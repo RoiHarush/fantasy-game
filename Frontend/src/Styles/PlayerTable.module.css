@@ -1,0 +1,137 @@
+.tableContainer {
+    min-height: 500px;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    background: #fff;
+}
+
+.tableContainer table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 0.95rem;
+}
+
+.tableContainer thead {
+    border-bottom: 1px solid #ddd;
+}
+
+.tableContainer thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    color: #666;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    z-index: 2;
+    font-size: 0.85rem;
+}
+
+.tableContainer thead th:nth-child(2),
+.tableContainer thead th:nth-child(3),
+.tableContainer thead th:nth-child(4) {
+    text-align: center;
+}
+
+.tableContainer tbody tr {
+    background: #fff;
+    height: 56px;
+    border-bottom: 1px solid #eee;
+}
+
+.tableContainer td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    text-align: left;
+}
+
+.tableContainer td:nth-child(2) {
+    text-align: center;
+    font-weight: 500;
+}
+
+.tableContainer td:nth-child(3),
+.tableContainer td:nth-child(4) {
+    text-align: center;
+}
+
+.player-main-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: #222;
+    border-right: 1px solid #ddd;
+}
+
+.player-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.player-shirt {
+    width: 25px;
+    height: 25px;
+    object-fit: contain;
+}
+
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.player-name {
+    font-weight: 600;
+    color: #222;
+    white-space: nowrap;
+    font-size: 0.95rem;
+}
+
+.player-subinfo {
+    font-size: 0.8rem;
+    color: #000000;
+    white-space: nowrap;
+    font-weight: 400;
+}
+
+.tableContainer button {
+    min-width: 70px;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.tableContainer button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.tableContainer button:disabled {
+    background: #e0e0e0;
+    color: #777;
+    cursor: default;
+}
+
+.watch-btn {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    color: #333;
+}
+
+.sign-btn {
+    background: #00e0c6;
+    color: #fff;
+}
+
+.trade-btn {
+    background: #a020f0;
+    color: #fff;
+}

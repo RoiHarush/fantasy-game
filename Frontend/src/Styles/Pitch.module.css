@@ -1,0 +1,62 @@
+.pitchFrame {
+    position: relative;
+    width: 1000px;
+    height: 800px;
+    background: url("/UI/pitch-default.svg") no-repeat bottom center;
+    background-size: contain;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.pitch {
+    width: 1000px;
+    height: 800px;
+    position: relative;
+    display: grid;
+    grid-template-rows: 0.8fr 1fr 1fr 1.2fr auto;
+    grid-template-columns: repeat(12, 1fr);
+}
+
+
+.row {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 6.6%;
+    margin: 0;
+}
+
+
+
+/* .bench {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    width: 78%;
+    margin: 0 auto 15px auto;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px 2px 0 0;
+} */
+
+
+.bench {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    /* מוודא שהוא תמיד בשורה האחרונה */
+    align-self: end;
+    /* מצמיד לתחתית השורה */
+    justify-self: center;
+    /* ממורכז לרוחב */
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    width: 78%;
+    /* תשחק עם זה */
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px 2px 0 0;
+}

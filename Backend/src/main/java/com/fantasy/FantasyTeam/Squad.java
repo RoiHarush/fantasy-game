@@ -71,7 +71,7 @@ public class Squad implements Draftable {
     public void setMinPlayersInPosition(){
         this.minPlayersInPosition.put(PlayerPosition.GOALKEEPER, 1);
         this.minPlayersInPosition.put(PlayerPosition.DEFENDER, 3);
-        this.minPlayersInPosition.put(PlayerPosition.MIDFIELDER, 3);
+        this.minPlayersInPosition.put(PlayerPosition.MIDFIELDER, 2);
         this.minPlayersInPosition.put(PlayerPosition.FORWARD, 1);
     }
     public void setMaxPlayersInPosition(){

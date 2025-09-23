@@ -1,0 +1,56 @@
+.player-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 80px;
+    height: 100%;
+    margin: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.player-card:hover {
+    transform: scale(1.05);
+}
+
+.player-shirt {
+    width: 60%;
+    height: auto;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.25));
+}
+
+.player-name {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    background-color: #37003c;
+    padding: 2px 0;
+    border-radius: 3px 3px 0 0;
+    margin-bottom: 0;
+    letter-spacing: 0.3px;
+    width: 130%;
+}
+
+.player-nextMatch,
+.player-points {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    color: #111;
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 2px 0;
+    border-radius: 0 0 3px 3px;
+    width: 130%;
+}
+
+.player-card.selected img {
+    filter: drop-shadow(0 0 10px #00ff87);
+}
+
+.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}

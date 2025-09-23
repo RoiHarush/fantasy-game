@@ -1,0 +1,72 @@
+.leagueTable {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: "Segoe UI", Arial, sans-serif;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.leagueTable table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.leagueTable-head {
+    background-color: white;
+    color: #333;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.teamHeader {
+    text-align: left !important;
+}
+
+.teamCell {
+    text-align: left !important;
+}
+
+.leagueTable th,
+.leagueTable td {
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.leagueTable tbody tr:hover {
+    background-color: #f4f4f8;
+}
+
+.tableUser {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.tableUser :hover {
+    cursor: pointer;
+}
+
+.userName {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #111;
+}
+
+.userTeam {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.currentUserRow {
+    background: linear-gradient(90deg, #00ff94, #00e5ff);
+    font-weight: 600;
+}
