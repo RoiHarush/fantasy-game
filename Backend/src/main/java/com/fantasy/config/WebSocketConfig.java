@@ -18,8 +18,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:5173")
+                .setAllowedOriginPatterns(
+                        "http://localhost:5173",
+                        "http://192.168.*.*:5173",
+                        "https://fantasy-draft-sigma.vercel.app",
+                        "https://*.ngrok-free.app"
+                )
                 .withSockJS();
     }
 }
