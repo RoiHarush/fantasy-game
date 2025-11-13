@@ -24,6 +24,8 @@
     margin: 16px auto 8px;
     padding: 10px 18px;
     width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
     background: linear-gradient(90deg, #6a5cff, #a34bff);
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -60,14 +62,15 @@
 .turnContent {
     width: 100%;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
     color: white;
     font-weight: 600;
+
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
 }
 
 .passButton {
-    background: #3ef085;
     background: linear-gradient(90deg, #00ff94, #00e5ff);
     border: none;
     padding: 8px 16px;
@@ -75,13 +78,15 @@
     border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.2s ease;
+    transition: transform 0.2s ease;
+    width: 100%;
 }
 
-.passButton:hover {
-    background: #3ef085;
-    /* background: #9333ea; */
+.passButton:hover,
+.passButton:focus {
     transform: translateY(-1px);
+    outline: 2px solid #00e5ff;
+    outline-offset: 2px;
 }
 
 .turnHint {
@@ -136,7 +141,6 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    max-width: 100%;
 }
 
 .turnCard {
@@ -156,18 +160,14 @@
     margin-bottom: 3px;
 }
 
-
 .turnCard.current {
     border: 2px solid #b85fff;
-    /* סגול-ורדרד בהיר וזוהר */
     box-shadow: 0 0 12px rgba(184, 95, 255, 0.8);
 }
-
 
 .turnCard.done {
     opacity: 0.6;
 }
-
 
 .turnProgress {
     position: relative;
@@ -190,10 +190,25 @@
     box-shadow: 0 0 8px rgba(150, 80, 255, 0.7);
 }
 
-
-
 .turnCount {
     font-size: 0.75rem;
     color: #ddd;
     font-weight: 500;
+}
+
+/* ============================ */
+/* Media Query (Desktop)     */
+/* ============================ */
+
+@media (min-width: 500px) {
+    .turnContent {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0;
+    }
+
+    .passButton {
+        width: auto
+    }
 }

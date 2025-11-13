@@ -21,24 +21,29 @@
     height: 22px;
     object-fit: cover;
     border-radius: 3px;
+    flex-shrink: 0;
 }
 
 .userInfo {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .username {
     font-size: 1rem;
     font-weight: 700;
     text-transform: lowercase;
+    overflow-wrap: break-word;
 }
 
 .team {
     font-size: 0.85rem;
     opacity: 0.9;
     margin-top: -2px;
+    overflow-wrap: break-word;
 }
+
 
 .tab {
     background: #38003c;

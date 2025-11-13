@@ -4,6 +4,7 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     font-family: "Poppins", sans-serif;
+    width: 100%;
 }
 
 .header {
@@ -24,12 +25,13 @@
 
 .tableWrapper {
     max-height: none;
-    overflow: visible;
+    overflow-x: auto;
 }
-
 
 .table {
     width: 100%;
+    min-width: 450px;
+
     border-collapse: collapse;
     font-size: 0.9rem;
 }
@@ -54,6 +56,7 @@
     align-items: center;
     gap: 8px;
     justify-content: flex-start;
+    min-width: 200px;
 }
 
 .photo {
@@ -81,4 +84,14 @@
     object-fit: contain;
     margin-right: 6px;
     vertical-align: middle;
+}
+
+.tableWrapper::-webkit-scrollbar {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
 }

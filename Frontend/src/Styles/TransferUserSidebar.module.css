@@ -4,6 +4,7 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     font-family: "Poppins", sans-serif;
+    width: 100%;
 }
 
 .header {
@@ -40,6 +41,12 @@
 
 .select:hover {
     border-color: #a64aff;
+}
+
+.select:focus {
+    border-color: #a64aff;
+    outline: 2px solid #a64aff;
+    outline-offset: 2px;
 }
 
 .content {

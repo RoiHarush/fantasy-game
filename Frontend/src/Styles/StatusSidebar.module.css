@@ -1,6 +1,5 @@
 .statusSidebar {
-    width: 360px;
-    /* אתה יכול לשנות ל-380 או 400 לפי איך שאתה רוצה שזה ייראה */
+    width: 140%;
     display: flex;
     flex-direction: column;
     gap: 20px;

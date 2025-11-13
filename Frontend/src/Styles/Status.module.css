@@ -15,5 +15,9 @@
     background-clip: text;
     color: transparent;
     font-weight: 700;
-    font-size: 50px;
+
+    font-size: clamp(2.2rem, 8vw, 3.125rem);
+
+    text-align: center;
+    overflow-wrap: break-word;
 }
