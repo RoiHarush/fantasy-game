@@ -21,7 +21,6 @@ function PlayerCard({
         );
     }
 
-    // ✨ מה־Provider במקום props
     const isSelected = view === "pick" && selectedPlayerId === player.id;
     const isDisabled = view === "pick" && disabledIds.includes(player.id);
 

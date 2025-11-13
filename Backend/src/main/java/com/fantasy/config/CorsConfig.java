@@ -21,7 +21,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://192.168.68.53:5173",
                         "https://fantasy-draft-sigma.vercel.app",
                         "https://mari-saccharine-kaysen.ngrok-free.dev",
-                        "https://move-aims-marine-blah.trycloudflare.com"
+                        "https://gmc-automatically-usd-nicholas.trycloudflare.com"
                 )
                 .allowedMethods("*")
                 .allowedHeaders("*")
