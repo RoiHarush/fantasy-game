@@ -52,13 +52,11 @@ export default function Login({ onLogin }) {
 
             const data = await res.json();
 
-            // במקום זה:
             // localStorage.setItem("token", data.token);
             // localStorage.setItem("userId", data.user.id);
             // localStorage.setItem("username", data.user.name);
             // localStorage.setItem("loggedUser", JSON.stringify(data.user));
 
-            // תחליף בזה:
             sessionStorage.setItem("token", data.token);
             sessionStorage.setItem("userId", data.user.id);
             sessionStorage.setItem("username", data.user.name);
@@ -74,7 +72,7 @@ export default function Login({ onLogin }) {
 
     return (
         <div className={styles.container}>
-            {logoRows.map((row, i) => (
+            {/* {logoRows.map((row, i) => (
                 <div
                     key={i}
                     className={styles["logo-row"]}
@@ -92,7 +90,7 @@ export default function Login({ onLogin }) {
                 src="/UI/premier-league-logo.svg"
                 alt="Premier League Logo"
                 className={styles.premierLogo}
-            />
+            /> */}
 
             <h1 className={styles.title}>Fantasy Draft</h1>
 
