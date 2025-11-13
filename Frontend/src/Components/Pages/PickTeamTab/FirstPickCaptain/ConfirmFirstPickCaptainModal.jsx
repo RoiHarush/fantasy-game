@@ -19,6 +19,7 @@ function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, 
         };
     }, []);
 
+    console.log();
     const modalContent = (
         <div className={Style.modalBackdrop} onClick={onCancel}>
             <div className={Style.modal} onClick={e => e.stopPropagation()}>
