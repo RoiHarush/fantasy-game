@@ -2,10 +2,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* justify-content: center; */
-    height: 70vh;
+    justify-content: center;
+    min-height: 70vh;
     text-align: center;
     color: #333;
+    padding: 20px 0;
+    box-sizing: border-box;
 }
 
 .closedWindow .message {
@@ -23,10 +25,13 @@
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    transition: 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
 }
 
-.scoutButton:hover {
+.scoutButton:hover,
+.scoutButton:focus {
     transform: scale(1.03);
     opacity: 0.9;
+    outline: 2px solid #00eaff;
+    outline-offset: 2px;
 }

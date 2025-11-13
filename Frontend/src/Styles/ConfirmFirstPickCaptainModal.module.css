@@ -22,6 +22,7 @@
     box-shadow: -4px 0 25px rgba(0, 0, 0, 0.6);
     animation: slideIn 0.3s ease forwards;
     position: relative;
+    box-sizing: border-box;
 }
 
 @keyframes slideIn {
@@ -44,7 +45,6 @@
     }
 }
 
-
 .closeBtn {
     position: absolute;
     top: 18px;
@@ -57,10 +57,11 @@
     transition: transform 0.2s ease;
 }
 
-.closeBtn:hover {
+.closeBtn:hover,
+.closeBtn:focus {
     transform: scale(1.15);
+    outline: none;
 }
-
 
 .title {
     font-size: 1.8rem;
@@ -96,7 +97,6 @@
     filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.4));
 }
 
-
 .notice {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -108,12 +108,12 @@
     text-align: center;
 }
 
-
 .modalButtons {
     margin-top: auto;
     width: 100%;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .confirmButton,
@@ -125,7 +125,7 @@
     padding: 12px 0;
     cursor: pointer;
     font-size: 0.95rem;
-    transition: all 0.25s ease;
+    transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .confirmButton {
@@ -134,10 +134,12 @@
     box-shadow: 0 0 12px rgba(0, 255, 200, 0.25);
 }
 
-.confirmButton:hover {
+.confirmButton:hover,
+.confirmButton:focus {
     background: linear-gradient(90deg, #00f48a, #00d0ff);
     box-shadow: 0 0 18px rgba(0, 255, 255, 0.4);
     transform: scale(1.03);
+    outline: none;
 }
 
 .cancelButton {
@@ -146,10 +148,12 @@
     box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);
 }
 
-.cancelButton:hover {
+.cancelButton:hover,
+.cancelButton:focus {
     background: #ff5550;
     box-shadow: 0 0 14px rgba(255, 59, 48, 0.5);
     transform: scale(1.03);
+    outline: none;
 }
 
 @media (max-width: 600px) {

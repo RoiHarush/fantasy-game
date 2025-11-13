@@ -7,9 +7,14 @@
     padding: 10px 20px;
     cursor: pointer;
     transition: background 0.2s ease, transform 0.1s ease;
+
+    max-width: 100%;
 }
 
-.btn:hover {
+.btn:hover,
+.btn:focus {
     background: #5b00ff;
     transform: translateY(-2px);
+    outline: 2px solid #5b00ff;
+    outline-offset: 2px;
 }
