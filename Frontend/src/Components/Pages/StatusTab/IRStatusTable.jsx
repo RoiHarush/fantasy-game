@@ -15,26 +15,31 @@ function IRStatusTable() {
     return (
         <div className={Style.irStatusSection}>
             <h3>IR Status</h3>
-            <table className={Style.irTable}>
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Team</th>
-                        <th>IR Player</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {irStatuses.map((s) => (
-                        <tr key={s.userId}>
-                            <td>{s.userName}</td>
-                            <td>{s.teamName}</td>
-                            <td>{s.hasIr ? s.irPlayerName : "—"}</td>
+
+            {/* הוספנו את העטיפה כאן */}
+            <div className={Style.tableWrapper}>
+                <table className={Style.irTable}>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Team</th>
+                            <th>IR Player</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {irStatuses.map((s) => (
+                            <tr key={s.userId}>
+                                <td>{s.userName}</td>
+                                <td>{s.teamName}</td>
+                                <td>{s.hasIr ? s.irPlayerName : "—"}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {/* סוף העטיפה */}
+
         </div>
     );
 }
-
 export default IRStatusTable;
