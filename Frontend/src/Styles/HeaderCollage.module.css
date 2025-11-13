@@ -1,14 +1,10 @@
-/* --- בסיס (מובייל) --- */
 .collage {
     display: none;
-    /* כברירת מחדל, הקולאז' מוסתר */
 }
 
-/* --- דסקטופ (החל מ-768px ומעלה) --- */
 @media (min-width: 768px) {
     .collage {
         display: grid;
-        /* הצג את הקולאז' רק במסכים רחבים */
         grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
         width: 100%;
         height: 300px;
