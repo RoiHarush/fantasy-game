@@ -81,7 +81,7 @@ function App() {
               element={<TransferWindowPage user={loggedUser} />}
             />
 
-            <Route
+            {/* <Route
               path="/draft-room"
               element={
                 <PageLayout
@@ -89,7 +89,7 @@ function App() {
                   right={<div>Sidebar for Draft Room</div>}
                 />
               }
-            />
+            /> */}
           </Routes>
         </main>
       </div>

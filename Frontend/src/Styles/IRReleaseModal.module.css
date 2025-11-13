@@ -22,6 +22,7 @@
     box-shadow: -4px 0 25px rgba(0, 0, 0, 0.6);
     animation: slideIn 0.3s ease forwards;
     position: relative;
+    box-sizing: border-box;
 }
 
 @keyframes slideIn {
@@ -56,8 +57,10 @@
     transition: transform 0.2s ease;
 }
 
-.closeBtn:hover {
+.closeBtn:hover,
+.closeBtn:focus {
     transform: scale(1.15);
+    outline: none;
 }
 
 .title {
@@ -76,7 +79,6 @@
     margin-bottom: 20px;
 }
 
-
 .playerList {
     width: 100%;
     display: flex;
@@ -84,6 +86,7 @@
     gap: 12px;
     overflow-y: auto;
     padding-right: 4px;
+    flex: 1;
 }
 
 .playerButton {
@@ -95,12 +98,15 @@
     border-radius: 10px;
     padding: 10px 14px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: background 0.25s ease, transform 0.25s ease;
 }
 
-.playerButton:hover {
+.playerButton:hover,
+.playerButton:focus {
     background: rgba(255, 255, 255, 0.15);
     transform: translateX(-2px);
+    outline: 1px solid rgba(255, 255, 255, 0.3);
+    outline-offset: -2px;
 }
 
 .playerInfo {
@@ -128,6 +134,7 @@
 
 .modalButtons {
     margin-top: auto;
+    padding-top: 20px;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -142,10 +149,24 @@
     padding: 12px 0;
     width: 100%;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: background 0.25s ease, transform 0.25s ease;
 }
 
-.cancelButton:hover {
+.cancelButton:hover,
+.cancelButton:focus {
     background: #ff5550;
     transform: scale(1.03);
+    outline: 2px solid #ff3b30;
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    .modal {
+        padding: 30px 20px;
+    }
+
+    .title {
+        font-size: 1.4rem;
+        margin-top: 30px;
+    }
 }

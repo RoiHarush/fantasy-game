@@ -63,109 +63,111 @@ function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
                     <span className={Style.team}>{awayTeam?.shortName || awayTeam?.name || "TBD"}</span>
                 </div>
 
-                <table className={Style.statsTable}>
-                    <thead>
-                        <tr>
-                            <th>Statistic</th>
-                            <th>Value</th>
-                            <th>Pts</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {noMatchPlayed ? (
-                            <>
-                                <tr>
-                                    <td>
-                                        <div className={Style.statCellContent}>
-                                            <img
-                                                src="/Icons/stopwatch.svg"
-                                                alt="Minutes played"
-                                                className={Style.statIcon}
-                                            />
-                                            <span>Minutes played</span>
-                                        </div>
-                                    </td>
-                                    <td>0</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr className={Style.totalRow}>
-                                    <td>
-                                        <div className={Style.statCellContent}>
-                                            <img
-                                                src="/Icons/total.svg"
-                                                alt="Total"
-                                                className={Style.statIcon}
-                                            />
-                                            <strong>Total</strong>
-                                        </div>
-                                    </td>
-                                    <td></td>
-                                    <td><strong>0</strong></td>
-                                </tr>
-                                <tr>
-                                    <td colSpan="3" className={Style.noDataRow}>
-                                        No data available for this fixture yet.
-                                    </td>
-                                </tr>
-                            </>
-                        ) : (
-                            <>
-                                {matchData.stats
-                                    .filter((s) => s.points !== 0 && s.name !== "Total")
-                                    .map((s, i) => (
-                                        <tr key={i}>
-                                            <td className={Style.statNameCell}>
-                                                <div className={Style.statCellContent}>
-                                                    {s.iconPath && (
-                                                        <img
-                                                            src={s.iconPath}
-                                                            alt={s.name}
-                                                            className={Style.statIcon}
-                                                        />
-                                                    )}
-                                                    <span>{s.name}</span>
-                                                </div>
-                                            </td>
-                                            <td>{s.value}</td>
-                                            <td>{s.points}</td>
-                                        </tr>
-                                    ))}
-
-                                {matchData.captain && (
-                                    <tr className={Style.captainRow}>
+                <div class="statsTable-container">
+                    <table className={Style.statsTable}>
+                        <thead>
+                            <tr>
+                                <th>Statistic</th>
+                                <th>Value</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {noMatchPlayed ? (
+                                <>
+                                    <tr>
                                         <td>
                                             <div className={Style.statCellContent}>
                                                 <img
-                                                    src="/Icons/captain.svg"
-                                                    alt="Captain bonus"
+                                                    src="/Icons/stopwatch.svg"
+                                                    alt="Minutes played"
                                                     className={Style.statIcon}
                                                 />
-                                                <span>Captain bonus</span>
+                                                <span>Minutes played</span>
                                             </div>
                                         </td>
-                                        <td>x2</td>
-                                        <td></td>
+                                        <td>0</td>
+                                        <td>0</td>
                                     </tr>
-                                )}
+                                    <tr className={Style.totalRow}>
+                                        <td>
+                                            <div className={Style.statCellContent}>
+                                                <img
+                                                    src="/Icons/total.svg"
+                                                    alt="Total"
+                                                    className={Style.statIcon}
+                                                />
+                                                <strong>Total</strong>
+                                            </div>
+                                        </td>
+                                        <td></td>
+                                        <td><strong>0</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td colSpan="3" className={Style.noDataRow}>
+                                            No data available for this fixture yet.
+                                        </td>
+                                    </tr>
+                                </>
+                            ) : (
+                                <>
+                                    {matchData.stats
+                                        .filter((s) => s.points !== 0 && s.name !== "Total")
+                                        .map((s, i) => (
+                                            <tr key={i}>
+                                                <td className={Style.statNameCell}>
+                                                    <div className={Style.statCellContent}>
+                                                        {s.iconPath && (
+                                                            <img
+                                                                src={s.iconPath}
+                                                                alt={s.name}
+                                                                className={Style.statIcon}
+                                                            />
+                                                        )}
+                                                        <span>{s.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td>{s.value}</td>
+                                                <td>{s.points}</td>
+                                            </tr>
+                                        ))}
 
-                                <tr className={Style.totalRow}>
-                                    <td>
-                                        <div className={Style.statCellContent}>
-                                            <img
-                                                src="/Icons/total.svg"
-                                                alt="Total"
-                                                className={Style.statIcon}
-                                            />
-                                            <strong>Total</strong>
-                                        </div>
-                                    </td>
-                                    <td></td>
-                                    <td><strong>{finalTotal}</strong></td>
-                                </tr>
-                            </>
-                        )}
-                    </tbody>
-                </table>
+                                    {matchData.captain && (
+                                        <tr className={Style.captainRow}>
+                                            <td>
+                                                <div className={Style.statCellContent}>
+                                                    <img
+                                                        src="/Icons/captain.svg"
+                                                        alt="Captain bonus"
+                                                        className={Style.statIcon}
+                                                    />
+                                                    <span>Captain bonus</span>
+                                                </div>
+                                            </td>
+                                            <td>x2</td>
+                                            <td></td>
+                                        </tr>
+                                    )}
+
+                                    <tr className={Style.totalRow}>
+                                        <td>
+                                            <div className={Style.statCellContent}>
+                                                <img
+                                                    src="/Icons/total.svg"
+                                                    alt="Total"
+                                                    className={Style.statIcon}
+                                                />
+                                                <strong>Total</strong>
+                                            </div>
+                                        </td>
+                                        <td></td>
+                                        <td><strong>{finalTotal}</strong></td>
+                                    </tr>
+                                </>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
                 <button className={Style.infoBtn} onClick={() => onViewInfo(player)}>
                     View Information

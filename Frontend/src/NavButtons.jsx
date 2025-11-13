@@ -108,7 +108,7 @@ function NavButtons() {
                 Transfer Window
             </NavLink>
 
-            <NavLink
+            {/* <NavLink
                 to="/draft-room"
                 className={({ isActive }) =>
                     isActive
@@ -117,7 +117,7 @@ function NavButtons() {
                 }
             >
                 Draft Room
-            </NavLink>
+            </NavLink> */}
 
             <NavLink
                 to="/"

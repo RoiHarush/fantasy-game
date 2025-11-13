@@ -1,9 +1,6 @@
 .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(6px);
     display: flex;
@@ -18,12 +15,13 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
     border-radius: 18px;
-    padding: 28px 36px;
+    padding: 24px 20px;
     width: 360px;
     max-width: 90vw;
     text-align: center;
     color: #fff;
     animation: popIn 0.25s ease-out;
+    box-sizing: border-box;
 }
 
 .modal h3 {
@@ -53,12 +51,15 @@
     padding: 10px 0;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease-in-out;
+    transition: transform 0.15s ease-in-out, background 0.15s ease-in-out;
 }
 
-.confirm:hover {
+.confirm:hover,
+.confirm:focus {
     transform: scale(1.03);
     background: linear-gradient(135deg, #22c55e, #16a34a);
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
 }
 
 .cancel {
@@ -70,12 +71,15 @@
     padding: 10px 0;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease-in-out;
+    transition: background 0.15s ease-in-out, transform 0.15s ease-in-out;
 }
 
-.cancel:hover {
+.cancel:hover,
+.cancel:focus {
     background: #4b5563;
     transform: scale(1.03);
+    outline: 2px solid #4b5563;
+    outline-offset: 2px;
 }
 
 @keyframes fadeIn {
@@ -97,5 +101,11 @@
     to {
         transform: scale(1);
         opacity: 1;
+    }
+}
+
+@media (min-width: 480px) {
+    .modal {
+        padding: 28px 36px;
     }
 }

@@ -1,23 +1,24 @@
 .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    padding: 16px;
+    box-sizing: border-box;
 }
 
 .modal {
     background: white;
-    width: 600px;
+    width: 100%;
+    max-width: 600px;
     border-radius: 12px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-    padding: 30px;
+    padding: 24px 20px;
     position: relative;
+    box-sizing: border-box;
 }
 
 .closeBtn {
@@ -28,6 +29,10 @@
     border: none;
     font-size: 22px;
     cursor: pointer;
+}
+
+.closeBtn:focus {
+    outline: 2px solid #008cff;
 }
 
 .playerName {
@@ -43,6 +48,7 @@
     gap: 10px;
     margin-bottom: 20px;
     font-weight: 600;
+    flex-wrap: wrap;
 }
 
 .team {
@@ -56,10 +62,18 @@
     border-radius: 6px;
 }
 
+.statsTable-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+
 .statsTable {
     width: 100%;
+    min-width: 500px;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 0;
 }
 
 .statsTable th,
@@ -77,8 +91,15 @@
     padding: 10px 20px;
     border-radius: 8px;
     cursor: pointer;
+    transition: background 0.2s ease;
 }
 
+.infoBtn:hover,
+.infoBtn:focus {
+    background: #e9e9e9;
+    outline: 2px solid #ccc;
+    outline-offset: 2px;
+}
 
 .statNameCell {
     text-align: left;
@@ -89,11 +110,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.statIcon {
-    width: 22px;
-    height: 22px;
 }
 
 .statIcon {
@@ -119,4 +135,10 @@
 .statCellContent:hover .statIcon {
     transform: scale(1.15) rotate(3deg);
     transition: transform 0.2s ease;
+}
+
+@media (min-width: 480px) {
+    .modal {
+        padding: 30px;
+    }
 }

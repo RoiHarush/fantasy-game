@@ -1,11 +1,10 @@
-.draftHeader {
+/* .draftHeader {
     text-align: center;
     margin-bottom: 20px;
 }
 
 .leagueTitle {
     background: #e00034;
-    /* אדום */
     color: white;
     font-weight: bold;
     padding: 8px;
@@ -30,11 +29,10 @@
 .progressBar {
     height: 100%;
     background: #4b006e;
-    /* סגול */
     transition: width 1s linear;
 }
 
 .turnInfo {
     font-size: 1rem;
     margin-top: 5px;
-}
+} */

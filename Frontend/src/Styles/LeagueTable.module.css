@@ -4,26 +4,29 @@
     font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* גרסה רגילה (עמוד הליגה המלא) */
 .full {
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
+    overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* גרסה קומפקטית (בתוך Sidebar) */
 .compact {
     background: transparent;
     box-shadow: none;
     border-radius: 0;
 }
 
-
 .leagueTable table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
+}
+
+.full table {
+    min-width: 700px;
 }
 
 .leagueTable-head {
@@ -79,4 +82,14 @@
 .currentUserRow {
     background: linear-gradient(90deg, #00ff94, #00e5ff);
     font-weight: 600;
+}
+
+.full::-webkit-scrollbar {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.full::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
 }

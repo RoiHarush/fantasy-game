@@ -1,6 +1,6 @@
 .pointsControlsInside {
     display: grid;
-    grid-template-columns: 120px 1fr 120px;
+    grid-template-columns: 80px 1fr 80px;
     align-items: center;
     text-align: center;
     padding: 6px 0 8px;
@@ -19,10 +19,23 @@
     transition: color 0.2s ease;
 }
 
-.pointsButtonInside:hover {
+.pointsButtonInside:hover,
+.pointsButtonInside:focus {
     color: white;
+    outline: none;
 }
 
 .pointsGameweekInfoInside {
     font-weight: 600;
+}
+
+/* ============================ */
+/* Media Query (Desktop)     */
+/* ============================ */
+
+@media (min-width: 768px) {
+    .pointsControlsInside {
+        /* בדסקטופ: מחזירים את הגודל המקורי */
+        grid-template-columns: 120px 1fr 120px;
+    }
 }

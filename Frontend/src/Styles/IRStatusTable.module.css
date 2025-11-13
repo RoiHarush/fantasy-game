@@ -2,9 +2,11 @@
     margin-top: 25px;
     background: #ffffff;
     border-radius: 16px;
-    padding: 25px 30px;
+    padding: 20px;
     border: 1px solid rgba(0, 140, 255, 0.15);
     box-shadow: 0 4px 16px rgba(0, 140, 255, 0.15);
+
+    overflow-x: auto;
 }
 
 .irStatusSection h3 {
@@ -17,6 +19,8 @@
 
 .irTable {
     width: 100%;
+    min-width: 600px;
+
     border-collapse: collapse;
     color: #004d80;
     font-size: 0.95rem;
@@ -55,4 +59,20 @@
 .irTable td:last-child {
     font-weight: 700;
     color: #00b8ff;
+}
+
+.irStatusSection::-webkit-scrollbar {
+    height: 6px;
+    background: rgba(0, 140, 255, 0.05);
+}
+
+.irStatusSection::-webkit-scrollbar-thumb {
+    background: rgba(0, 140, 255, 0.3);
+    border-radius: 3px;
+}
+
+@media (min-width: 768px) {
+    .irStatusSection {
+        padding: 25px 30px;
+    }
 }

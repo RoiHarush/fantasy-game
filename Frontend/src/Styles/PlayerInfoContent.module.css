@@ -1,6 +1,15 @@
-.table {
+.table-container {
     width: 90%;
     margin: 20px auto;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.table {
+    width: 100%;
+    min-width: 650px;
+    margin: 0;
     border-collapse: collapse;
     font-size: 0.9rem;
     color: #000;
@@ -62,4 +71,14 @@
     padding-bottom: 4px;
     border: none;
     background: transparent;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
 }
