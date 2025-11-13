@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { lockScroll, unlockScroll } from "../../../../Utils/scrollLock";
-import Style from "../../../../Styles/confirmFirstPickCaptainModal.module.css";
+import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 
 function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlayer }) {
     useEffect(() => {
