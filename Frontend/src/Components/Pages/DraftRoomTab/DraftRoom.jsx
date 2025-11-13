@@ -2,19 +2,22 @@ import { useState } from "react";
 import DraftRoomWrapper from "./DraftRoomWrapper";
 import DraftHeader from "./DraftHeader";
 import Style from "../../../Styles/DraftRoom.module.css";
+import { usePlayers } from "../../../Context/PlayersContext";
 
-function DraftRoom({ players, initialUser, leagueName = "My Fantasy League" }) {
+function DraftRoom({ initialUser, leagueName = "My Fantasy League" }) {
     const [user, setUser] = useState(initialUser);
-
     const [currentTurnUser, setCurrentTurnUser] = useState(initialUser);
+    const { players } = usePlayers();
 
     const turnDuration = 90;
 
-    // מה קורה כשנגמר הזמן (תעביר תור, תעדכן state או API)
     const handleTurnEnd = () => {
         console.log("Turn ended!");
-        // כאן תכניס לוגיקה שתעביר תור הלאה
     };
+
+    if (!players || players.length === 0) {
+        return <div>Loading players...</div>;
+    }
 
     return (
         <div className={Style.draftRoom}>
@@ -25,10 +28,10 @@ function DraftRoom({ players, initialUser, leagueName = "My Fantasy League" }) {
                 turnDuration={turnDuration}
                 onTurnEnd={handleTurnEnd}
             />
-
             <DraftRoomWrapper players={players} user={user} setUser={setUser} />
         </div>
     );
 }
 
 export default DraftRoom;
+

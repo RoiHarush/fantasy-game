@@ -1,137 +1,122 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { mockUser1, users } from "./MockData/Users";
-import { league } from "./MockData/League";
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import Header from "./Header";
 import HeaderCollage from "./HeaderCollage";
-import Status from "./Components/Pages/Status";
-import PickTeam from "./Components/Pages/PickTeam";
-import Fixtures from "./Components/Pages/FixturesTab/Fixtures";
-import LeagueTable from "./Components/Pages/LeagueTab/LeagueTable";
-import Points from "./Components/Pages/Points";
-import players from "./MockData/Players";
-import Scout from "./Components/Pages/ScoutTab/Scout";
+import StatusPage from "./Components/Pages/StatusTab/StatusPage";
+import PickTeamPage from "./Components/Pages/PickTeamTab/PickTeamPage";
+import FixturesPage from "./Components/Pages/FixturesTab/FixturePage";
+import LeaguePage from "./Components/Pages/LeagueTab/LeaguePage";
+import PointsPage from "./Components/Pages/PointsTab/PointsPage";
+import ScoutPage from "./Components/Pages/ScoutTab/ScoutPage";
 import DraftRoom from "./Components/Pages/DraftRoomTab/DraftRoom";
-import PageLayout from "./PageLayout";
-import Gameweeks from "./MockData/Gameweeks";
-import { Heading2 } from "lucide-react";
+import PageLayout from "./Components/PageLayout";
+import Login from "./Components/Auth/Login";
+import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
+import API_URL from "./config";
+import { WatchlistProvider } from "./Context/WatchlistContext";
 
 function App() {
-  const currentGameweek = Gameweeks.find(gw => gw.status === "LIVE");
-  const nextGameweek = Gameweeks.find(gw => gw.status === "UPCOMING");
+  const [loggedUser, setLoggedUser] = useState(null);
+
+  useEffect(() => {
+    const savedUser = sessionStorage.getItem("loggedUser");
+    const savedToken = sessionStorage.getItem("token");
+
+    if (savedUser && savedToken) {
+      setLoggedUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+
+  if (!loggedUser) {
+    return <Login onLogin={(data) => setLoggedUser(data)} />;
+  }
 
   return (
-    <>
-      <HeaderCollage />
-      <Header />
-      <main>
-        <Routes>
-          <Route path="/" element={<Navigate to="/status" replace />} />
+    <WatchlistProvider user={loggedUser}>
+      <div>
+        <HeaderCollage />
+        <Header />
+        <main>
+          <Routes>
+            <Route path="/" element={<Navigate to="/status" replace />} />
 
-          <Route
-            path="/status"
-            element={
-              <PageLayout
-                left={<Status user={mockUser1} currentGameweek={currentGameweek} nextGameweek={nextGameweek} leagueName={league.name} />}
-                right={<div>Sidebar for Status</div>}
-              />
-            }
-          />
+            <Route
+              path="/status"
+              element={<StatusPage user={loggedUser} />}
+            />
 
-          <Route
-            path="/points"
-            element={
-              <PageLayout
-                left={<Points user={mockUser1} gameweek={currentGameweek} gameweeks={Gameweeks} />}
-                right={<div>Sidebar for Points</div>}
-              />
-            }
-          />
+            <Route
+              path="/points"
+              element={<PointsPage user={loggedUser} />}
+            />
 
-          <Route
-            path="/points/:userId"
-            element={
-              <PageLayout
-                left={<OtherUserPointsWrapper gameweek={currentGameweek} gameweeks={Gameweeks} />}
-                right={<div>Sidebar for Other User</div>}
-              />
-            }
-          />
+            <Route
+              path="/points/:userId"
+              element={<OtherUserPointsWrapper />}
+            />
 
-          <Route
-            path="/pick-team"
-            element={
-              <PageLayout
-                left={<PickTeam user={mockUser1} gameweek={nextGameweek} gameweeks={Gameweeks} />}
-                right={<div>Sidebar for Pick Team</div>}
-              />
-            }
-          />
+            <Route
+              path="/pick-team"
+              element={<PickTeamPage user={loggedUser} />}
+            />
 
-          <Route
-            path="/league"
-            element={
-              <PageLayout
-                left={<LeagueTable league={league} currentUser={mockUser1} />}
-                right={<div>Sidebar for League</div>}
-              />
-            }
-          />
+            <Route
+              path="/league"
+              element={<LeaguePage user={loggedUser} />}
+            />
 
-          <Route
-            path="/fixtures"
-            element={
-              <PageLayout
-                left={<Fixtures gameweeks={Gameweeks} defaultGameweek={nextGameweek} />}
-                right={<div>Sidebar for Fixtures</div>}
-              />
-            }
-          />
+            <Route
+              path="/fixtures"
+              element={<FixturesPage />}
+            />
 
+            <Route
+              path="/scout"
+              element={<ScoutPage user={loggedUser} />}
+            />
 
-          <Route
-            path="/scout"
-            element={
-              <PageLayout
-                left={<Scout players={players} initialUser={mockUser1} />}
-                right={<div>Sidebar for Scout</div>}
-              />
-            }
-          />
+            <Route
+              path="/transfer-window"
+              element={<TransferWindowPage user={loggedUser} />}
+            />
 
-          <Route
-            path="/draft-room"
-            element={
-              <PageLayout
-                left={<DraftRoom players={players} initialUser={mockUser1} leagueName={league.name} />}
-                right={<div>Sidebar for Draft Room</div>}
-              />
-            }
-          />
-
-          <Route
-            path="/test"
-            element={
-              <PageLayout
-                left={<h2>Test</h2>}
-                right={<div>Sidebar for Test</div>}
-              />
-            }
-          />
-        </Routes>
-      </main>
-    </>
+            <Route
+              path="/draft-room"
+              element={
+                <PageLayout
+                  left={<DraftRoom initialUser={loggedUser} />}
+                  right={<div>Sidebar for Draft Room</div>}
+                />
+              }
+            />
+          </Routes>
+        </main>
+      </div>
+    </WatchlistProvider>
   );
 }
 
-function OtherUserPointsWrapper({ gameweek, gameweeks }) {
+function OtherUserPointsWrapper() {
   const { userId } = useParams();
-  const otherUser = users.find(u => u.id.toString() === userId);
+  const [otherUser, setOtherUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!otherUser) {
-    return <div>User not found</div>;
-  }
+  useEffect(() => {
+    fetch(`${API_URL}/api/users/${userId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("User not found");
+        return res.json();
+      })
+      .then((data) => setOtherUser(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, [userId]);
 
-  return <Points user={otherUser} gameweek={gameweek} gameweeks={Gameweeks} />;
+  if (loading) return <div>Loading...</div>;
+  if (!otherUser) return <div>User not found</div>;
+
+  return <PointsPage user={otherUser} />;
 }
 
 export default App;

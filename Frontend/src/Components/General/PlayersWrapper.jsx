@@ -1,135 +1,96 @@
 import { useState } from "react";
-import PlayerTable from "../Pages/ScoutTab//PlayersTable";
-import Switcher from "./Switcher";
+import { useFilteredPlayers } from "../../hooks/useFilteredPlayers";
+import PlayerTable from "../Pages/ScoutTab/PlayersTable";
+import ControlsBar from "./ControlsBar";
 import Style from "../../Styles/ScoutWrapper.module.css";
-import teams from "../../MockData/Teams";
+import CompareModal from "./CompareModal";
 
-function PlayersWrapper({ players, user, setUser, mode = "scout" }) {
+function PlayersWrapper({ user, mode = "scout", onPlayerSelect, currentTurnUserId, irPosition }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeButton, setActiveButton] = useState("All players");
     const [viewFilter, setViewFilter] = useState("All");
     const [sortBy, setSortBy] = useState("Points");
     const [showAvailable, setShowAvailable] = useState(false);
 
-    let basePlayers = [...players];
+    const [comparePlayers, setComparePlayers] = useState([]);
+    const [filterByPosition, setFilterByPosition] = useState(null);
+    const [showCompareModal, setShowCompareModal] = useState(false);
 
-    if (mode === "draft") {
-        basePlayers = basePlayers.filter((p) => p.available);
-    }
-
-    if (activeButton === "Watchlist") {
-        basePlayers = basePlayers.filter((p) => user.watchedPlayers.includes(p.id));
-    }
-
-    let filteredPlayers = basePlayers.filter((p) =>
-        p.viewName.toLowerCase().startsWith(searchQuery.toLowerCase())
-    );
-
-    if (viewFilter !== "All") {
-        if (["GK", "DEF", "MID", "FWD"].includes(viewFilter)) {
-            filteredPlayers = filteredPlayers.filter((p) => p.position === viewFilter);
-        } else if (viewFilter.startsWith("Team")) {
-            const teamNumber = parseInt(viewFilter.replace("Team", ""), 10);
-            filteredPlayers = filteredPlayers.filter((p) => p.team === teamNumber);
+    const handleCompare = (player) => {
+        if (comparePlayers.length === 0) {
+            setComparePlayers([player]);
+            setFilterByPosition(player.position);
         }
-    }
-
-    if (sortBy === "Points") {
-        filteredPlayers.sort((a, b) => b.points - a.points);
-    } else if (sortBy === "Name") {
-        filteredPlayers.sort((a, b) => a.viewName.localeCompare(b.viewName));
-    }
-
-    if (mode === "scout") {
-        if (showAvailable) {
-            filteredPlayers = filteredPlayers.filter((p) => p.available);
+        else if (comparePlayers.length === 1) {
+            if (player.position !== comparePlayers[0].position) {
+                alert("You can only compare players from the same position.");
+                return;
+            }
+            setComparePlayers((prev) => [...prev, player]);
+            setShowCompareModal(true);
         }
-    }
+    };
+
+    const handleCloseCompare = () => {
+        setComparePlayers([]);
+        setFilterByPosition(null);
+        setShowCompareModal(false);
+    };
+
+    const filteredPlayers = useFilteredPlayers({
+        activeButton,
+        searchQuery,
+        viewFilter,
+        sortBy,
+        showAvailable,
+        irPosition
+    });
+
+    const visiblePlayers = filterByPosition
+        ? filteredPlayers.filter((p) => p.position === filterByPosition)
+        : filteredPlayers;
 
     return (
         <div className={Style.scoutWrapper}>
-            <div className={Style.controls}>
-                <div className={Style.controlsTop}>
-                    <div className={Style.search}>
-                        <h3>Search</h3>
-                        <input
-                            type="text"
-                            placeholder="Search players"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+            <ControlsBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                viewFilter={viewFilter}
+                setViewFilter={setViewFilter}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                activeButton={activeButton}
+                setActiveButton={setActiveButton}
+                showAvailable={showAvailable}
+                setShowAvailable={setShowAvailable}
+                filteredCount={visiblePlayers.length}
+                disablePositionOptions={comparePlayers.length === 1}
+            />
 
-                    <div className={Style.view}>
-                        <h3>View</h3>
-                        <select
-                            value={viewFilter}
-                            onChange={(e) => setViewFilter(e.target.value)}
-                        >
-                            <option value="All">All positions</option>
-                            <option value="GK">Goalkeepers</option>
-                            <option value="DEF">Defenders</option>
-                            <option value="MID">Midfielders</option>
-                            <option value="FWD">Forwards</option>
-                            {mode === "scout" && <option disabled>──────────</option>}
-                            {mode === "scout" &&
-                                teams.map((team) => (
-                                    <option key={team.id} value={`Team${team.id}`}>
-                                        {team.name}
-                                    </option>
-                                ))}
-                        </select>
-                    </div>
 
-                    <div className={Style.sort}>
-                        <h3>Sort</h3>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="Points">Sort by Points</option>
-                            <option value="Name">Sort by Name</option>
-                        </select>
-                    </div>
+            {comparePlayers.length === 1 && (
+                <div className={Style.compareBanner}>
+                    Select another <strong>{filterByPosition}</strong> to compare with{" "}
+                    <strong>{comparePlayers[0].viewName}</strong>.
+                    <button className={Style.cancelCompare} onClick={handleCloseCompare}>
+                        Cancel
+                    </button>
                 </div>
+            )}
 
-                <div className={Style.switchButtons}>
-                    <Switcher
-                        active={activeButton}
-                        options={["All players", "Watchlist"]}
-                        onChange={setActiveButton}
-                    />
-                </div>
+            <PlayerTable
+                user={user}
+                players={visiblePlayers}
+                mode={mode}
+                onPlayerSelect={onPlayerSelect}
+                currentTurnUserId={currentTurnUserId}
+                onCompare={handleCompare}
+                comparePlayers={comparePlayers}
+            />
 
-                <div className={Style.statusRow}>
-                    <div className={Style.message}>
-                        <span className={Style.playersCount}>{filteredPlayers.length}</span>
-                        <span>{mode === "draft" ? " players available" : " players shown"}</span>
-                    </div>
-
-                    {mode === "scout" && (
-                        <div className={Style.availableButton}>
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    checked={showAvailable}
-                                    onChange={(e) => setShowAvailable(e.target.checked)}
-                                />
-                                <span className={Style["checkbox-message"]}>Show available</span>
-                            </label>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className={Style.tableWrapper}>
-                <PlayerTable
-                    user={user}
-                    players={filteredPlayers}
-                    setUser={setUser}
-                    mode={mode}
-                />
-            </div>
+            {showCompareModal && (
+                <CompareModal players={comparePlayers} onClose={handleCloseCompare} />
+            )}
         </div>
     );
 }

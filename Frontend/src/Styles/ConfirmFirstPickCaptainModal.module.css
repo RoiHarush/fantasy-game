@@ -1,0 +1,161 @@
+.modalBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+    z-index: 9999;
+    animation: fadeIn 0.25s ease;
+}
+
+.modal {
+    background: #24002a;
+    color: #fff;
+    width: 420px;
+    max-width: 100%;
+    height: 100%;
+    padding: 50px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: -4px 0 25px rgba(0, 0, 0, 0.6);
+    animation: slideIn 0.3s ease forwards;
+    position: relative;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+.closeBtn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.closeBtn:hover {
+    transform: scale(1.15);
+}
+
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-top: 40px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.message {
+    font-size: 1rem;
+    color: #ddd;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.playerName {
+    color: #00e5ff;
+    font-weight: 700;
+}
+
+.player-shirt {
+    width: 44px;
+    height: auto;
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.player-shirt:hover {
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.4));
+}
+
+
+.notice {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 10px;
+    color: #bbb;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+
+.modalButtons {
+    margin-top: auto;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.confirmButton,
+.cancelButton {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    padding: 12px 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.25s ease;
+}
+
+.confirmButton {
+    background: linear-gradient(90deg, #00e676, #00bcd4);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(0, 255, 200, 0.25);
+}
+
+.confirmButton:hover {
+    background: linear-gradient(90deg, #00f48a, #00d0ff);
+    box-shadow: 0 0 18px rgba(0, 255, 255, 0.4);
+    transform: scale(1.03);
+}
+
+.cancelButton {
+    background: #ff3b30;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);
+}
+
+.cancelButton:hover {
+    background: #ff5550;
+    box-shadow: 0 0 14px rgba(255, 59, 48, 0.5);
+    transform: scale(1.03);
+}
+
+@media (max-width: 600px) {
+    .modal {
+        width: 100%;
+        height: 100%;
+        padding: 30px 20px;
+    }
+}

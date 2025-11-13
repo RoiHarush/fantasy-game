@@ -1,22 +1,16 @@
 import { Eye, X } from "lucide-react";
+import { useWatchlist } from "../../Context/WatchlistContext";
 
-function WatchButton({ playerId, user, setUser }) {
-    const isWatched = user.watchedPlayers.includes(playerId);
+function WatchButton({ playerId }) {
+    const { watchlist, toggleWatch } = useWatchlist();
+    const isWatched = Array.isArray(watchlist) && watchlist.includes(playerId);
 
-    const toggleWatch = () => {
-        setUser((prev) => {
-            let updatedWatched;
-            if (isWatched) {
-                updatedWatched = prev.watchedPlayers.filter((id) => id !== playerId);
-            } else {
-                updatedWatched = [...prev.watchedPlayers, playerId];
-            }
-            return { ...prev, watchedPlayers: updatedWatched };
-        });
+    const handleClick = () => {
+        toggleWatch(playerId, isWatched);
     };
 
     return (
-        <button onClick={toggleWatch}>
+        <button onClick={handleClick}>
             {isWatched ? (
                 <>
                     <X size={14} /> Remove

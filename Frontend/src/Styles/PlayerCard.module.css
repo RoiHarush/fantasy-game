@@ -1,4 +1,5 @@
 .player-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -9,6 +10,7 @@
     text-align: center;
     transition: transform 0.15s ease, opacity 0.15s ease;
 }
+
 
 .player-card:hover {
     transform: scale(1.05);
@@ -53,4 +55,68 @@
 .disabled {
     opacity: 0.4;
     pointer-events: none;
+}
+
+.captain-badge-container {
+    position: absolute;
+    top: 6px;
+    left: -10px;
+    z-index: 3;
+}
+
+.captain-badge,
+.vice-badge {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #3c1053;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.injury-icon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background-color: #d81919;
+    color: #fff;
+    font-weight: 900;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+    z-index: 4;
+}
+
+
+.empty-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transform: none !important;
+    opacity: 1 !important;
+    cursor: default !important;
+}
+
+.player-card.empty-card:hover {
+    transform: none !important;
+}
+
+.empty-card .player-shirt {
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+    width: 50px;
+    height: auto;
+    opacity: 0.85;
 }

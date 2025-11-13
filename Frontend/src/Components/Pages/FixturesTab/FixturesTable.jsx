@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FixtureCard } from "./FixtureCard";
-import fixtures from "../../../MockData/fixtures.jsx";
 import Style from "../../../Styles/FixturesTable.module.css";
+import API_URL from "../../../config";
 
 function FixturesTable({ gameweeks, defaultGameweek }) {
-    // נתחיל מהמחזור שהגיע מה־props
     const [currentGameweek, setCurrentGameweek] = useState(defaultGameweek?.id || 1);
+    const [fixtures, setFixtures] = useState([]);
+
+    useEffect(() => {
+        fetch(`${API_URL}/api/fixtures`)
+            .then(res => res.json())
+            .then(data => setFixtures(data))
+            .catch(err => console.error("Failed to fetch fixtures:", err));
+    }, []);
 
     const gameweekFixtures = fixtures.filter(f => f.event === currentGameweek);
 
@@ -21,13 +28,23 @@ function FixturesTable({ gameweeks, defaultGameweek }) {
         }
     };
 
-    // קיבוץ לפי יום
     const fixturesByDay = gameweekFixtures.reduce((acc, fix) => {
         const dateKey = new Date(fix.kickoff_time).toDateString();
         if (!acc[dateKey]) acc[dateKey] = [];
         acc[dateKey].push(fix);
         return acc;
     }, {});
+
+    const sortedFixturesByDay = Object.entries(fixturesByDay)
+        .map(([day, dayFixtures]) => [
+            day,
+            dayFixtures.sort(
+                (a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time)
+            ),
+        ])
+        .sort(
+            (a, b) => new Date(a[1][0].kickoff_time) - new Date(b[1][0].kickoff_time)
+        );
 
     return (
         <div className={Style.fixturesWrapper}>
@@ -60,7 +77,7 @@ function FixturesTable({ gameweeks, defaultGameweek }) {
             </div>
 
             <div className={Style["fixtures-table"]}>
-                {Object.entries(fixturesByDay).map(([day, dayFixtures]) => (
+                {sortedFixturesByDay.map(([day, dayFixtures]) => (
                     <div key={day} className={Style["fixtures-day-block"]}>
                         <h4 className={Style["fixtures-day-title"]}>
                             {new Date(dayFixtures[0].kickoff_time).toLocaleDateString("en-GB", {
@@ -78,6 +95,5 @@ function FixturesTable({ gameweeks, defaultGameweek }) {
         </div>
     );
 }
-
 
 export default FixturesTable;

@@ -1,0 +1,84 @@
+.block {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    font-family: "Poppins", sans-serif;
+}
+
+.header {
+    background: linear-gradient(135deg, #00e5ff, #a64aff 80%);
+    color: #220030;
+    font-weight: 700;
+    padding: 14px 16px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon {
+    color: #00ffc8;
+    font-size: 1.2rem;
+}
+
+.tableWrapper {
+    max-height: none;
+    overflow: visible;
+}
+
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table thead {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.4px;
+    color: #666;
+    background: #fafafa;
+}
+
+.table th,
+.table td {
+    text-align: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.playerCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
+.photo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.points {
+    font-weight: 700;
+    color: #38003c;
+}
+
+.loading {
+    text-align: center;
+    padding: 14px;
+    color: #777;
+    font-size: 0.9rem;
+}
+
+.player-shirt {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    margin-right: 6px;
+    vertical-align: middle;
+}

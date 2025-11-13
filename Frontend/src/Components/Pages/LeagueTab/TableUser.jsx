@@ -8,14 +8,14 @@ function TableUser({ user, currentUser }) {
         if (user.userId === currentUser.id) {
             navigate("/points");
         } else {
-            navigate(`/points/${user.userId}`);
+            navigate(`/points/${user.id}`);
         }
     };
 
     return (
         <div className={Style.tableUser} onClick={handleClick}>
-            <span className={Style.userName}>{user.username}</span>
-            <span className={Style.userTeam}>{user.fantasyTeam}</span>
+            <span className={Style.userName}>{user.name}</span>
+            <span className={Style.userTeam}>{user.fantasyTeamName}</span>
         </div>
     );
 }

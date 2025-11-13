@@ -38,3 +38,19 @@
 .activeLink::after {
     width: 100%;
 }
+
+.logoutLink {
+    color: #ff3b3b;
+}
+
+.logoutLink::after {
+    background: #ff3b3b;
+}
+
+.logoutLink:hover {
+    color: #ff6b6b;
+}
+
+.logoutLink:hover::after {
+    width: 100%;
+}

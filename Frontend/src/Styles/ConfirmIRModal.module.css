@@ -1,0 +1,104 @@
+.modalBackdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal {
+    background: #fff;
+    color: #222;
+    border-radius: 12px;
+    padding: 24px;
+    width: 320px;
+    text-align: center;
+}
+
+.title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #111;
+}
+
+.message {
+    font-size: 1rem;
+    color: #222;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.playerName {
+    color: #7100ff;
+    font-weight: 700;
+}
+
+.notice {
+    background: #fff5f5;
+    border: 1px solid #ffcccc;
+    color: #b00000;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    margin-bottom: 18px;
+}
+
+.noticeLabel {
+    font-weight: 700;
+    color: #a00000;
+}
+
+.modalButtons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+}
+
+.confirmButton {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.confirmButton {
+    background: linear-gradient(90deg, #ff0033, #b00000);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+    transition: all 0.25s ease;
+}
+
+.confirmButton:hover {
+    background: linear-gradient(90deg, #ff1a40, #cc0000);
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.5);
+    transform: scale(1.03);
+}
+
+.cancelButton {
+    background: #ddd;
+    color: #222;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.cancelButton:hover {
+    background: #ccc;
+}

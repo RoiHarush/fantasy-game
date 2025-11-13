@@ -1,14 +1,20 @@
-import { useState } from "react";
-import ScoutWrapper from "./ScoutWrapper";
 import Style from "../../../Styles/Scout.module.css";
+import { usePlayers } from "../../../Context/PlayersContext";
+import PlayersWrapper from "../../General/PlayersWrapper";
 
-function Scout({ initialUser, players }) {
-    const [user, setUser] = useState(initialUser);
+function Scout({ user }) {
+    const { players } = usePlayers();
+
+    if (!players || players.length === 0) {
+        return <div>Loading players...</div>;
+    }
 
     return (
         <div className={Style.scoutPage}>
             <h2 className={Style.title}>Scout</h2>
-            <ScoutWrapper players={players} user={user} setUser={setUser} />
+            <PlayersWrapper
+                user={user}
+            />
         </div>
     );
 }

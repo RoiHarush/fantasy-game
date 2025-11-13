@@ -1,0 +1,200 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.compareModal {
+    background: #fff;
+    width: min(90vw, 950px);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.25s ease-in;
+    display: flex;
+    flex-direction: column;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #222;
+    z-index: 5;
+}
+
+.closeBtn:hover {
+    color: #008cff;
+}
+
+.compareHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(135deg, #00e5ff 0%, #008cff 100%);
+    color: #fff;
+    padding: 16px 24px 0;
+    position: relative;
+}
+
+.playerSection {
+    display: flex;
+    align-items: flex-end;
+    width: 42%;
+    min-height: 180px;
+}
+
+.left {
+    flex-direction: row;
+}
+
+.right {
+    flex-direction: row-reverse;
+}
+
+.right .details {
+    transform: translateX(80px);
+}
+
+.playerImage {
+    width: 110px;
+    height: 140px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    position: relative;
+}
+
+.details {
+    flex: 1;
+    margin: 0 16px;
+}
+
+.name {
+    font-size: clamp(1.1rem, 1.3vw, 1.5rem);
+    margin: 5px 0;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.position {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.team {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.totalPoints {
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.vsText {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg,
+            #b56cff 0%,
+            #9b2fff 35%,
+            #7f3fff 70%,
+            #d08aff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+}
+
+.compareContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    background: #fff;
+    padding: 20px;
+    overflow-x: hidden;
+}
+
+.side {
+    width: 48%;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+}
+
+.side table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.side::-webkit-scrollbar {
+    height: 6px;
+}
+
+.side::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.table th,
+.table td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.iconRow img {
+    width: 18px;
+    height: 18px;
+    opacity: 0.9;
+    margin-bottom: 3px;
+}
+
+.tabSwitch {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px auto 10px;
+}
+
+.tabBtn {
+    border: none;
+    background: #f0f0f0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #333;
+}
+
+.tabBtn.active {
+    background: linear-gradient(135deg, #00e5ff, #00bfa5);
+    color: #fff;
+}

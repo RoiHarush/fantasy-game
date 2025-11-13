@@ -28,35 +28,31 @@
 }
 
 
-
-/* .bench {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    width: 78%;
-    margin: 0 auto 15px auto;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 2px 2px 0 0;
-} */
-
-
 .bench {
     grid-column: 1 / -1;
     grid-row: 5;
-    /* מוודא שהוא תמיד בשורה האחרונה */
     align-self: end;
-    /* מצמיד לתחתית השורה */
     justify-self: center;
-    /* ממורכז לרוחב */
     display: flex;
     justify-content: center;
     gap: 20px;
     width: 78%;
-    /* תשחק עם זה */
     padding: 10px;
     background: rgba(255, 255, 255, 0.4);
     border-radius: 2px 2px 0 0;
+}
+
+.bench-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.bench-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-top: 2px;
+    letter-spacing: 0.5px;
 }

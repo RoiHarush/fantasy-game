@@ -1,4 +1,24 @@
+.pitchContainer {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.irSlotContainer {
+    position: absolute;
+    left: -100px;
+    top: 45%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 6px;
+    z-index: 20;
+}
+
 .pitchWrapper {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -48,8 +68,6 @@
     pointer-events: none;
 }
 
-
-
 .block {
     width: 90%;
     margin: 0 auto;
@@ -68,4 +86,54 @@
 
 .switchBtn {
     margin: 0 5px;
+}
+
+.irLabel {
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.75rem;
+    background: linear-gradient(90deg, #a000c4, #7100ff);
+    border-radius: 6px;
+    padding: 3px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.irCard,
+.irCardEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    padding: 8px;
+    width: 60px;
+    transition: 0.2s ease;
+}
+
+.irPlayerImg,
+.irEmptyImg {
+    width: 50px;
+    height: auto;
+    border-radius: 6px;
+    background: #f2f2f2;
+}
+
+.irName {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #222;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.player-shirt {
+    width: 62px;
+    height: auto;
+}
+
+.pointsButtonInside[style*="hidden"] {
+    pointer-events: none;
 }

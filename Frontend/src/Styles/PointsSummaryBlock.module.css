@@ -1,0 +1,87 @@
+.block {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    font-family: "Poppins", sans-serif;
+    width: 100%;
+}
+
+.header {
+    background: linear-gradient(135deg, #00e5ff, #a64aff 80%);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+}
+
+.flag {
+    width: 32px;
+    height: 22px;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+.userInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: lowercase;
+}
+
+.team {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-top: -2px;
+}
+
+.tab {
+    background: #38003c;
+    color: #00e5ff;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.stats {
+    padding: 14px 18px;
+    color: #220030;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.value {
+    font-weight: 700;
+    color: #38003c;
+}
+
+.history {
+    text-align: right;
+    padding: 10px 18px 14px;
+    color: #38003c;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.history:hover {
+    color: #00e5ff;
+}

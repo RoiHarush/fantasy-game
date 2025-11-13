@@ -2,10 +2,13 @@
     min-height: 500px;
     max-height: 500px;
     overflow-y: auto;
+    /* פס גלילה יחיד */
     border: 1px solid #ddd;
     background: #fff;
+    position: relative;
 }
 
+/* טבלה אמיתית */
 .tableContainer table {
     width: 100%;
     border-collapse: collapse;
@@ -13,6 +16,7 @@
     font-size: 0.95rem;
 }
 
+/* כותרת עליונה */
 .tableContainer thead {
     border-bottom: 1px solid #ddd;
 }
@@ -21,84 +25,53 @@
     position: sticky;
     top: 0;
     background: #fff;
-    color: #666;
+    color: #555;
     font-weight: 600;
     text-align: left;
     padding: 10px 12px;
     z-index: 2;
     font-size: 0.85rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #ddd;
 }
 
+/* ממרכז עמודות ניקוד ומחזורים */
 .tableContainer thead th:nth-child(2),
 .tableContainer thead th:nth-child(3),
-.tableContainer thead th:nth-child(4) {
-    text-align: center;
-}
-
-.tableContainer tbody tr {
-    background: #fff;
-    height: 56px;
-    border-bottom: 1px solid #eee;
-}
-
-.tableContainer td {
-    padding: 8px 12px;
-    vertical-align: middle;
-    text-align: left;
-}
-
-.tableContainer td:nth-child(2) {
-    text-align: center;
-    font-weight: 500;
-}
-
+.tableContainer thead th:nth-child(4),
+.tableContainer td:nth-child(2),
 .tableContainer td:nth-child(3),
 .tableContainer td:nth-child(4) {
     text-align: center;
 }
 
-.player-main-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
+/* שורות גוף */
+.tableContainer tbody tr {
+    background: #fff;
+    height: 56px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.15s ease;
+}
+
+.tableContainer tbody tr:hover {
+    background: #f9f9f9;
+}
+
+/* תאים רגילים */
+.tableContainer td {
     color: #222;
-    border-right: 1px solid #ddd;
-}
-
-.player-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.player-shirt {
-    width: 25px;
-    height: 25px;
-    object-fit: contain;
-}
-
-
-.player-info {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.2;
-}
-
-.player-name {
-    font-weight: 600;
-    color: #222;
+    padding: 8px 12px;
+    vertical-align: middle;
+    text-align: left;
     white-space: nowrap;
-    font-size: 0.95rem;
 }
 
-.player-subinfo {
-    font-size: 0.8rem;
-    color: #000000;
-    white-space: nowrap;
-    font-weight: 400;
+/* יישור עמודת הבעלים למרכז */
+.tableContainer td:last-child {
+    text-align: center;
 }
 
+/* כפתורים */
 .tableContainer button {
     min-width: 70px;
     padding: 5px 12px;
@@ -107,7 +80,8 @@
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .tableContainer button:hover:not(:disabled) {
@@ -120,18 +94,24 @@
     cursor: default;
 }
 
-.watch-btn {
-    background: #fafafa;
-    border: 1px solid #ddd;
-    color: #333;
+/* עיצוב ריווח אופקי אחיד */
+.tableContainer td:first-child,
+.tableContainer th:first-child {
+    padding-left: 16px;
 }
 
-.sign-btn {
-    background: #00e0c6;
-    color: #fff;
+.tableContainer td:last-child,
+.tableContainer th:last-child {
+    padding-right: 16px;
 }
 
-.trade-btn {
-    background: #a020f0;
-    color: #fff;
+/* ביטול outline כשגוללים עם מקלדת */
+.tableContainer:focus {
+    outline: none;
+}
+
+/* placeholder rows */
+.tableContainer tbody tr:empty td {
+    border: none;
+    background: transparent;
 }
