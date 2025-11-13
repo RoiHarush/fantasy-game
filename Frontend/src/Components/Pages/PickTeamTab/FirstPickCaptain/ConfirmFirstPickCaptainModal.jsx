@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import ReactDOM from "react-dom";
-import Style from "../../../../Styles/confirmFirstPickCaptainModal.module.css";
+import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 import { usePlayers } from "../../../../Context/PlayersContext";
 
 function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, isActive }) {
