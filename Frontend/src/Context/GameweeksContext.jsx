@@ -10,25 +10,40 @@ export function GameweekProvider({ children }) {
     const [lastGameweek, setLastGameweek] = useState(null);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/gameweeks`)
-            .then(res => res.json())
-            .then(setGameweeks)
-            .catch(err => console.error("Failed to fetch gameweeks:", err));
+        async function safeFetch(url, fallback = null) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    console.error(`Fetch failed (${res.status}) for: ${url}`);
+                    return fallback;
+                }
 
-        fetch(`${API_URL}/api/gameweeks/current`)
-            .then(res => res.json())
-            .then(setCurrentGameweek)
-            .catch(err => console.error("Failed to fetch current gameweek:", err));
+                try {
+                    return await res.json();
+                } catch {
+                    console.error(`Bad JSON for: ${url}`);
+                    return fallback;
+                }
+            } catch (err) {
+                console.error(`Network error for: ${url}`, err);
+                return fallback;
+            }
+        }
 
-        fetch(`${API_URL}/api/gameweeks/next`)
-            .then(res => res.json())
-            .then(setNextGameweek)
-            .catch(err => console.error("Failed to fetch next gameweek:", err));
+        (async () => {
+            const gw = await safeFetch(`${API_URL}/api/gameweeks`, []);
+            setGameweeks(gw);
 
-        fetch(`${API_URL}/api/gameweeks/last`)
-            .then(res => res.json())
-            .then(setLastGameweek)
-            .catch(err => console.error("Failed to fetch last gameweek:", err));
+            const current = await safeFetch(`${API_URL}/api/gameweeks/current`, null);
+            setCurrentGameweek(current);
+
+            const next = await safeFetch(`${API_URL}/api/gameweeks/next`, null);
+            setNextGameweek(next);
+
+            const last = await safeFetch(`${API_URL}/api/gameweeks/last`, null);
+            setLastGameweek(last);
+        })();
+
     }, []);
 
     return (

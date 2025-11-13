@@ -11,14 +11,30 @@ export async function getUserFromId(id) {
 
     try {
         const res = await fetch(`${API_URL}/api/users/${id}`);
-        if (!res.ok) throw new Error("User not found");
-        const user = await res.json();
+
+        if (!res.ok) {
+            if (res.status === 404) {
+                console.warn(`User ${id} not found`);
+                return null;
+            }
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        let user;
+        try {
+            user = await res.json();
+        } catch {
+            console.error("Bad JSON response from server");
+            return null;
+        }
 
         userCache.set(id, user);
         return user;
+
     } catch (err) {
-        console.error("Failed to fetch user:", err);
+        console.error("Network or fetch error:", err.message);
         return null;
     }
 }
+
 

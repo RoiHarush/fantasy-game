@@ -101,22 +101,53 @@ function OtherUserPointsWrapper() {
   const { userId } = useParams();
   const [otherUser, setOtherUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/users/${userId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("User not found");
-        return res.json();
-      })
-      .then((data) => setOtherUser(data))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    async function loadUser() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(`${API_URL}/api/users/${userId}`);
+
+        if (!res.ok) {
+          if (res.status === 404) throw new Error("User not found");
+          throw new Error("Failed to fetch user");
+        }
+
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Bad JSON response");
+        }
+
+        if (!cancelled) {
+          setOtherUser(data);
+        }
+
+      } catch (err) {
+        console.error("❌ Fetch error:", err.message);
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadUser();
+
+    return () => (cancelled = true);
   }, [userId]);
 
   if (loading) return <div>Loading...</div>;
+  if (error) return <div style={{ color: "red" }}>{error}</div>;
   if (!otherUser) return <div>User not found</div>;
 
   return <PointsPage user={otherUser} />;
 }
+
 
 export default App;

@@ -9,21 +9,28 @@ export function FixturesProvider({ children }) {
     const getFixturesForTeam = useCallback(async (teamId) => {
         if (!teamId) return {};
 
-        // cache hit
+        // clean cache read
         if (cache[teamId]) return cache[teamId];
 
         try {
             const res = await fetch(`${API_URL}/api/fixtures/team/${teamId}`);
             if (!res.ok) throw new Error("Failed to fetch fixtures");
+
             const data = await res.json();
 
-            setCache(prev => ({ ...prev, [teamId]: data }));
+            setCache(prev => ({
+                ...prev,
+                [teamId]: data
+            }));
+
             return data;
+
         } catch (err) {
             console.error("Error fetching fixtures:", err);
             return {};
         }
-    }, [cache]);
+    }, []); // 🎯 יציב תמיד
+
 
     return (
         <FixturesContext.Provider value={{ getFixturesForTeam }}>

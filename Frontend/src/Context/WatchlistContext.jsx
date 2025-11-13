@@ -10,52 +10,91 @@ export function WatchlistProvider({ user, children }) {
 
     useEffect(() => {
         if (!user?.id) return;
-        fetch(`${API_URL}/api/users/${user.id}/watchlist`)
-            .then(res => res.json())
-            .then(setWatchlist)
-            .catch(err => console.error("Failed to fetch watchlist:", err));
+
+        let cancelled = false;
+
+        async function loadWatchlist() {
+            try {
+                const res = await fetch(`${API_URL}/api/users/${user.id}/watchlist`);
+
+                if (!res.ok) {
+                    console.error(`Watchlist fetch failed: HTTP ${res.status}`);
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch {
+                    console.error("Bad JSON for watchlist");
+                    return;
+                }
+
+                if (!cancelled) {
+                    setWatchlist(Array.isArray(data) ? data : []);
+                }
+            } catch (err) {
+                console.error("Network error fetching watchlist:", err);
+            }
+        }
+
+        loadWatchlist();
+        return () => (cancelled = true);
+
     }, [user]);
 
+
+    // ----- WebSockets -----
     useEffect(() => {
         if (!connected || !user?.id) return;
+
         const sub = subscribe(`/topic/watchlist/${user.id}`, (msg) => {
             if (!msg.body || msg.body === "undefined") return;
+
             try {
                 const updated = JSON.parse(msg.body);
                 setWatchlist(Array.isArray(updated) ? updated : []);
-            } catch (err) {
+            } catch {
                 console.error("Invalid JSON from WS:", msg.body);
             }
         });
-        return () => unsubscribe(sub);
-    }, [connected, user]);
 
+        return () => unsubscribe(sub);
+
+    }, [connected, user, subscribe, unsubscribe]);
+
+
+    // ----- Toggle -----
     const toggleWatch = async (playerId, isWatched) => {
+        // optimistic UI
         setWatchlist((prev) => {
-            if (isWatched) {
-                return prev.filter((id) => id !== playerId);
-            } else {
-                return [...prev, playerId];
-            }
+            return isWatched
+                ? prev.filter((id) => id !== playerId)
+                : [...prev, playerId];
         });
 
         try {
             const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
-            await fetch(endpoint, {
+            const res = await fetch(endpoint, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ playerId }),
+                body: JSON.stringify({ playerId })
             });
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+
         } catch (err) {
             console.error("Failed to update watchlist:", err);
+
+            // rollback
             setWatchlist((prev) => {
-                if (isWatched) {
-                    return [...prev, playerId];
-                } else {
-                    return prev.filter((id) => id !== playerId);
-                }
+                return isWatched
+                    ? [...prev, playerId]
+                    : prev.filter((id) => id !== playerId);
             });
         }
     };
