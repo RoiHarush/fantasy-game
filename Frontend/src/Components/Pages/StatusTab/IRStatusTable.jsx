@@ -16,7 +16,6 @@ function IRStatusTable() {
         <div className={Style.irStatusSection}>
             <h3>IR Status</h3>
 
-            {/* הוספנו את העטיפה כאן */}
             <div className={Style.tableWrapper}>
                 <table className={Style.irTable}>
                     <thead>
@@ -37,7 +36,6 @@ function IRStatusTable() {
                     </tbody>
                 </table>
             </div>
-            {/* סוף העטיפה */}
 
         </div>
     );
