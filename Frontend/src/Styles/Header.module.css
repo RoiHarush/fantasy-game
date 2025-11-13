@@ -11,9 +11,10 @@
 .topSection {
     position: relative;
     padding: 0 20px;
-    height: 90px;
+    min-height: 90px;
     display: flex;
     align-items: center;
+    box-sizing: border-box;
 }
 
 .topBar {
@@ -40,5 +41,17 @@
     width: 100%;
     display: flex;
     justify-content: flex-start;
-    flex-wrap: wrap;
+
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.navBar::-webkit-scrollbar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.navBar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
 }

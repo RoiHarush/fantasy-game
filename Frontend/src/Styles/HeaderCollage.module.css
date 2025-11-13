@@ -1,25 +1,24 @@
+/* --- בסיס (מובייל) --- */
 .collage {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    width: 100%;
-    height: auto;
-    overflow: hidden;
-    margin: 0;
+    display: none;
+    /* כברירת מחדל, הקולאז' מוסתר */
 }
 
-.collage img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-}
-
+/* --- דסקטופ (החל מ-768px ומעלה) --- */
 @media (min-width: 768px) {
     .collage {
+        display: grid;
+        /* הצג את הקולאז' רק במסכים רחבים */
         grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+        width: 100%;
         height: 300px;
+        overflow: hidden;
+        margin: 0;
     }
 
     .collage img {
+        width: 100%;
         height: 100%;
+        object-fit: cover;
     }
 }
