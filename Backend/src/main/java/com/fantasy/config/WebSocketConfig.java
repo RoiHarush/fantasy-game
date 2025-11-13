@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://localhost:5173",
                         "http://192.168.*.*:5173",
                         "https://fantasy-draft-sigma.vercel.app",
-                        "https://*.ngrok-free.app"
+                        "https://*.ngrok-free.dev"
                 )
                 .withSockJS();
     }

@@ -20,7 +20,8 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "http://192.168.68.53:5173",
                         "https://fantasy-draft-sigma.vercel.app",
-                        "https://mari-saccharine-kaysen.ngrok-free.dev"
+                        "https://mari-saccharine-kaysen.ngrok-free.dev",
+                        "https://move-aims-marine-blah.trycloudflare.com"
                 )
                 .allowedMethods("*")
                 .allowedHeaders("*")
