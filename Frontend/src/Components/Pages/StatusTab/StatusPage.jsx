@@ -6,7 +6,7 @@ function StatusPage({ user }) {
     return (
         <PageLayout
             left={<Status user={user} />}
-        // right={<StatusSidebar user={user} />}
+            right={<StatusSidebar user={user} />}
         />
     );
 }

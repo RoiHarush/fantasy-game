@@ -60,7 +60,7 @@ function Status({ user }) {
                 ]}
             />
 
-            {/* <PlayerOfTheWeekBlock /> */}
+            <PlayerOfTheWeekBlock />
 
             <IRStatusTable />
         </div>
