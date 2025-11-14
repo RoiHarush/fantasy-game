@@ -73,7 +73,7 @@ public class StartupLoader {
 //        seedInitialLeague();
 //        initializeTransferOrderForGW8();
         loadToMemory();
-        printAll();
+//        printAll();
 
         System.out.println("=== STARTUP COMPLETE ===");
     }
