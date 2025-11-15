@@ -1,13 +1,17 @@
-FROM eclipse-temurin:21-jdk-jammy
-
+FROM eclipse-temurin:21-jdk-jammy AS builder
 WORKDIR /app
 
 COPY . .
 
 RUN chmod +x ./gradlew
+RUN ./gradlew clean build -x test --no-daemon
 
-RUN ./gradlew build --no-daemon
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
 
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+ENV PORT=8080
 EXPOSE 8080
 
-CMD ["java", "-jar", "build/libs/app.jar"]
+CMD ["java", "-jar", "app.jar"]
