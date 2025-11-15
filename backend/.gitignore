@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+!src/**/build/
+
+# IntelliJ / JetBrains
+.idea/
+*.iml
+*.iws
+out/
+
+# Logs
+logs/
+*.log
+hs_err_pid*
+replay_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# H2 database files
+*.mv.db
+*.log.db
+
+# Temporary files
+*.swp
+*.tmp
+*.bak
