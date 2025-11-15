@@ -10,7 +10,6 @@ public class League {
     private final List<User> users;
     private final String leagueCode;
     private final User admin;
-    private int currentGameweek;
 
     public League(User admin, String name, String leagueCode) {
         this.admin = admin;
@@ -24,8 +23,6 @@ public class League {
     public User getAdmin() { return admin; }
     public List<User> getUsers() { return users; }
     public String getLeagueCode() { return leagueCode; }
-    public int getCurrentGameweek() { return currentGameweek; }
-    public void setCurrentGameweek(int gw) { this.currentGameweek = gw; }
 
     public void userEnter(User user, String userCode) {
         if (user != null && LeagueLogic.userEnter(userCode, this.leagueCode))

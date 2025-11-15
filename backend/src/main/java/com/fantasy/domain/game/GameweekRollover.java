@@ -25,6 +25,7 @@ public class GameweekRollover {
         Map<String, Boolean> activeChips = user.getActiveChips();
         activeChips.put("FIRST_PICK_CAPTAIN", false);
         user.setActiveChips(activeChips);
+        user.getPointsByGameweek().put(gameweek, 0);
     }
 
     private static Squad copySquad(Squad squad){

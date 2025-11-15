@@ -383,7 +383,6 @@ public class StartupLoader {
             league.setLeagueCode("123ABC");
             league.setAdmin(userRepo.findById(1).orElseThrow());
             league.setUsers(userRepo.findAll());
-            league.setGameweek(7);
             leagueRepo.save(league);
         }
     }
@@ -464,7 +463,6 @@ public class StartupLoader {
 
             liveLeague.getUsers().addAll(domainUsers);
 
-            liveLeague.setCurrentGameweek(liveGw.getId());
             liveLeague.sortUsers();
             InMemoryData.setActiveLeague(liveLeague);
         }

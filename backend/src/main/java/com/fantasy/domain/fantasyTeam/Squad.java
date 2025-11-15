@@ -304,7 +304,7 @@ public class Squad implements Draftable {
 
     private void removeIRFromBench(Player ir) {
         if (ir.getPosition().equals(PlayerPosition.GOALKEEPER)) {
-            bench.remove("GK");
+            bench.put("GK", null);
             return;
         }
 
@@ -318,10 +318,6 @@ public class Squad implements Draftable {
                     break;
                 }
             }
-        }
-
-        if (bench.get("S3") == null) {
-            bench.remove("S3");
         }
     }
 

@@ -14,7 +14,6 @@ public class LeagueEntity {
 
     private String name;
     private String leagueCode;
-    private int gameweek;
 
     @ManyToOne
     @JoinColumn(name = "admin_id")
@@ -30,15 +29,13 @@ public class LeagueEntity {
 
     public LeagueEntity() {}
 
-    public LeagueEntity(String name, String leagueCode, UserEntity admin, int gameweek, List<UserEntity> users) {
+    public LeagueEntity(String name, String leagueCode, UserEntity admin, List<UserEntity> users) {
         this.name = name;
         this.leagueCode = leagueCode;
         this.admin = admin;
-        this.gameweek = gameweek;
         this.users = users;
     }
 
-    public int getGameweek() { return gameweek; }
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getLeagueCode() { return leagueCode; }
@@ -50,6 +47,4 @@ public class LeagueEntity {
     public void setLeagueCode(String leagueCode) { this.leagueCode = leagueCode; }
     public void setAdmin(UserEntity admin) { this.admin = admin; }
     public void setUsers(List<UserEntity> users) { this.users = users; }
-    public void setGameweek(int gameweek) { this.gameweek = gameweek; }
-
 }

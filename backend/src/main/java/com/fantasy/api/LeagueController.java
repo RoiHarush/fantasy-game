@@ -1,5 +1,6 @@
 package com.fantasy.api;
 
+import com.fantasy.application.GameWeekService;
 import com.fantasy.domain.league.League;
 import com.fantasy.dto.LeagueDto;
 import com.fantasy.dto.UserSummaryDto;
@@ -11,6 +12,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/league")
 public class LeagueController {
+
+    private final GameWeekService gameWeekService;
+
+    public LeagueController(GameWeekService gameWeekService) {
+        this.gameWeekService = gameWeekService;
+    }
 
     @GetMapping
     public LeagueDto getLiveLeague() {
@@ -27,7 +34,7 @@ public class LeagueController {
                         u.getName(),
                         u.getFantasyTeamName(),
                         u.getTotalPoints(),
-                        u.getPointsByGameweek().getOrDefault(liveLeague.getCurrentGameweek(), 0),
+                        u.getPointsByGameweek().getOrDefault(gameWeekService.getCurrentGameweek().getId(), 0),
                         liveLeague.getUsers().indexOf(u) + 1
                 ))
                 .toList();
