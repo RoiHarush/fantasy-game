@@ -14,6 +14,7 @@ import Login from "./Components/Auth/Login";
 import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
 import API_URL from "./config";
 import { WatchlistProvider } from "./Context/WatchlistContext";
+import Test from "./Test";
 
 function App() {
   const [loggedUser, setLoggedUser] = useState(null);
@@ -81,15 +82,16 @@ function App() {
               element={<TransferWindowPage user={loggedUser} />}
             />
 
-            {/* <Route
+            <Route
               path="/draft-room"
               element={
                 <PageLayout
-                  left={<DraftRoom initialUser={loggedUser} />}
-                  right={<div>Sidebar for Draft Room</div>}
+                  // left={<DraftRoom initialUser={loggedUser} />}
+                  // right={<div>Sidebar for Draft Room</div>}
+                  left={<Test />}
                 />
               }
-            /> */}
+            />
           </Routes>
         </main>
       </div>

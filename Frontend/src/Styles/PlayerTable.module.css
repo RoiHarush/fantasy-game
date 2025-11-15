@@ -2,13 +2,11 @@
     min-height: 500px;
     max-height: 500px;
     overflow-y: auto;
-    /* פס גלילה יחיד */
     border: 1px solid #ddd;
     background: #fff;
     position: relative;
 }
 
-/* טבלה אמיתית */
 .tableContainer table {
     width: 100%;
     border-collapse: collapse;
@@ -16,7 +14,6 @@
     font-size: 0.95rem;
 }
 
-/* כותרת עליונה */
 .tableContainer thead {
     border-bottom: 1px solid #ddd;
 }
@@ -35,7 +32,6 @@
     border-bottom: 1px solid #ddd;
 }
 
-/* ממרכז עמודות ניקוד ומחזורים */
 .tableContainer thead th:nth-child(2),
 .tableContainer thead th:nth-child(3),
 .tableContainer thead th:nth-child(4),
@@ -45,7 +41,6 @@
     text-align: center;
 }
 
-/* שורות גוף */
 .tableContainer tbody tr {
     background: #fff;
     height: 56px;
@@ -57,7 +52,6 @@
     background: #f9f9f9;
 }
 
-/* תאים רגילים */
 .tableContainer td {
     color: #222;
     padding: 8px 12px;
@@ -66,12 +60,10 @@
     white-space: nowrap;
 }
 
-/* יישור עמודת הבעלים למרכז */
 .tableContainer td:last-child {
     text-align: center;
 }
 
-/* כפתורים */
 .tableContainer button {
     min-width: 70px;
     padding: 5px 12px;
@@ -94,7 +86,6 @@
     cursor: default;
 }
 
-/* עיצוב ריווח אופקי אחיד */
 .tableContainer td:first-child,
 .tableContainer th:first-child {
     padding-left: 16px;
@@ -105,12 +96,10 @@
     padding-right: 16px;
 }
 
-/* ביטול outline כשגוללים עם מקלדת */
 .tableContainer:focus {
     outline: none;
 }
 
-/* placeholder rows */
 .tableContainer tbody tr:empty td {
     border: none;
     background: transparent;

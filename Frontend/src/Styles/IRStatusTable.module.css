@@ -6,10 +6,8 @@
     border: 1px solid rgba(0, 140, 255, 0.15);
     box-shadow: 0 4px 16px rgba(0, 140, 255, 0.15);
 
-    /* שינוי חשוב 1: הסרנו את הגלילה מכאן והוספנו רוחב קשיח */
     width: 100%;
     box-sizing: border-box;
-    /* קריטי כדי שהפדינג לא ירחיב את הבלוק */
 }
 
 .irStatusSection h3 {
@@ -20,25 +18,20 @@
     letter-spacing: 0.4px;
 }
 
-/* שינוי חשוב 2: מחלקה חדשה שעוטפת את הטבלה */
 .tableWrapper {
     width: 100%;
     overflow-x: auto;
-    /* הגלילה עוברת לכאן */
     -webkit-overflow-scrolling: touch;
-    /* גלילה חלקה באייפון */
 }
 
 .irTable {
     width: 100%;
     min-width: 600px;
-    /* הטבלה עדיין רחבה, אבל בתוך הראפר */
     border-collapse: collapse;
     color: #004d80;
     font-size: 0.95rem;
 }
 
-/* שאר ה-CSS נשאר זהה... */
 .irTable thead th {
     text-align: left;
     padding: 12px 14px;
@@ -74,7 +67,6 @@
     color: #00b8ff;
 }
 
-/* עיצוב סרגל גלילה לראפר החדש */
 .tableWrapper::-webkit-scrollbar {
     height: 6px;
     background: rgba(0, 140, 255, 0.05);

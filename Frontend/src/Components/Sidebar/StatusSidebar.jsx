@@ -3,11 +3,11 @@ import LeagueBlock from "./LeagueBlock";
 import styles from "../../Styles/StatusSidebar.module.css";
 import TeamOfTheWeekBlock from "./TeamOfTheWeekBlock";
 
-function StatusSidebar({ user }) {
+function StatusSidebar({ user, league }) {
     return (
         <div className={styles.statusSidebar}>
             <SidebarContainer>
-                <LeagueBlock currentUser={user} />
+                <LeagueBlock league={league} currentUser={user} />
                 <TeamOfTheWeekBlock />
             </SidebarContainer>
         </div>

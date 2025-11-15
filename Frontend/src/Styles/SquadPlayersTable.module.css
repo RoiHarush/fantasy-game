@@ -15,7 +15,6 @@
     border-bottom: none;
 }
 
-/* === כותרת העמדה (תגית קטנה) === */
 .positionHeader {
     display: inline-block;
     background: #38003c;
@@ -31,7 +30,6 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* === עיצוב טבלה === */
 .table {
     width: 100%;
     border-collapse: collapse;
@@ -57,7 +55,6 @@ th {
     width: 60px;
 }
 
-/* === שורות השחקנים === */
 .row {
     height: 54px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);

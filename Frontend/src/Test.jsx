@@ -1,21 +1,12 @@
-import { useEffect, useState } from "react";
+import LoadingPage from "./Components/General/LoadingPage";
 
-function TestFetch() {
-    const [message, setMessage] = useState("");
-
-    useEffect(() => {
-        fetch("http://localhost:8080/hello")
-            .then((res) => res.json())
-            .then((data) => setMessage(data.message))
-            .catch((err) => console.error("Error fetching:", err));
-    }, []);
+function Test() {
 
     return (
         <div>
-            <h1>Message from server:</h1>
-            <p>{message}</p>
+            <LoadingPage />
         </div>
     );
 }
 
-export default TestFetch;
+export default Test;

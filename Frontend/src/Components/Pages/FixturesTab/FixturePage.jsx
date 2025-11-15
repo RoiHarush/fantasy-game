@@ -11,7 +11,6 @@ function FixturePage({ user }) {
             right={
                 <SidebarContainer>
                     <PointsSummaryBlock user={user} />
-                    {/* בהמשך תוכל להוסיף עוד בלוקים כאן */}
                 </SidebarContainer>
             }
         />

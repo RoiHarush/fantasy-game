@@ -3,109 +3,58 @@ import Style from "../../../Styles/TransferWindow.module.css";
 import { usePlayers } from "../../../Context/PlayersContext";
 import ReplacementModal from "./ReplacementModal";
 import { useWebSocket } from "../../../Context/WebSocketContext";
-import API_URL from "../../../config";
 import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
+import { passTurn } from "../../../services/transferWindowService";
 
-function TransferWindow({ initialUser }) {
-    const [user, setUser] = useState(initialUser);
+function TransferWindow({ user, allUsers, initialWindowState }) {
     const { players, setPlayers } = usePlayers();
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
-    const [currentTurnUserId, setCurrentTurnUserId] = useState(null);
+    const [currentTurnUserId, setCurrentTurnUserId] = useState(initialWindowState?.currentUserId ?? null);
     const [lastTransferMessage, setLastTransferMessage] = useState(null);
-    const [isWindowOpen, setIsWindowOpen] = useState(false);
-    const [allUsers, setAllUsers] = useState([]);
+    const [isWindowOpen, setIsWindowOpen] = useState(initialWindowState?.isOpen ?? false);
+    const [turnOrder, setTurnOrder] = useState(initialWindowState?.order || []);
+    const [turnsUsed, setTurnsUsed] = useState(initialWindowState?.turnsUsed || {});
+    const [maxTurns, setMaxTurns] = useState(initialWindowState?.maxTurns || 2);
+    const [initialOrder, setInitialOrder] = useState(initialWindowState?.initialOrder || []);
     const { subscribe, unsubscribe, connected } = useWebSocket();
     const [irPosition, setIrPosition] = useState(null);
-    const [turnOrder, setTurnOrder] = useState([]);
-    const [turnsUsed, setTurnsUsed] = useState({});
-    const [maxTurns, setMaxTurns] = useState(2);
-    const [initialOrder, setInitialOrder] = useState([]);
 
-
-    const isDataReady = allUsers.length > 0 && initialOrder.length > 0;
-
+    const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
     function turnsUntilMyTurn() {
         if (!turnOrder.length || !currentTurnUserId) return null;
-
         const currentIndex = turnOrder.indexOf(currentTurnUserId);
         const myIndex = turnOrder.indexOf(user.id);
-
         if (currentIndex === -1 || myIndex === -1) return null;
-
         const diff = myIndex - currentIndex;
-
         const turnsLeft = diff >= 0 ? diff : turnOrder.length + diff;
-
         if (turnsLeft === 0) return 0;
         return turnsLeft;
     }
 
     useEffect(() => {
-        fetch(`${API_URL}/api/transfer-window/state`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.isOpen) {
-                    setIsWindowOpen(true);
-                    setCurrentTurnUserId(data.currentUserId);
-
-                    if (Array.isArray(data.initialOrder)) {
-                        setInitialOrder([...new Set(data.initialOrder)]);
-                    }
-
-                    if (Array.isArray(data.order)) {
-                        setTurnOrder(data.order);
-                    }
-
-                    if (data.turnsUsed) setTurnsUsed(data.turnsUsed);
-                    if (data.maxTurns) setMaxTurns(data.maxTurns);
-
-                    console.log("🔁 Joined existing window | Current turn:", data.currentUserId);
-                } else {
-                    setIsWindowOpen(false);
-                    console.log("🚪 Window currently closed");
-                }
-            })
-            .catch(err => console.error("Failed to fetch transfer window state:", err));
-    }, []);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/users`)
-            .then(res => res.json())
-            .then(data => setAllUsers(data))
-            .catch(err => console.error("Failed to load users:", err));
-    }, []);
-
-    useEffect(() => {
         if (!connected) return;
 
         const handleTransferEvent = (event) => {
-            console.log("📩 Transfer event received:", event);
-
             if (event.event === "window_opened") {
                 setIsWindowOpen(true);
                 setCurrentTurnUserId(event.userId);
-
                 if (Array.isArray(event.initialOrder) && initialOrder.length === 0) {
                     setInitialOrder([...new Set(event.initialOrder)]);
                 }
-
                 if (Array.isArray(event.turnOrder)) {
                     setTurnOrder(event.turnOrder);
                 }
-
                 if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
                 if (event.maxTurns) setMaxTurns(event.maxTurns);
-                console.log("🪟 Transfer window opened — first user:", event.userId);
                 return;
             }
 
             if (event.event === "window_closed") {
                 setIsWindowOpen(false);
                 setCurrentTurnUserId(null);
-                console.log("🚪 Transfer window closed — switching to ClosedWindow view");
                 return;
             }
 
@@ -124,7 +73,6 @@ function TransferWindow({ initialUser }) {
                 setIrPosition(event.irPosition);
                 if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
                 if (event.maxTurns) setMaxTurns(event.maxTurns);
-                console.log("⚕️ IR Round started | Position:", event.irPosition);
                 return;
             }
 
@@ -149,27 +97,22 @@ function TransferWindow({ initialUser }) {
             }
 
             if (event.event === "turn_passed") {
-                const { userId, userName } = event;
+                const { userName } = event;
                 setLastTransferMessage(`${userName || "User"} passed his turn!`);
-                console.log("⏩ Turn passed by:", userName);
                 return;
             }
 
             if (event.event === "info_message") {
                 if (event.userId === user.id) {
                     setLastTransferMessage(event.message);
-                    console.log("📢 Info message for me:", event.message);
-                } else {
-                    console.log("ℹ️ Info message for user", event.userId, ":", event.message);
                 }
                 return;
             }
-
         };
 
         subscribe("/topic/transfers", handleTransferEvent);
         return () => unsubscribe("/topic/transfers");
-    }, [connected, setPlayers, players]);
+    }, [connected, subscribe, unsubscribe, setPlayers, players, user, initialOrder.length]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
@@ -213,8 +156,8 @@ function TransferWindow({ initialUser }) {
                             <div
                                 key={id}
                                 className={`${Style.turnCard} 
-                    ${done ? Style.done : ""} 
-                    ${isCurrent ? Style.current : ""}`}
+                                    ${done ? Style.done : ""} 
+                                    ${isCurrent ? Style.current : ""}`}
                             >
                                 <div className={Style.userName}>{userName}</div>
                                 <div className={Style.turnProgress}>
@@ -230,7 +173,6 @@ function TransferWindow({ initialUser }) {
                         );
                     })}
                 </div>
-
             </div>
 
             <div className={Style.turnBar}>
@@ -240,15 +182,12 @@ function TransferWindow({ initialUser }) {
                             <span className={Style.myTurn}>Your turn to make a transfer</span>
                             <button
                                 className={Style.passButton}
-                                onClick={() => {
-                                    fetch(`${API_URL}/api/transfer-window/pass?userId=${user.id}`, {
-                                        method: "POST",
-                                    })
-                                        .then((res) => {
-                                            if (!res.ok) throw new Error("Failed to pass turn");
-                                            console.log("Turn passed successfully");
-                                        })
-                                        .catch((err) => console.error("Error passing turn:", err));
+                                onClick={async () => {
+                                    try {
+                                        await passTurn(user.id);
+                                    } catch (err) {
+                                        console.error("Error passing turn:", err);
+                                    }
                                 }}
                             >
                                 Pass Turn
@@ -272,7 +211,6 @@ function TransferWindow({ initialUser }) {
                 )}
             </div>
 
-
             {lastTransferMessage && (
                 <div className={Style.transferMessage}>{lastTransferMessage}</div>
             )}
@@ -285,7 +223,6 @@ function TransferWindow({ initialUser }) {
                 irPosition={irPosition}
             />
 
-
             {selectedPlayerIn && (
                 irPosition ? (
                     <IRSignModal
@@ -297,7 +234,7 @@ function TransferWindow({ initialUser }) {
                     <ReplacementModal
                         playerIn={selectedPlayerIn}
                         user={user}
-                        setUser={setUser}
+                        setUser={() => { }}
                         players={players}
                         onClose={() => setSelectedPlayerIn(null)}
                     />

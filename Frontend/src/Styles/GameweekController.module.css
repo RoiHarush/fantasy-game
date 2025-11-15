@@ -35,7 +35,6 @@
 
 @media (min-width: 768px) {
     .pointsControlsInside {
-        /* בדסקטופ: מחזירים את הגודל המקורי */
         grid-template-columns: 120px 1fr 120px;
     }
 }

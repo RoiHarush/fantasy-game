@@ -1,26 +1,10 @@
-import { useEffect, useState } from "react";
 import SidebarContainer from "../Sidebar/SidebarContainer";
 import SquadPlayersTable from "./SquadPlayersTable";
-import API_URL from "../../config";
-import { useGameweek } from "../../Context/GameweeksContext";
 import styles from "../../Styles/TransferUserSidebar.module.css";
 
-function TransferUserSidebar({ users, currentUserId, onUserChange }) {
-    const { nextGameweek } = useGameweek();
-    const [selectedUserId, setSelectedUserId] = useState(currentUserId);
-    const [squad, setSquad] = useState(null);
-
-    useEffect(() => {
-        if (!selectedUserId || !nextGameweek) return;
-        fetch(`${API_URL}/api/users/${selectedUserId}/squad?gw=${nextGameweek.id}`)
-            .then((res) => res.json())
-            .then((data) => setSquad(data))
-            .catch((err) => console.error("Failed to fetch squad:", err));
-    }, [selectedUserId, nextGameweek]);
-
+function TransferUserSidebar({ users, currentUserId, onUserChange, squad }) {
     const handleChange = (e) => {
         const newUserId = Number(e.target.value);
-        setSelectedUserId(newUserId);
         onUserChange?.(newUserId);
     };
 
@@ -30,7 +14,7 @@ function TransferUserSidebar({ users, currentUserId, onUserChange }) {
                 <div className={styles.header}>
                     <label className={styles.label}>Change Team</label>
                     <select
-                        value={selectedUserId || ""}
+                        value={currentUserId || ""}
                         onChange={handleChange}
                         className={styles.select}
                     >
