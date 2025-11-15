@@ -1,29 +1,42 @@
-# Gradle
+# ====== Gradle build folders ======
 .gradle/
 build/
-!src/**/build/
+out/
 
-# IntelliJ / JetBrains
+# ====== Compiled class files ======
+*.class
+
+# ====== Log files ======
+*.log
+
+# ====== Gradle wrapper (keep only the jar) ======
+!gradle/wrapper/gradle-wrapper.jar
+
+# ====== IntelliJ IDEA ======
 .idea/
 *.iml
 *.iws
-out/
+*.ipr
 
-# Logs
-logs/
-*.log
-hs_err_pid*
-replay_pid*
+# ====== Eclipse ======
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans/
+.sts4-cache/
+bin/
 
-# OS files
+# ====== NetBeans ======
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# ====== VS Code ======
+.vscode/
+
+# ====== macOS ======
 .DS_Store
-Thumbs.db
-
-# H2 database files
-*.mv.db
-*.log.db
-
-# Temporary files
-*.swp
-*.tmp
-*.bak
