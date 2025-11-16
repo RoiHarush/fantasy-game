@@ -424,12 +424,9 @@ public class StartupLoader {
                         e.setChips(Map.of("FIRST_PICK_CAPTAIN", 1, "IR", 2));
                     }
 
-                    System.out.println("User " + e.getName() + " ready");
-
                     return UserMapper.toDomain(e, currentSquad, nextSquad, InMemoryData.getPlayers());
                 })
                 .toList();
-        System.out.println("User list ready");
 
 
         userRegistry.loadMany(users);

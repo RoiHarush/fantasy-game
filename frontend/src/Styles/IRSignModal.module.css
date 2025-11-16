@@ -1,0 +1,111 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal {
+    background: linear-gradient(135deg, #202040 0%, #181828 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    border-radius: 18px;
+    padding: 24px 20px;
+    width: 360px;
+    max-width: 90vw;
+    text-align: center;
+    color: #fff;
+    animation: popIn 0.25s ease-out;
+    box-sizing: border-box;
+}
+
+.modal h3 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+
+.modal p {
+    color: #cccccc;
+    font-size: 0.95rem;
+    margin-bottom: 22px;
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.confirm {
+    flex: 1;
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out, background 0.15s ease-in-out;
+}
+
+.confirm:hover,
+.confirm:focus {
+    transform: scale(1.03);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+}
+
+.cancel {
+    flex: 1;
+    background: #374151;
+    color: #ddd;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.cancel:hover,
+.cancel:focus {
+    background: #4b5563;
+    transform: scale(1.03);
+    outline: 2px solid #4b5563;
+    outline-offset: 2px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@media (min-width: 480px) {
+    .modal {
+        padding: 28px 36px;
+    }
+}

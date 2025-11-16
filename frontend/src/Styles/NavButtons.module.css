@@ -1,0 +1,81 @@
+.navbar {
+    display: flex;
+    gap: 14px;
+    padding: 0;
+
+    flex-wrap: nowrap;
+
+    -ms-overflow-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1);
+}
+
+.navbar::-webkit-scrollbar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.navbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.navLink {
+    font-family: "Segoe UI", Arial, sans-serif;
+    position: relative;
+    color: white;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 6px 10px;
+
+    flex-shrink: 0;
+}
+
+.navLink::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    width: 0;
+    height: 5px;
+    background: white;
+    border-radius: 5px 5px 0 0;
+    transition: width 0.1s ease;
+    transform: translateX(-50%);
+}
+
+.navLink:hover::after,
+.navLink:focus::after {
+    width: 100%;
+}
+
+.navLink:focus {
+    outline: none;
+}
+
+.activeLink {
+    font-weight: 700;
+}
+
+.activeLink::after {
+    width: 100%;
+}
+
+.logoutLink {
+    color: #ff3b3b;
+}
+
+.logoutLink::after {
+    background: #ff3b3b;
+}
+
+.logoutLink:hover,
+.logoutLink:focus {
+    color: #ff6b6b;
+}
+
+.logoutLink:hover::after,
+.logoutLink:focus::after {
+    width: 100%;
+}

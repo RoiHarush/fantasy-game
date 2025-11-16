@@ -77,6 +77,7 @@ public class PointsService {
 
         int totalPoints = userPointsRepo.sumPointsByUserId(userId);
         userEntity.setTotalPoints(totalPoints);
+
         userRepo.save(userEntity);
 
         return points;

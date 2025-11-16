@@ -1,0 +1,66 @@
+.block {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    padding-bottom: 15px;
+}
+
+.header {
+    background: linear-gradient(90deg, #00e5ff, #9b4dff);
+    color: #111;
+    font-weight: 700;
+    font-size: 1.3rem;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icon {
+    color: #00ffbf;
+    font-size: 1.4rem;
+}
+
+.carouselWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 10px 0;
+}
+
+.arrow {
+    background: #f2f3f7;
+    border: none;
+    border-radius: 8px;
+    color: #222;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 4px 10px;
+    margin: 0 10px;
+    transition: background 0.2s ease;
+}
+
+.arrow:hover {
+    background: #e1e3e9;
+}
+
+.viewport {
+    overflow: hidden;
+    width: 750px;
+}
+
+.track {
+    display: flex;
+    gap: 25px;
+    transition: transform 0.4s ease-in-out;
+    will-change: transform;
+}
+
+.cardWrapper {
+    width: 130px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+}

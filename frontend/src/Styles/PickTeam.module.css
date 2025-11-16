@@ -1,0 +1,124 @@
+.pickTeamScreen {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: black;
+}
+
+.contentWrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 800px;
+    max-width: 100%;
+    gap: 20px;
+}
+
+.pitchWrapper {
+    position: relative;
+}
+
+.pitchWrapper,
+.fixtures {
+    width: 100%;
+}
+
+.saveContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.saveTeam {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    background: #2c0032;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.saveTeam:hover:not(:disabled) {
+    background: #2c0032;
+}
+
+.saveTeam:disabled {
+    background: #b0b0b0;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.chipBar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.chipCard {
+    background: #24002a;
+    border-radius: 10px;
+    padding: 8px 12px;
+    text-align: center;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    min-height: 95px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+}
+
+.chipIcon {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 4px;
+}
+
+.chipTitle {
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.chipButton {
+    width: 100%;
+    padding: 5px 0;
+    border-radius: 6px;
+    border: 2px solid #fff;
+    background: transparent;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: calc(100% + 4px);
+    margin: 0 -2px;
+}
+
+.chipButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.chipButton.active {
+    border: none;
+    background: linear-gradient(90deg, #00e5ff, #007bff);
+    color: #fff;
+}
+
+.chipButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

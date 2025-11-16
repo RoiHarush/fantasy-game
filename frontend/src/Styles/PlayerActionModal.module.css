@@ -1,0 +1,210 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    color: #222;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.25);
+    animation: fadeIn 0.2s ease;
+    box-sizing: border-box;
+}
+
+@keyframes fadeIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #888;
+    cursor: pointer;
+}
+
+.closeBtn:focus {
+    outline: 2px solid #888;
+    outline-offset: 2px;
+}
+
+.subHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 20px;
+}
+
+.teamLogo {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+}
+
+.teamName {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.positionTag {
+    margin-left: auto;
+    background: #efefef;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: 10px;
+}
+
+.switchBtn {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    color: #111;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.switchBtn:hover,
+.switchBtn:focus {
+    background: #ececec;
+    outline: 2px solid #ddd;
+    outline-offset: -1px;
+}
+
+.checkboxRow {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.checkboxRow label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    color: #222;
+    font-weight: 500;
+}
+
+.checkboxRow input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 34px;
+    height: 34px;
+    border: 2px solid #ccc;
+    background: white;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    border-radius: 4px;
+}
+
+.checkboxRow input[type="checkbox"]:focus {
+    outline: 2px solid #008cff;
+    outline-offset: 2px;
+}
+
+.checkboxRow input[type="checkbox"]:hover {
+    border-color: #888;
+}
+
+.checkboxRow input[type="checkbox"]:hover::after {
+    content: "✔";
+    color: #888;
+    font-size: 22px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.checkboxRow input[type="checkbox"]:checked {
+    background: #ff0066;
+    border-color: #ff0066;
+}
+
+.checkboxRow input[type="checkbox"]:checked::after {
+    content: "✔";
+    color: white;
+    font-size: 22px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.infoBtn {
+    border: 1px solid #ccc;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.infoBtn:hover,
+.infoBtn:focus {
+    background: #f0f0f0;
+    outline: 2px solid #ccc;
+    outline-offset: -1px;
+}
+
+.disabledLabel {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (min-width: 480px) {
+    .modal {
+        padding: 24px;
+    }
+}
