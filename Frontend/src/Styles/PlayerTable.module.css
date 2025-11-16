@@ -1,0 +1,106 @@
+.tableContainer {
+    min-height: 500px;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    background: #fff;
+    position: relative;
+}
+
+.tableContainer table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 0.95rem;
+}
+
+.tableContainer thead {
+    border-bottom: 1px solid #ddd;
+}
+
+.tableContainer thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    color: #555;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    z-index: 2;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #ddd;
+}
+
+.tableContainer thead th:nth-child(2),
+.tableContainer thead th:nth-child(3),
+.tableContainer thead th:nth-child(4),
+.tableContainer td:nth-child(2),
+.tableContainer td:nth-child(3),
+.tableContainer td:nth-child(4) {
+    text-align: center;
+}
+
+.tableContainer tbody tr {
+    background: #fff;
+    height: 56px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.15s ease;
+}
+
+.tableContainer tbody tr:hover {
+    background: #f9f9f9;
+}
+
+.tableContainer td {
+    color: #222;
+    padding: 8px 12px;
+    vertical-align: middle;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.tableContainer td:last-child {
+    text-align: center;
+}
+
+.tableContainer button {
+    min-width: 70px;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tableContainer button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.tableContainer button:disabled {
+    background: #e0e0e0;
+    color: #777;
+    cursor: default;
+}
+
+.tableContainer td:first-child,
+.tableContainer th:first-child {
+    padding-left: 16px;
+}
+
+.tableContainer td:last-child,
+.tableContainer th:last-child {
+    padding-right: 16px;
+}
+
+.tableContainer:focus {
+    outline: none;
+}
+
+.tableContainer tbody tr:empty td {
+    border: none;
+    background: transparent;
+}

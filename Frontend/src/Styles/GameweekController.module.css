@@ -1,0 +1,40 @@
+.pointsControlsInside {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    align-items: center;
+    text-align: center;
+    padding: 6px 0 8px;
+    color: black;
+    font-family: "Segoe UI", Arial, sans-serif;
+    position: relative;
+    z-index: 2;
+}
+
+.pointsButtonInside {
+    background: none;
+    border: none;
+    font-weight: 600;
+    color: black;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.pointsButtonInside:hover,
+.pointsButtonInside:focus {
+    color: white;
+    outline: none;
+}
+
+.pointsGameweekInfoInside {
+    font-weight: 600;
+}
+
+/* ============================ */
+/* Media Query (Desktop)     */
+/* ============================ */
+
+@media (min-width: 768px) {
+    .pointsControlsInside {
+        grid-template-columns: 120px 1fr 120px;
+    }
+}

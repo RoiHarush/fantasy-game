@@ -1,0 +1,25 @@
+.pointsScreen {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: black;
+}
+
+.contentWrapper {
+    display: flex;
+    flex-direction: column;
+    width: 800px;
+    max-width: 100%;
+    gap: 20px;
+}
+
+.pitchWrapper,
+.fixtures {
+    width: 100%;
+}
