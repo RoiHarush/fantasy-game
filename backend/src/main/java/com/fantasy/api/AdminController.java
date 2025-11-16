@@ -55,7 +55,7 @@ public class AdminController {
 
     @PostMapping("/players/update-points")
     public ResponseEntity<Void> updateCurrentGwPoints(@RequestParam int gw) {
-        playerService.updateCurrentGameweekPoints(gw);
+        playerService.updateGameweekPoints(gw);
         return ResponseEntity.ok().build();
     }
 

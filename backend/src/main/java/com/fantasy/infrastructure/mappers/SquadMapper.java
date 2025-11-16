@@ -72,11 +72,14 @@ public class SquadMapper {
         );
 
 
-        // --- Bench Map (Safe Handling, No forced null slots) ---
+        // --- Bench Map (Include null values for empty slots) ---
         Map<String, Integer> benchMap = new LinkedHashMap<>();
         squad.getBench().forEach((slot, player) -> {
             if (player != null) {
                 benchMap.put(slot, player.getId());
+            }
+            else {
+                benchMap.put(slot, null);
             }
         });
         e.setBenchMap(benchMap);
@@ -121,11 +124,14 @@ public class SquadMapper {
 
         dto.setStartingLineup(starting);
 
-        // --- Bench Map (No null values, reflect domain exactly) ---
+        // --- Bench Map (Include null values for empty slots) ---
         Map<String, Integer> benchMap = new LinkedHashMap<>();
         squad.getBench().forEach((slot, player) -> {
             if (player != null) {
                 benchMap.put(slot, player.getId());
+            }
+            else {
+                benchMap.put(slot, null);
             }
         });
         dto.setBench(benchMap);

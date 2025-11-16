@@ -86,8 +86,6 @@ public class User implements Comparable<User>, Identifiable {
         int total = 0;
         if (pointsByGameweek != null)
             total += pointsByGameweek.values().stream().mapToInt(Integer::intValue).sum();
-        if (currentFantasyTeam != null)
-            total += currentFantasyTeam.getTotalPoints();
         return total;
     }
 

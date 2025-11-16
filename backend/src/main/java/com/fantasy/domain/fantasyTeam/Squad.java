@@ -224,7 +224,6 @@ public class Squad implements Draftable {
         List<Player> fromList = startingLineup.get(lineupPlayer.getPosition());
         int index = fromList.indexOf(lineupPlayer);
         if (index == -1) {
-            System.out.println("[AutoSub] ⚠️ Tried to replace player not in lineup: " + lineupPlayer.getViewName());
             return;
         }
         fromList.remove(index);
@@ -269,14 +268,13 @@ public class Squad implements Draftable {
             throw new IRException("This player is not injured!");
         }
 
+        updateSquadWithoutIR();
+
         this.IR = IR;
         this.IR.setState(PlayerState.IN_USE);
-
-        updateSquadWithoutIR();
     }
 
     private void updateSquadWithoutIR() {
-        if (this.IR == null) return;
 
         Player irPlayer = this.IR;
 
@@ -302,25 +300,6 @@ public class Squad implements Draftable {
             setDefaultViceCaptain();
     }
 
-    private void removeIRFromBench(Player ir) {
-        if (ir.getPosition().equals(PlayerPosition.GOALKEEPER)) {
-            bench.put("GK", null);
-            return;
-        }
-
-        if (bench.get("S3") != null && bench.get("S3").equals(ir)) {
-            bench.put("S3", null);
-        } else {
-            for (String key : new ArrayList<>(bench.keySet())) {
-                if (bench.get(key) != null && bench.get(key).equals(ir)) {
-                    bench.put(key, bench.get("S3"));
-                    bench.put("S3", null);
-                    break;
-                }
-            }
-        }
-    }
-
     private void removeIRFromStarting(Player ir){
 
         if (ir.getPosition().equals(PlayerPosition.GOALKEEPER)){
@@ -328,7 +307,6 @@ public class Squad implements Draftable {
             gk.add(bench.get("GK"));
             startingLineup.put(PlayerPosition.GOALKEEPER, gk);
             gk.getFirst().setState(PlayerState.STARTING);
-            bench.remove("GK");
             return;
         }
 
@@ -347,6 +325,25 @@ public class Squad implements Draftable {
         }
 
         removeIRFromBench(ir);
+    }
+
+    private void removeIRFromBench(Player ir) {
+        if (ir.getPosition().equals(PlayerPosition.GOALKEEPER)) {
+            bench.put("GK", null);
+            return;
+        }
+
+        if (bench.get("S3") != null && bench.get("S3").equals(ir)) {
+            bench.put("S3", null);
+        } else {
+            for (String key : new ArrayList<>(bench.keySet())) {
+                if (bench.get(key) != null && bench.get(key).equals(ir)) {
+                    bench.put(key, bench.get("S3"));
+                    bench.put("S3", null);
+                    break;
+                }
+            }
+        }
     }
 
     private void ensurePlayersInSquad(Player... players) {

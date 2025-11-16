@@ -437,28 +437,24 @@ public class StartupLoader {
         GameWeekDto liveGw = gameWeekService.getCurrentGameweek();
         if (liveGw != null && "LIVE".equalsIgnoreCase(liveGw.getStatus())) {
             LeagueEntity baseLeague = leagueRepo.findAll().getFirst();
+
+
+            User adminUser = InMemoryData.getUsers().findById(baseLeague.getAdmin().getId());
+            if (adminUser == null) {
+                throw new RuntimeException("Admin user not found in memory registry!");
+            }
+
             League liveLeague = new League(
-                    UserMapper.toDomain(
-                            baseLeague.getAdmin(),
-                            baseLeague.getAdmin().getCurrentSquad(),
-                            baseLeague.getAdmin().getNextSquad(),
-                            InMemoryData.getPlayers()
-                    ),
+                    adminUser,
                     baseLeague.getName(),
                     baseLeague.getLeagueCode()
             );
 
-            List<User> domainUsers = userRepo.findAll().stream()
-                    .filter(u -> u.getId() != baseLeague.getAdmin().getId())
-                    .map(u -> UserMapper.toDomain(
-                            u,
-                            u.getCurrentSquad(),
-                            u.getNextSquad(),
-                            InMemoryData.getPlayers()
-                    ))
+            List<User> usersForLeague = InMemoryData.getUsers().getUsers().stream()
+                    .filter(u -> u.getId() != adminUser.getId())
                     .toList();
 
-            liveLeague.getUsers().addAll(domainUsers);
+            liveLeague.getUsers().addAll(usersForLeague);
 
             liveLeague.sortUsers();
             InMemoryData.setActiveLeague(liveLeague);

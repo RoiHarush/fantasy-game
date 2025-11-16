@@ -210,7 +210,7 @@ public class PlayerService {
         }
     }
 
-    public void updateCurrentGameweekPoints(int currentGw) {
+    public void updateGameweekPoints(int currentGw) {
         try {
             List<PlayerEntity> players = playerRepo.findAll();
 
