@@ -12,8 +12,12 @@ export function GameweekProvider({ children }) {
     useEffect(() => {
         fetch(`${API_URL}/api/gameweeks`)
             .then(res => res.json())
-            .then(setGameweeks)
+            .then(data => {
+                const sorted = data.sort((a, b) => a.id - b.id);
+                setGameweeks(sorted);
+            })
             .catch(err => console.error("Failed to fetch gameweeks:", err));
+
 
         fetch(`${API_URL}/api/gameweeks/current`)
             .then(res => res.json())

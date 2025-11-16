@@ -15,7 +15,6 @@ export function WebSocketProvider({ children }) {
         const stomp = over(socket);
 
         stomp.connect({}, () => {
-            console.log("✅ Connected to WebSocket");
             stompClientRef.current = stomp;
             setConnected(true);
         });
@@ -37,7 +36,6 @@ export function WebSocketProvider({ children }) {
         });
 
         subscriptionsRef.current[topic] = subscription;
-        console.log(`📡 Subscribed to ${topic}`);
     };
 
     const unsubscribe = (topic) => {
@@ -45,7 +43,6 @@ export function WebSocketProvider({ children }) {
         if (sub) {
             sub.unsubscribe();
             delete subscriptionsRef.current[topic];
-            console.log(`🚫 Unsubscribed from ${topic}`);
         }
     };
 
