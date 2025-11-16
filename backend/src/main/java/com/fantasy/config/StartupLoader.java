@@ -394,7 +394,7 @@ public class StartupLoader {
         var players = playerRepo.findAll().stream()
                 .map(p -> PlayerMapper.toDomain(p, pointsRepo.findByPlayer_Id(p.getId())))
                 .toList();
-        playerRegistry.loadMany(players);
+        playerRegistry.addMany(players);
         InMemoryData.setPlayers(playerRegistry);
         System.out.println("Finish load Players");
 
@@ -429,7 +429,7 @@ public class StartupLoader {
                 .toList();
 
 
-        userRegistry.loadMany(users);
+        userRegistry.addMany(users);
         InMemoryData.setUsers(userRegistry);
         System.out.println("Finish load Users");
 
@@ -553,7 +553,7 @@ public class StartupLoader {
             System.out.println("  🏅 Captain: " + captain.map(PlayerEntity::getViewName).orElse("None"));
             System.out.println("  🎖️ Vice Captain: " + vice.map(PlayerEntity::getViewName).orElse("None"));
             System.out.println("  ⭐ First Pick: " + firstPick.map(PlayerEntity::getViewName).orElse("None"));
-            System.out.println("User chips status: " + InMemoryData.getUsers().getById(user.getId()).getActiveChips());
+            System.out.println("User chips status: " + InMemoryData.getUsers().findById(user.getId()).getActiveChips());
             System.out.println();
         }
 

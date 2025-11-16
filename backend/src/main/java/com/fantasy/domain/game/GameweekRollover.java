@@ -41,13 +41,13 @@ public class GameweekRollover {
         for (PlayerPosition pp : PlayerPosition.values()){
             for (Player player : squad.getStartingLineup().get(pp)){
                 starting.get(pp).add(player);
-                pr.loadOne(player);
+                pr.add(player);
             }
         }
 
         for (String key : squad.getBench().keySet()){
             bench.put(key, squad.getBench().get(key));
-            pr.loadOne(squad.getBench().get(key));
+            pr.add(squad.getBench().get(key));
         }
 
         Squad result = new Squad();

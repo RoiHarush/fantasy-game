@@ -25,7 +25,7 @@ public class FantasyUserRegistry implements Repository<User> {
         return users;
     }
 
-    public void loadOne(User user) {
+    public void add(User user) {
         if (user == null)
             throw new NullUserException();
         this.users.add(user);
@@ -33,9 +33,9 @@ public class FantasyUserRegistry implements Repository<User> {
         this.userByUsername.put(user.getUsername(), user);
     }
 
-    public void loadMany(List<User> users){
+    public void addMany(List<User> users){
         for (User user : users)
-            loadOne(user);
+            add(user);
     }
 
     public User getUser(User user){
@@ -45,7 +45,7 @@ public class FantasyUserRegistry implements Repository<User> {
         return null;
     }
 
-    public User getById(int id){
+    public User findById(int id){
         return this.userByID.get(id);
     }
 

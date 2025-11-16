@@ -25,12 +25,12 @@ public class PlayerRegistry implements Repository<Player> {
         return players.isEmpty() && playersById.isEmpty() && playersByTeam.isEmpty() && playersByPosition.isEmpty();
     }
 
-    public void loadMany(List<Player> players){
+    public void addMany(List<Player> players){
         for (Player player : players)
-            loadOne(player);
+            add(player);
     }
 
-    public void loadOne(Player player){
+    public void add(Player player){
         this.playersById.put(player.getId(), player);
         this.playersByTeam.computeIfAbsent(player.getTeamId(), k -> new ArrayList<>()).add(player);
         this.playersByPosition.computeIfAbsent(player.getPosition(), k -> new ArrayList<>()).add(player);
@@ -56,7 +56,7 @@ public class PlayerRegistry implements Repository<Player> {
     }
 
 
-    public Player getById(int id){
+    public Player findById(int id){
         return playersById.get(id);
     }
 
@@ -79,7 +79,7 @@ public class PlayerRegistry implements Repository<Player> {
 
         removePlayer(playerOut);
 
-        loadOne(playerIn);
+        add(playerIn);
     }
 
 

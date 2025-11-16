@@ -43,7 +43,7 @@ public class UserService {
     }
 
     public UserDto getUserById(int id) {
-        User user = InMemoryData.getUsers().getById(id);
+        User user = InMemoryData.getUsers().findById(id);
         if (user == null)
             throw new RuntimeException("User not found");
 
@@ -65,7 +65,7 @@ public class UserService {
         }
 
 
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) return null;
 
         Squad squad;
@@ -130,7 +130,7 @@ public class UserService {
     }
 
     public void addToWatchlist(int userId, int playerId) {
-        User domainUser = InMemoryData.getUsers().getById(userId);
+        User domainUser = InMemoryData.getUsers().findById(userId);
         var userEntity = userRepo.findById(userId).orElseThrow();
 
         if (!domainUser.getWatchedPlayers().contains(playerId)) {
@@ -144,7 +144,7 @@ public class UserService {
     }
 
     public void removeFromWatchlist(int userId, int playerId) {
-        User domainUser = InMemoryData.getUsers().getById(userId);
+        User domainUser = InMemoryData.getUsers().findById(userId);
         var userEntity = userRepo.findById(userId).orElseThrow();
 
         domainUser.getWatchedPlayers().remove(Integer.valueOf(playerId));
@@ -155,7 +155,7 @@ public class UserService {
     }
 
     public List<Integer> getWatchlist(int userId) {
-        return new ArrayList<>(InMemoryData.getUsers().getById(userId).getWatchedPlayers());
+        return new ArrayList<>(InMemoryData.getUsers().findById(userId).getWatchedPlayers());
     }
 
 }

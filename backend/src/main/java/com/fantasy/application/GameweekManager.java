@@ -72,7 +72,7 @@ public class GameweekManager {
 
             userRepository.save(entity);
 
-            var memoryUser = InMemoryData.getUsers().getById(entity.getId());
+            var memoryUser = InMemoryData.getUsers().findById(entity.getId());
             if (memoryUser != null) {
                 memoryUser.setCurrentFantasyTeam(domainUser.getCurrentFantasyTeam());
                 memoryUser.setNextFantasyTeam(domainUser.getNextFantasyTeam());

@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -86,7 +87,7 @@ public class PlayerService {
 
                 playerRepo.save(entity);
 
-                Player domainPlayer = InMemoryData.getPlayers().getById(entity.getId());
+                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
                 if (domainPlayer == null) {
                     domainPlayer = new Player(
                             entity.getId(),
@@ -266,7 +267,7 @@ public class PlayerService {
                 int goalsConceded = latest.get("goals_conceded").asInt();
                 int starts = latest.get("starts").asInt();
 
-                Player domainPlayer = InMemoryData.getPlayers().getById(entity.getId());
+                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
                 if (domainPlayer == null)
                     continue;
 
@@ -384,7 +385,7 @@ public class PlayerService {
                 PlayerEntity entity = playerMap.get(playerId);
                 if (entity == null) continue;
 
-                Player domainPlayer = InMemoryData.getPlayers().getById(playerId);
+                Player domainPlayer = InMemoryData.getPlayers().findById(playerId);
                 if (domainPlayer == null) continue;
 
                 List<ScoreEvent> events = new ArrayList<>();
@@ -464,6 +465,132 @@ public class PlayerService {
             e.printStackTrace();
         }
     }
+
+    public void refreshBasicPlayerData() {
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
+            JsonNode root = mapper.readTree(response.getBody());
+            JsonNode elements = root.get("elements");
+
+            if (elements == null || !elements.isArray()) return;
+
+            for (JsonNode node : elements) {
+
+                int fplId = node.get("id").asInt();
+                boolean canSelect = node.get("can_select").asBoolean();
+
+                if (!canSelect) continue;
+
+                Optional<PlayerEntity> optional = playerRepo.findById(fplId);
+
+                PlayerEntity entity;
+
+                if (optional.isPresent()) {
+                    entity = optional.get();
+
+                    entity.setFirstName(node.get("first_name").asText());
+                    entity.setLastName(node.get("second_name").asText());
+                    entity.setViewName(node.get("web_name").asText());
+
+                    entity.setTeamId(node.get("team").asInt());
+
+                    String status = node.get("status").asText();
+                    entity.setInjured(!status.equals("a"));
+
+                    entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
+
+                    entity.setChanceOfPlayingThisRound(
+                            node.has("chance_of_playing_this_round") && !node.get("chance_of_playing_this_round").isNull()
+                                    ? node.get("chance_of_playing_this_round").asInt()
+                                    : null
+                    );
+
+                    entity.setChanceOfPlayingNextRound(
+                            node.has("chance_of_playing_next_round") && !node.get("chance_of_playing_next_round").isNull()
+                                    ? node.get("chance_of_playing_next_round").asInt()
+                                    : null
+                    );
+
+                    if (node.hasNonNull("news_added")) {
+                        try {
+                            entity.setNewsAdded(
+                                    LocalDateTime.parse(node.get("news_added").asText().replace("Z", ""))
+                            );
+                        } catch (Exception ignore) {}
+                    }
+
+                } else {
+                    entity = new PlayerEntity();
+
+                    entity.setId(fplId);
+                    entity.setFirstName(node.get("first_name").asText());
+                    entity.setLastName(node.get("second_name").asText());
+                    entity.setViewName(node.get("web_name").asText());
+
+                    int posId = node.get("element_type").asInt();
+                    entity.setPosition(PlayerPosition.fromId(posId));
+
+                    entity.setTeamId(node.get("team").asInt());
+
+                    String status = node.get("status").asText();
+                    entity.setInjured(!status.equals("a"));
+
+                    entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
+
+                    entity.setChanceOfPlayingThisRound(
+                            node.has("chance_of_playing_this_round") && !node.get("chance_of_playing_this_round").isNull()
+                                    ? node.get("chance_of_playing_this_round").asInt()
+                                    : null
+                    );
+
+                    entity.setChanceOfPlayingNextRound(
+                            node.has("chance_of_playing_next_round") && !node.get("chance_of_playing_next_round").isNull()
+                                    ? node.get("chance_of_playing_next_round").asInt()
+                                    : null
+                    );
+
+                    if (node.hasNonNull("news_added")) {
+                        try {
+                            entity.setNewsAdded(
+                                    LocalDateTime.parse(node.get("news_added").asText().replace("Z", ""))
+                            );
+                        } catch (Exception ignore) {}
+                    }
+
+                    entity.setOwnerId(-1);
+                    entity.setState(PlayerState.NONE);
+                    entity.setTotalPoints(0);
+                }
+
+                playerRepo.save(entity);
+                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
+
+                if (domainPlayer == null) {
+                    // שחקן חדש בדומיין
+                    domainPlayer = new Player(
+                            entity.getId(),
+                            entity.getFirstName(),
+                            entity.getLastName(),
+                            entity.getPosition(),
+                            entity.getTeamId(),
+                            entity.getViewName()
+                    );
+                    InMemoryData.getPlayers().add(domainPlayer);
+
+                } else {
+                    domainPlayer.setFirstName(entity.getFirstName());
+                    domainPlayer.setLastName(entity.getLastName());
+                    domainPlayer.setViewName(entity.getViewName());
+                    domainPlayer.setTeamId(entity.getTeamId());
+                    domainPlayer.setInjured(entity.isInjured());
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public List<PlayerDto> getAllPlayers() {
         List<PlayerPointsEntity> allPoints = pointsRepo.findAll();

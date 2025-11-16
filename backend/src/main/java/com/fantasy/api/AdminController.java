@@ -43,12 +43,17 @@ public class AdminController {
     }
 
 
-    @PostMapping("/gameweeks")
+    @PostMapping("/update-gameweeks")
     public void updateGameweeks(){
         gameWeekService.loadFromApiAndSave();
     }
 
-    @PostMapping("/players/update-current")
+    @PostMapping("/refresh-players")
+    public void refreshPlayers(){
+        playerService.refreshBasicPlayerData();
+    }
+
+    @PostMapping("/players/update-points")
     public ResponseEntity<Void> updateCurrentGwPoints(@RequestParam int gw) {
         playerService.updateCurrentGameweekPoints(gw);
         return ResponseEntity.ok().build();

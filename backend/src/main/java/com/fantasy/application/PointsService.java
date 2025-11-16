@@ -41,7 +41,7 @@ public class PointsService {
     @Transactional
     public int calculateAndPersist(int userId, int gw) {
 
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         FantasyTeam team;

@@ -38,7 +38,7 @@ public class TransferService {
     @Transactional
     public void makeTransfer(TransferRequestDto request) {
         try {
-            User user = InMemoryData.getUsers().getById(request.getUserId());
+            User user = InMemoryData.getUsers().findById(request.getUserId());
             if (user == null) throw new RuntimeException("User not found");
             System.out.println(user);
 
@@ -46,8 +46,8 @@ public class TransferService {
             if (team == null) throw new RuntimeException("User has no next fantasy team");
             System.out.println(team);
 
-            Player playerOut = InMemoryData.getPlayers().getById(request.getPlayerOutId());
-            Player playerIn = InMemoryData.getPlayers().getById(request.getPlayerInId());
+            Player playerOut = InMemoryData.getPlayers().findById(request.getPlayerOutId());
+            Player playerIn = InMemoryData.getPlayers().findById(request.getPlayerInId());
 
             try {
                 team.makeTransfer(playerIn, playerOut);

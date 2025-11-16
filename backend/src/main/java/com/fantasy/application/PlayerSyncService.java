@@ -66,7 +66,7 @@ public class PlayerSyncService {
             int userId = squad.getUser().getId();
 
             for (Integer pid : squad.getStartingLineup()) {
-                Player dp = domainPlayers.getById(pid);
+                Player dp = domainPlayers.findById(pid);
                 if (dp != null) {
                     dp.setOwnerId(userId);
                     dp.setState(PlayerState.STARTING);
@@ -74,7 +74,7 @@ public class PlayerSyncService {
             }
 
             for (Integer pid : squad.getBenchMap().values()) {
-                Player dp = domainPlayers.getById(pid);
+                Player dp = domainPlayers.findById(pid);
                 if (dp != null) {
                     dp.setOwnerId(userId);
                     dp.setState(PlayerState.BENCH);

@@ -56,7 +56,7 @@ public class TransferWindowService {
     }
 
     public void broadcastPass(int userId) {
-        var user = InMemoryData.getUsers().getById(userId);
+        var user = InMemoryData.getUsers().findById(userId);
         String userName = user != null ? user.getName() : "Unknown user";
         webSocketController.sendPassEvent(userId, userName);
     }
@@ -100,7 +100,7 @@ public class TransferWindowService {
             TransferPickEntity pick = order.get(i);
             int userId = pick.getUserId();
 
-            var user = InMemoryData.getUsers().getById(userId);
+            var user = InMemoryData.getUsers().findById(userId);
             if (user == null || user.getNextFantasyTeam() == null) continue;
 
             var squad = user.getNextFantasyTeam().getSquad();
@@ -120,13 +120,13 @@ public class TransferWindowService {
 
     @Transactional
     public void replaceIRPlayer(IRSignRequestDto request) {
-        var user = InMemoryData.getUsers().getById(request.getUserId());
+        var user = InMemoryData.getUsers().findById(request.getUserId());
         if (user == null) throw new FantasyTeamException("User not found");
 
         var squad = user.getNextFantasyTeam().getSquad();
         if (squad == null) throw new FantasyTeamException("Squad not found");
 
-        var player = InMemoryData.getPlayers().getById(request.getPlayerId());
+        var player = InMemoryData.getPlayers().findById(request.getPlayerId());
         if (player == null) throw new FantasyTeamException("Player not found");
         if (!player.getState().equals(PlayerState.NONE))
             throw new FantasyTeamException("Player not available");
@@ -180,7 +180,7 @@ public class TransferWindowService {
 
         if (turnManager.isIRRound()) {
             List<Integer> irOrder = turnManager.getCurrentOrder();
-            User user = InMemoryData.getUsers().getById(nextUserId);
+            User user = InMemoryData.getUsers().findById(nextUserId);
             Player player = user.getNextFantasyTeam().getSquad().getIR();
 
             System.out.println("⚕️ IR Round turn: user " + nextUserId);
@@ -235,7 +235,7 @@ public class TransferWindowService {
     }
 
     public void broadcastTransferDone(int userId, int playerOutId, int playerInId) {
-        var user = InMemoryData.getUsers().getById(userId);
+        var user = InMemoryData.getUsers().findById(userId);
         String userName = user != null ? user.getName() : null;
         webSocketController.sendTransferDoneEvent(userId, playerOutId, playerInId, userName);
     }

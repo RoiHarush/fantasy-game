@@ -31,7 +31,7 @@ public class PlayerMatchStatsService {
     }
 
     public List<PlayerMatchStatsDto> getAllMatchStats(int playerId) {
-        Player player = InMemoryData.getPlayers().getById(playerId);
+        Player player = InMemoryData.getPlayers().findById(playerId);
         if (player == null)
             throw new RuntimeException("Player not found: " + playerId);
 
@@ -71,7 +71,7 @@ public class PlayerMatchStatsService {
 
 
     public PlayerMatchStatsDto getMatchStats(int playerId, int gw, Integer userId) {
-        Player player = InMemoryData.getPlayers().getById(playerId);
+        Player player = InMemoryData.getPlayers().findById(playerId);
         if (player == null)
             throw new RuntimeException("Player not found: " + playerId);
 

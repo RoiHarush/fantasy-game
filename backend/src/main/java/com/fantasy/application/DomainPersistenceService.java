@@ -45,7 +45,7 @@ public class DomainPersistenceService {
         if (nextSquadEntity == null || nextSquadEntity.getGameweek() != nextGw)
             throw new RuntimeException("Next squad not found for gameweek " + nextGw);
 
-        User userDomain = InMemoryData.getUsers().getById(userId);
+        User userDomain = InMemoryData.getUsers().findById(userId);
         FantasyTeam team = userDomain.getNextFantasyTeam();
 
         UserSquadEntity updatedEntity = SquadMapper.toEntity(team.getSquad(), nextGw);
@@ -59,7 +59,7 @@ public class DomainPersistenceService {
         PlayerEntity playerEntity = playerRepo.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("Player entity not found"));
 
-        Player playerDomain = InMemoryData.getPlayers().getById(playerId);
+        Player playerDomain = InMemoryData.getPlayers().findById(playerId);
 
         playerEntity.setOwnerId(playerDomain.getOwnerId());
         playerEntity.setState(playerDomain.getState());

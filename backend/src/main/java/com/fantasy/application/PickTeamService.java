@@ -38,7 +38,7 @@ public class PickTeamService {
 
     @Transactional
     public SquadDto saveTeam(int userId, SquadDto dto) {
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         FantasyTeam team = user.getNextFantasyTeam();

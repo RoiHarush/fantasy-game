@@ -20,7 +20,7 @@ public class SquadMapper {
         starting.put(PlayerPosition.FORWARD, new ArrayList<>());
 
         for (int i = 0; i < e.getStartingLineup().size(); i++){
-            Player player =  allPlayers.getById(e.getStartingLineup().get(i));
+            Player player =  allPlayers.findById(e.getStartingLineup().get(i));
             List<Player> lst = starting.get(player.getPosition());
             lst.add(player);
             starting.put(player.getPosition(), lst);
@@ -32,7 +32,7 @@ public class SquadMapper {
 
         for (String key : e.getBenchMap().keySet()) {
             Integer playerId = e.getBenchMap().get(key);
-            Player player = playerId != null ? allPlayers.getById(playerId) : null;
+            Player player = playerId != null ? allPlayers.findById(playerId) : null;
             bench.put(key, player);
             if (player != null)
                 squad.loadPlayer(player);
@@ -41,19 +41,19 @@ public class SquadMapper {
 
         // --- Captain & ViceCaptain ---
         if (e.getCaptainId() != null) {
-            squad.setCaptain(allPlayers.getById(e.getCaptainId()));
+            squad.setCaptain(allPlayers.findById(e.getCaptainId()));
         }
 
         if (e.getViceCaptainId() != null) {
-            squad.setViceCaptain(allPlayers.getById(e.getViceCaptainId()));
+            squad.setViceCaptain(allPlayers.findById(e.getViceCaptainId()));
         }
 
         // --- First Pick & IR ---
         if (e.getFirstPickId() != null)
-            squad.setFirstPick(allPlayers.getById(e.getFirstPickId()));
+            squad.setFirstPick(allPlayers.findById(e.getFirstPickId()));
 
         if (e.getIrId() != null)
-            squad.setIR(allPlayers.getById(e.getIrId()));
+            squad.setIR(allPlayers.findById(e.getIrId()));
 
 
         return squad;
@@ -181,12 +181,12 @@ public class SquadMapper {
         for (String key : dto.getStartingLineup().keySet()){
             for (Integer playerId : dto.getStartingLineup().get(key)){
                 switch (key){
-                    case "GK" -> starting.get(PlayerPosition.GOALKEEPER).add(allPlayers.getById(playerId));
-                    case "DEF" -> starting.get(PlayerPosition.DEFENDER).add(allPlayers.getById(playerId));
-                    case "MID" -> starting.get(PlayerPosition.MIDFIELDER).add(allPlayers.getById(playerId));
-                    case "FWD" ->  starting.get(PlayerPosition.FORWARD).add(allPlayers.getById(playerId));
+                    case "GK" -> starting.get(PlayerPosition.GOALKEEPER).add(allPlayers.findById(playerId));
+                    case "DEF" -> starting.get(PlayerPosition.DEFENDER).add(allPlayers.findById(playerId));
+                    case "MID" -> starting.get(PlayerPosition.MIDFIELDER).add(allPlayers.findById(playerId));
+                    case "FWD" ->  starting.get(PlayerPosition.FORWARD).add(allPlayers.findById(playerId));
                 }
-                squad.loadPlayer(allPlayers.getById(playerId));
+                squad.loadPlayer(allPlayers.findById(playerId));
             }
         }
         squad.setStartingLineup(starting);
@@ -194,20 +194,20 @@ public class SquadMapper {
         // --- Bench ---
         Map<String, Player> bench = new LinkedHashMap<>();
         dto.getBench().forEach((slot, playerId) -> {
-            Player player = playerId != null ? allPlayers.getById(playerId) : null;
+            Player player = playerId != null ? allPlayers.findById(playerId) : null;
             bench.put(slot, player);
             if (player != null) squad.loadPlayer(player);
         });
         squad.setBench(bench);
 
-        squad.setCaptain(allPlayers.getById(dto.getCaptainId()));
-        squad.setViceCaptain(allPlayers.getById(dto.getViceCaptainId()));
+        squad.setCaptain(allPlayers.findById(dto.getCaptainId()));
+        squad.setViceCaptain(allPlayers.findById(dto.getViceCaptainId()));
 
         if (dto.getFirstPickId() != null)
-            squad.setFirstPick(allPlayers.getById(dto.getFirstPickId()));
+            squad.setFirstPick(allPlayers.findById(dto.getFirstPickId()));
 
         if (dto.getIrId() != null)
-            squad.setIR(allPlayers.getById(dto.getIrId()));
+            squad.setIR(allPlayers.findById(dto.getIrId()));
 
         return squad;
     }

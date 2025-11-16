@@ -61,6 +61,14 @@ public class Player  implements Comparable<Player>, Identifiable {
         this.lastName = lastName.substring(0,1).toUpperCase() + lastName.substring(1).toLowerCase();
     }
 
+    public void setFirstName(String firstName){
+        this.firstName = firstName;
+    }
+
+    public void setLastName(String lastName){
+        this.firstName = lastName;
+    }
+
     public String getViewName() {
         return viewName;
     }

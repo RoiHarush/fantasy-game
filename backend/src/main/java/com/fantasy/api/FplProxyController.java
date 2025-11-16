@@ -42,7 +42,7 @@ public class FplProxyController {
             for (Map<String, Object> entry : fplTeam) {
                 int playerId = (int) entry.get("element");
 
-                Player player = InMemoryData.getPlayers().getById(playerId);
+                Player player = InMemoryData.getPlayers().findById(playerId);
                 if (player == null) continue;
 
                 Map<String, Object> p = new LinkedHashMap<>();
@@ -82,7 +82,7 @@ public class FplProxyController {
                     Map<String, Object> topPlayer = (Map<String, Object>) apiData.get("top_player");
                     int playerId = (int) topPlayer.get("id");
 
-                    Player player = InMemoryData.getPlayers().getById(playerId);
+                    Player player = InMemoryData.getPlayers().findById(playerId);
                     if (player == null) continue;
 
                     Map<String, Object> entry = new LinkedHashMap<>();

@@ -42,7 +42,7 @@ public class PlayerDataService {
 
         return playerIds.stream()
                 .map(id -> {
-                    Player player = InMemoryData.getPlayers().getById(id);
+                    Player player = InMemoryData.getPlayers().findById(id);
                     if (player == null)
                         return new PlayerDataDto(id, 0, null);
 

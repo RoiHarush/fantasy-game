@@ -101,12 +101,12 @@ public class Squad implements Draftable {
     }
 
     public Player getPlayerById(int id) {
-        return this.allPlayers.getById(id);
+        return this.allPlayers.findById(id);
     }
     // </editor-fold>
 
     public void loadPlayer(Player player) {
-        this.allPlayers.loadOne(player);
+        this.allPlayers.add(player);
     }
 
     @Override
@@ -118,12 +118,12 @@ public class Squad implements Draftable {
     public void makePick(Player player) {
         if (this.allPlayers.getPlayers().size() >= 15)
             throw new MaxPicksUsagesException("Cant make over 15 picks!");
-        if (this.allPlayers.getById(player.getId()) != null)
+        if (this.allPlayers.findById(player.getId()) != null)
             throw new PlayerAlreadyPickedException("Player already picked in this squad!");
         List<Player> playersByPosition = this.allPlayers.getPlayersByPosition(player.getPosition());
         if (playersByPosition != null && (playersByPosition.size() >= this.maxPlayersInPosition.get(player.getPosition())))
             throw new MaxPositionCapacityException("Cant pick more players from this position: " + player.getPosition());
-        this.allPlayers.loadOne(player);
+        this.allPlayers.add(player);
         if (this.allPlayers.getPlayers().size() == 1)
             firstPick = player;
     }
@@ -257,7 +257,7 @@ public class Squad implements Draftable {
     }
 
     public void assignIR(Player IR){
-        if (this.allPlayers.getById(IR.getId()) == null){
+        if (this.allPlayers.findById(IR.getId()) == null){
             throw new IRException("This player is not in squad!");
         }
 
@@ -351,7 +351,7 @@ public class Squad implements Draftable {
 
     private void ensurePlayersInSquad(Player... players) {
         for (Player player : players) {
-            if (this.allPlayers.getById(player.getId()) == null) {
+            if (this.allPlayers.findById(player.getId()) == null) {
                 throw new CantFindPlayerInSquadException("Player not in the squad!");
             }
         }
@@ -363,7 +363,7 @@ public class Squad implements Draftable {
         else
             bench.put("S3", player);
 
-        this.allPlayers.loadOne(player);
+        this.allPlayers.add(player);
     }
 
     public void releaseIR(Player playerOut) {

@@ -3,7 +3,6 @@ package com.fantasy.application;
 import com.fantasy.domain.fantasyTeam.Exceptions.IRException;
 import com.fantasy.domain.fantasyTeam.FantasyTeam;
 import com.fantasy.domain.player.Player;
-import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.user.User;
 import com.fantasy.dto.SquadDto;
 import com.fantasy.dto.UserChipsDto;
@@ -26,7 +25,7 @@ public class ChipsService {
     }
 
     public UserChipsDto getUserChips(int userId) {
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
         return UserChipMapper.toDto(user);
     }
@@ -34,7 +33,7 @@ public class ChipsService {
 
     @Transactional
     public SquadDto assignIR(int userId, int playerId) {
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         try {
@@ -43,7 +42,7 @@ public class ChipsService {
             throw new RuntimeException("Problem with user chips: " + e.getMessage());
         }
 
-        Player player = InMemoryData.getPlayers().getById(playerId);
+        Player player = InMemoryData.getPlayers().findById(playerId);
         if (player == null) throw new RuntimeException("Player not found");
 
         FantasyTeam team = user.getNextFantasyTeam();
@@ -62,7 +61,7 @@ public class ChipsService {
     }
 
     public SquadDto assignFirstPickCaptain(int userId){
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         try {
@@ -87,7 +86,7 @@ public class ChipsService {
     }
 
     public SquadDto releaseIR(int userId, int playerOutId){
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         try {
@@ -100,7 +99,7 @@ public class ChipsService {
         if (team == null) throw new RuntimeException("User has no next fantasy team");
 
         try {
-            team.releaseIR(InMemoryData.getPlayers().getById(playerOutId));
+            team.releaseIR(InMemoryData.getPlayers().findById(playerOutId));
         } catch (IRException e) {
             throw new RuntimeException("Invalid First Pick Captain assignment: " + e.getMessage());
         }
@@ -113,7 +112,7 @@ public class ChipsService {
     }
 
     public SquadDto releaseFirstPickCaptain(int userId){
-        User user = InMemoryData.getUsers().getById(userId);
+        User user = InMemoryData.getUsers().findById(userId);
         if (user == null) throw new RuntimeException("User not found");
 
         try {
