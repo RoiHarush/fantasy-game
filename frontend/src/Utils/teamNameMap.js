@@ -1,0 +1,32 @@
+const TeamShortNames = {
+    "Arsenal": "ARS",
+    "Aston Villa": "AVL",
+    "Burnley": "BUR",
+    "Bournemouth": "BOU",
+    "Brentford": "BRE",
+    "Brighton": "BHA",
+    "Chelsea": "CHE",
+    "Crystal Palace": "CRY",
+    "Everton": "EVE",
+    "Fulham": "FUL",
+    "Leeds": "LEE",
+    "Leeds United": "LEE",
+    "Liverpool": "LIV",
+    "Man City": "MCI",
+    "Manchester City": "MCI",
+    "Man Utd": "MUN",
+    "Manchester United": "MUN",
+    "Newcastle": "NEW",
+    "Newcastle United": "NEW",
+    "Nott'm Forest": "NFO",
+    "Nottingham Forest": "NFO",
+    "Sunderland": "SUN",
+    "Spurs": "TOT",
+    "Tottenham": "TOT",
+    "Tottenham Hotspur": "TOT",
+    "West Ham": "WHU",
+    "Wolves": "WOL",
+    "Wolverhampton Wanderers": "WOL"
+};
+
+export default TeamShortNames;

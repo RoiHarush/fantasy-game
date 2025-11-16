@@ -1,0 +1,169 @@
+.playerMainCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #222;
+    border-right: 1px solid #ddd;
+    white-space: nowrap;
+}
+
+.playerCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 160px;
+}
+
+.playerShirt {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.playerInfo {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.playerName {
+    font-weight: 600;
+    color: #222;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.playerSubinfo {
+    font-size: 0.7rem;
+    color: #444;
+    white-space: nowrap;
+    font-weight: 400;
+}
+
+.fixtureCell {
+    font-size: 0.75rem;
+    color: #333;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.tableContainer button {
+    min-width: 65px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tableContainer button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.tableContainer button:disabled {
+    background: #e0e0e0;
+    color: #777;
+    cursor: default;
+}
+
+.watchBtn {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+}
+
+.compareBtn {
+    background: #eee;
+    border: 1px solid #ddd;
+    color: #222;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selectedCompare {
+    background: linear-gradient(135deg, #00e5ff, #00a8ff);
+    color: #fff;
+    border: none;
+    cursor: default;
+}
+
+.compareBtn:disabled.selectedCompare {
+    opacity: 1;
+    background: linear-gradient(135deg, #00e5ff, #00a8ff);
+    color: #fff;
+    cursor: default;
+}
+
+.signBtn {
+    background: linear-gradient(90deg, #00ff94, #00e5ff);
+    color: black;
+    font-weight: bold;
+}
+
+.tradeBtn {
+    background: #a020f0;
+    color: #fff;
+}
+
+.ownerBadge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    background: linear-gradient(135deg, #5a0ea1 0%, #7b2cbf 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 3px rgba(90, 14, 161, 0.3);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.ownerFree {
+    background: #e5e5e5;
+    color: #333;
+    border: 1px solid #ccc;
+    box-shadow: none;
+}
+
+.ownerMe {
+    background: linear-gradient(135deg, #009688 0%, #00bfa5 100%);
+    color: #fff;
+}
+
+.infoIconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.infoIconWrapper:hover {
+    transform: scale(1.08);
+}
+
+.infoIcon {
+    width: 18px;
+    height: 18px;
+}
+
+.lockIcon {
+    width: 22px;
+    height: 22px;
+    opacity: 0.7;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
+}
