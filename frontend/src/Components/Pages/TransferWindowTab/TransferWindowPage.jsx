@@ -7,8 +7,10 @@ import PageLayout from "../../PageLayout";
 import TransferWindow from "./TransferWindow";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
-function TransferWindowPage({ user }) {
+function TransferWindowPage() {
+    const { user } = useAuth();
     const { nextGameweek } = useGameweek();
 
     const [users, setUsers] = useState([]);

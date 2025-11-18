@@ -2,14 +2,13 @@ package com.fantasy.infrastructure.mappers;
 
 import com.fantasy.domain.game.FixtureEntity;
 import com.fantasy.domain.realWorldData.TeamEntity;
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.user.UserGameData;
 import com.fantasy.dto.FixtureSummaryDto;
 import com.fantasy.dto.PlayerDto;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerPointsEntity;
 import com.fantasy.domain.player.PlayerState;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.infrastructure.repositories.FixtureRepository;
 import com.fantasy.infrastructure.repositories.TeamRepository;
 
@@ -17,19 +16,14 @@ import java.util.*;
 
 public class PlayerMapper {
 
-    // === Entity + Points → DTO ===
-    public static PlayerDto toDto(PlayerEntity e, List<PlayerPointsEntity> points) {
+    // === Entity + Points + Owner Name → DTO ===
+    public static PlayerDto toDto(PlayerEntity e, List<PlayerPointsEntity> points, String ownerName) {
         int sum = 0;
         for (PlayerPointsEntity p : points) {
             sum += p.getPoints();
         }
 
         boolean available = e.getState().equals(PlayerState.NONE);
-        String ownerName = null;
-        for (User user : InMemoryData.getUsers().getUsers()) {
-            if (user.getId() == e.getOwnerId())
-                ownerName = user.getName();
-        }
 
         return new PlayerDto(
                 e.getId(),
@@ -49,8 +43,6 @@ public class PlayerMapper {
                 e.getPhoto()
         );
     }
-
-
     // === Entity + Points → Domain ===
     public static Player toDomain(PlayerEntity e, List<PlayerPointsEntity> points) {
         Player player = new Player(

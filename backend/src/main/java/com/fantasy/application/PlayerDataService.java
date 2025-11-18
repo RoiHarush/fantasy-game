@@ -2,11 +2,11 @@ package com.fantasy.application;
 
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPointsEntity;
+import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.user.UserSquadEntity;
 import com.fantasy.dto.PlayerDataDto;
 import com.fantasy.infrastructure.repositories.PlayerPointsRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
-import com.fantasy.main.InMemoryData;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,13 +19,16 @@ public class PlayerDataService {
     private final UserSquadRepository userSquadRepo;
     private final PlayerPointsRepository playerPointsRepo;
     private final FixtureService fixtureService;
+    private final PlayerRegistry playerRegistry;
 
     public PlayerDataService(UserSquadRepository userSquadRepo,
                              PlayerPointsRepository playerPointsRepo,
-                             FixtureService fixtureService) {
+                             FixtureService fixtureService,
+                             PlayerRegistry playerRegistry) {
         this.userSquadRepo = userSquadRepo;
         this.playerPointsRepo = playerPointsRepo;
         this.fixtureService = fixtureService;
+        this.playerRegistry = playerRegistry;
     }
 
     public List<PlayerDataDto> getSquadDataForGameweek(int userId, int gwId) {
@@ -42,7 +45,7 @@ public class PlayerDataService {
 
         return playerIds.stream()
                 .map(id -> {
-                    Player player = InMemoryData.getPlayers().findById(id);
+                    Player player = playerRegistry.findById(id);
                     if (player == null)
                         return new PlayerDataDto(id, 0, null);
 

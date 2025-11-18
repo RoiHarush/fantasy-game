@@ -2,8 +2,8 @@ package com.fantasy.api;
 
 import com.fantasy.application.GameWeekService;
 import com.fantasy.domain.player.Player;
+import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.realWorldData.TeamName;
-import com.fantasy.main.InMemoryData;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -20,9 +20,12 @@ public class FplProxyController {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final GameWeekService gameWeekService;
+    private final PlayerRegistry playerRegistry;
 
-    public FplProxyController(GameWeekService gameWeekService) {
+    public FplProxyController(GameWeekService gameWeekService,
+                              PlayerRegistry playerRegistry) {
         this.gameWeekService = gameWeekService;
+        this.playerRegistry = playerRegistry;
     }
 
     @GetMapping("/dream-team/{gw}")
@@ -42,7 +45,7 @@ public class FplProxyController {
             for (Map<String, Object> entry : fplTeam) {
                 int playerId = (int) entry.get("element");
 
-                Player player = InMemoryData.getPlayers().findById(playerId);
+                Player player = playerRegistry.findById(playerId);
                 if (player == null) continue;
 
                 Map<String, Object> p = new LinkedHashMap<>();
@@ -82,7 +85,7 @@ public class FplProxyController {
                     Map<String, Object> topPlayer = (Map<String, Object>) apiData.get("top_player");
                     int playerId = (int) topPlayer.get("id");
 
-                    Player player = InMemoryData.getPlayers().findById(playerId);
+                    Player player = playerRegistry.findById(playerId);
                     if (player == null) continue;
 
                     Map<String, Object> entry = new LinkedHashMap<>();

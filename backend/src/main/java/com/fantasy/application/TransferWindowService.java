@@ -7,11 +7,12 @@ import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.player.PlayerState;
 import com.fantasy.domain.transfer.TransferPickEntity;
 import com.fantasy.domain.transfer.TransferTurnManager;
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.user.UserGameData;
 import com.fantasy.dto.IRSignRequestDto;
 import com.fantasy.dto.TransferRequestDto;
+import com.fantasy.infrastructure.mappers.SquadMapper;
+import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.PlayerRepository;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.infrastructure.repositories.GameWeekRepository;
 import com.fantasy.api.TransferWebSocketController;
 import org.springframework.stereotype.Service;
@@ -19,14 +20,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+import com.fantasy.domain.player.*;
+import com.fantasy.domain.user.*;
+import com.fantasy.infrastructure.repositories.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+
 @Service
 public class TransferWindowService {
+
+    private static final Logger log = LoggerFactory.getLogger(TransferWindowService.class);
 
     private final PlayerRepository playerRepo;
     private final GameWeekRepository gameWeekRepo;
     private final TransferService transferService;
     private final TransferWebSocketController webSocketController;
-    private final DomainPersistenceService domainPersistenceService;
+
+    private final UserGameDataRepository gameDataRepo;
+    private final UserRepository userRepo;
+    private final UserSquadRepository squadRepo;
+    private final PlayerRegistry playerRegistry;
 
     private TransferTurnManager turnManager;
     private boolean activeWindow = false;
@@ -36,17 +51,24 @@ public class TransferWindowService {
                                  GameWeekRepository gameWeekRepo,
                                  TransferService transferService,
                                  TransferWebSocketController webSocketController,
-                                 DomainPersistenceService domainPersistenceService) {
+                                 UserGameDataRepository gameDataRepo,
+                                 UserRepository userRepo,
+                                 UserSquadRepository squadRepo,
+                                 PlayerRegistry playerRegistry) {
         this.playerRepo = playerRepo;
         this.gameWeekRepo = gameWeekRepo;
         this.transferService = transferService;
         this.webSocketController = webSocketController;
-        this.domainPersistenceService = domainPersistenceService;
+        this.gameDataRepo = gameDataRepo;
+        this.userRepo = userRepo;
+        this.squadRepo = squadRepo;
+        this.playerRegistry = playerRegistry;
     }
 
     @Transactional
     public void processTransfer(TransferRequestDto request) {
         transferService.makeTransfer(request);
+
         broadcastTransferDone(
                 request.getUserId(),
                 request.getPlayerOutId(),
@@ -56,8 +78,10 @@ public class TransferWindowService {
     }
 
     public void broadcastPass(int userId) {
-        var user = InMemoryData.getUsers().findById(userId);
-        String userName = user != null ? user.getName() : "Unknown user";
+        String userName = userRepo.findById(userId)
+                .map(UserEntity::getName)
+                .orElse("Unknown user");
+
         webSocketController.sendPassEvent(userId, userName);
     }
 
@@ -87,7 +111,6 @@ public class TransferWindowService {
                 turnManager.getTurnsStatus(),
                 turnManager.getMaxTurns()
         );
-
     }
 
     private List<Integer> findUsersEligibleForIR(List<TransferPickEntity> order) {
@@ -100,7 +123,11 @@ public class TransferWindowService {
             TransferPickEntity pick = order.get(i);
             int userId = pick.getUserId();
 
-            var user = InMemoryData.getUsers().findById(userId);
+            Optional<UserGameDataEntity> gameDataEntityOpt = gameDataRepo.findByUserId(userId);
+            if (gameDataEntityOpt.isEmpty()) continue;
+
+            UserGameData user = UserMapper.toDomainGameData(gameDataEntityOpt.get(), playerRegistry);
+
             if (user == null || user.getNextFantasyTeam() == null) continue;
 
             var squad = user.getNextFantasyTeam().getSquad();
@@ -120,13 +147,15 @@ public class TransferWindowService {
 
     @Transactional
     public void replaceIRPlayer(IRSignRequestDto request) {
-        var user = InMemoryData.getUsers().findById(request.getUserId());
-        if (user == null) throw new FantasyTeamException("User not found");
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(request.getUserId())
+                .orElseThrow(() -> new FantasyTeamException("UserGameData entity not found"));
+        UserGameData user = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
 
         var squad = user.getNextFantasyTeam().getSquad();
         if (squad == null) throw new FantasyTeamException("Squad not found");
 
-        var player = InMemoryData.getPlayers().findById(request.getPlayerId());
+        var player = playerRegistry.findById(request.getPlayerId());
+
         if (player == null) throw new FantasyTeamException("Player not found");
         if (!player.getState().equals(PlayerState.NONE))
             throw new FantasyTeamException("Player not available");
@@ -141,7 +170,7 @@ public class TransferWindowService {
             throw new FantasyTeamException("Squad already has 15 players");
 
         var ir = squad.getIR();
-        if (ir == null) throw new FantasyTeamException("User has no IR slot active");
+        if (ir == null) throw new FantasyTeamException("UserGameData has no IR slot active");
         if (ir.getPosition() != player.getPosition())
             throw new FantasyTeamException("Player position must match IR position");
 
@@ -151,14 +180,23 @@ public class TransferWindowService {
 
         PlayerEntity playerEntity = playerRepo.findById(player.getId())
                 .orElseThrow(() -> new RuntimeException("Player entity not found"));
-
         playerEntity.setState(player.getState());
         playerEntity.setOwnerId(player.getOwnerId());
+        playerRepo.save(playerEntity);
 
+        UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
+        if (nextSquadEntity == null) throw new FantasyTeamException("Next squad entity not found");
 
-        domainPersistenceService.saveSquad(user.getId());
+        UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, nextSquadEntity.getGameweek());
+        updatedEntity.setId(nextSquadEntity.getId());
+        updatedEntity.setUser(gameDataEntity);
+        squadRepo.save(updatedEntity);
 
-        webSocketController.sendTransferDoneEvent(user.getId(), player.getId(), user.getName());
+        String userName = userRepo.findById(request.getUserId())
+                .map(UserEntity::getName)
+                .orElse("Unknown user");
+
+        webSocketController.sendTransferDoneEvent(user.getId(), player.getId(), userName);
         endTurn();
     }
 
@@ -180,7 +218,10 @@ public class TransferWindowService {
 
         if (turnManager.isIRRound()) {
             List<Integer> irOrder = turnManager.getCurrentOrder();
-            User user = InMemoryData.getUsers().findById(nextUserId);
+            UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(nextUserId)
+                    .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
+            UserGameData user = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+
             Player player = user.getNextFantasyTeam().getSquad().getIR();
 
             System.out.println("⚕️ IR Round turn: user " + nextUserId);
@@ -193,7 +234,7 @@ public class TransferWindowService {
             return;
         }
 
-        System.out.println("➡️ Next turn: User " + nextUserId);
+        System.out.println("➡️ Next turn: UserGameData " + nextUserId);
         webSocketController.sendTurnStartedEvent(
                 nextUserId,
                 turnManager.getCurrentOrder(),
@@ -235,8 +276,10 @@ public class TransferWindowService {
     }
 
     public void broadcastTransferDone(int userId, int playerOutId, int playerInId) {
-        var user = InMemoryData.getUsers().findById(userId);
-        String userName = user != null ? user.getName() : null;
+        String userName = userRepo.findById(userId)
+                .map(UserEntity::getName)
+                .orElse("Unknown user");
+
         webSocketController.sendTransferDoneEvent(userId, playerOutId, playerInId, userName);
     }
 

@@ -10,20 +10,23 @@ import { GameweekProvider } from "./Context/GameweeksContext.jsx";
 import { TeamsProvider } from "./Context/TeamsContext.jsx";
 import { WebSocketProvider } from "./Context/WebSocketContext.jsx";
 import RootApp from "./RootApp.jsx";
+import { AuthProvider } from "./Context/AuthContext.jsx";
 
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <WebSocketProvider>
-        <GameweekProvider>
-          <PlayersProvider>
-            <TeamsProvider>
-              <RootApp />
-            </TeamsProvider>
-          </PlayersProvider>
-        </GameweekProvider>
-      </WebSocketProvider>
+      <AuthProvider>
+        <WebSocketProvider>
+          <GameweekProvider>
+            <PlayersProvider>
+              <TeamsProvider>
+                <RootApp />
+              </TeamsProvider>
+            </PlayersProvider>
+          </GameweekProvider>
+        </WebSocketProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );

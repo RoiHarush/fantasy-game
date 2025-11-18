@@ -1,26 +1,15 @@
 import App from "./App";
 import { WatchlistProvider } from "./Context/WatchlistContext";
-import { useState, useEffect } from "react";
 import { FixturesProvider } from "./Context/FixturesContext";
+import { useAuth } from "./Context/AuthContext";
 
 function RootApp() {
-    const [loggedUser, setLoggedUser] = useState(null);
-
-    useEffect(() => {
-        const savedUser = sessionStorage.getItem("loggedUser");
-        const savedToken = sessionStorage.getItem("token");
-        if (savedUser && savedToken) {
-            setLoggedUser(JSON.parse(savedUser));
-        }
-    }, []);
+    const { user } = useAuth();
 
     return (
         <FixturesProvider>
-            <WatchlistProvider user={loggedUser}>
-                <App
-                    loggedUser={loggedUser}
-                    onLogin={(u) => setLoggedUser(u)}
-                />
+            <WatchlistProvider user={user}>
+                <App />
             </WatchlistProvider>
         </FixturesProvider>
     );

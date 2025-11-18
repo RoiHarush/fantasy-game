@@ -6,10 +6,14 @@ import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "./Points";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
 
-function PointsPage({ user }) {
+function PointsPage({ displayedUser }) {
+    const { user: loggedUser } = useAuth();
     const { currentGameweek, gameweeks } = useGameweek();
+
+    const targetUser = displayedUser || loggedUser;
 
     const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [squad, setSquad] = useState(null);
@@ -23,16 +27,16 @@ function PointsPage({ user }) {
     }, [currentGameweek]);
 
     useEffect(() => {
-        if (!user || !selectedGameweek) return;
+        if (!targetUser || !selectedGameweek) return;
 
         let cancelled = false;
         async function load() {
             setLoading(true);
             try {
                 const [squadRes, pointsRes, playerDataRes] = await Promise.all([
-                    fetchSquadForGameweek(user.id, selectedGameweek.id),
-                    fetchUserPoints(user.id, selectedGameweek.id),
-                    fetchPlayerDataForGameweek(user.id, selectedGameweek.id)
+                    fetchSquadForGameweek(targetUser.id, selectedGameweek.id),
+                    fetchUserPoints(targetUser.id, selectedGameweek.id),
+                    fetchPlayerDataForGameweek(targetUser.id, selectedGameweek.id)
                 ]);
 
                 if (!cancelled) {
@@ -49,7 +53,7 @@ function PointsPage({ user }) {
         load();
 
         return () => (cancelled = true);
-    }, [user, selectedGameweek]);
+    }, [targetUser, selectedGameweek]);
 
     if (loading || !selectedGameweek) {
         return <LoadingPage />;
@@ -63,7 +67,7 @@ function PointsPage({ user }) {
         <PageLayout
             left={
                 <Points
-                    user={user}
+                    user={targetUser}
                     squad={squad}
                     points={points}
                     playerData={playerData}
@@ -73,10 +77,9 @@ function PointsPage({ user }) {
                     currentGameweek={currentGameweek}
                 />
             }
-            right={<UserSidebar user={user} />}
+            right={<UserSidebar user={targetUser} />}
         />
     );
 }
 
 export default PointsPage;
-

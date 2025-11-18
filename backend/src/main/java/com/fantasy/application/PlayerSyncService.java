@@ -5,7 +5,6 @@ import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.player.PlayerState;
 import com.fantasy.domain.user.UserSquadEntity;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.infrastructure.repositories.PlayerRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,7 @@ public class PlayerSyncService {
     @Autowired private UserSquadRepository squadRepo;
     @Autowired private PlayerRepository playerRepo;
     @Autowired private GameWeekService gameWeekService;
+    @Autowired private PlayerRegistry playerRegistry;
 
 
     public void fullSyncCurrentGw() {
@@ -55,9 +55,7 @@ public class PlayerSyncService {
 
         playerRepo.saveAll(allPlayers);
 
-        PlayerRegistry domainPlayers = InMemoryData.getPlayers();
-
-        domainPlayers.getPlayers().forEach(p -> {
+        playerRegistry.getPlayers().forEach(p -> {
             p.setOwnerId(-1);
             p.setState(PlayerState.NONE);
         });
@@ -66,7 +64,7 @@ public class PlayerSyncService {
             int userId = squad.getUser().getId();
 
             for (Integer pid : squad.getStartingLineup()) {
-                Player dp = domainPlayers.findById(pid);
+                Player dp = playerRegistry.findById(pid);
                 if (dp != null) {
                     dp.setOwnerId(userId);
                     dp.setState(PlayerState.STARTING);
@@ -74,7 +72,7 @@ public class PlayerSyncService {
             }
 
             for (Integer pid : squad.getBenchMap().values()) {
-                Player dp = domainPlayers.findById(pid);
+                Player dp = playerRegistry.findById(pid);
                 if (dp != null) {
                     dp.setOwnerId(userId);
                     dp.setState(PlayerState.BENCH);

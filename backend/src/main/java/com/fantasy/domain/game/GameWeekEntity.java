@@ -19,9 +19,8 @@ public class GameWeekEntity {
     private String status;
     private LocalDateTime transferOpenTime;
 
-    @OneToMany(mappedBy = "gameWeek", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @OrderBy("position ASC")
-    private List<TransferPickEntity> transferOrder = new ArrayList<>();
+    @OneToMany(mappedBy = "gameWeek", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TransferPickEntity> transferOrder;
 
     public GameWeekEntity() {}
 

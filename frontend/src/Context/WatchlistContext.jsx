@@ -9,15 +9,29 @@ export function WatchlistProvider({ user, children }) {
     const { subscribe, unsubscribe, connected } = useWebSocket();
 
     useEffect(() => {
-        if (!user?.id) return;
-        fetch(`${API_URL}/api/users/${user.id}/watchlist`)
-            .then(res => res.json())
+        if (!user?.id) {
+            setWatchlist([]);
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+
+        fetch(`${API_URL}/api/users/${user.id}/watchlist`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(res.statusText);
+                return res.json();
+            })
             .then(setWatchlist)
             .catch(err => console.error("Failed to fetch watchlist:", err));
     }, [user]);
 
     useEffect(() => {
         if (!connected || !user?.id) return;
+
         const sub = subscribe(`/topic/watchlist/${user.id}`, (msg) => {
             if (!msg.body || msg.body === "undefined") return;
             try {
@@ -28,7 +42,7 @@ export function WatchlistProvider({ user, children }) {
             }
         });
         return () => unsubscribe(sub);
-    }, [connected, user]);
+    }, [connected, user, subscribe, unsubscribe]);
 
     const toggleWatch = async (playerId, isWatched) => {
         setWatchlist((prev) => {
@@ -40,12 +54,16 @@ export function WatchlistProvider({ user, children }) {
         });
 
         try {
+            const token = localStorage.getItem('token');
             const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
             await fetch(endpoint, {
                 method,
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
                 body: JSON.stringify({ playerId }),
             });
         } catch (err) {
@@ -59,7 +77,6 @@ export function WatchlistProvider({ user, children }) {
             });
         }
     };
-
 
     return (
         <WatchlistContext.Provider value={{ watchlist, toggleWatch }}>

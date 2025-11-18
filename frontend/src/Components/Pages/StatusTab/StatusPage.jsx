@@ -5,8 +5,10 @@ import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
 import Status from "./Status";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
-function StatusPage({ user }) {
+function StatusPage() {
+    const { user } = useAuth();
     const { currentGameweek, nextGameweek } = useGameweek();
 
     const [league, setLeague] = useState(null);

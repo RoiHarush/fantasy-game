@@ -6,8 +6,10 @@ import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
 import SidebarContainer from "../../Sidebar/SidebarContainer";
 import LeagueTable from "./LeagueTable";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
-function LeaguePage({ user }) {
+function LeaguePage() {
+    const { user } = useAuth();
     const { currentGameweek } = useGameweek();
     const [league, setLeague] = useState(null);
     const [loading, setLoading] = useState(true);

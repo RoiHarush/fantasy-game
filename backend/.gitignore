@@ -40,3 +40,5 @@ nbdist/
 
 # ====== macOS ======
 .DS_Store
+
+*.db

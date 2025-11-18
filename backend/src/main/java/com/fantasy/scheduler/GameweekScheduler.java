@@ -2,8 +2,7 @@ package com.fantasy.scheduler;
 
 import com.fantasy.application.*;
 import com.fantasy.domain.game.GameWeekEntity;
-import com.fantasy.domain.user.User;
-import com.fantasy.main.InMemoryData;
+import com.fantasy.domain.user.UserGameData;
 
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -100,9 +99,9 @@ public class GameweekScheduler {
             try {
                 playerService.updateLiveGameweekStats(gw.getId());
 
-                for (User user : InMemoryData.getUsers().getUsers()) {
-                    pointsService.calculateAndPersist(user.getId(), gw.getId());
-                }
+//                for (UserGameData user : InMemoryData.getUsers().getUsers()) {
+//                    pointsService.calculateAndPersist(user.getId(), gw.getId());
+//                }
 
                 System.out.println("✅ Updated live stats and points for GW " + gw.getId());
             } catch (Exception e) {

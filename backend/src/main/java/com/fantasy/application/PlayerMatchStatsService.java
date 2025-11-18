@@ -1,9 +1,9 @@
 package com.fantasy.application;
 
 import com.fantasy.domain.player.Player;
+import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.realWorldData.TeamEntity;
 import com.fantasy.dto.PlayerMatchStatsDto;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.infrastructure.mappers.PlayerMatchStatsMapper;
 import com.fantasy.infrastructure.repositories.*;
 import org.springframework.stereotype.Service;
@@ -19,19 +19,22 @@ public class PlayerMatchStatsService {
     private final TeamRepository teamRepo;
     private final FixtureRepository fixtureRepo;
     private final UserSquadRepository userSquadRepo;
+    private final PlayerRegistry playerRegistry;
 
     public PlayerMatchStatsService(PlayerGameweekStatsRepository statsRepo,
                                    TeamRepository teamRepo,
                                    FixtureRepository fixtureRepo,
-                                   UserSquadRepository userSquadRepo) {
+                                   UserSquadRepository userSquadRepo,
+                                   PlayerRegistry playerRegistry) {
         this.statsRepo = statsRepo;
         this.teamRepo = teamRepo;
         this.fixtureRepo = fixtureRepo;
         this.userSquadRepo = userSquadRepo;
+        this.playerRegistry = playerRegistry;
     }
 
     public List<PlayerMatchStatsDto> getAllMatchStats(int playerId) {
-        Player player = InMemoryData.getPlayers().findById(playerId);
+        Player player = playerRegistry.findById(playerId);
         if (player == null)
             throw new RuntimeException("Player not found: " + playerId);
 
@@ -71,7 +74,7 @@ public class PlayerMatchStatsService {
 
 
     public PlayerMatchStatsDto getMatchStats(int playerId, int gw, Integer userId) {
-        Player player = InMemoryData.getPlayers().findById(playerId);
+        Player player = playerRegistry.findById(playerId);
         if (player == null)
             throw new RuntimeException("Player not found: " + playerId);
 

@@ -18,7 +18,7 @@ public class UserSquadEntity {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private UserEntity user;
+    private UserGameDataEntity user;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_squad_starting", joinColumns = @JoinColumn(name = "squad_id"))
@@ -57,8 +57,8 @@ public class UserSquadEntity {
     public int getGameweek() { return gameweek; }
     public void setGameweek(int gameweek) { this.gameweek = gameweek; }
 
-    public UserEntity getUser() { return user; }
-    public void setUser(UserEntity user) { this.user = user; }
+    public UserGameDataEntity getUser() { return user; }
+    public void setUser(UserGameDataEntity user) { this.user = user; }
 
     public List<Integer> getStartingLineup() { return startingLineup; }
     public void setStartingLineup(List<Integer> startingLineup) { this.startingLineup = startingLineup; }

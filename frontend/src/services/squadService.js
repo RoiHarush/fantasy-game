@@ -1,13 +1,18 @@
 import API_URL from "../config";
+import { getAuthHeaders } from "./authHelper";
 
 export async function fetchSquadForGameweek(userId, gameweekId) {
-    const res = await fetch(`${API_URL}/api/users/${userId}/squad?gw=${gameweekId}`);
+    const res = await fetch(`${API_URL}/api/users/${userId}/squad?gw=${gameweekId}`, {
+        headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error("Failed to fetch squad");
     return res.json();
 }
 
 export async function fetchPlayerDataForGameweek(userId, gameweekId) {
-    const res = await fetch(`${API_URL}/api/players/user/${userId}/gameweek/${gameweekId}`);
+    const res = await fetch(`${API_URL}/api/players/user/${userId}/gameweek/${gameweekId}`, {
+        headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error("Failed to fetch player data");
     return res.json();
 }

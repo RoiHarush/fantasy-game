@@ -1,11 +1,14 @@
 import { useState, useMemo } from "react";
 import styles from "../../Styles/Login.module.css";
-import API_URL from "../../config"
+import API_URL from "../../config";
+import { useAuth } from "../../Context/AuthContext";
 
-export default function Login({ onLogin }) {
+export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+
+    const { login } = useAuth();
 
     const disallowed = /[\sא-ת]/;
 
@@ -52,18 +55,8 @@ export default function Login({ onLogin }) {
 
             const data = await res.json();
 
-            // localStorage.setItem("token", data.token);
-            // localStorage.setItem("userId", data.user.id);
-            // localStorage.setItem("username", data.user.name);
-            // localStorage.setItem("loggedUser", JSON.stringify(data.user));
+            login(data.user, data.token);
 
-            sessionStorage.setItem("token", data.token);
-            sessionStorage.setItem("userId", data.user.id);
-            sessionStorage.setItem("username", data.user.name);
-            sessionStorage.setItem("loggedUser", JSON.stringify(data.user));
-
-
-            onLogin(data.user);
         } catch (err) {
             console.error(err);
             setError("Error while sign-in");

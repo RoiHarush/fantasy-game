@@ -5,8 +5,10 @@ import PageLayout from "../../PageLayout";
 import UserSquadSidebar from "../../Sidebar/UserSquadSidebar";
 import Scout from "./Scout";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
-function ScoutPage({ user }) {
+function ScoutPage() {
+    const { user } = useAuth();
     const { nextGameweek } = useGameweek();
 
     const [squad, setSquad] = useState(null);

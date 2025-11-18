@@ -2,14 +2,17 @@ package com.fantasy.application;
 
 import com.fantasy.domain.fantasyTeam.Exceptions.FantasyTeamException;
 import com.fantasy.domain.player.PlayerEntity;
+import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.user.UserGameDataEntity;
 import com.fantasy.dto.TransferRequestDto;
 import com.fantasy.domain.fantasyTeam.FantasyTeam;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
+import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.PlayerRepository;
+import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.user.UserGameData;
 import com.fantasy.domain.user.UserSquadEntity;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -26,39 +29,45 @@ public class TransferService {
     private final PlayerRepository playerRepo;
     private final GameWeekService gameWeekService;
     private final UserSquadRepository squadRepo;
+    private final UserGameDataRepository gameDataRepo;
+    private final PlayerRegistry playerRegistry;
 
     public TransferService(PlayerRepository playerRepo,
                            GameWeekService gameWeekService,
-                           UserSquadRepository squadRepo) {
+                           UserSquadRepository squadRepo,
+                           UserGameDataRepository gameDataRepo,
+                           PlayerRegistry playerRegistry) {
         this.playerRepo = playerRepo;
         this.gameWeekService = gameWeekService;
         this.squadRepo = squadRepo;
+        this.gameDataRepo = gameDataRepo;
+        this.playerRegistry = playerRegistry;
     }
 
     @Transactional
     public void makeTransfer(TransferRequestDto request) {
         try {
-            User user = InMemoryData.getUsers().findById(request.getUserId());
-            if (user == null) throw new RuntimeException("User not found");
+            UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
+
+            UserGameData user = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
             System.out.println(user);
 
             FantasyTeam team = user.getNextFantasyTeam();
-            if (team == null) throw new RuntimeException("User has no next fantasy team");
-            System.out.println(team);
+            if (team == null) throw new RuntimeException("UserGameData has no next fantasy team");
 
-            Player playerOut = InMemoryData.getPlayers().findById(request.getPlayerOutId());
-            Player playerIn = InMemoryData.getPlayers().findById(request.getPlayerInId());
+            Player playerOut = playerRegistry.findById(request.getPlayerOutId());
+            Player playerIn = playerRegistry.findById(request.getPlayerInId());
 
             try {
                 team.makeTransfer(playerIn, playerOut);
             } catch (FantasyTeamException e) {
-                log.warn("Transfer failed for user {}: {}", user.getName(), e.getMessage());
+                log.warn("Transfer failed for user {}: {}", request.getUserId(), e.getMessage());
                 throw e;
             }
 
             System.out.println(playerOut.getViewName() + ": Owner: " + playerOut.getOwnerId() + "|| State: " + playerOut.getState());
             System.out.println(playerIn.getViewName() + ": Owner: " + playerIn.getOwnerId() + "|| State: " + playerIn.getState());
-
 
             updatePlayerInDb(playerIn);
             updatePlayerInDb(playerOut);
@@ -66,8 +75,10 @@ public class TransferService {
 
             int nextGw = gameWeekService.getNextGameweek().getId();
 
-            UserSquadEntity nextSquadEntity = squadRepo.findByUser_IdAndGameweek(user.getId(), nextGw)
-                    .orElseThrow(() -> new RuntimeException("Squad for next game-week doesn't exist!"));
+            UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
+            if (nextSquadEntity == null || nextSquadEntity.getGameweek() != nextGw) {
+                throw new RuntimeException("Squad for next game-week doesn't exist!");
+            }
 
             List<Integer> newStartingLineup = team.getSquad().getStartingLineup().values().stream()
                     .flatMap(List::stream)
@@ -97,13 +108,12 @@ public class TransferService {
 
             squadRepo.save(nextSquadEntity);
 
-            log.info("User {} completed transfer: {} -> {} for GW {}",
-                    user.getName(), playerOut.getViewName(), playerIn.getViewName(), nextGw);
-        }catch (Exception e) {
+            log.info("UserGameData {} completed transfer: {} -> {} for GW {}",
+                    request.getUserId(), playerOut.getViewName(), playerIn.getViewName(), nextGw);
+        } catch (Exception e) {
             throw e;
         }
     }
-
 
     private void updatePlayerInDb(Player player) {
         PlayerEntity entity = playerRepo.findById(player.getId())
@@ -119,5 +129,3 @@ public class TransferService {
                 " | State=" + entity.getState());
     }
 }
-
-

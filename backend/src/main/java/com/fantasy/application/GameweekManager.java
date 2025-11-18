@@ -3,16 +3,16 @@ package com.fantasy.application;
 import com.fantasy.domain.fantasyTeam.Squad;
 import com.fantasy.domain.game.GameweekRollover;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
-import com.fantasy.domain.user.User;
-import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.user.UserGameData;
+import com.fantasy.domain.user.UserGameDataEntity;
 import com.fantasy.domain.user.UserSquadEntity;
 import com.fantasy.infrastructure.repositories.PlayerGameweekStatsRepository;
-import com.fantasy.main.InMemoryData;
 
 import com.fantasy.infrastructure.mappers.SquadMapper;
 import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.GameWeekRepository;
-import com.fantasy.infrastructure.repositories.UserRepository;
+import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -23,65 +23,56 @@ import java.util.stream.Collectors;
 @Service
 public class GameweekManager {
 
-    private final UserRepository userRepository;
+    private final UserGameDataRepository gameDataRepository;
     private final UserSquadRepository squadRepository;
     private final GameWeekRepository gameweekRepository;
-
     private final PlayerGameweekStatsRepository statsRepo;
-    private final UserSquadRepository squadRepo;
     private final PointsService pointsService;
+    private final PlayerRegistry playerRegistry;
 
-    public GameweekManager(UserRepository userRepository,
+    public GameweekManager(UserGameDataRepository gameDataRepository,
                            UserSquadRepository squadRepository,
                            GameWeekRepository gameweekRepository,
                            PlayerGameweekStatsRepository statsRepo,
-                           UserSquadRepository squadRepo,
-                           PointsService pointsService) {
-        this.userRepository = userRepository;
+                           PointsService pointsService,
+                           PlayerRegistry playerRegistry) {
+        this.gameDataRepository = gameDataRepository;
         this.squadRepository = squadRepository;
         this.gameweekRepository = gameweekRepository;
         this.statsRepo = statsRepo;
-        this.squadRepo = squadRepo;
         this.pointsService = pointsService;
-
+        this.playerRegistry = playerRegistry;
     }
 
     @Transactional
     public void openNextGameweek(int newGw) {
-        var users = userRepository.findAllWithRelations();
+        var gameDataEntities = gameDataRepository.findAllWithRelations();
 
-        for (UserEntity entity : users) {
-            var domainUser = UserMapper.toDomain(
-                    entity,
-                    entity.getCurrentSquad(),
-                    entity.getNextSquad(),
-                    InMemoryData.getPlayers()
+        for (UserGameDataEntity gameDataEntity : gameDataEntities) {
+            var userGameData = UserMapper.toDomainGameData(
+                    gameDataEntity,
+                    playerRegistry
             );
 
-            GameweekRollover.rolloverToNextGameweek(domainUser, newGw);
+            GameweekRollover.rolloverToNextGameweek(userGameData, newGw);
 
             var newNextSquadEntity = SquadMapper.toEntity(
-                    domainUser.getNextFantasyTeam().getSquad(),
-                    domainUser.getNextFantasyTeam().getGameweek()
+                    userGameData.getNextFantasyTeam().getSquad(),
+                    userGameData.getNextFantasyTeam().getGameweek()
             );
-            newNextSquadEntity.setUser(entity);
+            newNextSquadEntity.setUser(gameDataEntity);
             squadRepository.save(newNextSquadEntity);
 
-            entity.setCurrentSquad(entity.getNextSquad());
-            entity.setNextSquad(newNextSquadEntity);
+            gameDataEntity.setCurrentSquad(gameDataEntity.getNextSquad());
+            gameDataEntity.setNextSquad(newNextSquadEntity);
 
-            userRepository.save(entity);
-
-            var memoryUser = InMemoryData.getUsers().findById(entity.getId());
-            if (memoryUser != null) {
-                memoryUser.setCurrentFantasyTeam(domainUser.getCurrentFantasyTeam());
-                memoryUser.setNextFantasyTeam(domainUser.getNextFantasyTeam());
-            }
+            gameDataRepository.save(gameDataEntity);
         }
 
         updateGameweeksStatus(newGw);
     }
 
+    @Transactional
     public void processGameweek(int gameweekId) {
         Map<Integer, Integer> minutesMap = statsRepo.findAll().stream()
                 .filter(s -> s.getGameweek() == gameweekId)
@@ -91,25 +82,27 @@ public class GameweekManager {
                         (a, b) -> b
                 ));
 
-        for (User user : InMemoryData.getUsers().getUsers()){
-            Squad squad = user.getCurrentFantasyTeam().getSquad();
+        var gameDataEntities = gameDataRepository.findAllWithRelations();
+
+        for (UserGameDataEntity gameDataEntity : gameDataEntities) {
+            UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+
+            Squad squad = userGameData.getCurrentFantasyTeam().getSquad();
 
             squad.autoSub(minutesMap);
 
-            var squadEntity = squadRepo.findByUser_IdAndGameweek(user.getId(), gameweekId)
-                    .orElseThrow(() -> new RuntimeException("Squad entity not found for GW " + gameweekId));
+            var squadEntity = gameDataEntity.getCurrentSquad();
+            if (squadEntity == null || squadEntity.getGameweek() != gameweekId) {
+                throw new RuntimeException("Squad entity not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
+            }
 
             UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, gameweekId);
+            updatedEntity.setId(squadEntity.getId());
+            updatedEntity.setUser(gameDataEntity);
 
-            squadEntity.setStartingLineup(updatedEntity.getStartingLineup());
-            squadEntity.setBenchMap(updatedEntity.getBenchMap());
-            squadEntity.setFormation(updatedEntity.getFormation());
-            squadEntity.setCaptainId(updatedEntity.getCaptainId());
-            squadEntity.setViceCaptainId(updatedEntity.getViceCaptainId());
+            squadRepository.save(updatedEntity);
 
-            squadRepo.save(squadEntity);
-
-            pointsService.calculateAndPersist(user.getId(), gameweekId);
+            pointsService.calculateAndPersist(userGameData.getId(), gameweekId);
         }
     }
 

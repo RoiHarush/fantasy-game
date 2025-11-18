@@ -6,8 +6,17 @@ function IRStatusTable() {
     const [irStatuses, setIrStatuses] = useState([]);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/users/ir-status`)
-            .then(res => res.json())
+        const token = localStorage.getItem('token');
+
+        fetch(`${API_URL}/api/users/ir-status`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch");
+                return res.json();
+            })
             .then(data => setIrStatuses(data))
             .catch(err => console.error("Failed to fetch IR statuses:", err));
     }, []);

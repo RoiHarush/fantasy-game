@@ -5,6 +5,7 @@ public class UserDto {
     private String name;
     private String fantasyTeam;
     private String logoPath;
+    private String role;
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -21,4 +22,7 @@ public class UserDto {
     public void setLogoPath(String logoPath) {
         this.logoPath = logoPath;
     }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }

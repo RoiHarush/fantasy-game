@@ -1,13 +1,14 @@
 package com.fantasy.domain.player;
 
 import com.fantasy.domain.intefaces.Repository;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//TODO: Add exceptions
+@Service
 public class PlayerRegistry implements Repository<Player> {
     private final List<Player> players;
     private final Map<Integer, Player> playersById;

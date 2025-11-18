@@ -1,6 +1,6 @@
 package com.fantasy.domain.league;
 
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.user.UserGameData;
 
 import java.util.*;
 
@@ -8,7 +8,7 @@ import java.util.*;
 public final class LeagueLogic {
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    public static void sortUsers(List<User> orderedUsers) {
+    public static void sortUsers(List<UserGameData> orderedUsers) {
         orderedUsers.sort(new UserByPointsComparator());
     }
 

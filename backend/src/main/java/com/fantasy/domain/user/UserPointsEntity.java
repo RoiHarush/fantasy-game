@@ -17,7 +17,7 @@ public class UserPointsEntity {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
-    private UserEntity user;
+    private UserGameDataEntity user;
 
 
     public Long getId() { return id; }
@@ -29,7 +29,7 @@ public class UserPointsEntity {
     public int getPoints() { return points; }
     public void setPoints(int points) { this.points = points; }
 
-    public UserEntity getUser() { return user; }
-    public void setUser(UserEntity user) { this.user = user; }
+    public UserGameDataEntity getUser() { return user; }
+    public void setUser(UserGameDataEntity user) { this.user = user; }
 }
 

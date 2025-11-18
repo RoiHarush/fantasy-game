@@ -1,8 +1,8 @@
 package com.fantasy.application;
 
 import com.fantasy.domain.player.*;
+import com.fantasy.domain.user.UserEntity;
 import com.fantasy.dto.PlayerDto;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.infrastructure.mappers.PlayerMapper;
 import com.fantasy.infrastructure.repositories.*;
 import com.fantasy.domain.score.ScoreCalculator;
@@ -27,6 +27,8 @@ public class PlayerService {
     private final PlayerRepository playerRepo;
     private final PlayerPointsRepository pointsRepo;
     private final PlayerGameweekStatsRepository statsRepo;
+    private final PlayerRegistry playerRegistry;
+    private final UserRepository userRepo;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -36,10 +38,14 @@ public class PlayerService {
 
     public PlayerService(PlayerRepository playerRepo,
                          PlayerPointsRepository pointsRepo,
-                         PlayerGameweekStatsRepository statsRepo) {
+                         PlayerGameweekStatsRepository statsRepo,
+                         PlayerRegistry playerRegistry,
+                         UserRepository userRepo) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
+        this.playerRegistry = playerRegistry;
+        this.userRepo = userRepo;
     }
 
     public void loadPlayersFromApi() {
@@ -87,7 +93,7 @@ public class PlayerService {
 
                 playerRepo.save(entity);
 
-                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
+                Player domainPlayer = playerRegistry.findById(entity.getId());
                 if (domainPlayer == null) {
                     domainPlayer = new Player(
                             entity.getId(),
@@ -267,7 +273,7 @@ public class PlayerService {
                 int goalsConceded = latest.get("goals_conceded").asInt();
                 int starts = latest.get("starts").asInt();
 
-                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
+                Player domainPlayer = playerRegistry.findById(entity.getId());
                 if (domainPlayer == null)
                     continue;
 
@@ -385,7 +391,7 @@ public class PlayerService {
                 PlayerEntity entity = playerMap.get(playerId);
                 if (entity == null) continue;
 
-                Player domainPlayer = InMemoryData.getPlayers().findById(playerId);
+                Player domainPlayer = playerRegistry.findById(playerId);
                 if (domainPlayer == null) continue;
 
                 List<ScoreEvent> events = new ArrayList<>();
@@ -563,10 +569,9 @@ public class PlayerService {
                 }
 
                 playerRepo.save(entity);
-                Player domainPlayer = InMemoryData.getPlayers().findById(entity.getId());
+                Player domainPlayer = playerRegistry.findById(entity.getId());
 
                 if (domainPlayer == null) {
-                    // שחקן חדש בדומיין
                     domainPlayer = new Player(
                             entity.getId(),
                             entity.getFirstName(),
@@ -575,7 +580,7 @@ public class PlayerService {
                             entity.getTeamId(),
                             entity.getViewName()
                     );
-                    InMemoryData.getPlayers().add(domainPlayer);
+                    playerRegistry.add(domainPlayer);
 
                 } else {
                     domainPlayer.setFirstName(entity.getFirstName());
@@ -594,12 +599,22 @@ public class PlayerService {
 
     public List<PlayerDto> getAllPlayers() {
         List<PlayerPointsEntity> allPoints = pointsRepo.findAll();
-
         Map<Integer, List<PlayerPointsEntity>> pointsByPlayer =
                 allPoints.stream().collect(Collectors.groupingBy(p -> p.getPlayer().getId()));
 
+        Map<Integer, String> ownerNameMap = userRepo.findAll().stream()
+                .collect(Collectors.toMap(UserEntity::getId, UserEntity::getName));
+
         return playerRepo.findAll().stream()
-                .map(p -> PlayerMapper.toDto(p, pointsByPlayer.getOrDefault(p.getId(), List.of())))
+                .map(p -> {
+                    String ownerName = ownerNameMap.get(p.getOwnerId());
+
+                    return PlayerMapper.toDto(
+                            p,
+                            pointsByPlayer.getOrDefault(p.getId(), List.of()),
+                            ownerName
+                    );
+                })
                 .collect(Collectors.toList());
     }
 

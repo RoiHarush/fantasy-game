@@ -2,13 +2,17 @@ package com.fantasy.api;
 
 import com.fantasy.application.TransferWindowService;
 import com.fantasy.domain.fantasyTeam.Exceptions.FantasyTeamException;
+import com.fantasy.domain.user.User;
 import com.fantasy.dto.IRSignRequestDto;
 import com.fantasy.dto.TransferRequestDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/transfer-window")

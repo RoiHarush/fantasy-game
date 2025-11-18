@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, Outlet, Link } from "react-router-dom";
+import { useAuth } from "./Context/AuthContext";
 import Header from "./Header";
 import HeaderCollage from "./HeaderCollage";
 import StatusPage from "./Components/Pages/StatusTab/StatusPage";
@@ -8,94 +8,109 @@ import FixturesPage from "./Components/Pages/FixturesTab/FixturePage";
 import LeaguePage from "./Components/Pages/LeagueTab/LeaguePage";
 import PointsPage from "./Components/Pages/PointsTab/PointsPage";
 import ScoutPage from "./Components/Pages/ScoutTab/ScoutPage";
-import DraftRoom from "./Components/Pages/DraftRoomTab/DraftRoom";
 import PageLayout from "./Components/PageLayout";
 import Login from "./Components/Auth/Login";
 import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
+import { useEffect, useState } from "react";
 import API_URL from "./config";
-import { WatchlistProvider } from "./Context/WatchlistContext";
-import Test from "./Test";
-
-function App() {
-  const [loggedUser, setLoggedUser] = useState(null);
-
-  useEffect(() => {
-    const savedUser = sessionStorage.getItem("loggedUser");
-    const savedToken = sessionStorage.getItem("token");
-
-    if (savedUser && savedToken) {
-      setLoggedUser(JSON.parse(savedUser));
-    }
-  }, []);
+import AdminDashboard from "./Components/Pages/Admin/AdminDashboard";
+import LoadingPage from "./Components/General/LoadingPage";
+import AdminUsersPage from "./Components/Pages/Admin/AdminUserPage";
+import AdminActionsPage from "./Components/Pages/Admin/AdminActionsPage";
+import DraftRoomWrapper from "./Components/Pages/DraftRoomTab/DraftRoomWrapper";
 
 
-  if (!loggedUser) {
-    return <Login onLogin={(data) => setLoggedUser(data)} />;
+function MainAppLayout() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'ROLE_SUPER_ADMIN') {
+    return <Navigate to="/admin" replace />;
   }
 
   return (
-    <WatchlistProvider user={loggedUser}>
-      <div>
-        <HeaderCollage />
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Navigate to="/status" replace />} />
+    <div>
+      <HeaderCollage />
+      <Header />
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
 
-            <Route
-              path="/status"
-              element={<StatusPage user={loggedUser} />}
-            />
+function AdminAppLayout() {
+  const { user, logout } = useAuth();
 
-            <Route
-              path="/points"
-              element={<PointsPage user={loggedUser} />}
-            />
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-            <Route
-              path="/points/:userId"
-              element={<OtherUserPointsWrapper />}
-            />
+  if (user.role !== 'ROLE_SUPER_ADMIN') {
+    return <Navigate to="/status" replace />;
+  }
 
-            <Route
-              path="/pick-team"
-              element={<PickTeamPage user={loggedUser} />}
-            />
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <nav style={{ width: '220px', background: '#1f2937', color: 'white', padding: '1rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '1rem 0' }}>Admin Panel</h2>
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          <li style={{ marginBottom: '0.5rem' }}>
+            <Link to="/admin" style={{ color: 'white', textDecoration: 'none' }}>Dashboard</Link>
+          </li>
+          <li style={{ marginBottom: '0.5rem' }}>
+            <Link to="/admin/users" style={{ color: 'white', textDecoration: 'none' }}>User Managment</Link>
+          </li>
+          <li style={{ marginBottom: '0.5rem' }}>
+            <Link to="/admin/actions" style={{ color: 'white', textDecoration: 'none' }}>System Actions</Link>
+          </li>
+          <li style={{ marginTop: '2rem' }}>
+            <Link to="/" style={{ color: '#9ca3af', textDecoration: 'none' }}>Back To Game</Link>
+          </li>
+          <li style={{ marginTop: '0.5rem' }}>
+            <button onClick={logout} style={{ background: 'none', border: 'none', color: '#ef4444', padding: 0, cursor: 'pointer' }}>Logout</button>
+          </li>
+        </ul>
+      </nav>
+      <main style={{ flex: 1, padding: '2rem', background: '#f3f4f6' }}>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
 
-            <Route
-              path="/league"
-              element={<LeaguePage user={loggedUser} />}
-            />
+function App() {
+  const { loading } = useAuth();
 
-            <Route
-              path="/fixtures"
-              element={<FixturesPage />}
-            />
+  if (loading) {
+    return <div><LoadingPage /></div>;
+  }
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
 
-            <Route
-              path="/scout"
-              element={<ScoutPage user={loggedUser} />}
-            />
+      <Route element={<MainAppLayout />}>
+        <Route path="/" element={<Navigate to="/status" replace />} />
+        <Route path="status" element={<StatusPage />} />
+        <Route path="points" element={<PointsPage />} />
+        <Route path="points/:userId" element={<OtherUserPointsWrapper />} />
+        <Route path="pick-team" element={<PickTeamPage />} />
+        <Route path="league" element={<LeaguePage />} />
+        <Route path="fixtures" element={<FixturesPage />} />
+        <Route path="scout" element={<ScoutPage />} />
+        <Route path="transfer-window" element={<TransferWindowPage />} />
+        <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />
+      </Route>
 
-            <Route
-              path="/transfer-window"
-              element={<TransferWindowPage user={loggedUser} />}
-            />
-
-            <Route
-              path="/draft-room"
-              element={
-                <PageLayout
-                  // left={<DraftRoom initialUser={loggedUser} />}
-                  // right={<div>Sidebar for Draft Room</div>}
-                  left={<Test />}
-                />
-              }
-            />
-          </Routes>
-        </main>
-      </div>
-    </WatchlistProvider>
+      <Route path="/admin" element={<AdminAppLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="actions" element={<AdminActionsPage />} />
+      </Route>
+    </Routes>
   );
 }
 
@@ -107,16 +122,22 @@ function OtherUserPointsWrapper() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadUser() {
       setLoading(true);
       setError(null);
 
+      const token = localStorage.getItem('token');
+
       try {
-        const res = await fetch(`${API_URL}/api/users/${userId}`);
+        const res = await fetch(`${API_URL}/api/users/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
         if (!res.ok) {
           if (res.status === 404) throw new Error("User not found");
+          if (res.status === 403) throw new Error("Access Denied (Token expired?)");
           throw new Error("Failed to fetch user");
         }
 
@@ -130,7 +151,6 @@ function OtherUserPointsWrapper() {
         if (!cancelled) {
           setOtherUser(data);
         }
-
       } catch (err) {
         console.error("❌ Fetch error:", err.message);
         if (!cancelled) setError(err.message);
@@ -138,9 +158,7 @@ function OtherUserPointsWrapper() {
         if (!cancelled) setLoading(false);
       }
     }
-
     loadUser();
-
     return () => (cancelled = true);
   }, [userId]);
 
@@ -148,8 +166,7 @@ function OtherUserPointsWrapper() {
   if (error) return <div style={{ color: "red" }}>{error}</div>;
   if (!otherUser) return <div>User not found</div>;
 
-  return <PointsPage user={otherUser} />;
+  return <PointsPage displayedUser={otherUser} />;
 }
-
 
 export default App;

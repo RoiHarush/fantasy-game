@@ -6,8 +6,10 @@ import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import PickTeam from "./PickTeam";
 import LoadingPage from "../../General/LoadingPage";
+import { useAuth } from "../../../Context/AuthContext";
 
-function PickTeamPage({ user }) {
+function PickTeamPage() {
+    const { user } = useAuth();
     const { nextGameweek, gameweeks } = useGameweek();
 
     const [squad, setSquad] = useState(null);

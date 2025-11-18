@@ -5,17 +5,17 @@ import com.fantasy.domain.fantasyTeam.Squad;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.player.PlayerRegistry;
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.user.UserGameData;
 
 import java.util.*;
 
 public class GameweekRollover {
 
-    public static void rolloverToNextGameweek(User user, int gameweek){
+    public static void rolloverToNextGameweek(UserGameData user, int gameweek){
         FantasyTeam next = user.getNextFantasyTeam();
 
         if (next == null)
-            throw new RuntimeException("User dont have squads!");
+            throw new RuntimeException("UserGameData dont have squads!");
 
         Squad newSquad = copySquad(next.getSquad());
 

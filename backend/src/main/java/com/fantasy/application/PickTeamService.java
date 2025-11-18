@@ -3,13 +3,14 @@ package com.fantasy.application;
 import com.fantasy.domain.fantasyTeam.Exceptions.FantasyTeamException;
 import com.fantasy.domain.fantasyTeam.FantasyTeam;
 import com.fantasy.domain.fantasyTeam.Squad;
-import com.fantasy.domain.user.User;
-import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.user.UserGameData;
+import com.fantasy.domain.user.UserGameDataEntity;
 import com.fantasy.domain.user.UserSquadEntity;
 import com.fantasy.dto.SquadDto;
-import com.fantasy.main.InMemoryData;
+import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.mappers.SquadMapper;
-import com.fantasy.infrastructure.repositories.UserRepository;
+import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -21,55 +22,73 @@ import java.util.stream.Collectors;
 @Service
 public class PickTeamService {
 
-    private final UserRepository userRepo;
+    private final UserGameDataRepository gameDataRepo;
     private final UserSquadRepository userSquadRepo;
-    private final DomainPersistenceService domainPersistenceService;
     private final GameWeekService gameWeekService;
+    private final PlayerRegistry playerRegistry;
 
-    public PickTeamService(UserRepository userRepo,
+
+    public PickTeamService(UserGameDataRepository gameDataRepo,
                            UserSquadRepository userSquadRepo,
-                           DomainPersistenceService domainPersistenceService,
-                           GameWeekService gameWeekService) {
-        this.userRepo = userRepo;
+                           GameWeekService gameWeekService,
+                           PlayerRegistry playerRegistry) {
+        this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
-        this.domainPersistenceService = domainPersistenceService;
         this.gameWeekService = gameWeekService;
+        this.playerRegistry = playerRegistry;
     }
 
     @Transactional
     public SquadDto saveTeam(int userId, SquadDto dto) {
-        User user = InMemoryData.getUsers().findById(userId);
-        if (user == null) throw new RuntimeException("User not found");
+
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
+
+        UserGameData user = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
 
         FantasyTeam team = user.getNextFantasyTeam();
-        if (team == null) throw new RuntimeException("User has no next fantasy team");
+        if (team == null) throw new RuntimeException("UserGameData has no next fantasy team");
 
-        Squad squad = SquadMapper.fromDto(dto, InMemoryData.getPlayers());
+        Squad squad = SquadMapper.fromDto(dto, playerRegistry);
         try {
             team.saveSquad(squad, user.getActiveChips().get("FIRST_PICK_CAPTAIN"));
-        }catch (FantasyTeamException e){
+        } catch (FantasyTeamException e) {
             System.out.println(e.getMessage());
             throw e;
         }
 
-        domainPersistenceService.saveSquad(userId);
+        UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
+        if (nextSquadEntity == null) {
+            throw new RuntimeException("Next squad entity not found");
+        }
+
+        UserSquadEntity updatedEntity = SquadMapper.toEntity(
+                squad,
+                team.getGameweek()
+        );
+
+        updatedEntity.setId(nextSquadEntity.getId());
+        updatedEntity.setUser(gameDataEntity);
+
+        userSquadRepo.save(updatedEntity);
 
         return SquadMapper.toDto(squad);
     }
 
     @Transactional
-    public void saveTeamForPrevGameweek(int userId, SquadDto dto, int gw){
+    public void saveTeamForPrevGameweek(int userId, SquadDto dto, int gw) {
         if (gw == gameWeekService.getCurrentGameweek().getId() || gw == gameWeekService.getNextGameweek().getId())
             throw new RuntimeException("Not a prev game-week");
 
-        UserEntity userEntity = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData not found"));
 
         UserSquadEntity squad = userSquadRepo.findByUser_IdAndGameweek(userId, gw)
                 .orElse(new UserSquadEntity());
 
-        squad.setUser(userEntity);
+        squad.setUser(gameDataEntity);
         squad.setGameweek(gw);
+
         squad.setStartingLineup(dto.getStartingLineup().values().stream()
                 .flatMap(List::stream)
                 .collect(Collectors.toList()));

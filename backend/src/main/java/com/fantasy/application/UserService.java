@@ -1,15 +1,19 @@
 package com.fantasy.application;
 
 import com.fantasy.domain.fantasyTeam.Squad;
-import com.fantasy.domain.user.User;
+import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.user.Exceptions.ChipException;
+import com.fantasy.domain.user.UserGameData;
 import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.user.UserGameDataEntity;
+import com.fantasy.domain.user.UserRole;
 import com.fantasy.dto.IrStatusDto;
 import com.fantasy.dto.SquadDto;
 import com.fantasy.dto.UserDto;
-import com.fantasy.main.InMemoryData;
 import com.fantasy.api.WatchlistSocketController;
 import com.fantasy.infrastructure.mappers.SquadMapper;
 import com.fantasy.infrastructure.mappers.UserMapper;
+import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import jakarta.transaction.Transactional;
@@ -21,33 +25,64 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
+
+    private final UserGameDataRepository gameDataRepo;
     private final UserRepository userRepo;
     private final UserSquadRepository userSquadRepo;
     private final GameWeekService gameWeekService;
     private final WatchlistSocketController watchlistSocketController;
+    private final PlayerRegistry playerRegistry;
 
-    public UserService(UserRepository userRepo,
+    public UserService(UserGameDataRepository gameDataRepo,
+                       UserRepository userRepo,
                        UserSquadRepository userSquadRepo,
                        GameWeekService gameWeekService,
-                       WatchlistSocketController watchlistSocketController) {
+                       WatchlistSocketController watchlistSocketController,
+                       PlayerRegistry playerRegistry) {
         this.userSquadRepo = userSquadRepo;
         this.gameWeekService = gameWeekService;
+        this.gameDataRepo = gameDataRepo;
         this.userRepo = userRepo;
         this.watchlistSocketController = watchlistSocketController;
+        this.playerRegistry = playerRegistry;
     }
 
     public List<UserDto> getAllUsers() {
-        return InMemoryData.getUsers().getUsers().stream()
-                .map(UserMapper::toDto)
+        List<UserEntity> users = userRepo.findAll();
+        List<UserGameDataEntity> gameData = gameDataRepo.findAll();
+
+        Map<Integer, String> teamNameMap = gameData.stream()
+                .collect(Collectors.toMap(
+                        gd -> gd.getUser().getId(),
+                        UserGameDataEntity::getFantasyTeamName
+                ));
+
+        return users.stream()
+                .filter(user -> user.getRole() != UserRole.ROLE_SUPER_ADMIN)
+                .map(user -> {
+                    UserDto dto = new UserDto();
+                    dto.setId(user.getId());
+                    dto.setName(user.getName());
+                    dto.setFantasyTeam(teamNameMap.getOrDefault(user.getId(), "N/A"));
+                    dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
     public UserDto getUserById(int id) {
-        User user = InMemoryData.getUsers().findById(id);
-        if (user == null)
-            throw new RuntimeException("User not found");
+        UserEntity user = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(id)
+                .orElseThrow(() -> new RuntimeException("UserGameData not found"));
 
-        return UserMapper.toDto(user);
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setFantasyTeam(gameData.getFantasyTeamName());
+        dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
+
+        return dto;
     }
 
     public SquadDto getSquadForGameweek(int userId, Integer gw) {
@@ -55,18 +90,19 @@ public class UserService {
         int nextGw = gameWeekService.getNextGameweek().getId();
         int effectiveGw = gw != null ? gw : currentGw;
 
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData not found"));
+
         if (effectiveGw < currentGw) {
-            return userSquadRepo.findByUser_IdAndGameweek(userId, effectiveGw)
+            return userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), effectiveGw)
                     .map(entity -> {
-                        Squad squad = SquadMapper.toDomain(entity, InMemoryData.getPlayers());
+                        Squad squad = SquadMapper.toDomain(entity, playerRegistry);
                         return SquadMapper.toDto(squad);
                     })
                     .orElse(null);
         }
 
-
-        User user = InMemoryData.getUsers().findById(userId);
-        if (user == null) return null;
+        UserGameData user = UserMapper.toDomainGameData(gameData, playerRegistry);
 
         Squad squad;
         if (effectiveGw == currentGw) {
@@ -81,47 +117,60 @@ public class UserService {
     }
 
     @Transactional
-    public void useChip(String chip, User user) {
-        if (user.getChips().get(chip) == null)
-            throw new RuntimeException("User has no chip such as: " + chip);
+    public void useChip(int userId, String chip) {
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 
-        if (!user.hasChipAvailable(chip))
-            throw new RuntimeException("User has used all his amount of: " + chip);
+        UserGameData userDomain = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
 
-        user.useChip(chip);
+        if (userDomain.getChips().get(chip) == null)
+            throw new ChipException("UserGameData has no chip such as: " + chip);
+        if (!userDomain.hasChipAvailable(chip))
+            throw new ChipException("UserGameData has used all his amount of: " + chip);
+
+        userDomain.useChip(chip);
+
+        gameDataEntity.setChips(userDomain.getChips());
+        gameDataEntity.setActiveChips(userDomain.getActiveChips());
+        gameDataRepo.save(gameDataEntity);
     }
 
     @Transactional
-    public void deactivateChip(String chip, User user){
-        if (user.getChips().get(chip) == null)
-            throw new RuntimeException("User has no chip such as: " + chip);
+    public void deactivateChip(int userId, String chip) {
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 
-        user.deactivateChip(chip);
+        UserGameData userDomain = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+
+        if (userDomain.getChips().get(chip) == null)
+            throw new RuntimeException("UserGameData has no chip such as: " + chip);
+
+        userDomain.deactivateChip(chip);
+
+        gameDataEntity.setChips(userDomain.getChips());
+        gameDataEntity.setActiveChips(userDomain.getActiveChips());
+        gameDataRepo.save(gameDataEntity);
     }
 
-    public void updateChipsInDb(User user, String chip) {
-        UserEntity userEntity = userRepo.findById(user.getId())
-                .orElseThrow(() -> new RuntimeException("User entity not found"));
-
-        if (!user.getChips().containsKey(chip))
-            throw new RuntimeException("Chip not found in DB for user: " + chip);
-
-        userEntity.setChips(user.getChips());
-        userEntity.setActiveChips(user.getActiveChips());
-
-        userRepo.save(userEntity);
-    }
 
     public List<IrStatusDto> getIrStatuses() {
-        return InMemoryData.getUsers().getUsers().stream()
-                .map(user -> {
-                    var squad = user.getNextFantasyTeam() != null ? user.getNextFantasyTeam().getSquad() : null;
+        List<UserGameDataEntity> gameDataEntities = gameDataRepo.findAllWithRelations();
+
+        Map<Integer, UserEntity> userMap = userRepo.findAll().stream()
+                .collect(Collectors.toMap(UserEntity::getId, u -> u));
+
+        return gameDataEntities.stream()
+                .map(gameData -> {
+                    UserEntity userEntity = userMap.get(gameData.getUser().getId());
+                    UserGameData userDomain = UserMapper.toDomainGameData(gameData, playerRegistry);
+
+                    var squad = userDomain.getNextFantasyTeam() != null ? userDomain.getNextFantasyTeam().getSquad() : null;
                     var ir = squad != null ? squad.getIR() : null;
 
                     return new IrStatusDto(
-                            user.getId(),
-                            user.getName(),
-                            user.getFantasyTeamName(),
+                            userEntity.getId(), // ID של זהות
+                            userEntity.getName(),
+                            userDomain.getFantasyTeamName(),
                             ir != null,
                             ir != null ? ir.getViewName() : null
                     );
@@ -129,33 +178,37 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public void addToWatchlist(int userId, int playerId) {
-        User domainUser = InMemoryData.getUsers().findById(userId);
-        var userEntity = userRepo.findById(userId).orElseThrow();
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 
-        if (!domainUser.getWatchedPlayers().contains(playerId)) {
-            domainUser.getWatchedPlayers().add(playerId);
-            userEntity.setWatchedPlayers(new ArrayList<>(domainUser.getWatchedPlayers()));
-            userRepo.save(userEntity);
+        List<Integer> watchedPlayers = gameDataEntity.getWatchedPlayers();
 
-            watchlistSocketController.sendWatchlistUpdate(userId, domainUser.getWatchedPlayers());
+        if (!watchedPlayers.contains(playerId)) {
+            watchedPlayers.add(playerId);
+            gameDataRepo.save(gameDataEntity);
+            watchlistSocketController.sendWatchlistUpdate(userId, watchedPlayers);
         }
-
     }
 
+    @Transactional
     public void removeFromWatchlist(int userId, int playerId) {
-        User domainUser = InMemoryData.getUsers().findById(userId);
-        var userEntity = userRepo.findById(userId).orElseThrow();
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 
-        domainUser.getWatchedPlayers().remove(Integer.valueOf(playerId));
-        userEntity.setWatchedPlayers(new ArrayList<>(domainUser.getWatchedPlayers()));
-        userRepo.save(userEntity);
+        List<Integer> watchedPlayers = gameDataEntity.getWatchedPlayers();
 
-        watchlistSocketController.sendWatchlistUpdate(userId, domainUser.getWatchedPlayers());
+        if (watchedPlayers.remove(Integer.valueOf(playerId))) {
+            gameDataRepo.save(gameDataEntity);
+            watchlistSocketController.sendWatchlistUpdate(userId, watchedPlayers);
+        }
     }
 
     public List<Integer> getWatchlist(int userId) {
-        return new ArrayList<>(InMemoryData.getUsers().findById(userId).getWatchedPlayers());
-    }
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 
+        return new ArrayList<>(gameDataEntity.getWatchedPlayers());
+    }
 }

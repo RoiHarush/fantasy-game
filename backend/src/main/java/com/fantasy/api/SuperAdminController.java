@@ -1,45 +1,58 @@
 package com.fantasy.api;
 
+import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.user.UserGameDataEntity;
+import com.fantasy.dto.AdminUserDetailsDto;
+import com.fantasy.dto.AdminUserSummaryDto;
 import com.fantasy.dto.SquadDto;
 import com.fantasy.application.*;
+import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserRepository;
-import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-public class AdminController {
+@PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+public class SuperAdminController {
 
 
     private final PlayerSyncService playerSyncService;
     private final GameWeekService gameWeekService;
     private final PlayerService playerService;
     private final PickTeamService pickTeamService;
+    private final UserGameDataRepository gameDataRepo;
     private final UserRepository userRepo;
-    private final UserSquadRepository squadRepo;
     private final TransferWindowService transferWindowService;
     private final GameweekManager gameweekManager;
+    private final AdminUserService adminUserService;
 
     @Autowired
-    public AdminController(PlayerSyncService playerSyncService,
-                           GameWeekService gameWeekService,
-                           PlayerService playerService,
-                           PickTeamService pickTeamService,
-                           UserRepository userRepo,
-                           UserSquadRepository squadRepo,
-                           TransferWindowService transferWindowService,
-                           GameweekManager gameweekManager) {
+    public SuperAdminController(PlayerSyncService playerSyncService,
+                                GameWeekService gameWeekService,
+                                PlayerService playerService,
+                                PickTeamService pickTeamService,
+                                UserGameDataRepository gameDataRepo,
+                                UserRepository userRepo,
+                                TransferWindowService transferWindowService,
+                                GameweekManager gameweekManager,
+                                AdminUserService adminUserService) {
         this.playerSyncService = playerSyncService;
         this.gameWeekService = gameWeekService;
         this.playerService = playerService;
         this.pickTeamService = pickTeamService;
+        this.gameDataRepo = gameDataRepo;
         this.userRepo = userRepo;
-        this.squadRepo = squadRepo;
         this.transferWindowService = transferWindowService;
         this.gameweekManager = gameweekManager;
+        this.adminUserService = adminUserService;
     }
 
 
@@ -121,9 +134,51 @@ public class AdminController {
             gameweekManager.processGameweek(gameweek);
             message =  "[ADMIN] Auto-adjust completed for all users (GW " + gameweek + ")";
         }catch (Exception e){
-            e.printStackTrace();
             message =  "[ADMIN] Auto-adjust failed (GW " + gameweek + ")";
         }
         return message;
     }
+
+    @GetMapping("/users-summary")
+    public ResponseEntity<List<AdminUserSummaryDto>> getUsersSummary() {
+        List<UserEntity> users = userRepo.findAll();
+        Map<Integer, UserGameDataEntity> gameDataMap = gameDataRepo.findAll().stream()
+                .collect(Collectors.toMap(gd -> gd.getUser().getId(), gd -> gd));
+
+        List<AdminUserSummaryDto> summaryList = users.stream()
+                .map(user -> {
+                    UserGameDataEntity gameData = gameDataMap.get(user.getId());
+                    return new AdminUserSummaryDto(
+                            user.getId(),
+                            user.getUsername(),
+                            user.getRole().name(),
+                            gameData != null ? gameData.getFantasyTeamName() : "N/A",
+                            gameData != null ? gameData.getTotalPoints() : 0
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(summaryList);
+    }
+
+    @GetMapping("/user-details/{userId}")
+    public ResponseEntity<AdminUserDetailsDto> getFullUserDetails(@PathVariable int userId) {
+        try {
+            AdminUserDetailsDto userDetails = adminUserService.getFullUserDetails(userId);
+            return ResponseEntity.ok(userDetails);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/user-details/{userId}")
+    public ResponseEntity<Void> updateFullUserDetails(@PathVariable int userId, @RequestBody AdminUserDetailsDto dto) {
+        try {
+            adminUserService.updateFullUserDetails(userId, dto);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
 }
