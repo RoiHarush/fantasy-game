@@ -78,10 +78,10 @@ public class StartupLoader {
         loadRegistries();
         seedUsersIfNeeded();
         createSuperAdminIfNeeded();
-//        updateUserPoints();
-//        seedUserSquads();
-//        seedInitialLeague();
-//        initializeTransferOrderForAllWeeks();
+        updateUserPoints();
+        seedUserSquads();
+        seedInitialLeague();
+        initializeTransferOrderForAllWeeks();
 
         System.out.println("=== STARTUP COMPLETE ===");
     }
