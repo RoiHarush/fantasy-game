@@ -8,3 +8,11 @@ export async function fetchUserPoints(userId, gameweekId) {
     if (!res.ok) throw new Error("Failed to fetch points");
     return res.json();
 }
+
+export async function fetchUserTotalPoints(userId) {
+    const res = await fetch(`${API_URL}/api/points/${userId}`, {
+        headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error("Failed to fetch total points");
+    return res.json();
+}

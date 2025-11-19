@@ -59,7 +59,7 @@ function Points({
                                 <GameweekController
                                     onPrev={handlePrev}
                                     onNext={handleNext}
-                                    hidePrev={selectedGameweek.id === 1}
+                                    hidePrev={selectedGameweek.id === 6}
                                     gw={selectedGameweek.id}
                                 />
                             }

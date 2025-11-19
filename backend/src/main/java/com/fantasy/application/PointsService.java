@@ -3,6 +3,8 @@ package com.fantasy.application;
 import com.fantasy.domain.fantasyTeam.Squad;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.user.*;
+import com.fantasy.dto.GameweekHistoryDto;
+import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.PlayerPointsRepository;
 import com.fantasy.infrastructure.repositories.UserPointsRepository;
 import com.fantasy.infrastructure.mappers.SquadMapper;
@@ -12,6 +14,10 @@ import com.fantasy.domain.fantasyTeam.FantasyTeam;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 
 @Service
@@ -83,4 +89,36 @@ public class PointsService {
                 .map(UserPointsEntity::getPoints)
                 .orElse(0);
     }
+
+    public int getUserTotalPoints(int userId) {
+        return gameDataRepo.findByUserId(userId)
+                .map(e -> UserMapper.toDomainGameData(e, playerRegistry))
+                .map(UserGameData::getTotalPoints)
+                .orElse(0);
+    }
+
+    public List<GameweekHistoryDto> getUserHistory(Integer userId) {
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User data not found for ID: " + userId));
+
+        List<UserPointsEntity> pointsList = gameData.getPointsByGameweek();
+
+        pointsList.sort(Comparator.comparingInt(UserPointsEntity::getGameweek));
+
+        List<GameweekHistoryDto> history = new ArrayList<>();
+        int runningTotal = 0;
+
+        for (UserPointsEntity p : pointsList) {
+            runningTotal += p.getPoints();
+
+            history.add(new GameweekHistoryDto(
+                    p.getGameweek(),
+                    p.getPoints(),
+                    runningTotal
+            ));
+        }
+
+        return history;
+    }
+
 }

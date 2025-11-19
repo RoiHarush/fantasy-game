@@ -1,8 +1,11 @@
 package com.fantasy.api;
 
 import com.fantasy.application.PointsService;
+import com.fantasy.dto.GameweekHistoryDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/points")
@@ -20,8 +23,20 @@ public class PointsController {
     }
 
     @GetMapping("/{userId}/{gwId}")
-    public ResponseEntity<Integer> getUserPoints(@PathVariable int userId, @PathVariable int gwId) {
+    public ResponseEntity<Integer> getUserPointsForGameWeek(@PathVariable int userId, @PathVariable int gwId) {
         int points = pointsService.getUserPointsForGameWeek(userId, gwId);
         return ResponseEntity.ok(points);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<Integer> getUserTotalPoints(@PathVariable int userId) {
+        int points = pointsService.getUserTotalPoints(userId);
+        return ResponseEntity.ok(points);
+    }
+
+    @GetMapping("/{userId}/history")
+    public ResponseEntity<List<GameweekHistoryDto>> getUserHistory(@PathVariable Integer userId) {
+        List<GameweekHistoryDto> history = pointsService.getUserHistory(userId);
+        return ResponseEntity.ok(history);
     }
 }

@@ -76,14 +76,32 @@ public class StartupLoader {
 
         loadStaticData();
         loadRegistries();
+
         seedUsersIfNeeded();
+        ensureUserMapLoaded();
+
         createSuperAdminIfNeeded();
+
         updateUserPoints();
         seedUserSquads();
         seedInitialLeague();
+
         initializeTransferOrderForAllWeeks();
 
         System.out.println("=== STARTUP COMPLETE ===");
+    }
+
+    private void ensureUserMapLoaded() {
+        if (seededUserIds.isEmpty() && userRepo.count() > 0) {
+            List<UserEntity> users = userRepo.findAll();
+            for (UserEntity user : users) {
+                seededUserIds.put(user.getName(), user.getId());
+            }
+
+            if (!seededUserIds.containsKey("Tepper")) {
+                System.out.println("⚠ Warning: 'Tepper' not found in DB map reload.");
+            }
+        }
     }
 
     private void loadStaticData() {
@@ -186,6 +204,15 @@ public class StartupLoader {
     }
 
     private void updateUserPoints() {
+        Integer sampleUserId = seededUserIds.get("Tepper");
+        if (sampleUserId != null) {
+            var sampleGameData = gameDataRepo.findByUserId(sampleUserId);
+            if (sampleGameData.isPresent() && sampleGameData.get().getTotalPoints() >= 244) {
+                System.out.println("✔ User points already seeded (Skipping update).");
+                return;
+            }
+        }
+
         System.out.println("Updating users’ total and GW1–5 points...");
 
         Map<String, Integer> totals = Map.of(
@@ -236,6 +263,15 @@ public class StartupLoader {
     }
 
     private void seedUserSquads() {
+        Integer sampleUserId = seededUserIds.get("Omri");
+        if (sampleUserId != null) {
+            boolean exists = squadRepo.findByUser_IdAndGameweek(sampleUserId, 6).isPresent();
+            if (exists) {
+                System.out.println("✔ User squads already seeded (Skipping GW 6-8 seed).");
+                return;
+            }
+        }
+
         System.out.println("Seeding squads for GWs 6–8...");
         updateGW6();
         updateGW7();
@@ -435,6 +471,11 @@ public class StartupLoader {
     }
 
     private void seedInitialLeague() {
+        if (leagueRepo.count() > 0) {
+            System.out.println("✔ League already exists.");
+            return;
+        }
+
         if (leagueRepo.count() == 0) {
             System.out.println("Seeding initial league...");
             LeagueEntity league = new LeagueEntity();
@@ -452,6 +493,7 @@ public class StartupLoader {
             league.setAdmin(adminUser);
 
             List<UserEntity> allUsers = userRepo.findAll();
+            allUsers.removeIf(u -> u.getUsername().equals("sup-admin"));
             league.setUsers(allUsers);
 
             leagueRepo.save(league);

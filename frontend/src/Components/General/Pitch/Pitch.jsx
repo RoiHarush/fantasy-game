@@ -11,15 +11,32 @@ function Pitch({
 }) {
     const { players } = usePlayers();
 
-    const renderPlayer = (id) => {
-        if (!id) return null;
+    const renderPlayer = (id, index) => {
+        const player = id ? getPlayerById(players, id) : null;
 
-        const player = getPlayerById(players, id);
-        if (!player) return null;
+        let points = null;
+        let nextFixture = null;
 
-        const playerDynamic = playerData?.find(p => Number(p.playerId) === Number(id));
-        const points = playerDynamic?.points ?? null;
-        const nextFixture = playerDynamic?.nextFixture ?? null;
+        if (player) {
+            const playerDynamic = playerData?.find(p => Number(p.playerId) === Number(id));
+            points = playerDynamic?.points ?? null;
+            nextFixture = playerDynamic?.nextFixture ?? null;
+        }
+
+        if (!player) {
+            return (
+                <PlayerCard
+                    key={`empty-${index}`}
+                    player={null}
+                    view={view}
+                    captain={false}
+                    viceCaptain={false}
+                    currentGw={currentGw}
+                    points={null}
+                    nextFixture={null}
+                />
+            );
+        }
 
         return (
             <PlayerCard
@@ -49,13 +66,14 @@ function Pitch({
                     gridTemplateColumns: "repeat(4, 1fr)",
                     alignItems: "center",
                 }}>
-                    {["GK", "S1", "S2", "S3"].map(slot => {
+
+                    {["GK", "S1", "S2", "S3"].map((slot, index) => {
                         const playerId = squad.bench ? squad.bench[slot] : null;
                         const label = slot === "GK" ? "GK" : slot.replace("S", "");
 
                         return (
                             <div key={slot} className={Style["bench-slot"]}>
-                                {renderPlayer(playerId)}
+                                {renderPlayer(playerId, `bench-${index}`)}
                                 <div className={Style["bench-label"]}>{label}</div>
                             </div>
                         );
@@ -65,6 +83,5 @@ function Pitch({
         </div>
     );
 }
-
 
 export default Pitch;

@@ -255,48 +255,46 @@ public class Squad implements Draftable {
         setViceCaptain(viceCaptain);
     }
 
-    public void assignIR(Player IR){
-        if (this.allPlayers.findById(IR.getId()) == null){
+    public void assignIR(Player ir){
+        if (this.allPlayers.findById(ir.getId()) == null){
             throw new IRException("This player is not in squad!");
         }
 
         if (this.IR != null){
-            throw new IRException("IR slot already taken!");
+            throw new IRException("ir slot already taken!");
         }
 
-        if (!IR.isInjured()){
+        if (!ir.isInjured()){
             throw new IRException("This player is not injured!");
         }
 
-        updateSquadWithoutIR();
+        updateSquadWithoutIR(ir);
 
-        this.IR = IR;
+        this.IR = ir;
         this.IR.setState(PlayerState.IN_USE);
     }
 
-    private void updateSquadWithoutIR() {
-
-        Player irPlayer = this.IR;
+    private void updateSquadWithoutIR(Player ir) {
 
         boolean wasInStarting = false;
 
         for (PlayerPosition pp : PlayerPosition.values()) {
-            if (startingLineup.get(pp).contains(irPlayer)) {
+            if (startingLineup.get(pp).contains(ir)) {
                 wasInStarting = true;
                 break;
             }
         }
 
         if (wasInStarting){
-            removeIRFromStarting(irPlayer);
+            removeIRFromStarting(ir);
         }else
-            removeIRFromBench(irPlayer);
+            removeIRFromBench(ir);
 
-        this.allPlayers.removePlayer(irPlayer);
-        if (this.captain.equals(irPlayer))
+        this.allPlayers.removePlayer(ir);
+        if (this.captain.equals(ir))
             setDefaultCaptain();
 
-        if (this.viceCaptain.equals(irPlayer))
+        if (this.viceCaptain.equals(ir))
             setDefaultViceCaptain();
     }
 

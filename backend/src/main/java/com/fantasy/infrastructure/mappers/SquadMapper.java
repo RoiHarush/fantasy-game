@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 public class SquadMapper {
 
+    private static final List<String> BENCH_SLOTS = Arrays.asList("GK", "S1", "S2", "S3");
+
     public static Squad toDomain(UserSquadEntity e, PlayerRegistry allPlayers) {
         Squad squad = new Squad();
 
@@ -20,26 +22,27 @@ public class SquadMapper {
         starting.put(PlayerPosition.FORWARD, new ArrayList<>());
 
         for (int i = 0; i < e.getStartingLineup().size(); i++){
-            Player player =  allPlayers.findById(e.getStartingLineup().get(i));
-            List<Player> lst = starting.get(player.getPosition());
-            lst.add(player);
-            starting.put(player.getPosition(), lst);
-            squad.loadPlayer(player);
+            Player player = allPlayers.findById(e.getStartingLineup().get(i));
+            if (player != null) {
+                List<Player> lst = starting.get(player.getPosition());
+                lst.add(player);
+                starting.put(player.getPosition(), lst);
+                squad.loadPlayer(player);
+            }
         }
         squad.setStartingLineup(starting);
 
         Map<String, Player> bench = new LinkedHashMap<>();
-
-        for (String key : e.getBenchMap().keySet()) {
-            Integer playerId = e.getBenchMap().get(key);
+        for (String slot : BENCH_SLOTS) {
+            Integer playerId = e.getBenchMap().get(slot);
             Player player = playerId != null ? allPlayers.findById(playerId) : null;
-            bench.put(key, player);
-            if (player != null)
+            bench.put(slot, player);
+            if (player != null) {
                 squad.loadPlayer(player);
+            }
         }
         squad.setBench(bench);
 
-        // --- Captain & ViceCaptain ---
         if (e.getCaptainId() != null) {
             squad.setCaptain(allPlayers.findById(e.getCaptainId()));
         }
@@ -48,18 +51,15 @@ public class SquadMapper {
             squad.setViceCaptain(allPlayers.findById(e.getViceCaptainId()));
         }
 
-        // --- First Pick & IR ---
         if (e.getFirstPickId() != null)
             squad.setFirstPick(allPlayers.findById(e.getFirstPickId()));
 
         if (e.getIrId() != null)
             squad.setIR(allPlayers.findById(e.getIrId()));
 
-
         return squad;
     }
 
-    // === Domain -> Entity ===
     public static UserSquadEntity toEntity(Squad squad, int gw) {
         UserSquadEntity e = new UserSquadEntity();
         e.setGameweek(gw);
@@ -71,24 +71,20 @@ public class SquadMapper {
                         .collect(Collectors.toList())
         );
 
-
-        // --- Bench Map (Include null values for empty slots) ---
         Map<String, Integer> benchMap = new LinkedHashMap<>();
-        squad.getBench().forEach((slot, player) -> {
+        for (String slot : BENCH_SLOTS) {
+            Player player = squad.getBench().get(slot);
             if (player != null) {
                 benchMap.put(slot, player.getId());
-            }
-            else {
+            } else {
                 benchMap.put(slot, null);
             }
-        });
+        }
         e.setBenchMap(benchMap);
-
 
         Map<String, Integer> formation = calcFormation(squad);
         e.setFormation(formation);
 
-        // --- Captain & ViceCaptain ---
         if (squad.getCaptain() != null)
             e.setCaptainId(squad.getCaptain().getId());
 
@@ -101,7 +97,6 @@ public class SquadMapper {
         return e;
     }
 
-    // === Domain -> DTO ===
     public static SquadDto toDto(Squad squad) {
         SquadDto dto = new SquadDto();
 
@@ -124,18 +119,16 @@ public class SquadMapper {
 
         dto.setStartingLineup(starting);
 
-        // --- Bench Map (Include null values for empty slots) ---
         Map<String, Integer> benchMap = new LinkedHashMap<>();
-        squad.getBench().forEach((slot, player) -> {
+        for (String slot : BENCH_SLOTS) {
+            Player player = squad.getBench().get(slot);
             if (player != null) {
                 benchMap.put(slot, player.getId());
-            }
-            else {
+            } else {
                 benchMap.put(slot, null);
             }
-        });
+        }
         dto.setBench(benchMap);
-
 
         Map<String, Integer> formation = calcFormation(squad);
         dto.setFormation(formation);
@@ -148,7 +141,6 @@ public class SquadMapper {
 
         dto.setFirstPickId(squad.getFirstPick() != null ? squad.getFirstPick().getId() : null);
         dto.setIrId(squad.getIR() != null ? squad.getIR().getId() : null);
-
 
         return dto;
     }
@@ -173,8 +165,6 @@ public class SquadMapper {
         return dto;
     }
 
-
-    // === DTO -> Domain ===
     public static Squad fromDto(SquadDto dto, PlayerRegistry allPlayers) {
         Squad squad = new Squad();
 
@@ -186,28 +176,31 @@ public class SquadMapper {
 
         for (String key : dto.getStartingLineup().keySet()){
             for (Integer playerId : dto.getStartingLineup().get(key)){
-                switch (key){
-                    case "GK" -> starting.get(PlayerPosition.GOALKEEPER).add(allPlayers.findById(playerId));
-                    case "DEF" -> starting.get(PlayerPosition.DEFENDER).add(allPlayers.findById(playerId));
-                    case "MID" -> starting.get(PlayerPosition.MIDFIELDER).add(allPlayers.findById(playerId));
-                    case "FWD" ->  starting.get(PlayerPosition.FORWARD).add(allPlayers.findById(playerId));
+                if(playerId != null) {
+                    Player p = allPlayers.findById(playerId);
+                    switch (key){
+                        case "GK" -> starting.get(PlayerPosition.GOALKEEPER).add(p);
+                        case "DEF" -> starting.get(PlayerPosition.DEFENDER).add(p);
+                        case "MID" -> starting.get(PlayerPosition.MIDFIELDER).add(p);
+                        case "FWD" -> starting.get(PlayerPosition.FORWARD).add(p);
+                    }
+                    squad.loadPlayer(p);
                 }
-                squad.loadPlayer(allPlayers.findById(playerId));
             }
         }
         squad.setStartingLineup(starting);
 
-        // --- Bench ---
         Map<String, Player> bench = new LinkedHashMap<>();
-        dto.getBench().forEach((slot, playerId) -> {
+        for (String slot : BENCH_SLOTS) {
+            Integer playerId = dto.getBench().get(slot);
             Player player = playerId != null ? allPlayers.findById(playerId) : null;
             bench.put(slot, player);
             if (player != null) squad.loadPlayer(player);
-        });
+        }
         squad.setBench(bench);
 
-        squad.setCaptain(allPlayers.findById(dto.getCaptainId()));
-        squad.setViceCaptain(allPlayers.findById(dto.getViceCaptainId()));
+        if (dto.getCaptainId() != null) squad.setCaptain(allPlayers.findById(dto.getCaptainId()));
+        if (dto.getViceCaptainId() != null) squad.setViceCaptain(allPlayers.findById(dto.getViceCaptainId()));
 
         if (dto.getFirstPickId() != null)
             squad.setFirstPick(allPlayers.findById(dto.getFirstPickId()));

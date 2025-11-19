@@ -1,8 +1,34 @@
+import { useEffect, useState } from "react";
 import { useGameweek } from "../../Context/GameweeksContext";
 import styles from "../../Styles/PointsSummaryBlock.module.css";
+import { fetchUserPoints, fetchUserTotalPoints } from "../../services/pointsService";
+import HistoryModal from "../General/HistoryModal";
 
 function PointsSummaryBlock({ user }) {
-    const { currentGw } = useGameweek();
+    const [showHistory, setShowHistory] = useState(false);
+    const { currentGameweek } = useGameweek();
+    const [points, setPoints] = useState(null);
+    const [totalPoints, setTotalPoints] = useState(null);
+
+    useEffect(() => {
+        if (!user || !currentGameweek) return;
+
+        async function load() {
+            try {
+                const [pointsRes, totalPointsRes] = await Promise.all([
+                    fetchUserPoints(user.id, currentGameweek.id),
+                    fetchUserTotalPoints(user.id)
+                ]);
+                setPoints(pointsRes);
+                setTotalPoints(totalPointsRes);
+            } catch (error) {
+                console.error("Error loading points:", error);
+            }
+        }
+
+        load();
+
+    }, [user, currentGameweek]);
 
     if (!user) return null;
 
@@ -11,7 +37,7 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.header}>
                 <div className={styles.userInfo}>
                     <h3 className={styles.username}>{user.name}</h3>
-                    <p className={styles.team}>{user.teamName}</p>
+                    <p className={styles.team}>{user.fantasyTeam}</p>
                 </div>
             </div>
 
@@ -20,15 +46,28 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.stats}>
                 <div className={styles.row}>
                     <span>Gameweek Points</span>
-                    <span className={styles.value}>{0}</span>
+                    <span className={styles.value}>{points !== null ? points : "-"}</span>
                 </div>
                 <div className={styles.row}>
                     <span>Overall Points</span>
-                    <span className={styles.value}>{user.totalPoints ? user.totalPoints : 0}</span>
+                    <span className={styles.value}>{totalPoints !== null ? totalPoints : "-"}</span>
                 </div>
             </div>
 
-            <div className={styles.history}>View History →</div>
+            <div
+                className={styles.history}
+                onClick={() => setShowHistory(true)}
+                style={{ cursor: "pointer" }}
+            >
+                View History →
+            </div>
+
+            {showHistory && (
+                <HistoryModal
+                    userId={user.id}
+                    onClose={() => setShowHistory(false)}
+                />
+            )}
         </div>
     );
 }
