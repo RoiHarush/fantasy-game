@@ -112,17 +112,13 @@ public class GameWeekService {
     }
 
     public GameWeekDto getNextGameweek() {
-        return gameWeekRepo.findAll().stream()
-                .filter(gw -> "UPCOMING".equalsIgnoreCase(gw.getStatus()))
-                .findFirst()
+        return gameWeekRepo.findFirstByStatusOrderByIdAsc("UPCOMING")
                 .map(GameWeekMapper::toDto)
                 .orElse(null);
     }
 
     public GameWeekDto getLastFinishedGameweek() {
-        return gameWeekRepo.findAll().stream()
-                .filter(gw -> "FINISHED".equalsIgnoreCase(gw.getStatus()))
-                .reduce((first, second) -> second)
+        return gameWeekRepo.findFirstByStatusOrderByIdDesc("FINISHED")
                 .map(GameWeekMapper::toDto)
                 .orElse(null);
     }
