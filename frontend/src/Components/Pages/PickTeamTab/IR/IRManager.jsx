@@ -5,6 +5,7 @@ import IRReleaseModal from "./IRReleaseModal";
 import Style from "../../../../Styles/PickTeam.module.css";
 import API_URL from "../../../../config";
 import { usePlayers } from "../../../../Context/PlayersContext";
+import { getAuthHeaders } from "../../../../services/authHelper";
 
 
 function IRManager({ userId, squad, setSquad, chips, setChips }) {
@@ -24,7 +25,10 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
         try {
             const res = await fetch(
                 `${API_URL}/api/chips/ir?userId=${userId}&playerId=${player.id}`,
-                { method: "POST" }
+                {
+                    method: "POST",
+                    headers: getAuthHeaders()
+                }
             );
 
             if (!res.ok) {
@@ -37,7 +41,9 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
             setSquad(updatedSquad);
             alert(`✅ IR assigned successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`);
+            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+                headers: getAuthHeaders()
+            });
             if (chipRes.ok) {
                 const updatedChips = await chipRes.json();
                 setChips(updatedChips);
@@ -56,7 +62,10 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
         try {
             const res = await fetch(
                 `${API_URL}/api/chips/ir/release?userId=${userId}&playerOutId=${playerOut.id}`,
-                { method: "POST" }
+                {
+                    method: "POST",
+                    headers: getAuthHeaders()
+                }
             );
 
             if (!res.ok) {
@@ -69,7 +78,9 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
             setSquad(updatedSquad);
             alert(`✅ IR released successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`);
+            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+                headers: getAuthHeaders()
+            });
             if (chipRes.ok) {
                 const updatedChips = await chipRes.json();
                 setChips(updatedChips);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import ConfirmFirstPickCaptainModal from "./ConfirmFirstPickCaptainModal";
 import style from "../../../../Styles/PickTeam.module.css";
 import API_URL from "../../../../config";
+import { getAuthHeaders } from "../../../../services/authHelper";
 
 function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -21,7 +22,11 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
                 ? `${API_URL}/api/chips/first-pick-captain/release?userId=${userId}`
                 : `${API_URL}/api/chips/first-pick-captain?userId=${userId}`;
 
-            const res = await fetch(endpoint, { method: "POST" });
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: getAuthHeaders()
+            });
+
             if (!res.ok) {
                 const msg = await res.text();
                 alert(`❌ Failed to ${isActive ? "cancel" : "activate"} chip: ${msg}`);
@@ -33,7 +38,9 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
 
             alert(`✅ Captain Chip ${isActive ? "cancelled" : "activated"} successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`);
+            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+                headers: getAuthHeaders()
+            });
             if (chipRes.ok) {
                 const updatedChips = await chipRes.json();
                 setChips(updatedChips);
