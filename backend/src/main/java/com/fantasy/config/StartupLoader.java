@@ -555,7 +555,7 @@ public class StartupLoader {
                 pick.setGameWeek(gameWeek);
                 picks.add(pick);
             }
-            
+
             if (gameWeek.getTransferOrder() == null) {
                 gameWeek.setTransferOrder(new ArrayList<>());
             }
