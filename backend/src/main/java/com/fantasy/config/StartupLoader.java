@@ -555,8 +555,14 @@ public class StartupLoader {
                 pick.setGameWeek(gameWeek);
                 picks.add(pick);
             }
+            
+            if (gameWeek.getTransferOrder() == null) {
+                gameWeek.setTransferOrder(new ArrayList<>());
+            }
+            gameWeek.getTransferOrder().clear();
+            gameWeek.getTransferOrder().addAll(picks);
+            // -----------------------
 
-            gameWeek.setTransferOrder(picks);
             gameWeekRepo.save(gameWeek);
 
             System.out.println("✅ Initialized GW" + currentGwId + ". First picker: " + currentOrderIds.get(0));
