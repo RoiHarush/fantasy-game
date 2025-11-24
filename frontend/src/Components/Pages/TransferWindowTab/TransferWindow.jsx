@@ -11,31 +11,42 @@ import { passTurn } from "../../../services/transferWindowService";
 function TransferWindow({ user, allUsers, initialWindowState }) {
     const { players, setPlayers } = usePlayers();
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
+
     const [currentTurnUserId, setCurrentTurnUserId] = useState(initialWindowState?.currentUserId ?? null);
     const [lastTransferMessage, setLastTransferMessage] = useState(null);
     const [isWindowOpen, setIsWindowOpen] = useState(initialWindowState?.isOpen ?? false);
+
     const [turnOrder, setTurnOrder] = useState(initialWindowState?.order || []);
     const [initialOrder, setInitialOrder] = useState(initialWindowState?.initialOrder || []);
+
     const [turnsUsed, setTurnsUsed] = useState(initialWindowState?.turnsUsed || {});
     const [totalTurnsMap, setTotalTurnsMap] = useState(initialWindowState?.totalTurns || {});
+
     const { subscribe, unsubscribe, connected } = useWebSocket();
+
     const [isIrRound, setIsIrRound] = useState(initialWindowState?.currentRound === 'IR');
     const [irPosition, setIrPosition] = useState(null);
+
     const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
     function turnsUntilMyTurn() {
         if (!turnOrder.length || !currentTurnUserId) return null;
         const currentIndex = turnOrder.indexOf(currentTurnUserId);
         const myIndex = turnOrder.indexOf(user.id);
+
         if (currentIndex === -1 || myIndex === -1) return null;
+
         const diff = myIndex - currentIndex;
         return diff >= 0 ? diff : turnOrder.length + diff;
     }
+
+    const turnsLeft = turnsUntilMyTurn();
 
     useEffect(() => {
         if (!connected) return;
 
         const handleTransferEvent = (event) => {
+
             if (event.event === "window_opened") {
                 setIsWindowOpen(true);
                 setCurrentTurnUserId(event.userId);
@@ -55,13 +66,19 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 setCurrentTurnUserId(event.userId);
                 if (event.turnOrder) setTurnOrder(event.turnOrder);
                 if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
-                if (event.roundType) setIsIrRound(event.roundType === "IR");
+                if (event.roundType) {
+                    setIsIrRound(event.roundType === "IR");
+                }
             }
 
             if (event.event === "ir_round_started") {
                 setIsWindowOpen(true);
                 setCurrentTurnUserId(event.userId);
-                if (event.turnOrder) setTurnOrder(event.turnOrder);
+
+                if (event.turnOrder && event.turnOrder.length > 0) {
+                    setTurnOrder(event.turnOrder);
+                }
+
                 setIrPosition(event.irPosition);
                 if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
                 setIsIrRound(true);
@@ -112,7 +129,11 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                         {isIrRound ? "IR Round" : "Regular Round"}
                     </span>
                     <span className={Style.roundSubtitle}>
-                        {isDataReady ? `${Object.keys(turnsUsed).length} Active Managers` : "Loading..."}
+                        {isDataReady ?
+                            (isIrRound
+                                ? `${displayedOrder.length} Eligible Managers`
+                                : `${Object.keys(turnsUsed).length} Active Managers`)
+                            : "Loading..."}
                     </span>
                 </div>
 
@@ -120,7 +141,6 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                     {displayedOrder.map((id) => {
                         const userName = getUserNameById(id);
                         const used = turnsUsed[id] || 0;
-
                         const userMax = totalTurnsMap[id] || 2;
 
                         const showProgress = !isIrRound;
@@ -158,7 +178,9 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                     {currentTurnUserId === user.id ? (
                         <>
                             <span className={Style.myTurn}>
-                                {isIrRound ? `Pick replacement for ${irPosition}` : "Your turn to make a transfer"}
+                                {isIrRound
+                                    ? `Pick replacement for ${irPosition} (IR)`
+                                    : "Your turn to make a transfer"}
                             </span>
 
                             {!isIrRound && (
@@ -169,6 +191,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                                             await passTurn(user.id);
                                         } catch (err) {
                                             console.error("Error passing turn:", err);
+                                            alert(err.message);
                                         }
                                     }}
                                 >
@@ -183,9 +206,10 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                     )}
                 </div>
 
-                {!isIrRound && currentTurnUserId !== user.id && (
+                {/* תיקון: הצגת הרמז רק אם יש ערך תקין ב-turnsLeft (לא null) */}
+                {!isIrRound && currentTurnUserId !== user.id && turnsLeft !== null && (
                     <div className={Style.turnHint}>
-                        {turnsUntilMyTurn() === 1 ? "You're next!" : `Your turn in ${turnsUntilMyTurn()} turns`}
+                        {turnsLeft === 1 ? "You're next!" : `Your turn in ${turnsLeft} turns`}
                     </div>
                 )}
             </div>
