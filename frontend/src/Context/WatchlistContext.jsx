@@ -14,7 +14,7 @@ export function WatchlistProvider({ user, children }) {
             return;
         }
 
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         fetch(`${API_URL}/api/users/${user.id}/watchlist`, {
             headers: {
@@ -54,7 +54,7 @@ export function WatchlistProvider({ user, children }) {
         });
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 

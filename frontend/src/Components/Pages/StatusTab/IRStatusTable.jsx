@@ -6,7 +6,7 @@ function IRStatusTable() {
     const [irStatuses, setIrStatuses] = useState([]);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         fetch(`${API_URL}/api/users/ir-status`, {
             headers: {

@@ -99,7 +99,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
     useEffect(() => {
         const fetchCurrentOrder = async () => {
             if (!nextGameweek) return;
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
 
             try {
                 const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
@@ -142,7 +142,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
                 method: 'POST',
                 headers: {

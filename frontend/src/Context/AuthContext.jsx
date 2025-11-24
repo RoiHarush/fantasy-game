@@ -10,21 +10,21 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         try {
-            const storedUser = localStorage.getItem('loggedUser');
+            const storedUser = sessionStorage.getItem('loggedUser');
             if (storedUser) {
                 setUser(JSON.parse(storedUser));
             }
         } catch (e) {
             console.error("Failed to parse stored user", e);
-            localStorage.clear();
+            sessionStorage.clear();
         } finally {
             setLoading(false);
         }
     }, []);
 
     const login = (userData, token) => {
-        localStorage.setItem('loggedUser', JSON.stringify(userData));
-        localStorage.setItem('token', token);
+        sessionStorage.setItem('loggedUser', JSON.stringify(userData));
+        sessionStorage.setItem('token', token);
         setUser(userData);
 
         if (userData.role === 'ROLE_SUPER_ADMIN') {
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        localStorage.clear();
+        sessionStorage.clear();
         setUser(null);
         navigate('/login');
     };

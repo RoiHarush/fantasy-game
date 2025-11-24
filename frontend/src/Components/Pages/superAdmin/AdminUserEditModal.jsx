@@ -96,7 +96,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
         const fetchDetails = async () => {
             setLoading(true);
             setError(null);
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             try {
                 const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -115,7 +115,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
 
     const handleSave = async () => {
         setLoading(true);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const payload = {
             ...userData,
             password: newPassword ? newPassword : null

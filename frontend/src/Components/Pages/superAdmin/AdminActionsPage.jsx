@@ -150,7 +150,7 @@ export default function AdminActionsPage() {
     const { user } = useAuth();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         const fetchPlayers = async () => {
             try {
@@ -200,7 +200,7 @@ export default function AdminActionsPage() {
     const callAdminApi = async (endpoint, method = 'POST', body = null) => {
         setLoading(true);
         setMessage({ text: '', type: '' });
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         try {
             const res = await fetch(`${API_URL}${endpoint}`, {

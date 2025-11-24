@@ -34,7 +34,7 @@ function SettingsPage() {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         const payload = {};
         if (formData.name !== user.name) payload.name = formData.name;

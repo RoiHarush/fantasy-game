@@ -8,7 +8,7 @@ function NavButtons() {
     const { user } = useAuth();
 
     async function handleLogout() {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
 
         if (token) {
             try {
@@ -23,10 +23,10 @@ function NavButtons() {
             }
         }
 
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("username");
-        localStorage.removeItem("loggedUser");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("userId");
+        sessionStorage.removeItem("username");
+        sessionStorage.removeItem("loggedUser");
         navigate(0);
     }
 

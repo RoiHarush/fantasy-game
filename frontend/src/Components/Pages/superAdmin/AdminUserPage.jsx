@@ -45,7 +45,7 @@ export default function AdminUsersPage() {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         try {
             const res = await fetch(`${API_URL}/api/admin/users-summary`, {
