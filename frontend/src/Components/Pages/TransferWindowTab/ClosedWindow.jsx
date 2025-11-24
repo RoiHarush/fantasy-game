@@ -15,7 +15,15 @@ function ClosedWindow() {
     const [usersList, setUsersList] = useState([]);
     const [currentOrder, setCurrentOrder] = useState([]);
 
-    const transferWindowOpens = nextGameweek ? new Date(nextGameweek.transferOpenTime) : new Date();
+    const parseDateArray = (dateArray) => {
+        if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
+        return new Date(dateArray[0], dateArray[1] - 1, dateArray[2], dateArray[3], dateArray[4]);
+    };
+
+    const transferWindowOpens = nextGameweek?.transferOpenTime
+        ? parseDateArray(nextGameweek.transferOpenTime)
+        : new Date();
+
     const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
 
     useEffect(() => {
@@ -69,7 +77,7 @@ function ClosedWindow() {
 
             <div
                 style={{
-                    backgroundColor: '#1b1035', // Purple fantasy background
+                    backgroundColor: '#1b1035',
                     padding: '25px',
                     borderRadius: '12px',
                     width: '100%',
@@ -100,7 +108,6 @@ function ClosedWindow() {
                             marginTop: '10px'
                         }}
                     >
-                        {/* LEFT SIDE: Places 1–7 (Green bar) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {currentOrder.slice(0, 7).map((name, index) => (
                                 <div
@@ -111,7 +118,7 @@ function ClosedWindow() {
                                         padding: '8px 12px',
                                         backgroundColor: 'rgba(255,255,255,0.05)',
                                         borderRadius: '6px',
-                                        borderLeft: '3px solid #10b981', // GREEN
+                                        borderLeft: '3px solid #10b981',
                                         color: 'white',
                                         fontSize: '0.95rem'
                                     }}
@@ -124,7 +131,6 @@ function ClosedWindow() {
                             ))}
                         </div>
 
-                        {/* RIGHT SIDE: Places 8–14 (Blue bar) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {currentOrder.slice(7, 14).map((name, index) => (
                                 <div
@@ -135,7 +141,7 @@ function ClosedWindow() {
                                         padding: '8px 12px',
                                         backgroundColor: 'rgba(255,255,255,0.05)',
                                         borderRadius: '6px',
-                                        borderLeft: '3px solid #3b82f6', // BLUE
+                                        borderLeft: '3px solid #3b82f6',
                                         color: 'white',
                                         fontSize: '0.95rem'
                                     }}
@@ -162,7 +168,6 @@ function ClosedWindow() {
                     </div>
                 )}
             </div>
-
 
             <button
                 className={Style.scoutButton}
@@ -204,20 +209,23 @@ function ClosedWindow() {
 
 function formatDateTime(date) {
     if (!date) return "";
+
+    const dateStr = date.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+    }).replace(/,/g, '');
+
+    const timeStr = date.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Jerusalem",
+    });
+
     return (
         <p>
-            {date.toLocaleDateString("en-GB", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-            })}{" "}
-            {date.toLocaleTimeString("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                timeZone: "Asia/Jerusalem",
-            })}
+            {dateStr} {timeStr}
         </p>
     );
 }

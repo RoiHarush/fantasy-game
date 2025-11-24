@@ -8,13 +8,17 @@ import com.fantasy.infrastructure.repositories.FixtureRepository;
 import com.fantasy.infrastructure.repositories.TeamRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class FixtureService {
@@ -23,39 +27,61 @@ public class FixtureService {
 
     private final FixtureRepository fixtureRepo;
     private final TeamRepository teamRepo;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper mapper;
 
-    public FixtureService(FixtureRepository fixtureRepo, TeamRepository teamRepo) {
+    public FixtureService(FixtureRepository fixtureRepo,
+                          TeamRepository teamRepo,
+                          RestTemplate restTemplate,
+                          ObjectMapper mapper) {
         this.fixtureRepo = fixtureRepo;
         this.teamRepo = teamRepo;
+        this.restTemplate = restTemplate;
+        this.mapper = mapper;
     }
 
+    @Transactional
     public void loadFromApiAndSave() {
         try {
-            JsonNode root = mapper.readTree(new URL(FIXTURES_URL));
+            String jsonResponse = restTemplate.getForObject(FIXTURES_URL, String.class);
+            JsonNode root = mapper.readTree(jsonResponse);
+
             List<FixtureEntity> fixtures = new ArrayList<>();
+            ZoneId appZoneId = ZoneId.systemDefault();
 
             for (JsonNode fixture : root) {
                 int id = fixture.get("id").asInt();
-                int gameweekId = fixture.get("event").isNull() ? 0 : fixture.get("event").asInt();
+                int gameweekId = fixture.has("event") && !fixture.get("event").isNull()
+                        ? fixture.get("event").asInt()
+                        : 0;
                 int homeTeamId = fixture.get("team_h").asInt();
                 int awayTeamId = fixture.get("team_a").asInt();
 
-                String kickoffUtc = fixture.get("kickoff_time").isNull() ? null : fixture.get("kickoff_time").asText();
+                String kickoffUtc = fixture.has("kickoff_time") && !fixture.get("kickoff_time").isNull()
+                        ? fixture.get("kickoff_time").asText()
+                        : null;
+
                 LocalDateTime kickoff = null;
                 if (kickoffUtc != null) {
                     Instant instant = Instant.parse(kickoffUtc);
-                    kickoff = LocalDateTime.ofInstant(instant, ZoneId.of("Asia/Jerusalem"));
+                    kickoff = LocalDateTime.ofInstant(instant, appZoneId);
                 }
 
-                Integer scoreHome = fixture.get("team_h_score").isNull() ? null : fixture.get("team_h_score").asInt();
-                Integer scoreAway = fixture.get("team_a_score").isNull() ? null : fixture.get("team_a_score").asInt();
-                Integer homeDifficulty = fixture.get("team_h_difficulty").isNull() ? null : fixture.get("team_h_difficulty").asInt();
-                Integer awayDifficulty = fixture.get("team_a_difficulty").isNull() ? null : fixture.get("team_a_difficulty").asInt();
+                Integer scoreHome = fixture.has("team_h_score") && !fixture.get("team_h_score").isNull() ? fixture.get("team_h_score").asInt() : null;
+                Integer scoreAway = fixture.has("team_a_score") && !fixture.get("team_a_score").isNull() ? fixture.get("team_a_score").asInt() : null;
+                Integer homeDifficulty = fixture.has("team_h_difficulty") && !fixture.get("team_h_difficulty").isNull() ? fixture.get("team_h_difficulty").asInt() : null;
+                Integer awayDifficulty = fixture.has("team_a_difficulty") && !fixture.get("team_a_difficulty").isNull() ? fixture.get("team_a_difficulty").asInt() : null;
+
+                boolean started = fixture.has("started") && fixture.get("started").asBoolean();
+                boolean finished = fixture.has("finished") && fixture.get("finished").asBoolean();
+                int minutes = fixture.has("minutes") ? fixture.get("minutes").asInt() : 0;
 
                 FixtureEntity entity = new FixtureEntity(id, gameweekId, homeTeamId, awayTeamId, kickoff, scoreHome, scoreAway);
                 entity.setHomeDifficulty(homeDifficulty);
                 entity.setAwayDifficulty(awayDifficulty);
+                entity.setStarted(started);
+                entity.setFinished(finished);
+                entity.setMinutes(minutes);
 
                 fixtures.add(entity);
             }
@@ -64,6 +90,80 @@ public class FixtureService {
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to load fixtures from API", e);
+        }
+    }
+
+    @Transactional
+    public void updateFixturesForGameweek(int gameweekId) {
+        try {
+            String url = FIXTURES_URL + "?event=" + gameweekId;
+            String jsonResponse = restTemplate.getForObject(url, String.class);
+            JsonNode root = mapper.readTree(jsonResponse);
+
+            List<FixtureEntity> dbFixtures = fixtureRepo.findByGameweekId(gameweekId);
+            Map<Integer, FixtureEntity> fixtureMap = dbFixtures.stream()
+                    .collect(Collectors.toMap(FixtureEntity::getId, Function.identity()));
+
+            List<FixtureEntity> toUpdate = new ArrayList<>();
+
+            for (JsonNode node : root) {
+                int id = node.get("id").asInt();
+                FixtureEntity entity = fixtureMap.get(id);
+
+                if (entity == null) continue;
+
+                boolean changed = false;
+
+                Integer newHomeScore = node.get("team_h_score").isNull() ? null : node.get("team_h_score").asInt();
+                Integer newAwayScore = node.get("team_a_score").isNull() ? null : node.get("team_a_score").asInt();
+
+                if (!Objects.equals(entity.getHomeTeamScore(), newHomeScore)) {
+                    entity.setHomeTeamScore(newHomeScore);
+                    changed = true;
+                }
+                if (!Objects.equals(entity.getAwayTeamScore(), newAwayScore)) {
+                    entity.setAwayTeamScore(newAwayScore);
+                    changed = true;
+                }
+
+                boolean started = node.get("started").asBoolean();
+                boolean finished = node.get("finished").asBoolean();
+                int minutes = node.get("minutes").asInt();
+
+                if (entity.isStarted() != started) {
+                    entity.setStarted(started);
+                    changed = true;
+                }
+                if (entity.isFinished() != finished) {
+                    entity.setFinished(finished);
+                    changed = true;
+                }
+                if (entity.getMinutes() != minutes) {
+                    entity.setMinutes(minutes);
+                    changed = true;
+                }
+
+                String kickoffUtc = node.has("kickoff_time") && !node.get("kickoff_time").isNull() ? node.get("kickoff_time").asText() : null;
+                if (kickoffUtc != null) {
+                    LocalDateTime apiKickoff = LocalDateTime.ofInstant(Instant.parse(kickoffUtc), ZoneId.systemDefault());
+                    if (!apiKickoff.isEqual(entity.getKickoffTime())) {
+                        entity.setKickoffTime(apiKickoff);
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    toUpdate.add(entity);
+                }
+            }
+
+            if (!toUpdate.isEmpty()) {
+                fixtureRepo.saveAll(toUpdate);
+                System.out.println("Updated scores for " + toUpdate.size() + " fixtures in GW " + gameweekId);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error updating fixtures for GW " + gameweekId + ": " + e.getMessage());
         }
     }
 

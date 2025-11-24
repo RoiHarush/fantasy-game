@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import styles from "./Styles/NavButtons.module.css";
 import API_URL from "./config";
+import { useAuth } from "./Context/AuthContext";
 
 function NavButtons() {
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     async function handleLogout() {
         const token = localStorage.getItem("token");
@@ -28,14 +30,14 @@ function NavButtons() {
         navigate(0);
     }
 
+    const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
+
     return (
         <nav className={styles.navbar}>
             <NavLink
                 to="/status"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Status
@@ -45,9 +47,7 @@ function NavButtons() {
                 to="/points"
                 end
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Points
@@ -56,9 +56,7 @@ function NavButtons() {
             <NavLink
                 to="/pick-team"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Pick Team
@@ -67,9 +65,7 @@ function NavButtons() {
             <NavLink
                 to="/league"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 League
@@ -78,9 +74,7 @@ function NavButtons() {
             <NavLink
                 to="/fixtures"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Fixtures
@@ -89,9 +83,7 @@ function NavButtons() {
             <NavLink
                 to="/scout"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Scout
@@ -100,9 +92,7 @@ function NavButtons() {
             <NavLink
                 to="/transfer-window"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Transfer Window
@@ -111,13 +101,36 @@ function NavButtons() {
             <NavLink
                 to="/draft-room"
                 className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.activeLink}`
-                        : styles.navLink
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
                 }
             >
                 Draft Room
             </NavLink>
+
+            {isAdmin && (
+                <NavLink
+                    to="/league-control"
+                    style={{
+                        color: '#3dd2c2',
+                        borderColor: '#5ff3e4'
+                    }}
+                    className={({ isActive }) =>
+                        isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
+                    }
+                >
+                    League Control
+                </NavLink>
+            )}
+
+            <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                    isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink
+                }
+            >
+                Settings
+            </NavLink>
+
 
             <NavLink
                 to="/"

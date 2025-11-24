@@ -1,28 +1,54 @@
+import React, { useState, useEffect } from 'react';
 import ColumnsBlock from "../../Blocks/ColumnsBlock";
 import SplitBlock from "../../Blocks/SplitBlock";
 import Style from "../../../Styles/Status.module.css";
 import IRStatusTable from "./IRStatusTable";
 import PlayerOfTheWeekBlock from "./PlayerOfTheWeekBlock";
+import { fetchUserPoints } from "../../../Services/PointsService";
 
 function Status({ user, league, currentGameweek, nextGameweek }) {
-    const transferOpens = new Date(nextGameweek.transferOpenTime);
-    const gwStart = new Date(nextGameweek.firstKickoffTime);
 
-    const leagueUser = league.users?.find(u => u.id === user.id);
-    const gwPoints = user.pointsByGameweek?.[currentGameweek.id] ?? "-";
+    const [gwPoints, setGwPoints] = useState("-");
+
+    useEffect(() => {
+        const loadLivePoints = async () => {
+            if (user?.id && currentGameweek?.id) {
+                try {
+                    const points = await fetchUserPoints(user.id, currentGameweek.id);
+                    setGwPoints(points);
+                } catch (err) {
+                    console.error("Failed to fetch live points:", err);
+                    setGwPoints("-");
+                }
+            }
+        };
+
+        loadLivePoints();
+    }, [user?.id, currentGameweek?.id]);
+
+    const parseDateArray = (dateArray) => {
+        if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
+        return new Date(dateArray[0], dateArray[1] - 1, dateArray[2], dateArray[3], dateArray[4]);
+    };
+
+    const transferOpens = nextGameweek?.transferOpenTime ? parseDateArray(nextGameweek.transferOpenTime) : null;
+    const gwStart = nextGameweek?.firstKickoffTime ? parseDateArray(nextGameweek.firstKickoffTime) : null;
+
+    const leagueUser = league?.users?.find(u => u.id === user.id);
 
     return (
         <div className={Style.statusPage}>
-            <h3>Current Team - {user.fantasyTeam}</h3>
+            <h3>Current Team - {user.fantasyTeamName}</h3>
 
-            <ColumnsBlock title={currentGameweek.name} columns={2}>
+            <ColumnsBlock title={currentGameweek?.name || "Gameweek"} columns={2}>
                 <div>
-                    <p>{currentGameweek.name} points</p>
+                    <p>{currentGameweek?.name} points</p>
+                    {/* כאן אנחנו מציגים את הסטייט המעודכן מהשרת */}
                     <h2 className={Style.gradientText}>{gwPoints}</h2>
                 </div>
 
                 <div>
-                    <p>{league.name}</p>
+                    <p>{league?.name}</p>
                     <h2 className={Style.gradientText}>
                         {leagueUser?.rank ?? "-"}{getRankSuffix(leagueUser?.rank)}
                     </h2>
@@ -35,11 +61,11 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
                 items={[
                     {
                         title: "Transfer Window",
-                        content: formatDateTime(transferOpens),
+                        content: transferOpens ? formatDateTime(transferOpens) : <p>TBA</p>,
                     },
                     {
                         title: "Lineup Lock",
-                        content: formatDateTime(gwStart),
+                        content: gwStart ? formatDateTime(gwStart) : <p>TBA</p>,
                     },
                 ]}
             />
@@ -51,24 +77,27 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
 }
 
 function formatDateTime(date) {
+    if (!date) return null;
+
+    const dateStr = date.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+    }).replace(/,/g, '');
+
+    const timeStr = date.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Jerusalem",
+    });
+
     return (
         <p>
-            {date.toLocaleDateString("en-GB", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-            })}{" "}
-            {date.toLocaleTimeString("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                timeZone: "Asia/Jerusalem",
-            })}
+            {dateStr} {timeStr}
         </p>
     );
 }
-
 
 function getRankSuffix(rank) {
     if (!rank) return "";

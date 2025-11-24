@@ -34,6 +34,7 @@ public class GameWeekService {
             for (JsonNode gwNode : root.get("events")) {
                 int id = gwNode.get("id").asInt();
                 String name = gwNode.get("name").asText();
+
                 String status = gwNode.get("is_current").asBoolean() ? "LIVE"
                         : gwNode.get("finished").asBoolean() ? "FINISHED"
                         : "UPCOMING";
@@ -50,7 +51,7 @@ public class GameWeekService {
                             .orElse(null);
 
                     lastKickoff = fixtures.stream()
-                            .map(f -> f.getKickoffTime().plusHours(2))
+                            .map(FixtureEntity::getKickoffTime)
                             .max(LocalDateTime::compareTo)
                             .orElse(null);
                 }
@@ -76,17 +77,17 @@ public class GameWeekService {
         }
     }
 
-
-
     private LocalDateTime calculateTransferOpenTime(int gameweekId, LocalDateTime firstKickoff) {
         List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gameweekId);
+
+        LocalDateTime chosenTime = firstKickoff.minusMinutes(70);
+
         if (fixtures.isEmpty()) {
-            return firstKickoff.minusMinutes(70);
+            return chosenTime;
         }
 
         fixtures.sort(Comparator.comparing(FixtureEntity::getKickoffTime));
 
-        LocalDateTime chosenTime = firstKickoff.minusMinutes(70);
         for (FixtureEntity fixture : fixtures) {
             LocalDateTime candidate = fixture.getKickoffTime().minusMinutes(70);
             if (candidate.isBefore(firstKickoff)) {

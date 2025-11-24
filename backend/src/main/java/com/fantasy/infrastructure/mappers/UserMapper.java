@@ -51,10 +51,23 @@ public class UserMapper {
     }
 
     // === Domain -> DTO ===
+    public static UserDto toDto(User user, UserGameData userGameData) {
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setUserName(user.getUsername());
+        dto.setFantasyTeamName(userGameData.getFantasyTeamName());
+        dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
+        dto.setRole(user.getRole().name());
+
+        return dto;
+    }
+
     public static UserDto toDto(User user) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
+        dto.setUserName(user.getUsername());
         dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
         dto.setRole(user.getRole().name());
 

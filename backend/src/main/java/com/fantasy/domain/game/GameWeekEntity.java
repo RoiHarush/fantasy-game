@@ -3,7 +3,6 @@ package com.fantasy.domain.game;
 import com.fantasy.domain.transfer.TransferPickEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -21,6 +20,9 @@ public class GameWeekEntity {
 
     @OneToMany(mappedBy = "gameWeek", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransferPickEntity> transferOrder;
+
+    @Column(columnDefinition = "boolean default false")
+    private boolean calculated = false;
 
     public GameWeekEntity() {}
 
@@ -53,4 +55,7 @@ public class GameWeekEntity {
 
     public List<TransferPickEntity> getTransferOrder() { return transferOrder; }
     public void setTransferOrder(List<TransferPickEntity> transferOrder) { this.transferOrder = transferOrder; }
+
+    public boolean isCalculated() { return calculated; }
+    public void setCalculated(boolean calculated) { this.calculated = calculated; }
 }

@@ -33,6 +33,7 @@ public class PlayerGameweekStatsEntity {
     private int redCards;
     private int penaltiesSaved;
     private int penaltiesMissed;
+    private int ownGoals;
 
     private boolean started;
 
@@ -89,6 +90,9 @@ public class PlayerGameweekStatsEntity {
 
     public int getPenaltiesMissed() { return penaltiesMissed; }
     public void setPenaltiesMissed(int penaltiesMissed) { this.penaltiesMissed = penaltiesMissed; }
+
+    public int getOwnGoals() { return ownGoals; }
+    public void setOwnGoals(int ownGoals) { this.ownGoals = ownGoals; }
 
     public boolean isStarted() { return started; }
     public void setStarted(boolean started) { this.started = started; }

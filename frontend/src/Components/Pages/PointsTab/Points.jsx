@@ -38,7 +38,7 @@ function Points({
     return (
         <div className={Style.pointsScreen}>
             <h3 className={Style.title}>
-                {selectedGameweek.name} – {user.fantasyTeam}
+                {selectedGameweek.name} – {user.fantasyTeamName}
             </h3>
 
             <div className={Style.contentWrapper}>

@@ -17,16 +17,20 @@ public class FixtureEntity {
 
     private LocalDateTime kickoffTime;
 
-    private Integer scoreHome; // nullable עד שהמשחק נגמר
+    private Integer scoreHome;
     private Integer scoreAway;
 
     private Integer homeDifficulty;
     private Integer awayDifficulty;
 
-    public FixtureEntity() {}
+    private boolean started;
+    private boolean finished;
+    private int minutes;
 
-    public FixtureEntity(int id, int gameweekId, int homeTeamId, int awayTeamId,
-                         LocalDateTime kickoffTime, Integer scoreHome, Integer scoreAway) {
+    public FixtureEntity() {
+    }
+
+    public FixtureEntity(int id, int gameweekId, int homeTeamId, int awayTeamId, LocalDateTime kickoffTime, Integer scoreHome, Integer scoreAway) {
         this.id = id;
         this.gameweekId = gameweekId;
         this.homeTeamId = homeTeamId;
@@ -36,6 +40,7 @@ public class FixtureEntity {
         this.scoreAway = scoreAway;
     }
 
+    // Getters and Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -51,15 +56,24 @@ public class FixtureEntity {
     public LocalDateTime getKickoffTime() { return kickoffTime; }
     public void setKickoffTime(LocalDateTime kickoffTime) { this.kickoffTime = kickoffTime; }
 
-    public Integer getScoreHome() { return scoreHome; }
-    public void setScoreHome(Integer scoreHome) { this.scoreHome = scoreHome; }
+    public Integer getHomeTeamScore() { return scoreHome; }
+    public void setHomeTeamScore(Integer scoreHome) { this.scoreHome = scoreHome; }
 
-    public Integer getScoreAway() { return scoreAway; }
-    public void setScoreAway(Integer scoreAway) { this.scoreAway = scoreAway; }
+    public Integer getAwayTeamScore() { return scoreAway; }
+    public void setAwayTeamScore(Integer scoreAway) { this.scoreAway = scoreAway; }
 
     public Integer getHomeDifficulty() { return homeDifficulty; }
     public void setHomeDifficulty(Integer homeDifficulty) { this.homeDifficulty = homeDifficulty; }
 
     public Integer getAwayDifficulty() { return awayDifficulty; }
     public void setAwayDifficulty(Integer awayDifficulty) { this.awayDifficulty = awayDifficulty; }
+
+    public boolean isStarted() { return started; }
+    public void setStarted(boolean started) { this.started = started; }
+
+    public boolean isFinished() { return finished; }
+    public void setFinished(boolean finished) { this.finished = finished; }
+
+    public int getMinutes() { return minutes; }
+    public void setMinutes(int minutes) { this.minutes = minutes; }
 }

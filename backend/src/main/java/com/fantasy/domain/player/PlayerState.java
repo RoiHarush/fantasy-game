@@ -4,5 +4,6 @@ public enum PlayerState {
     IN_USE,
     STARTING,
     BENCH,
-    NONE
+    NONE,
+    LOCKED
 }

@@ -2,7 +2,6 @@ package com.fantasy.infrastructure.mappers;
 
 import com.fantasy.domain.game.FixtureEntity;
 import com.fantasy.domain.realWorldData.TeamEntity;
-import com.fantasy.domain.user.UserGameData;
 import com.fantasy.dto.FixtureSummaryDto;
 import com.fantasy.dto.PlayerDto;
 import com.fantasy.domain.player.Player;
@@ -19,8 +18,12 @@ public class PlayerMapper {
     // === Entity + Points + Owner Name → DTO ===
     public static PlayerDto toDto(PlayerEntity e, List<PlayerPointsEntity> points, String ownerName) {
         int sum = 0;
-        for (PlayerPointsEntity p : points) {
-            sum += p.getPoints();
+        if (points != null) {
+            for (PlayerPointsEntity p : points) {
+                sum += p.getPoints();
+            }
+        } else {
+            sum = e.getTotalPoints();
         }
 
         boolean available = e.getState().equals(PlayerState.NONE);

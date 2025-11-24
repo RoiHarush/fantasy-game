@@ -3,7 +3,8 @@ package com.fantasy.dto;
 public class UserDto {
     private int id;
     private String name;
-    private String fantasyTeam;
+    private String userName;
+    private String fantasyTeamName;
     private String logoPath;
     private String role;
 
@@ -13,8 +14,15 @@ public class UserDto {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getFantasyTeam() { return fantasyTeam; }
-    public void setFantasyTeam(String fantasyTeam) { this.fantasyTeam = fantasyTeam; }
+    public String getUserName() {
+        return userName;
+    }
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getFantasyTeamName() { return fantasyTeamName; }
+    public void setFantasyTeamName(String fantasyTeamName) { this.fantasyTeamName = fantasyTeamName; }
 
     public String getLogoPath() {
         return logoPath;

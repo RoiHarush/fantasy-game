@@ -58,7 +58,7 @@ public class PointsService {
 
         int points = team.calculatePoints();
 
-        UserPointsEntity pointsEntity = userPointsRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw) // <-- שימוש ב-ID הנכון
+        UserPointsEntity pointsEntity = userPointsRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw)
                 .orElseGet(() -> {
                     UserPointsEntity up = new UserPointsEntity();
                     up.setUser(gameDataEntity);

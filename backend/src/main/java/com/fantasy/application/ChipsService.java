@@ -4,7 +4,7 @@ import com.fantasy.domain.fantasyTeam.Exceptions.IRException;
 import com.fantasy.domain.fantasyTeam.FantasyTeam;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerEntity;
-import com.fantasy.domain.player.PlayerNotFoundException;
+import com.fantasy.domain.player.exception.PlayerNotFoundException;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.user.Exceptions.UserFTeamException;
 import com.fantasy.domain.user.Exceptions.UserNotFoundException;

@@ -61,8 +61,8 @@ public class PlayerMatchStatsService {
 
             if (fixtureOpt.isPresent()) {
                 var fixture = fixtureOpt.get();
-                homeScore = fixture.getScoreHome();
-                awayScore = fixture.getScoreAway();
+                homeScore = fixture.getHomeTeamScore();
+                awayScore = fixture.getAwayTeamScore();
             }
 
             var dto = PlayerMatchStatsMapper.toDto(player, e, homeTeam, awayTeam, homeScore, awayScore, false);
@@ -118,8 +118,8 @@ public class PlayerMatchStatsService {
 
         if (fixtureOpt.isPresent()) {
             var fixture = fixtureOpt.get();
-            homeScore = fixture.getScoreHome();
-            awayScore = fixture.getScoreAway();
+            homeScore = fixture.getHomeTeamScore();
+            awayScore = fixture.getAwayTeamScore();
         }
 
         boolean isCaptain = false;

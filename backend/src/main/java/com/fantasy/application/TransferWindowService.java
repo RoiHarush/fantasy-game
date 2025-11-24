@@ -87,6 +87,11 @@ public class TransferWindowService {
 
     @Transactional
     public void openTransferWindow(int gameWeekId) {
+        if (activeWindow) {
+            System.out.println("⚠️ Transfer window is already open! Skipping request.");
+            return;
+        }
+
         var gameWeek = gameWeekRepo.findById(gameWeekId)
                 .orElseThrow(() -> new RuntimeException("GameWeek not found: " + gameWeekId));
 

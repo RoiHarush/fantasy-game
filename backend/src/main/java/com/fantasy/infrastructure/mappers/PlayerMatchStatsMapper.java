@@ -28,7 +28,6 @@ public class PlayerMatchStatsMapper {
 
         PlayerMatchStatsDto dto = new PlayerMatchStatsDto();
 
-        // 🆕 נוספו שדות חדשים שלא מולאו קודם
         dto.setPlayerId(player.getId());
         dto.setGameweekId(e.getGameweek());
         dto.setPlayerName(player.getName());
@@ -125,6 +124,19 @@ public class PlayerMatchStatsMapper {
                     String.valueOf(e.getYellowCards()),
                     e.getYellowCards() * ptsPerCard,
                     getIconPath("Yellow cards")
+            ));
+        }
+
+        // === Own Goals ===
+        if (e.getOwnGoals() > 0) {
+            int ptsPerOg = ScoreCalculator.calculatePoints(
+                    new ScoreEvent(player, 0, ScoreType.OWN_GOAL)
+            );
+            stats.add(new PlayerMatchStatsDto.StatLine(
+                    "Own goals",
+                    String.valueOf(e.getOwnGoals()),
+                    e.getOwnGoals() * ptsPerOg,
+                    getIconPath("Own goals")
             ));
         }
 

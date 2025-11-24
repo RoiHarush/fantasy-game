@@ -2,7 +2,7 @@ package com.fantasy.api;
 
 import com.fantasy.application.ChipsService;
 import com.fantasy.domain.fantasyTeam.Exceptions.IRException;
-import com.fantasy.domain.player.PlayerNotFoundException;
+import com.fantasy.domain.player.exception.PlayerNotFoundException;
 import com.fantasy.domain.user.Exceptions.UserNotFoundException;
 import com.fantasy.dto.SquadDto;
 import com.fantasy.dto.UserChipsDto;

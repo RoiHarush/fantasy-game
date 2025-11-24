@@ -45,7 +45,13 @@ public class GameweekManager {
     }
 
     @Transactional
-    public void openNextGameweek(int newGw) {
+    public void openNextGameweek(int newGwId) {
+        boolean openedSuccessfully = updateGameweeksStatus(newGwId);
+
+        if (!openedSuccessfully) {
+            return;
+        }
+
         var gameDataEntities = gameDataRepository.findAllWithRelations();
 
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
@@ -54,7 +60,7 @@ public class GameweekManager {
                     playerRegistry
             );
 
-            GameweekRollover.rolloverToNextGameweek(userGameData, newGw);
+            GameweekRollover.rolloverToNextGameweek(userGameData, newGwId);
 
             var newNextSquadEntity = SquadMapper.toEntity(
                     userGameData.getNextFantasyTeam().getSquad(),
@@ -68,12 +74,17 @@ public class GameweekManager {
 
             gameDataRepository.save(gameDataEntity);
         }
-
-        updateGameweeksStatus(newGw);
     }
 
     @Transactional
     public void processGameweek(int gameweekId) {
+        var gw = gameweekRepository.findByIdWithLock(gameweekId)
+                .orElseThrow(() -> new RuntimeException("Gameweek not found"));
+
+        if (gw.isCalculated()) {
+            return;
+        }
+
         Map<Integer, Integer> minutesMap = statsRepo.findAll().stream()
                 .filter(s -> s.getGameweek() == gameweekId)
                 .collect(Collectors.toMap(
@@ -86,7 +97,6 @@ public class GameweekManager {
 
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
             UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
-
             Squad squad = userGameData.getCurrentFantasyTeam().getSquad();
 
             squad.autoSub(minutesMap);
@@ -95,7 +105,6 @@ public class GameweekManager {
             if (squadEntity == null || squadEntity.getGameweek() != gameweekId) {
                 throw new RuntimeException("Squad entity not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
             }
-
             UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, gameweekId);
             updatedEntity.setId(squadEntity.getId());
             updatedEntity.setUser(gameDataEntity);
@@ -104,18 +113,31 @@ public class GameweekManager {
 
             pointsService.calculateAndPersist(userGameData.getId(), gameweekId);
         }
+
+        gw.setCalculated(true);
+        gameweekRepository.save(gw);
     }
 
-    private void updateGameweeksStatus(int newGw) {
-        var nextGw = gameweekRepository.findById(newGw)
-                .orElseThrow(() -> new RuntimeException("Next gameweek not found"));
-        var prevGw = gameweekRepository.findById(newGw - 1)
-                .orElseThrow(() -> new RuntimeException("Previous gameweek not found"));
+    private boolean updateGameweeksStatus(int newGwId) {
+        var nextGw = gameweekRepository.findByIdWithLock(newGwId)
+                .orElseThrow(() -> new RuntimeException("Next gameweek not found: " + newGwId));
 
-        prevGw.setStatus("FINISHED");
+        if (!"UPCOMING".equalsIgnoreCase(nextGw.getStatus())) {
+            System.out.println("GW " + newGwId + " is already opened/live. Skipping.");
+            return false;
+        }
+
+        var currentLiveOpt = gameweekRepository.findFirstByStatusOrderByIdAsc("LIVE");
+        if (currentLiveOpt.isPresent()) {
+            var currentLive = currentLiveOpt.get();
+            currentLive.setStatus("FINISHED");
+            gameweekRepository.save(currentLive);
+        }
+
         nextGw.setStatus("LIVE");
-
-        gameweekRepository.save(prevGw);
         gameweekRepository.save(nextGw);
+
+        gameweekRepository.flush();
+        return true;
     }
 }

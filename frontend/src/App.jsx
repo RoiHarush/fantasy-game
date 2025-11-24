@@ -13,12 +13,13 @@ import Login from "./Components/Auth/Login";
 import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
 import { useEffect, useState } from "react";
 import API_URL from "./config";
-import AdminDashboard from "./Components/Pages/Admin/AdminDashboard";
 import LoadingPage from "./Components/General/LoadingPage";
-import AdminUsersPage from "./Components/Pages/Admin/AdminUserPage";
-import AdminActionsPage from "./Components/Pages/Admin/AdminActionsPage";
 import DraftRoomWrapper from "./Components/Pages/DraftRoomTab/DraftRoomWrapper";
-
+import AdminDashboard from "./Components/Pages/superAdmin/AdminDashboard";
+import AdminUsersPage from "./Components/Pages/superAdmin/AdminUserPage";
+import AdminActionsPage from "./Components/Pages/superAdmin/AdminActionsPage";
+import LeagueControlPage from "./Components/Pages/Admin/LeagueControlPage";
+import SettingsPage from "./Components/Pages/SettingsTab/SettingsPage";
 
 function MainAppLayout() {
   const { user } = useAuth();
@@ -82,6 +83,14 @@ function AdminAppLayout() {
   );
 }
 
+const LeagueAdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (user?.role !== 'ROLE_ADMIN' && user?.role !== 'ROLE_SUPER_ADMIN') {
+    return <Navigate to="/status" replace />;
+  }
+  return children;
+};
+
 function App() {
   const { loading } = useAuth();
 
@@ -103,6 +112,18 @@ function App() {
         <Route path="scout" element={<ScoutPage />} />
         <Route path="transfer-window" element={<TransferWindowPage />} />
         <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />
+
+        <Route path="settings" element={<SettingsPage />} />
+
+        <Route
+          path="league-control"
+          element={
+            <LeagueAdminRoute>
+              <LeagueControlPage />
+            </LeagueAdminRoute>
+          }
+        />
+
       </Route>
 
       <Route path="/admin" element={<AdminAppLayout />}>

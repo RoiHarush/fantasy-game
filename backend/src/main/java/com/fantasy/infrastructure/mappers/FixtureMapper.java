@@ -16,9 +16,11 @@ public class FixtureMapper {
                         entity.getKickoffTime().toString(),
                 entity.getHomeTeamId(),
                 entity.getAwayTeamId(),
-                entity.getScoreHome(),
-                entity.getScoreAway(),
-                entity.getScoreHome() != null && entity.getScoreAway() != null
+                entity.getHomeTeamScore(),
+                entity.getAwayTeamScore(),
+                entity.isStarted(),
+                entity.isFinished(),
+                entity.getMinutes()
         );
     }
 }

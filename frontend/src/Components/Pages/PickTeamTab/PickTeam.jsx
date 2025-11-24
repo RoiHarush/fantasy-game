@@ -63,14 +63,7 @@ function PickTeam({
                             block={
                                 <PickTeamBlock
                                     gameweek={nextGameweek.id}
-                                    date={`${nextGameweek.name}: ${new Date(
-                                        nextGameweek.firstKickoffTime
-                                    ).toLocaleString("en-GB", {
-                                        weekday: "long",
-                                        day: "numeric",
-                                        month: "long",
-                                        year: "numeric",
-                                    })}`}
+                                    kickoffTime={nextGameweek.firstKickoffTime}
                                 />
                             }
                         />

@@ -2,8 +2,10 @@ package com.fantasy.api;
 
 import com.fantasy.application.GameWeekService;
 import com.fantasy.domain.player.Player;
+import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.realWorldData.TeamName;
+import com.fantasy.infrastructure.repositories.PlayerRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -21,11 +23,14 @@ public class FplProxyController {
     private final RestTemplate restTemplate = new RestTemplate();
     private final GameWeekService gameWeekService;
     private final PlayerRegistry playerRegistry;
+    private final PlayerRepository playerRepo;
 
     public FplProxyController(GameWeekService gameWeekService,
-                              PlayerRegistry playerRegistry) {
+                              PlayerRegistry playerRegistry,
+                              PlayerRepository playerRepo) {
         this.gameWeekService = gameWeekService;
         this.playerRegistry = playerRegistry;
+        this.playerRepo = playerRepo;
     }
 
     @GetMapping("/dream-team/{gw}")
@@ -88,12 +93,19 @@ public class FplProxyController {
                     Player player = playerRegistry.findById(playerId);
                     if (player == null) continue;
 
+                    PlayerEntity playerEntity = playerRepo.findById(playerId).orElse(null);
+
+                    String photo = null;
+                    if (playerEntity != null)
+                        photo = playerEntity.getPhoto();
+
                     Map<String, Object> entry = new LinkedHashMap<>();
                     entry.put("id", playerId);
                     entry.put("gameweek", gw);
                     entry.put("playerName", player.getViewName());
                     entry.put("teamId", player.getTeamId());
                     entry.put("points", player.getPointsByGameweek().getOrDefault(gw, 0));
+                    entry.put("logoPath", null);
 
                     result.add(entry);
 

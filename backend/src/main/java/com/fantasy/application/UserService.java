@@ -9,6 +9,7 @@ import com.fantasy.domain.user.UserGameDataEntity;
 import com.fantasy.domain.user.UserRole;
 import com.fantasy.dto.IrStatusDto;
 import com.fantasy.dto.SquadDto;
+import com.fantasy.dto.UpdateProfileDto;
 import com.fantasy.dto.UserDto;
 import com.fantasy.api.WatchlistSocketController;
 import com.fantasy.infrastructure.mappers.SquadMapper;
@@ -17,6 +18,7 @@ import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -32,19 +34,22 @@ public class UserService {
     private final GameWeekService gameWeekService;
     private final WatchlistSocketController watchlistSocketController;
     private final PlayerRegistry playerRegistry;
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(UserGameDataRepository gameDataRepo,
                        UserRepository userRepo,
                        UserSquadRepository userSquadRepo,
                        GameWeekService gameWeekService,
                        WatchlistSocketController watchlistSocketController,
-                       PlayerRegistry playerRegistry) {
+                       PlayerRegistry playerRegistry,
+                       PasswordEncoder passwordEncoder) {
         this.userSquadRepo = userSquadRepo;
         this.gameWeekService = gameWeekService;
         this.gameDataRepo = gameDataRepo;
         this.userRepo = userRepo;
         this.watchlistSocketController = watchlistSocketController;
         this.playerRegistry = playerRegistry;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<UserDto> getAllUsers() {
@@ -63,8 +68,9 @@ public class UserService {
                     UserDto dto = new UserDto();
                     dto.setId(user.getId());
                     dto.setName(user.getName());
-                    dto.setFantasyTeam(teamNameMap.getOrDefault(user.getId(), "N/A"));
+                    dto.setFantasyTeamName(teamNameMap.getOrDefault(user.getId(), "N/A"));
                     dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
+                    dto.setRole(user.getRole().name());
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -79,10 +85,70 @@ public class UserService {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
-        dto.setFantasyTeam(gameData.getFantasyTeamName());
+        dto.setFantasyTeamName(gameData.getFantasyTeamName());
         dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
 
         return dto;
+    }
+
+    @Transactional
+    public UserDto updateUserProfile(int userId, UpdateProfileDto request) {
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User game data not found"));
+
+        boolean userChanged = false;
+        boolean gameDataChanged = false;
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            if (!request.getName().equals(user.getName())) {
+                user.setName(request.getName());
+                userChanged = true;
+            }
+        }
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            if (!request.getUsername().equals(user.getUsername())) {
+                if (userRepo.existsByUsername(request.getUsername()))
+                    throw new RuntimeException("This user name already exist!");
+                user.setUsername(request.getUsername());
+                userChanged = true;
+            }
+        }
+
+        if (request.getTeamName() != null && !request.getTeamName().isBlank()) {
+            if (!gameData.getFantasyTeamName().equals(request.getTeamName())) {
+                gameData.setFantasyTeamName(request.getTeamName());
+                gameDataChanged = true;
+            }
+        }
+
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+                throw new RuntimeException("Current password is required to set a new password");
+            }
+
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new RuntimeException("Incorrect current password");
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userChanged = true;
+        }
+
+        if (userChanged) {
+            userRepo.save(user);
+        }
+        if (gameDataChanged) {
+            gameDataRepo.save(gameData);
+        }
+
+        return UserMapper.toDto(
+                UserMapper.toDomainUser(user),
+                UserMapper.toDomainGameData(gameData, playerRegistry)
+        );
     }
 
     public SquadDto getSquadForGameweek(int userId, Integer gw) {
@@ -206,6 +272,11 @@ public class UserService {
     }
 
     public List<Integer> getWatchlist(int userId) {
+        UserEntity userEntity = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (userEntity.getRole().equals(UserRole.ROLE_SUPER_ADMIN))
+            return new ArrayList<>();
+
         UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
 

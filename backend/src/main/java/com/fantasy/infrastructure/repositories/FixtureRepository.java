@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,5 +28,8 @@ public interface FixtureRepository extends JpaRepository<FixtureEntity, Integer>
             @Param("gameweekId") int gameweekId,
             @Param("teamId") int teamId
     );
+
+    @Query("SELECT COUNT(f) > 0 FROM FixtureEntity f WHERE f.kickoffTime <= :now AND f.kickoffTime >= :startTimeLimit")
+    boolean hasActiveFixtures(@Param("now") LocalDateTime now, @Param("startTimeLimit") LocalDateTime startTimeLimit);
 
 }

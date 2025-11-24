@@ -1,10 +1,15 @@
 package com.fantasy.api;
 
+import com.fantasy.domain.user.UserEntity;
 import com.fantasy.dto.IrStatusDto;
 import com.fantasy.dto.SquadDto;
+import com.fantasy.dto.UpdateProfileDto;
 import com.fantasy.dto.UserDto;
 import com.fantasy.application.UserService;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +39,26 @@ public class UserController {
     public SquadDto getSquadForGameweek(@PathVariable int id,
                                         @RequestParam int gw) {
         return userService.getSquadForGameweek(id, gw);
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileDto request, Authentication authentication) {
+        try {
+            UserEntity currentUser = (UserEntity) authentication.getPrincipal();
+            int userId = currentUser.getId();
+
+            UserDto updatedUser = userService.updateUserProfile(userId, request);
+
+            return ResponseEntity.ok(updatedUser);
+
+        } catch (ClassCastException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid authentication principal");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+        }
     }
 
     @GetMapping("/ir-status")

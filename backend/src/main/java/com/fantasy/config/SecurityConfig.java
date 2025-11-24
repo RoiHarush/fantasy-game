@@ -32,6 +32,9 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
+                        .requestMatchers("/api/players/player-assisted/**").authenticated()
+                        .requestMatchers("/api/admin/**").authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/teams/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/gameweeks/**").permitAll()

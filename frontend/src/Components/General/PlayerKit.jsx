@@ -1,8 +1,11 @@
-function PlayerKit({ teamId, type = "field", className }) {
+import React from 'react';
+
+function PlayerKit({ teamId, type = "field", className, style }) {
     if (teamId === 0) {
         return (
             <img
                 className={className}
+                style={style}
                 src={`/Kits/0.webp`}
                 alt={`Team ${teamId} Kit`}
             />
@@ -12,11 +15,12 @@ function PlayerKit({ teamId, type = "field", className }) {
     return (
         <img
             className={className}
+            style={style}
             src={`/Kits/${teamId}_${type}.webp`}
             alt={`Team ${teamId} Kit`}
         />
     );
 }
 
-export default PlayerKit
+export default PlayerKit;
 

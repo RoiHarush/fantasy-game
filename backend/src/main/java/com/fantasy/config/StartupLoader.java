@@ -1,5 +1,6 @@
 package com.fantasy.config;
 
+import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerRegistry;
@@ -75,31 +76,36 @@ public class StartupLoader {
         System.out.println("=== STARTUP SEQUENCE BEGIN ===");
 
         loadStaticData();
+
         loadRegistries();
 
-        seedUsersIfNeeded();
-        ensureUserMapLoaded();
+        boolean systemAlreadyInitialized = userRepo.count() > 0 && leagueRepo.count() > 0;
 
-        createSuperAdminIfNeeded();
+        if (systemAlreadyInitialized) {
+            System.out.println("System already initialized with users and leagues. Skipping seeding logic.");
 
-        updateUserPoints();
-        seedUserSquads();
-        seedInitialLeague();
+            ensureUserMapLoaded();
 
-        initializeTransferOrderForAllWeeks();
+            initializeTransferOrderForAllWeeks();
+        } else {
+            System.out.println("Fresh install detected. Starting seeding process...");
+            seedUsersIfNeeded();
+            ensureUserMapLoaded();
+            createSuperAdminIfNeeded();
+            updateUserPoints();
+            seedUserSquads();
+            seedInitialLeague();
+            initializeTransferOrderForAllWeeks();
+        }
 
         System.out.println("=== STARTUP COMPLETE ===");
     }
 
     private void ensureUserMapLoaded() {
-        if (seededUserIds.isEmpty() && userRepo.count() > 0) {
+        if (seededUserIds.isEmpty()) {
             List<UserEntity> users = userRepo.findAll();
             for (UserEntity user : users) {
                 seededUserIds.put(user.getName(), user.getId());
-            }
-
-            if (!seededUserIds.containsKey("Tepper")) {
-                System.out.println("⚠ Warning: 'Tepper' not found in DB map reload.");
             }
         }
     }
@@ -230,6 +236,7 @@ public class StartupLoader {
             int total = entry.getValue();
 
             Integer userId = seededUserIds.get(userName);
+
             if (userId == null) {
                 System.err.println("Could not find seeded user: " + userName);
                 continue;
@@ -263,19 +270,23 @@ public class StartupLoader {
     }
 
     private void seedUserSquads() {
-        Integer sampleUserId = seededUserIds.get("Omri");
-        if (sampleUserId != null) {
-            boolean exists = squadRepo.findByUser_IdAndGameweek(sampleUserId, 6).isPresent();
-            if (exists) {
-                System.out.println("✔ User squads already seeded (Skipping GW 6-8 seed).");
-                return;
+        System.out.println("Seeding squads...");
+        try {
+            if (seededUserIds.containsKey("Omri") && seededUserIds.containsKey("Tepper")) {
+                updateGW6();
+                updateGW7();
+                updateGW8();
             }
+        } catch (Exception e) {
+            System.err.println("Warning: Could not seed squads (Users might have changed names): " + e.getMessage());
         }
+    }
 
-        System.out.println("Seeding squads for GWs 6–8...");
-        updateGW6();
-        updateGW7();
-        updateGW8();
+    private Integer getUserIdSafe(String name) {
+        if (!seededUserIds.containsKey(name)) {
+            throw new RuntimeException("User '" + name + "' not found in seed map");
+        }
+        return seededUserIds.get(name);
     }
 
     private void updateSquad(int userId, int gameweek, List<Integer> startingLineup, List<Integer> bench,
@@ -341,129 +352,129 @@ public class StartupLoader {
     }
 
     private void updateGW6() {
-        updateSquad(seededUserIds.get("Omri"), 6,
+        updateSquad(getUserIdSafe("Omri"), 6,
                 list(64, 283, 97, 736, 6, 575, 408, 582, 515, 419, 382),
                 list(220, 158, 317, 261),
                 map("FWD", 3, "GK", 1, "DEF", 3, "MID", 4),
                 582, 736, 64);
 
-        updateSquad(seededUserIds.get("Ifrah"), 6,
+        updateSquad(getUserIdSafe("Ifrah"), 6,
                 list(597, 499, 525, 67, 36, 226, 508, 119, 717, 83, 414),
                 list(469, 370, 17, 478),
                 map("FWD", 3, "GK", 1, "DEF", 3, "MID", 4),
                 597, 717,499);
 
-        updateSquad(seededUserIds.get("Itamar"), 6,
+        updateSquad(getUserIdSafe("Itamar"), 6,
                 list(430, 366, 74, 505, 224, 403, 238, 612, 384, 47, 427),
                 list(628, 726, 38, 135),
                 map("FWD", 1, "GK", 1, "DEF", 4, "MID", 5),
                 427, 384,430);
 
-        updateSquad(seededUserIds.get("Yakoel"), 6,
+        updateSquad(getUserIdSafe("Yakoel"), 6,
                 list(666, 681, 314, 573, 7, 410, 374, 485, 669, 324, 299),
                 list(733, 661, 260, 413),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 299, 410,666);
 
-        updateSquad(seededUserIds.get("Tepper"), 6,
+        updateSquad(getUserIdSafe("Tepper"), 6,
                 list(624, 654, 502, 291, 568, 5, 72, 449, 82, 120, 267),
                 list(287, 235, 477, 338),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 82, 449, 235);
 
-        updateSquad(seededUserIds.get("Eden"), 6,
+        updateSquad(getUserIdSafe("Eden"), 6,
                 list(311, 249, 136, 1, 371, 411, 569, 418, 381, 266, 160),
                 list(32, 476, 453, 256),
                 map("FWD", 3, "GK", 1, "DEF", 3, "MID", 4),
                 249, 418, 381);
 
-        updateSquad(seededUserIds.get("Yaniv"), 6,
+        updateSquad(getUserIdSafe("Yaniv"), 6,
                 list(691, 714, 565, 373, 8, 12, 16, 450, 236, 157, 237),
                 list(253, 258, 596, 402),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
                 450, 565, 16);
     }
     private void updateGW7() {
-        updateSquad(seededUserIds.get("Omri"), 7,
+        updateSquad(getUserIdSafe("Omri"), 7,
                 list(64, 283, 97, 736, 6, 575, 408, 582, 50, 21, 158),
                 list(220, 382, 261, 317),
                 map("FWD", 3, "GK", 1, "DEF", 3, "MID", 4),
                 6, 582, 64);
 
-        updateSquad(seededUserIds.get("Ifrah"), 7,
+        updateSquad(getUserIdSafe("Ifrah"), 7,
                 list(597, 499, 67, 36, 407, 478, 119, 717, 387, 414, 17),
                 list(469, 370, 508, 525),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
                 119, 597,499);
 
-        updateSquad(seededUserIds.get("Itamar"), 7,
+        updateSquad(getUserIdSafe("Itamar"), 7,
                 list(430, 367, 74, 38, 224, 403, 238, 712, 384, 47, 427),
                 list(366, 726, 505, 135),
                 map("FWD", 1, "GK", 1, "DEF", 4, "MID", 5),
                 47, 427,430);
 
-        updateSquad(seededUserIds.get("Yakoel"), 7,
+        updateSquad(getUserIdSafe("Yakoel"), 7,
                 list(666, 681, 733, 260, 7, 258, 374, 485, 84, 324, 299),
                 list(314, 661, 573, 413),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 485, 681,666);
 
-        updateSquad(seededUserIds.get("Tepper"), 7,
+        updateSquad(getUserIdSafe("Tepper"), 7,
                 list(624, 654, 287, 291, 72, 5, 436, 449, 82, 120, 267),
                 list(139, 235, 338, 568),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 449, 82,235);
 
-        updateSquad(seededUserIds.get("Eden"), 7,
+        updateSquad(getUserIdSafe("Eden"), 7,
                 list(249, 136, 1, 256, 411, 476, 418, 381, 266, 160, 200),
                 list(32, 625, 569, 371),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
                 266, 160,381);
 
-        updateSquad(seededUserIds.get("Yaniv"), 7,
+        updateSquad(getUserIdSafe("Yaniv"), 7,
                 list(691, 714, 253, 373, 8, 41, 145, 16, 450, 236, 237),
                 list(565, 596, 402, 157),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 714, 450,16);
     }
     private void updateGW8() {
-        updateSquad(seededUserIds.get("Omri"), 8,
+        updateSquad(getUserIdSafe("Omri"), 8,
                 list(64, 283, 97, 220, 6, 408, 317, 382, 582, 21, 50),
                 list(736, 158, 575, 261),
                 map("FWD", 3, "GK", 1, "DEF", 3, "MID", 4),
                 21, 6, 64);
 
-        updateSquad(seededUserIds.get("Ifrah"), 8,
+        updateSquad(getUserIdSafe("Ifrah"), 8,
                 list(597, 499, 67, 36, 407, 478, 119, 717, 387, 414, 17),
                 list(469, 370, 508, 525),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
                 119, 597,499);
 
-        updateSquad(seededUserIds.get("Itamar"), 8,
+        updateSquad(getUserIdSafe("Itamar"), 8,
                 list(430, 367, 74, 38, 224, 403, 238, 712, 384, 47, 427),
                 list(366, 726, 505, 135),
                 map("FWD", 1, "GK", 1, "DEF", 4, "MID", 5),
                 47, 427,430);
 
-        updateSquad(seededUserIds.get("Yakoel"), 8,
+        updateSquad(getUserIdSafe("Yakoel"), 8,
                 list(666, 681, 733, 260, 7, 258, 374, 485, 84, 324, 299),
                 list(314, 661, 573, 413),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 485, 681,666);
 
-        updateSquad(seededUserIds.get("Tepper"), 8,
+        updateSquad(getUserIdSafe("Tepper"), 8,
                 list(624, 654, 287, 291, 72, 5, 436, 449, 82, 120, 267),
                 list(139, 235, 338, 568),
                 map("FWD", 2, "GK", 1, "DEF", 4, "MID", 4),
                 449, 82,235);
 
-        updateSquad(seededUserIds.get("Eden"), 8,
+        updateSquad(getUserIdSafe("Eden"), 8,
                 list(249, 136, 1, 256, 476, 411, 418, 381, 266, 160, 200),
                 list(32, 569, 371, 625),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
                 266, 160,381);
 
-        updateSquad(seededUserIds.get("Yaniv"), 8,
+        updateSquad(getUserIdSafe("Yaniv"), 8,
                 list(691, 714, 253, 373, 8, 41, 16, 450, 236, 157, 237),
                 list(565, 145, 596, 402),
                 map("FWD", 2, "GK", 1, "DEF", 3, "MID", 5),
@@ -553,19 +564,27 @@ public class StartupLoader {
 
     @Transactional
     public void initializeTransferOrderForAllWeeks() {
+
+        Optional<GameWeekEntity> lastGw = gameWeekRepo.findById(38);
+        if (lastGw.isPresent() && lastGw.get().getTransferOrder() != null && !lastGw.get().getTransferOrder().isEmpty()) {
+            return;
+        }
+
+        System.out.println("Initializing transfer orders...");
+
         List<String> currentOrderNames = new ArrayList<>(List.of(
-                "Eden",
-                "Omri",
-                "Yakoel",
-                "Ifrah",
-                "Yaniv",
-                "Tepper",
-                "Itamar"
+                "Eden", "Omri", "Yakoel", "Ifrah", "Yaniv", "Tepper", "Itamar"
         ));
 
         List<Integer> currentOrderIds = currentOrderNames.stream()
-                .map(name -> seededUserIds.get(name))
+                .map(seededUserIds::get)
+                .filter(Objects::nonNull) // מסנן nullים
                 .collect(Collectors.toCollection(ArrayList::new));
+
+        if (currentOrderIds.size() < currentOrderNames.size()) {
+            System.out.println("⚠️ Cannot initialize draft order: Some seeded users are missing/renamed.");
+            return;
+        }
 
         for (int gwId = 8; gwId <= 38; gwId++) {
             int currentGwId = gwId;
@@ -574,7 +593,6 @@ public class StartupLoader {
                     .orElseThrow(() -> new RuntimeException("GameWeek not found: " + currentGwId));
 
             if (gameWeek.getTransferOrder() != null && !gameWeek.getTransferOrder().isEmpty()) {
-                System.out.println("⚠ Transfer order for GW" + currentGwId + " already exists. Skipping generation, BUT rotating logic continues.");
                 Collections.rotate(currentOrderIds, -1);
                 continue;
             }
@@ -603,11 +621,8 @@ public class StartupLoader {
             }
             gameWeek.getTransferOrder().clear();
             gameWeek.getTransferOrder().addAll(picks);
-            // -----------------------
 
             gameWeekRepo.save(gameWeek);
-
-            System.out.println("✅ Initialized GW" + currentGwId + ". First picker: " + currentOrderIds.get(0));
 
             Collections.rotate(currentOrderIds, -1);
         }
