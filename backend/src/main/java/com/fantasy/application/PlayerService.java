@@ -13,6 +13,8 @@ import com.fantasy.domain.scoreEvent.ScoreType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class PlayerService {
+
+    private static final Logger log = LoggerFactory.getLogger(PlayerService.class);
 
     private final PlayerRepository playerRepo;
     private final PlayerPointsRepository pointsRepo;
@@ -58,7 +62,7 @@ public class PlayerService {
     @Transactional
     public void loadPlayersFromApi() {
         long startTime = System.currentTimeMillis();
-        System.out.println("Starting optimized player load (Parallel Mode)...");
+        log.info("Starting optimized player load (Parallel Mode)...");
 
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
@@ -100,7 +104,7 @@ public class PlayerService {
                 playersToSave.add(entity);
             }
 
-            System.out.println("Saving " + playersToSave.size() + " players to DB...");
+            log.info("Saving {} players to DB...", playersToSave.size());
             playerRepo.saveAll(playersToSave);
 
             List<PlayerGameweekStatsEntity> allStatsToSave = Collections.synchronizedList(new ArrayList<>());
@@ -110,7 +114,7 @@ public class PlayerService {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             AtomicInteger counter = new AtomicInteger(0);
 
-            System.out.println("Fetching history for all players in parallel...");
+            log.info("Fetching history for all players in parallel...");
 
             for (PlayerEntity player : playersToSave) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
@@ -119,10 +123,10 @@ public class PlayerService {
 
                         int current = counter.incrementAndGet();
                         if (current % 100 == 0) {
-                            System.out.println("Processed history for " + current + "/" + playersToSave.size() + " players.");
+                            log.info("Processed history for {}/{} players.", current, playersToSave.size());
                         }
                     } catch (Exception e) {
-                        System.err.println("Error processing player " + player.getId() + ": " + e.getMessage());
+                        log.error("Error processing player {}: {}", player.getId(), e.getMessage());
                     }
                 }, executor);
                 futures.add(future);
@@ -131,7 +135,7 @@ public class PlayerService {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             executor.shutdown();
 
-            System.out.println("Calculating total points...");
+            log.info("Calculating total points...");
             Map<Integer, Integer> playerTotalPoints = new HashMap<>();
             for (PlayerPointsEntity pp : allPointsToSave) {
                 playerTotalPoints.merge(pp.getPlayer().getId(), pp.getPoints(), Integer::sum);
@@ -141,15 +145,16 @@ public class PlayerService {
                 p.setTotalPoints(playerTotalPoints.getOrDefault(p.getId(), 0));
             }
 
-            System.out.println("Saving all stats (" + allStatsToSave.size() + ") and points (" + allPointsToSave.size() + ")...");
+            log.info("Saving all stats ({}) and points ({})...", allStatsToSave.size(), allPointsToSave.size());
             statsRepo.saveAll(allStatsToSave);
             pointsRepo.saveAll(allPointsToSave);
             playerRepo.saveAll(playersToSave);
 
             long duration = System.currentTimeMillis() - startTime;
-            System.out.println("Finished loading players in " + (duration / 1000) + " seconds.");
+            log.info("Finished loading players in {} seconds.", (duration / 1000));
 
         } catch (Exception e) {
+            log.error("Failed to load players: {}", e.getMessage());
             throw new RuntimeException("Failed to load players", e);
         }
     }
@@ -249,14 +254,14 @@ public class PlayerService {
                 pointsList.add(pp);
             }
         } catch (Exception e) {
-            System.err.println("Failed to parse history for player " + player.getId() + ": " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to parse history for player {}: {}", player.getId(), e.getMessage());
         }
     }
 
     public void updateGameweekPoints(int currentGw) {
         try {
             List<PlayerEntity> players = playerRepo.findAll();
+            log.info("Updating live GW {} points for {} players", currentGw, players.size());
 
             for (PlayerEntity entity : players) {
                 String historyUrl = FPL_PLAYER_URL + entity.getId() + "/";
@@ -369,7 +374,6 @@ public class PlayerService {
                 stats.setCleanSheet60(minutes >= 60 && goalsConceded == 0);
 
                 stats.setStarted(starts == 1);
-
                 stats.setTotalPoints(gwPoints);
                 statsRepo.save(stats);
 
@@ -394,7 +398,7 @@ public class PlayerService {
                 playerRepo.save(entity);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed updating gameweek points: {}", e.getMessage(), e);
         }
     }
 
@@ -518,7 +522,7 @@ public class PlayerService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed refreshing basic player data: {}", e.getMessage(), e);
         }
     }
 
@@ -566,9 +570,9 @@ public class PlayerService {
         if (playerEntity.getOwnerId() != null && playerEntity.getOwnerId() != -1) {
             try {
                 pointsService.calculateAndPersist(playerEntity.getOwnerId(), request.getGameweek());
-                System.out.println("Updated points for user " + playerEntity.getOwnerId() + " due to manual assist update.");
+                log.info("Updated points for user {} due to manual assist update.", playerEntity.getOwnerId());
             } catch (Exception e) {
-                System.err.println("Failed to update user points after assist update: " + e.getMessage());
+                log.error("Failed to update user points after assist update: {}", e.getMessage());
             }
         }
 
@@ -593,12 +597,14 @@ public class PlayerService {
             }
             player.setState(PlayerState.LOCKED);
             p.setState(PlayerState.LOCKED);
+            log.info("Locked player {}", playerId);
         } else {
             if (player.getState() != PlayerState.LOCKED) {
                 throw new RuntimeException("Can only unlock players with state LOCKED");
             }
             player.setState(PlayerState.NONE);
             p.setState(PlayerState.NONE);
+            log.info("Unlocked player {}", playerId);
         }
 
         playerRepo.save(player);

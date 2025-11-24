@@ -51,7 +51,6 @@ public class TransferTurnManager {
         if (windowOpen) throw new IllegalStateException("Transfer window already open");
         windowOpen = true;
         currentRound = RoundType.REGULAR;
-        System.out.println("🪟 Transfer window started");
     }
 
     public void endTurn() {
@@ -74,13 +73,10 @@ public class TransferTurnManager {
         currentRound = RoundType.IR;
         order.clear();
         order.addAll(eligibleIR);
-
-        System.out.println("⚕️ Starting IR round");
     }
 
     public void closeWindow() {
         windowOpen = false;
-        System.out.println("🏁 Transfer window closed");
     }
 
     public Optional<Integer> getCurrentUserId() {

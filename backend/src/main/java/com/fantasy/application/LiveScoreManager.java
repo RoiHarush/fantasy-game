@@ -13,6 +13,9 @@ import com.fantasy.infrastructure.repositories.PlayerPointsRepository;
 import com.fantasy.infrastructure.repositories.PlayerRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -23,6 +26,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class LiveScoreManager {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveScoreManager.class);
 
     private static final String LIVE_API_URL = "https://fantasy.premierleague.com/api/event/{event_id}/live/";
 
@@ -49,20 +54,24 @@ public class LiveScoreManager {
 
     @Transactional
     public void updateLiveScores(int gameweekId) {
+        log.info("Starting live score update for GW {}", gameweekId);
+
         try {
             String url = LIVE_API_URL.replace("{event_id}", String.valueOf(gameweekId));
+
             JsonNode root = mapper.readTree(restTemplate.getForObject(url, String.class));
             JsonNode elements = root.get("elements");
 
             List<PlayerGameweekStatsEntity> allDbStats = statsRepository.findByGameweek(gameweekId);
 
-            Map<Integer, PlayerGameweekStatsEntity> statsMap = allDbStats.stream()
-                    .collect(Collectors.toMap(s -> s.getPlayer().getId(), Function.identity()));
+            Map<Integer, PlayerGameweekStatsEntity> statsMap =
+                    allDbStats.stream().collect(Collectors.toMap(s -> s.getPlayer().getId(), Function.identity()));
 
             List<PlayerGameweekStatsEntity> statsToUpdate = new ArrayList<>();
             List<PlayerPointsEntity> pointsToUpdate = new ArrayList<>();
 
             for (JsonNode apiPlayer : elements) {
+
                 int playerId = apiPlayer.get("id").asInt();
                 JsonNode apiStats = apiPlayer.get("stats");
 
@@ -70,7 +79,12 @@ public class LiveScoreManager {
                 boolean isNewRecord = false;
 
                 if (dbStats == null) {
-                    if (playerRegistry.findById(playerId) == null) continue;
+
+                    if (playerRegistry.findById(playerId) == null) {
+                        continue;
+                    }
+
+                    log.info("Creating new stats entry for player {} (GW {})", playerId, gameweekId);
 
                     dbStats = new PlayerGameweekStatsEntity();
                     dbStats.setPlayer(playerRepository.getReferenceById(playerId));
@@ -84,7 +98,9 @@ public class LiveScoreManager {
                 }
 
                 if (isNewRecord || hasStatsChanged(dbStats, apiStats)) {
+
                     updateStatsFromApi(dbStats, apiStats);
+
                     int newPoints = calculateLivePoints(dbStats);
                     dbStats.setTotalPoints(newPoints);
 
@@ -95,13 +111,16 @@ public class LiveScoreManager {
                         domainPlayer.getPointsByGameweek().put(gameweekId, newPoints);
                     }
 
-                    PlayerPointsEntity pointEntity = pointsRepository.findByPlayer_IdAndGameweek(playerId, gameweekId)
+                    PlayerPointsEntity pointEntity = pointsRepository
+                            .findByPlayer_IdAndGameweek(playerId, gameweekId)
                             .orElseGet(() -> {
+                                log.info("Creating PlayerPointsEntity for player {} GW {}", playerId, gameweekId);
                                 PlayerPointsEntity newP = new PlayerPointsEntity();
                                 newP.setPlayer(playerRepository.getReferenceById(playerId));
                                 newP.setGameweek(gameweekId);
                                 return newP;
                             });
+
                     pointEntity.setPoints(newPoints);
                     pointsToUpdate.add(pointEntity);
                 }
@@ -110,18 +129,21 @@ public class LiveScoreManager {
             if (!statsToUpdate.isEmpty()) {
                 statsRepository.saveAll(statsToUpdate);
                 pointsRepository.saveAll(pointsToUpdate);
-                System.out.println("Live Update: Updated/Created " + statsToUpdate.size() + " player stats.");
+                log.info("Live update finished → {} stats updated, {} point entries updated",
+                        statsToUpdate.size(), pointsToUpdate.size());
+            } else {
+                log.info("Live update finished → No changes detected for GW {}", gameweekId);
             }
 
         } catch (Exception e) {
-            System.err.println("Error in live update: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error during live score update for GW {}: {}", gameweekId, e.getMessage(), e);
         }
     }
 
     private boolean hasStatsChanged(PlayerGameweekStatsEntity db, JsonNode api) {
         int dbStartedAsInt = db.isStarted() ? 1 : 0;
         int apiStarted = api.has("starts") ? api.get("starts").asInt() : 0;
+
         return db.getMinutesPlayed() != api.get("minutes").asInt() ||
                 db.getGoals() != api.get("goals_scored").asInt() ||
                 db.getAssists() != api.get("assists").asInt() ||
@@ -160,7 +182,9 @@ public class LiveScoreManager {
     private int calculateLivePoints(PlayerGameweekStatsEntity stats) {
         Player domainPlayer = playerRegistry.findById(stats.getPlayer().getId());
         if (domainPlayer == null) return 0;
+
         List<ScoreEvent> events = new ArrayList<>();
+
         if (stats.getMinutesPlayed() > 0) {
             if (stats.isStarted()) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PLAYED));
             else events.add(new ScoreEvent(domainPlayer, 0, ScoreType.FROM_BENCH));
@@ -178,6 +202,7 @@ public class LiveScoreManager {
         for (int i = 0; i < stats.getOwnGoals(); i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.OWN_GOAL));
         for (int i = 0; i < stats.getPenaltiesSaved(); i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_SAVE));
         for (int i = 0; i < stats.getPenaltiesMissed(); i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_MISS));
+
         return ScoreCalculator.calculatePointsForPlayer(events);
     }
 }

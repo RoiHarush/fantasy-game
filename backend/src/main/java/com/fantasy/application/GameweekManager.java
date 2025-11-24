@@ -14,7 +14,10 @@ import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.GameWeekRepository;
 import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
+
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -22,6 +25,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class GameweekManager {
+
+    private static final Logger log = LoggerFactory.getLogger(GameweekManager.class);
 
     private final UserGameDataRepository gameDataRepository;
     private final UserSquadRepository squadRepository;
@@ -46,19 +51,22 @@ public class GameweekManager {
 
     @Transactional
     public void openNextGameweek(int newGwId) {
+
+        log.info("Attempting to open next gameweek: GW {}", newGwId);
+
         boolean openedSuccessfully = updateGameweeksStatus(newGwId);
 
         if (!openedSuccessfully) {
+            log.warn("openNextGameweek: GW {} was not opened (status was not UPCOMING)", newGwId);
             return;
         }
 
         var gameDataEntities = gameDataRepository.findAllWithRelations();
+        log.info("Loaded {} users for GW rollover", gameDataEntities.size());
 
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
-            var userGameData = UserMapper.toDomainGameData(
-                    gameDataEntity,
-                    playerRegistry
-            );
+
+            var userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
 
             GameweekRollover.rolloverToNextGameweek(userGameData, newGwId);
 
@@ -66,6 +74,7 @@ public class GameweekManager {
                     userGameData.getNextFantasyTeam().getSquad(),
                     userGameData.getNextFantasyTeam().getGameweek()
             );
+
             newNextSquadEntity.setUser(gameDataEntity);
             squadRepository.save(newNextSquadEntity);
 
@@ -74,14 +83,22 @@ public class GameweekManager {
 
             gameDataRepository.save(gameDataEntity);
         }
+
+        log.info("Successfully opened GW {} and rolled over all squads", newGwId);
     }
 
     @Transactional
     public void processGameweek(int gameweekId) {
+        log.info("Processing GW {}", gameweekId);
+
         var gw = gameweekRepository.findByIdWithLock(gameweekId)
-                .orElseThrow(() -> new RuntimeException("Gameweek not found"));
+                .orElseThrow(() -> {
+                    log.error("processGameweek: GW {} not found", gameweekId);
+                    return new RuntimeException("Gameweek not found");
+                });
 
         if (gw.isCalculated()) {
+            log.warn("processGameweek: GW {} already marked as calculated, skipping", gameweekId);
             return;
         }
 
@@ -93,18 +110,24 @@ public class GameweekManager {
                         (a, b) -> b
                 ));
 
+        log.info("Loaded minutes for {} players for GW {}", minutesMap.size(), gameweekId);
+
         var gameDataEntities = gameDataRepository.findAllWithRelations();
 
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
+
             UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
             Squad squad = userGameData.getCurrentFantasyTeam().getSquad();
 
             squad.autoSub(minutesMap);
 
             var squadEntity = gameDataEntity.getCurrentSquad();
+
             if (squadEntity == null || squadEntity.getGameweek() != gameweekId) {
+                log.error("Squad entity not found for user {} in GW {}", userGameData.getId(), gameweekId);
                 throw new RuntimeException("Squad entity not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
             }
+
             UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, gameweekId);
             updatedEntity.setId(squadEntity.getId());
             updatedEntity.setUser(gameDataEntity);
@@ -116,14 +139,19 @@ public class GameweekManager {
 
         gw.setCalculated(true);
         gameweekRepository.save(gw);
+
+        log.info("Finished processing GW {} successfully", gameweekId);
     }
 
     private boolean updateGameweeksStatus(int newGwId) {
         var nextGw = gameweekRepository.findByIdWithLock(newGwId)
-                .orElseThrow(() -> new RuntimeException("Next gameweek not found: " + newGwId));
+                .orElseThrow(() -> {
+                    log.error("updateGameweeksStatus: Next GW {} not found", newGwId);
+                    return new RuntimeException("Next gameweek not found: " + newGwId);
+                });
 
         if (!"UPCOMING".equalsIgnoreCase(nextGw.getStatus())) {
-            System.out.println("GW " + newGwId + " is already opened/live. Skipping.");
+            log.warn("GW {} is already {}. Cannot open.", newGwId, nextGw.getStatus());
             return false;
         }
 
@@ -131,6 +159,7 @@ public class GameweekManager {
         if (currentLiveOpt.isPresent()) {
             var currentLive = currentLiveOpt.get();
             currentLive.setStatus("FINISHED");
+            log.info("Marked GW {} as FINISHED", currentLive.getId());
             gameweekRepository.save(currentLive);
         }
 
@@ -138,6 +167,9 @@ public class GameweekManager {
         gameweekRepository.save(nextGw);
 
         gameweekRepository.flush();
+
+        log.info("GW {} is now LIVE", newGwId);
+
         return true;
     }
 }

@@ -9,6 +9,8 @@ import com.fantasy.infrastructure.repositories.TeamRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 @Service
 public class FixtureService {
 
+    private static final Logger log = LoggerFactory.getLogger(FixtureService.class);
     private static final String FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/";
 
     private final FixtureRepository fixtureRepo;
@@ -42,6 +45,7 @@ public class FixtureService {
 
     @Transactional
     public void loadFromApiAndSave() {
+        log.info("Starting full fixture load from API...");
         try {
             String jsonResponse = restTemplate.getForObject(FIXTURES_URL, String.class);
             JsonNode root = mapper.readTree(jsonResponse);
@@ -87,14 +91,17 @@ public class FixtureService {
             }
 
             fixtureRepo.saveAll(fixtures);
+            log.info("Successfully loaded and saved {} fixtures.", fixtures.size());
 
         } catch (Exception e) {
+            log.error("Failed to load fixtures from API", e);
             throw new RuntimeException("Failed to load fixtures from API", e);
         }
     }
 
     @Transactional
     public void updateFixturesForGameweek(int gameweekId) {
+        // log.debug("Checking fixture updates for GW {}", gameweekId); // Debug level to avoid spam
         try {
             String url = FIXTURES_URL + "?event=" + gameweekId;
             String jsonResponse = restTemplate.getForObject(url, String.class);
@@ -159,11 +166,11 @@ public class FixtureService {
 
             if (!toUpdate.isEmpty()) {
                 fixtureRepo.saveAll(toUpdate);
-                System.out.println("Updated scores for " + toUpdate.size() + " fixtures in GW " + gameweekId);
+                log.info("Updated scores/status for {} fixtures in GW {}", toUpdate.size(), gameweekId);
             }
 
         } catch (Exception e) {
-            System.err.println("Error updating fixtures for GW " + gameweekId + ": " + e.getMessage());
+            log.error("Error updating fixtures for GW {}", gameweekId, e);
         }
     }
 

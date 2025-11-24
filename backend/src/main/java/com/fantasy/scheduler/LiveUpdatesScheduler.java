@@ -8,6 +8,8 @@ import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.infrastructure.repositories.FixtureRepository;
 import com.fantasy.infrastructure.repositories.GameWeekRepository;
 import com.fantasy.infrastructure.repositories.UserGameDataRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 @Component
 public class LiveUpdatesScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveUpdatesScheduler.class);
 
     private final FixtureRepository fixtureRepository;
     private final GameWeekRepository gameweekRepository;
@@ -50,17 +54,23 @@ public class LiveUpdatesScheduler {
         boolean hasActiveGames = fixtureRepository.hasActiveFixtures(now, startTimeLimit);
 
         if (hasActiveGames) {
-            fixtureService.updateFixturesForGameweek(gwId);
+             log.info("Active games detected in GW {}. Running live updates...", gwId);
 
-            liveScoreManager.updateLiveScores(gwId);
+            try {
+                fixtureService.updateFixturesForGameweek(gwId);
+                liveScoreManager.updateLiveScores(gwId);
 
-            userGameDataRepository.findAll().forEach(userGameData -> {
-                try {
-                    pointsService.calculateAndPersist(userGameData.getUser().getId(), gwId);
-                } catch (Exception e) {
-                    System.err.println("Failed to calc live points for user " + userGameData.getId());
-                }
-            });
+                userGameDataRepository.findAll().forEach(userGameData -> {
+                    try {
+                        pointsService.calculateAndPersist(userGameData.getUser().getId(), gwId);
+                    } catch (Exception e) {
+                        log.error("Failed to calc live points for user ID {}", userGameData.getUser().getId(), e);
+                    }
+                });
+
+            } catch (Exception e) {
+                log.error("Critical error during live updates cycle", e);
+            }
         }
     }
 }
