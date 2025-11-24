@@ -77,18 +77,38 @@ public class TransferWindowService {
         endTurn();
     }
 
+    @Transactional
+    public void passTurn(int userId) {
+        if (!activeWindow || turnManager == null) {
+            throw new RuntimeException("Transfer window is not active");
+        }
+
+        if (turnManager.isIRRound()) {
+            throw new RuntimeException("Cannot pass turn during IR round! You must pick a player.");
+        }
+
+        var currentUserId = turnManager.getCurrentUserId().orElse(-1);
+        if (currentUserId != userId) {
+            throw new RuntimeException("Not your turn to pass");
+        }
+
+        endTurn();
+        broadcastPass(userId);
+    }
+
     public void broadcastPass(int userId) {
         String userName = userRepo.findById(userId)
                 .map(UserEntity::getName)
                 .orElse("Unknown user");
 
+        log.info("User {} ({}) passed their turn.", userName, userId);
         webSocketController.sendPassEvent(userId, userName);
     }
 
     @Transactional
     public void openTransferWindow(int gameWeekId) {
         if (activeWindow) {
-            System.out.println("⚠️ Transfer window is already open! Skipping request.");
+            log.warn("Attempted to open transfer window for GW {}, but window is already active.", gameWeekId);
             return;
         }
 
@@ -106,15 +126,18 @@ public class TransferWindowService {
         this.activeWindow = true;
 
         int firstUser = turnManager.getCurrentUserId().orElse(-1);
-        System.out.println("✅ Transfer window opened for GW " + gameWeekId + " | First turn: " + firstUser);
-        System.out.println("⚕️ Eligible for IR round: " + eligibleForIRRound);
+
+        log.info("Transfer window OPENED for GW {} | First turn: UserID {}", gameWeekId, firstUser);
+        if (!eligibleForIRRound.isEmpty()) {
+            log.info("Users eligible for IR round: {}", eligibleForIRRound);
+        }
 
         webSocketController.sendWindowOpenedEvent(
                 firstUser,
                 turnManager.getInitialOrder(),
                 turnManager.getCurrentOrder(),
-                turnManager.getTurnsStatus(),
-                turnManager.getMaxTurns()
+                turnManager.getTurnsUsed(),
+                turnManager.getUserTotalTurns()
         );
     }
 
@@ -201,20 +224,22 @@ public class TransferWindowService {
                 .map(UserEntity::getName)
                 .orElse("Unknown user");
 
+        log.info("IR Replacement: User {} signed {} ({})", userName, player.getViewName(), player.getId());
+
         webSocketController.sendTransferDoneEvent(user.getId(), player.getId(), userName);
         endTurn();
     }
 
     public void endTurn() {
         if (!activeWindow) {
-            System.out.println("⚠️ Tried to end turn but window not active");
+            log.warn("Tried to end turn but window is not active");
             return;
         }
 
         turnManager.endTurn();
 
         if (!turnManager.isWindowOpen() || turnManager.getCurrentUserId().isEmpty()) {
-            System.out.println("🏁 Transfer window finished — no more turns left");
+            log.info("Transfer window FINISHED for GW {}", currentGameWeekId);
             closeWindow();
             return;
         }
@@ -229,22 +254,22 @@ public class TransferWindowService {
 
             Player player = user.getNextFantasyTeam().getSquad().getIR();
 
-            System.out.println("⚕️ IR Round turn: user " + nextUserId);
+            log.info("IR Round Turn: UserID {}", nextUserId);
             webSocketController.sendIRTurnStartedEvent(
                     nextUserId,
                     player.getPosition().getCode(),
                     irOrder,
-                    turnManager.getTurnsStatus()
+                    turnManager.getTurnsUsed()
             );
             return;
         }
 
-        System.out.println("➡️ Next turn: UserGameData " + nextUserId);
+        log.info("Next turn: UserID {}", nextUserId);
         webSocketController.sendTurnStartedEvent(
                 nextUserId,
                 turnManager.getCurrentOrder(),
                 turnManager.isIRRound() ? "IR" : "REGULAR",
-                turnManager.getTurnsStatus()
+                turnManager.getTurnsUsed()
         );
     }
 
@@ -262,7 +287,7 @@ public class TransferWindowService {
 
         List<TransferPickEntity> nextOrder = nextGw.getTransferOrder();
         if (nextOrder != null && !nextOrder.isEmpty()) {
-            System.out.println("⚠️ Next GW " + nextGwId + " already has a transfer order. Skipping order generation.");
+            log.warn("Next GW {} already has a transfer order defined. Skipping order generation.", nextGwId);
             webSocketController.sendWindowClosedEvent();
             return;
         }
@@ -273,8 +298,7 @@ public class TransferWindowService {
 
         gameWeekRepo.saveAndFlush(nextGw);
 
-        System.out.println("🏁 Transfer window closed for GW " + currentGameWeekId);
-        System.out.println("🔁 Next order for GW " + nextGwId + ": " +
+        log.info("Window closed. Generated new order for GW {}: {}", nextGwId,
                 newOrder.stream().map(TransferPickEntity::getUserId).toList());
 
         webSocketController.sendWindowClosedEvent();
@@ -285,6 +309,7 @@ public class TransferWindowService {
                 .map(UserEntity::getName)
                 .orElse("Unknown user");
 
+        log.info("Transfer: User {} swapped OUT: {} -> IN: {}", userName, playerOutId, playerInId);
         webSocketController.sendTransferDoneEvent(userId, playerOutId, playerInId, userName);
     }
 
@@ -332,8 +357,8 @@ public class TransferWindowService {
             state.put("currentRound", turnManager.isIRRound() ? "IR" : "REGULAR");
             state.put("order", turnManager.getCurrentOrder());
             state.put("initialOrder", turnManager.getInitialOrder());
-            state.put("turnsUsed", turnManager.getTurnsStatus());
-            state.put("maxTurns", turnManager.getMaxTurns());
+            state.put("turnsUsed", turnManager.getTurnsUsed());
+            state.put("totalTurns", turnManager.getUserTotalTurns());
         } else {
             state.put("currentUserId", null);
             state.put("currentRound", null);

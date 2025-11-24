@@ -28,7 +28,7 @@ export function WebSocketProvider({ children }) {
 
     const subscribe = (topic, callback) => {
         if (!stompClientRef.current || !connected) return;
-        if (subscriptionsRef.current[topic]) return; // already subscribed
+        if (subscriptionsRef.current[topic]) return;
 
         const subscription = stompClientRef.current.subscribe(topic, (message) => {
             const body = JSON.parse(message.body);

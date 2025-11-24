@@ -3,10 +3,12 @@ import { useFixtures } from "../../Context/FixturesContext";
 import { useEffect, useState } from "react";
 import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
+import { useGameweek } from "../../Context/GameweeksContext";
 
 function SquadPlayersTable({ squad }) {
     const { players } = usePlayers();
     const { getFixturesForTeam } = useFixtures();
+    const { nextGameweek } = useGameweek();
     const [fixtures, setFixtures] = useState({});
 
     const getPlayer = (id) => players.find((p) => p.id === id);
@@ -38,13 +40,23 @@ function SquadPlayersTable({ squad }) {
     }, [squad, players]);
 
     const getNextFixtureText = (player) => {
+        if (!nextGameweek) return "-";
+
         const teamFixtures = fixtures[player.teamId];
-        if (!teamFixtures || !teamFixtures.length) return "-";
-        const f = teamFixtures[0];
-        const isHome = f.homeTeamId === player.teamId;
-        const opponent = isHome ? f.awayTeamShort : f.homeTeamShort;
-        return `${opponent}(${isHome ? "H" : "A"})`;
+        if (!teamFixtures) return "-";
+
+        const fixture = teamFixtures[nextGameweek.id];
+
+        if (!fixture) return "-";
+
+        const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
+        const fullName = match ? match[1].trim() : fixture.opponent;
+        const ha = match ? match[2] : "";
+
+        return `${fullName} (${ha})`;
     };
+
+
 
     const getPlayersByPosition = (posKey) => {
         const starting = squad.startingLineup[posKey] || [];

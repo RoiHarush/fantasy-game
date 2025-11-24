@@ -105,7 +105,7 @@ public class FplProxyController {
                     entry.put("playerName", player.getViewName());
                     entry.put("teamId", player.getTeamId());
                     entry.put("points", player.getPointsByGameweek().getOrDefault(gw, 0));
-                    entry.put("logoPath", null);
+                    entry.put("photo", photo);
 
                     result.add(entry);
 

@@ -14,6 +14,8 @@ public class TransferTurnManager {
 
     private final Map<Integer, Integer> turnsUsed = new HashMap<>();
 
+    private final Map<Integer, Integer> userTotalTurns = new HashMap<>();
+
 
     public TransferTurnManager(List<TransferPickEntity> order, List<Integer> eligibleIR) {
         if (order == null || order.isEmpty())
@@ -25,25 +27,23 @@ public class TransferTurnManager {
         Set<Integer> uniqueIds = new LinkedHashSet<>();
         for (TransferPickEntity pick : order) {
             uniqueIds.add(pick.getUserId());
+            userTotalTurns.merge(pick.getUserId(), 1, Integer::sum);
         }
         this.initialOrder = new ArrayList<>(uniqueIds);
 
-        for (Integer userId : this.order) {
+        for (Integer userId : uniqueIds) {
             turnsUsed.put(userId, 0);
         }
     }
 
-
     public <T> Queue<Integer> buildQueue(List<T> order) {
         Queue<Integer> result = new ArrayDeque<>();
-
         for (T element : order) {
             if (element instanceof TransferPickEntity entity)
                 result.offer(entity.getUserId());
             else if (element instanceof Integer id)
                 result.offer(id);
         }
-
         return result;
     }
 
@@ -51,7 +51,7 @@ public class TransferTurnManager {
         if (windowOpen) throw new IllegalStateException("Transfer window already open");
         windowOpen = true;
         currentRound = RoundType.REGULAR;
-        System.out.println("🪟 Transfer window started | Order: " + order);
+        System.out.println("🪟 Transfer window started");
     }
 
     public void endTurn() {
@@ -75,13 +75,8 @@ public class TransferTurnManager {
         order.clear();
         order.addAll(eligibleIR);
 
-        for (Integer userId : eligibleIR) {
-            turnsUsed.putIfAbsent(userId, 0);
-        }
-
-        System.out.println("⚕️ Starting IR round | Order: " + order);
+        System.out.println("⚕️ Starting IR round");
     }
-
 
     public void closeWindow() {
         windowOpen = false;
@@ -92,34 +87,17 @@ public class TransferTurnManager {
         return windowOpen && !order.isEmpty() ? Optional.of(order.peek()) : Optional.empty();
     }
 
-    public boolean isWindowOpen() {
-        return windowOpen;
+    public boolean isWindowOpen() { return windowOpen; }
+    public boolean isIRRound() { return currentRound.equals(RoundType.IR); }
+
+    public List<Integer> getCurrentOrder() { return new ArrayList<>(order); }
+    public List<Integer> getInitialOrder() { return new ArrayList<>(initialOrder); }
+
+    public Map<Integer, Integer> getTurnsUsed() {
+        return new HashMap<>(turnsUsed);
     }
 
-    public boolean isIRRound() {
-        return currentRound.equals(RoundType.IR);
-    }
-
-    public List<Integer> getCurrentOrder() {
-        return new ArrayList<>(order);
-    }
-
-    public List<Integer> getInitialOrder() {
-        return new ArrayList<>(initialOrder);
-    }
-
-    public int getMaxTurns() {
-        return 2;
-    }
-
-    public Map<Integer, Integer> getTurnsStatus() {
-        Map<Integer, Integer> result = new HashMap<>();
-        for (Integer id : turnsUsed.keySet()) {
-            result.put(id, turnsUsed.get(id));
-        }
-        for (Integer id : order) {
-            result.putIfAbsent(id, 0);
-        }
-        return result;
+    public Map<Integer, Integer> getUserTotalTurns() {
+        return new HashMap<>(userTotalTurns);
     }
 }

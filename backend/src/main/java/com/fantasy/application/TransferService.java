@@ -123,9 +123,5 @@ public class TransferService {
         entity.setState(player.getState());
 
         playerRepo.save(entity);
-
-        System.out.println("💾 Updated player in DB: " + entity.getViewName() +
-                " | Owner=" + entity.getOwnerId() +
-                " | State=" + entity.getState());
     }
 }

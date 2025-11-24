@@ -4,12 +4,11 @@ import API_URL from "../config";
 const FixturesContext = createContext();
 
 export function FixturesProvider({ children }) {
-    const [cache, setCache] = useState({}); // { teamId: fixtures }
+    const [cache, setCache] = useState({});
 
     const getFixturesForTeam = useCallback(async (teamId) => {
         if (!teamId) return {};
 
-        // cache hit
         if (cache[teamId]) return cache[teamId];
 
         try {

@@ -33,6 +33,7 @@ public class PlayerService {
     private final PlayerGameweekStatsRepository statsRepo;
     private final PlayerRegistry playerRegistry;
     private final UserRepository userRepo;
+    private final PointsService pointsService;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -44,12 +45,14 @@ public class PlayerService {
                          PlayerPointsRepository pointsRepo,
                          PlayerGameweekStatsRepository statsRepo,
                          PlayerRegistry playerRegistry,
-                         UserRepository userRepo) {
+                         UserRepository userRepo,
+                         PointsService pointsService) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
         this.playerRegistry = playerRegistry;
         this.userRepo = userRepo;
+        this.pointsService = pointsService;
     }
 
     @Transactional
@@ -528,7 +531,8 @@ public class PlayerService {
         PlayerGameweekStatsEntity statsEntity = statsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
                 .orElseThrow(() -> new RuntimeException("Stats not found for player id: " + request.getPlayerId()));
 
-        Player domainPlayer = PlayerMapper.toDomain(statsEntity.getPlayer(), null);
+        PlayerEntity playerEntity = statsEntity.getPlayer();
+        Player domainPlayer = PlayerMapper.toDomain(playerEntity, null);
 
         ScoreEvent assistEvent = new ScoreEvent(domainPlayer, 0, ScoreType.ASSIST);
         int pointDelta = ScoreCalculator.calculatePoints(assistEvent);
@@ -554,6 +558,20 @@ public class PlayerService {
         pointsEntity.setPoints(statsEntity.getTotalPoints());
         pointsRepo.save(pointsEntity);
 
+        Player registryPlayer = playerRegistry.findById(playerEntity.getId());
+        if (registryPlayer != null) {
+            registryPlayer.getPointsByGameweek().put(request.getGameweek(), statsEntity.getTotalPoints());
+        }
+
+        if (playerEntity.getOwnerId() != null && playerEntity.getOwnerId() != -1) {
+            try {
+                pointsService.calculateAndPersist(playerEntity.getOwnerId(), request.getGameweek());
+                System.out.println("Updated points for user " + playerEntity.getOwnerId() + " due to manual assist update.");
+            } catch (Exception e) {
+                System.err.println("Failed to update user points after assist update: " + e.getMessage());
+            }
+        }
+
         return new PlayerAssistedDto(
                 statsEntity.getPlayer().getId(),
                 statsEntity.getPlayer().getViewName(),
@@ -567,16 +585,20 @@ public class PlayerService {
         PlayerEntity player = playerRepo.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("Player not found"));
 
+        Player p = playerRegistry.findById(playerId);
+
         if (shouldLock) {
             if (player.getState() != PlayerState.NONE) {
                 throw new RuntimeException("Can only lock players with state NONE");
             }
             player.setState(PlayerState.LOCKED);
+            p.setState(PlayerState.LOCKED);
         } else {
             if (player.getState() != PlayerState.LOCKED) {
                 throw new RuntimeException("Can only unlock players with state LOCKED");
             }
             player.setState(PlayerState.NONE);
+            p.setState(PlayerState.NONE);
         }
 
         playerRepo.save(player);

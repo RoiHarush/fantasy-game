@@ -21,7 +21,7 @@ public class TransferWebSocketController {
             List<Integer> initialOrder,
             List<Integer> turnOrder,
             Map<Integer, Integer> turnsUsed,
-            int maxTurns
+            Map<Integer, Integer> totalTurns
     ) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "window_opened");
@@ -29,7 +29,7 @@ public class TransferWebSocketController {
         event.put("initialOrder", initialOrder);
         event.put("turnOrder", turnOrder);
         event.put("turnsUsed", turnsUsed);
-        event.put("maxTurns", maxTurns);
+        event.put("totalTurns", totalTurns); // <---
         messagingTemplate.convertAndSend("/topic/transfers", event);
     }
 

@@ -4,10 +4,13 @@ import styles from "../../../Styles/PlayerOfTheWeekBlock.module.css";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import PlayerOfWeekCard from "../../General/PlayerOfTheWeekCard";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
+import { getPlayerById } from "../../../Utils/ItemGetters";
+import { usePlayers } from "../../../Context/PlayersContext";
 
 function PlayerOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
-    const [players, setPlayers] = useState([]);
+    const { players } = usePlayers();
+    const [topPlayers, setTopPlayers] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const visibleCount = 5;
@@ -39,7 +42,7 @@ function PlayerOfTheWeekBlock() {
                     ...full.slice(0, visibleCount),
                 ];
 
-                setPlayers(circular);
+                setTopPlayers(circular);
                 setCurrentIndex(visibleCount);
             } catch (err) {
                 console.error("❌ Failed to load players of the week:", err);
@@ -49,21 +52,21 @@ function PlayerOfTheWeekBlock() {
     }, []);
 
     useEffect(() => {
-        if (currentGameweek && players.length > 0) {
+        if (currentGameweek && topPlayers.length > 0) {
             const total = 38;
             const gwIndex = Math.min(currentGameweek.id - 1, total - 1);
             setCurrentIndex(gwIndex + visibleCount + 1);
         }
-    }, [currentGameweek, players]);
+    }, [currentGameweek, topPlayers]);
 
     const next = () => {
-        if (players.length === 0) return;
+        if (topPlayers.length === 0) return;
         setIsTransitioning(true);
         setCurrentIndex((prev) => prev + 1);
     };
 
     const prev = () => {
-        if (players.length === 0) return;
+        if (topPlayers.length === 0) return;
         setIsTransitioning(true);
         setCurrentIndex((prev) => prev - 1);
     };
@@ -102,7 +105,7 @@ function PlayerOfTheWeekBlock() {
                         }}
                         onTransitionEnd={handleTransitionEnd}
                     >
-                        {players.map((p, idx) => (
+                        {topPlayers.map((p, idx) => (
                             <div
                                 key={`player-${p?.gameweek ?? idx}-${idx}`}
                                 className={styles.cardWrapper}
@@ -121,7 +124,7 @@ function PlayerOfTheWeekBlock() {
 
             {selectedPlayer && (
                 <PlayerInfoModal
-                    player={selectedPlayer}
+                    player={getPlayerById(players, selectedPlayer.id)}
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}

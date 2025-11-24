@@ -234,7 +234,7 @@ public class UserService {
                     var ir = squad != null ? squad.getIR() : null;
 
                     return new IrStatusDto(
-                            userEntity.getId(), // ID של זהות
+                            userEntity.getId(),
                             userEntity.getName(),
                             userDomain.getFantasyTeamName(),
                             ir != null,
