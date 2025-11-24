@@ -4,7 +4,7 @@ import SplitBlock from "../../Blocks/SplitBlock";
 import Style from "../../../Styles/Status.module.css";
 import IRStatusTable from "./IRStatusTable";
 import PlayerOfTheWeekBlock from "./PlayerOfTheWeekBlock";
-import { fetchUserPoints } from "../../../Services/PointsService";
+import { fetchUserPoints } from "../../../services/pointsService";
 
 function Status({ user, league, currentGameweek, nextGameweek }) {
 
@@ -43,7 +43,6 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
             <ColumnsBlock title={currentGameweek?.name || "Gameweek"} columns={2}>
                 <div>
                     <p>{currentGameweek?.name} points</p>
-                    {/* כאן אנחנו מציגים את הסטייט המעודכן מהשרת */}
                     <h2 className={Style.gradientText}>{gwPoints}</h2>
                 </div>
 
