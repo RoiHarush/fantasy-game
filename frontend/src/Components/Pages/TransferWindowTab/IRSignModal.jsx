@@ -1,12 +1,13 @@
 import Style from "../../../Styles/IRSignModal.module.css";
 import API_URL from "../../../config";
+import { getAuthHeaders } from "../../../services/authHelper";
 
 export default function IRSignModal({ player, user, onClose }) {
     const handleConfirm = async () => {
         try {
             const res = await fetch(`${API_URL}/api/transfer-window/replace-ir`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     userId: user.id,
                     playerId: player.id

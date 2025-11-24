@@ -3,6 +3,7 @@ import { useGameweek } from "../../../Context/GameweeksContext";
 import Style from "../../../Styles/TransferModal.module.css";
 import PlayerKit from "../../General/PlayerKit"
 import API_URL from "../../../config";
+import { getAuthHeaders } from "../../../services/authHelper";
 
 
 function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
@@ -13,7 +14,10 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
     useEffect(() => {
         async function fetchSquad() {
             try {
-                const res = await fetch(`${API_URL}/api/users/${user.id}/squad?gw=${nextGameweek.id}`);
+                const res = await fetch(`${API_URL}/api/users/${user.id}/squad?gw=${nextGameweek.id}`, {
+                    headers: getAuthHeaders()
+                });
+
                 if (!res.ok) throw new Error("Failed to load squad");
                 const data = await res.json();
                 setSquad(data);
@@ -79,7 +83,7 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
 
         fetch(`${API_URL}/api/transfers`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 userId: user.id,
                 playerOutId: playerOut.id,
@@ -91,7 +95,9 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
                 return res.text();
             })
             .then(msg => console.log("✅ Transfer completed:", msg))
-            .catch(err => console.error("❌ Transfer error:", err));
+            .catch(err => {
+                console.error("❌ Transfer error:", err);
+            });
 
         onClose();
     };
