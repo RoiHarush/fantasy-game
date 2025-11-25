@@ -456,7 +456,6 @@ public class SeedingService {
         }
     }
 
-    // ⭐⭐ שינוי: הסרת @Transactional. זה כבר רץ בתוך seedAndInitializeDB(). ⭐⭐
     public void initializeTransferOrderForAllWeeks() {
 
         Optional<GameWeekEntity> lastGw = gameWeekRepo.findById(38);

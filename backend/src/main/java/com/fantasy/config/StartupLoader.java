@@ -8,6 +8,9 @@ import com.fantasy.infrastructure.mappers.PlayerMapper;
 import com.fantasy.infrastructure.repositories.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -18,6 +21,8 @@ import java.util.*;
 
 @Component
 public class StartupLoader {
+
+    private static final Logger log = LoggerFactory.getLogger(StartupLoader.class);
 
     private final TeamService teamService;
     private final PlayerService playerService;
@@ -51,19 +56,17 @@ public class StartupLoader {
 
     @EventListener(ApplicationReadyEvent.class)
     public void run() {
-        System.out.println("=== STARTUP SEQUENCE BEGIN ===");
+        log.info("=== STARTUP SEQUENCE BEGIN ===");
 
         loadStaticData();
-
         loadRegistries();
-
         seedingService.seedAndInitializeDB();
 
-        System.out.println("=== STARTUP COMPLETE ===");
+        log.info("=== STARTUP COMPLETE ===");
     }
 
     private void loadStaticData() {
-        System.out.println("Loading static data...");
+        log.info("Loading static data...");
 
         long teamsCount = teamService.countTeams();
         long playersCount = playerService.countPlayers();
@@ -71,49 +74,49 @@ public class StartupLoader {
         long gameweeksCount = gameWeekService.countGameweeks();
 
         if (teamsCount == 0) {
-            System.out.println("→ Loading teams from API...");
+            log.info("Loading teams from API...");
             List<TeamEntity> teamsToSave = teamService.fetchTeamsFromApi();
             teamService.saveTeams(teamsToSave);
         } else {
-            System.out.println("✔ Teams already exist (" + teamsCount + ")");
+            log.info("Teams already exist ({})", teamsCount);
         }
 
         if (playersCount == 0) {
-            System.out.println("→ Loading players from API...");
+            log.info("Loading players from API...");
             playerService.loadPlayersFromApi();
             updatePlayersPhotosFromApi();
         } else {
-            System.out.println("✔ Players already exist (" + playersCount + ")");
+            log.info("Players already exist ({})", playersCount);
         }
 
         if (fixturesCount == 0) {
-            System.out.println("→ Loading fixtures from API...");
+            log.info("Loading fixtures from API...");
             fixtureService.loadFromApiAndSave();
         } else {
-            System.out.println("✔ Fixtures already exist (" + fixturesCount + ")");
+            log.info("Fixtures already exist ({})", fixturesCount);
         }
 
         if (gameweeksCount == 0) {
-            System.out.println("→ Loading gameweeks from API...");
+            log.info("Loading gameweeks from API...");
             gameWeekService.loadFromApiAndSave();
         } else {
-            System.out.println("✔ Gameweeks already exist (" + gameweeksCount + ")");
+            log.info("Gameweeks already exist ({})", gameweeksCount);
         }
     }
 
     public void loadRegistries() {
-        System.out.println("Loading registries to memory...");
+        log.info("Loading registries to memory...");
 
         var players = playerRepo.findAll().stream()
                 .map(p -> PlayerMapper.toDomain(p, pointsRepo.findByPlayer_Id(p.getId())))
                 .toList();
 
         playerRegistry.addMany(players);
-        System.out.println("✔ Finish loading Players to Registry");
+        log.info("Finished loading Players to Registry ({} players)", players.size());
     }
 
     private void updatePlayersPhotosFromApi() {
-        System.out.println("🖼️ Updating player photos using FPL code field...");
+        log.info("Updating player photos using FPL code field...");
 
         try {
             String url = "https://fantasy.premierleague.com/api/bootstrap-static/";
@@ -134,10 +137,10 @@ public class StartupLoader {
                 seedingService.persistPlayerPhotoUpdates(apiCodes);
             }
 
-            System.out.println("✔ Updated photo codes for " + apiCodes.size() + " players.");
+            log.info("Updated photo codes for {} players.", apiCodes.size());
 
         } catch (Exception e) {
-            System.err.println("❌ Failed to update player photos: " + e.getMessage());
+            log.error("Failed to update player photos: {}", e.getMessage(), e);
         }
     }
 }

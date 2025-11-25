@@ -34,7 +34,7 @@ public class GameweekAutoScheduler {
             if (now.isAfter(nextGw.getFirstKickoffTime()) || now.isEqual(nextGw.getFirstKickoffTime())) {
                 log.info("Deadline reached for GW {}. Opening gameweek...", nextGw.getId());
                 try {
-                    gameweekManager.openNextGameweek(nextGw.getId());
+                    gameweekManager.openNextGameweek(nextGw.getId(), false);
                     log.info("Successfully opened GW {}", nextGw.getId());
                 } catch (Exception e) {
                     log.error("Failed to open GW {}", nextGw.getId(), e);
@@ -50,7 +50,7 @@ public class GameweekAutoScheduler {
             if (now.isAfter(safeProcessTime) && !gw.isCalculated()) {
                 log.info("Gameweek {} finished (Safe time passed). Processing points & subs...", gw.getId());
                 try {
-                    gameweekManager.processGameweek(gw.getId());
+                    gameweekManager.processGameweek(gw.getId(), false);
                     gameweekRepository.save(gw);
                     log.info("Successfully processed GW {}", gw.getId());
                 } catch (Exception e) {

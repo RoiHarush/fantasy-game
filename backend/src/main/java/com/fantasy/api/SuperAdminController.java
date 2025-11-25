@@ -119,7 +119,7 @@ public class SuperAdminController {
     @PostMapping("/open/{gw}")
     public ResponseEntity<String> openNextGameweek(@PathVariable int gw) {
         try {
-            gameweekManager.openNextGameweek(gw);
+            gameweekManager.openNextGameweek(gw, true);
             return ResponseEntity.ok("Gameweek " + gw + " opened successfully.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -131,7 +131,7 @@ public class SuperAdminController {
     public String processGameweek(@PathVariable int gameweek) {
         String message;
         try {
-            gameweekManager.processGameweek(gameweek);
+            gameweekManager.processGameweek(gameweek, true);
             message =  "[ADMIN] Auto-adjust completed for all users (GW " + gameweek + ")";
         }catch (Exception e){
             message =  "[ADMIN] Auto-adjust failed (GW " + gameweek + ")";

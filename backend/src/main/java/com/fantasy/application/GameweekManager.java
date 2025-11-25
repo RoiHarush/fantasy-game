@@ -50,13 +50,13 @@ public class GameweekManager {
     }
 
     @Transactional
-    public void openNextGameweek(int newGwId) {
+    public void openNextGameweek(int newGwId, boolean isSuperAdmin) {
 
         log.info("Attempting to open next gameweek: GW {}", newGwId);
 
         boolean openedSuccessfully = updateGameweeksStatus(newGwId);
 
-        if (!openedSuccessfully) {
+        if (!openedSuccessfully && !isSuperAdmin) {
             log.warn("openNextGameweek: GW {} was not opened (status was not UPCOMING)", newGwId);
             return;
         }
@@ -88,7 +88,7 @@ public class GameweekManager {
     }
 
     @Transactional
-    public void processGameweek(int gameweekId) {
+    public void processGameweek(int gameweekId, boolean isSuperAdmin) {
         log.info("Processing GW {}", gameweekId);
 
         var gw = gameweekRepository.findByIdWithLock(gameweekId)
@@ -97,7 +97,7 @@ public class GameweekManager {
                     return new RuntimeException("Gameweek not found");
                 });
 
-        if (gw.isCalculated()) {
+        if (gw.isCalculated()&& !isSuperAdmin) {
             log.warn("processGameweek: GW {} already marked as calculated, skipping", gameweekId);
             return;
         }
