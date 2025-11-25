@@ -117,22 +117,26 @@ public class GameweekManager {
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
 
             UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
-            Squad squad = userGameData.getCurrentFantasyTeam().getSquad();
+
+            var squadEntity = squadRepository
+                    .findByUser_IdAndGameweek(userGameData.getId(), gameweekId)
+                    .orElse(null);
+
+            if (squadEntity == null) {
+                log.error("No squad found for user {} in GW {}", userGameData.getId(), gameweekId);
+                throw new RuntimeException("Squad not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
+            }
+
+            Squad squad = SquadMapper.toDomain(squadEntity, playerRegistry);
 
             squad.autoSub(minutesMap);
-
-            var squadEntity = gameDataEntity.getCurrentSquad();
-
-            if (squadEntity == null || squadEntity.getGameweek() != gameweekId) {
-                log.error("Squad entity not found for user {} in GW {}", userGameData.getId(), gameweekId);
-                throw new RuntimeException("Squad entity not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
-            }
 
             UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, gameweekId);
             updatedEntity.setId(squadEntity.getId());
             updatedEntity.setUser(gameDataEntity);
 
             squadRepository.save(updatedEntity);
+
 
             pointsService.calculateAndPersist(userGameData.getId(), gameweekId);
         }
