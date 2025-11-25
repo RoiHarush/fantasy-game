@@ -4,6 +4,7 @@ import com.fantasy.domain.realWorldData.TeamEntity;
 import com.fantasy.infrastructure.repositories.TeamRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
@@ -21,7 +22,7 @@ public class TeamService {
         this.teamRepo = teamRepo;
     }
 
-    public void loadFromApiAndSave() {
+    public List<TeamEntity> fetchTeamsFromApi() {
         try {
             JsonNode root = mapper.readTree(new URL(API_URL));
             JsonNode teams = root.get("teams");
@@ -35,11 +36,16 @@ public class TeamService {
 
                 entities.add(new TeamEntity(id, name, shortName));
             }
-
-            teamRepo.saveAll(entities);
-
+            return entities;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load teams from API", e);
+            throw new RuntimeException("Failed to fetch teams from API", e);
+        }
+    }
+
+    @Transactional
+    public void saveTeams(List<TeamEntity> entities) {
+        if (entities != null && !entities.isEmpty()) {
+            teamRepo.saveAll(entities);
         }
     }
 

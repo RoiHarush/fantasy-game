@@ -12,7 +12,7 @@ import com.fantasy.domain.scoreEvent.ScoreEvent;
 import com.fantasy.domain.scoreEvent.ScoreType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -59,96 +59,21 @@ public class PlayerService {
         this.pointsService = pointsService;
     }
 
-    @Transactional
+    private record PlayerLoadResult(
+            List<PlayerEntity> playersToSave,
+            List<PlayerGameweekStatsEntity> allStatsToSave,
+            List<PlayerPointsEntity> allPointsToSave
+    ) {}
+
+
     public void loadPlayersFromApi() {
         long startTime = System.currentTimeMillis();
         log.info("Starting optimized player load (Parallel Mode)...");
 
         try {
-            ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
-            JsonNode root = mapper.readTree(response.getBody());
-            JsonNode elements = root.get("elements");
+            PlayerLoadResult result = fetchPlayersAndHistoryData();
 
-            List<PlayerEntity> playersToSave = new ArrayList<>();
-
-            for (JsonNode node : elements) {
-                if (!node.get("can_select").asBoolean()) continue;
-
-                PlayerEntity entity = new PlayerEntity();
-                entity.setId(node.get("id").asInt());
-                entity.setFirstName(node.get("first_name").asText());
-                entity.setLastName(node.get("second_name").asText());
-                entity.setViewName(node.get("web_name").asText());
-                entity.setPosition(PlayerPosition.fromId(node.get("element_type").asInt()));
-                entity.setTeamId(node.get("team").asInt());
-                entity.setInjured(!node.get("status").asText().equals("a"));
-                entity.setOwnerId(-1);
-                entity.setState(PlayerState.NONE);
-                entity.setTotalPoints(0);
-
-                entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
-
-                if (node.has("chance_of_playing_this_round") && !node.get("chance_of_playing_this_round").isNull()) {
-                    entity.setChanceOfPlayingThisRound(node.get("chance_of_playing_this_round").asInt());
-                }
-                if (node.has("chance_of_playing_next_round") && !node.get("chance_of_playing_next_round").isNull()) {
-                    entity.setChanceOfPlayingNextRound(node.get("chance_of_playing_next_round").asInt());
-                }
-                if (node.hasNonNull("news_added")) {
-                    try {
-                        String raw = node.get("news_added").asText();
-                        entity.setNewsAdded(LocalDateTime.parse(raw.replace("Z", "")));
-                    } catch (Exception ignore) {}
-                }
-
-                playersToSave.add(entity);
-            }
-
-            log.info("Saving {} players to DB...", playersToSave.size());
-            playerRepo.saveAll(playersToSave);
-
-            List<PlayerGameweekStatsEntity> allStatsToSave = Collections.synchronizedList(new ArrayList<>());
-            List<PlayerPointsEntity> allPointsToSave = Collections.synchronizedList(new ArrayList<>());
-
-            ExecutorService executor = Executors.newFixedThreadPool(20);
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-            AtomicInteger counter = new AtomicInteger(0);
-
-            log.info("Fetching history for all players in parallel...");
-
-            for (PlayerEntity player : playersToSave) {
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                    try {
-                        processPlayerHistory(player, allStatsToSave, allPointsToSave);
-
-                        int current = counter.incrementAndGet();
-                        if (current % 100 == 0) {
-                            log.info("Processed history for {}/{} players.", current, playersToSave.size());
-                        }
-                    } catch (Exception e) {
-                        log.error("Error processing player {}: {}", player.getId(), e.getMessage());
-                    }
-                }, executor);
-                futures.add(future);
-            }
-
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-            executor.shutdown();
-
-            log.info("Calculating total points...");
-            Map<Integer, Integer> playerTotalPoints = new HashMap<>();
-            for (PlayerPointsEntity pp : allPointsToSave) {
-                playerTotalPoints.merge(pp.getPlayer().getId(), pp.getPoints(), Integer::sum);
-            }
-
-            for (PlayerEntity p : playersToSave) {
-                p.setTotalPoints(playerTotalPoints.getOrDefault(p.getId(), 0));
-            }
-
-            log.info("Saving all stats ({}) and points ({})...", allStatsToSave.size(), allPointsToSave.size());
-            statsRepo.saveAll(allStatsToSave);
-            pointsRepo.saveAll(allPointsToSave);
-            playerRepo.saveAll(playersToSave);
+            persistPlayerData(result);
 
             long duration = System.currentTimeMillis() - startTime;
             log.info("Finished loading players in {} seconds.", (duration / 1000));
@@ -157,6 +82,98 @@ public class PlayerService {
             log.error("Failed to load players: {}", e.getMessage());
             throw new RuntimeException("Failed to load players", e);
         }
+    }
+
+    private PlayerLoadResult fetchPlayersAndHistoryData() throws Exception {
+        ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
+        JsonNode root = mapper.readTree(response.getBody());
+        JsonNode elements = root.get("elements");
+
+        List<PlayerEntity> playersToProcess = new ArrayList<>();
+
+        for (JsonNode node : elements) {
+            if (!node.get("can_select").asBoolean()) continue;
+
+            PlayerEntity entity = new PlayerEntity();
+            entity.setId(node.get("id").asInt());
+            entity.setFirstName(node.get("first_name").asText());
+            entity.setLastName(node.get("second_name").asText());
+            entity.setViewName(node.get("web_name").asText());
+            entity.setPosition(PlayerPosition.fromId(node.get("element_type").asInt()));
+            entity.setTeamId(node.get("team").asInt());
+            entity.setInjured(!node.get("status").asText().equals("a"));
+            entity.setOwnerId(-1);
+            entity.setState(PlayerState.NONE);
+            entity.setTotalPoints(0);
+
+            entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
+
+            if (node.has("chance_of_playing_this_round") && !node.get("chance_of_playing_this_round").isNull()) {
+                entity.setChanceOfPlayingThisRound(node.get("chance_of_playing_this_round").asInt());
+            }
+            if (node.has("chance_of_playing_next_round") && !node.get("chance_of_playing_next_round").isNull()) {
+                entity.setChanceOfPlayingNextRound(node.get("chance_of_playing_next_round").asInt());
+            }
+            if (node.hasNonNull("news_added")) {
+                try {
+                    String raw = node.get("news_added").asText();
+                    entity.setNewsAdded(LocalDateTime.parse(raw.replace("Z", "")));
+                } catch (Exception ignore) {}
+            }
+            playersToProcess.add(entity);
+        }
+
+        List<PlayerGameweekStatsEntity> allStatsToSave = Collections.synchronizedList(new ArrayList<>());
+        List<PlayerPointsEntity> allPointsToSave = Collections.synchronizedList(new ArrayList<>());
+
+        ExecutorService executor = Executors.newFixedThreadPool(20);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        AtomicInteger counter = new AtomicInteger(0);
+
+        log.info("Fetching history for all players in parallel...");
+
+        for (PlayerEntity player : playersToProcess) {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                try {
+                    processPlayerHistory(player, allStatsToSave, allPointsToSave);
+
+                    int current = counter.incrementAndGet();
+                    if (current % 100 == 0) {
+                        log.info("Processed history for {}/{} players.", current, playersToProcess.size());
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing player {}: {}", player.getId(), e.getMessage());
+                }
+            }, executor);
+            futures.add(future);
+        }
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdown();
+
+        log.info("Calculating total points...");
+        Map<Integer, Integer> playerTotalPoints = new HashMap<>();
+        for (PlayerPointsEntity pp : allPointsToSave) {
+            playerTotalPoints.merge(pp.getPlayer().getId(), pp.getPoints(), Integer::sum);
+        }
+
+        for (PlayerEntity p : playersToProcess) {
+            p.setTotalPoints(playerTotalPoints.getOrDefault(p.getId(), 0));
+        }
+
+        return new PlayerLoadResult(playersToProcess, allStatsToSave, allPointsToSave);
+    }
+
+    @Transactional
+    public void persistPlayerData(PlayerLoadResult result) {
+        log.info("Saving initial players to DB...");
+        playerRepo.saveAll(result.playersToSave());
+
+        log.info("Saving all stats ({}) and points ({})...", result.allStatsToSave().size(), result.allPointsToSave().size());
+        statsRepo.saveAll(result.allStatsToSave());
+        pointsRepo.saveAll(result.allPointsToSave());
+
+        playerRepo.saveAll(result.playersToSave());
     }
 
     private void processPlayerHistory(PlayerEntity player,

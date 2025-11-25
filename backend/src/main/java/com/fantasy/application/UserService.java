@@ -17,7 +17,7 @@ import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.infrastructure.repositories.UserRepository;
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

@@ -8,13 +8,12 @@ import com.fantasy.infrastructure.repositories.FixtureRepository;
 import com.fantasy.infrastructure.repositories.TeamRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -43,54 +42,12 @@ public class FixtureService {
         this.mapper = mapper;
     }
 
-    @Transactional
     public void loadFromApiAndSave() {
         log.info("Starting full fixture load from API...");
         try {
-            String jsonResponse = restTemplate.getForObject(FIXTURES_URL, String.class);
-            JsonNode root = mapper.readTree(jsonResponse);
+            List<FixtureEntity> fixtures = fetchFixturesFromApi();
 
-            List<FixtureEntity> fixtures = new ArrayList<>();
-            ZoneId appZoneId = ZoneId.systemDefault();
-
-            for (JsonNode fixture : root) {
-                int id = fixture.get("id").asInt();
-                int gameweekId = fixture.has("event") && !fixture.get("event").isNull()
-                        ? fixture.get("event").asInt()
-                        : 0;
-                int homeTeamId = fixture.get("team_h").asInt();
-                int awayTeamId = fixture.get("team_a").asInt();
-
-                String kickoffUtc = fixture.has("kickoff_time") && !fixture.get("kickoff_time").isNull()
-                        ? fixture.get("kickoff_time").asText()
-                        : null;
-
-                LocalDateTime kickoff = null;
-                if (kickoffUtc != null) {
-                    Instant instant = Instant.parse(kickoffUtc);
-                    kickoff = LocalDateTime.ofInstant(instant, appZoneId);
-                }
-
-                Integer scoreHome = fixture.has("team_h_score") && !fixture.get("team_h_score").isNull() ? fixture.get("team_h_score").asInt() : null;
-                Integer scoreAway = fixture.has("team_a_score") && !fixture.get("team_a_score").isNull() ? fixture.get("team_a_score").asInt() : null;
-                Integer homeDifficulty = fixture.has("team_h_difficulty") && !fixture.get("team_h_difficulty").isNull() ? fixture.get("team_h_difficulty").asInt() : null;
-                Integer awayDifficulty = fixture.has("team_a_difficulty") && !fixture.get("team_a_difficulty").isNull() ? fixture.get("team_a_difficulty").asInt() : null;
-
-                boolean started = fixture.has("started") && fixture.get("started").asBoolean();
-                boolean finished = fixture.has("finished") && fixture.get("finished").asBoolean();
-                int minutes = fixture.has("minutes") ? fixture.get("minutes").asInt() : 0;
-
-                FixtureEntity entity = new FixtureEntity(id, gameweekId, homeTeamId, awayTeamId, kickoff, scoreHome, scoreAway);
-                entity.setHomeDifficulty(homeDifficulty);
-                entity.setAwayDifficulty(awayDifficulty);
-                entity.setStarted(started);
-                entity.setFinished(finished);
-                entity.setMinutes(minutes);
-
-                fixtures.add(entity);
-            }
-
-            fixtureRepo.saveAll(fixtures);
+            saveFixtures(fixtures);
             log.info("Successfully loaded and saved {} fixtures.", fixtures.size());
 
         } catch (Exception e) {
@@ -99,9 +56,58 @@ public class FixtureService {
         }
     }
 
+    public List<FixtureEntity> fetchFixturesFromApi() throws Exception {
+        String jsonResponse = restTemplate.getForObject(FIXTURES_URL, String.class);
+        JsonNode root = mapper.readTree(jsonResponse);
+
+        List<FixtureEntity> fixtures = new ArrayList<>();
+        ZoneId appZoneId = ZoneId.systemDefault();
+
+        for (JsonNode fixture : root) {
+            int id = fixture.get("id").asInt();
+            int gameweekId = fixture.has("event") && !fixture.get("event").isNull()
+                    ? fixture.get("event").asInt()
+                    : 0;
+            int homeTeamId = fixture.get("team_h").asInt();
+            int awayTeamId = fixture.get("team_a").asInt();
+
+            String kickoffUtc = fixture.has("kickoff_time") && !fixture.get("kickoff_time").isNull()
+                    ? fixture.get("kickoff_time").asText()
+                    : null;
+
+            LocalDateTime kickoff = null;
+            if (kickoffUtc != null) {
+                Instant instant = Instant.parse(kickoffUtc);
+                kickoff = LocalDateTime.ofInstant(instant, appZoneId);
+            }
+
+            Integer scoreHome = fixture.has("team_h_score") && !fixture.get("team_h_score").isNull() ? fixture.get("team_h_score").asInt() : null;
+            Integer scoreAway = fixture.has("team_a_score") && !fixture.get("team_a_score").isNull() ? fixture.get("team_a_score").asInt() : null;
+            Integer homeDifficulty = fixture.has("team_h_difficulty") && !fixture.get("team_h_difficulty").isNull() ? fixture.get("team_h_difficulty").asInt() : null;
+            Integer awayDifficulty = fixture.has("team_a_difficulty") && !fixture.get("team_a_difficulty").isNull() ? fixture.get("team_a_difficulty").asInt() : null;
+
+            boolean started = fixture.has("started") && fixture.get("started").asBoolean();
+            boolean finished = fixture.has("finished") && fixture.get("finished").asBoolean();
+            int minutes = fixture.has("minutes") ? fixture.get("minutes").asInt() : 0;
+
+            FixtureEntity entity = new FixtureEntity(id, gameweekId, homeTeamId, awayTeamId, kickoff, scoreHome, scoreAway);
+            entity.setHomeDifficulty(homeDifficulty);
+            entity.setAwayDifficulty(awayDifficulty);
+            entity.setStarted(started);
+            entity.setFinished(finished);
+            entity.setMinutes(minutes);
+
+            fixtures.add(entity);
+        }
+        return fixtures;
+    }
+
+    @Transactional
+    public void saveFixtures(List<FixtureEntity> fixtures) {
+        fixtureRepo.saveAll(fixtures);
+    }
     @Transactional
     public void updateFixturesForGameweek(int gameweekId) {
-        // log.debug("Checking fixture updates for GW {}", gameweekId); // Debug level to avoid spam
         try {
             String url = FIXTURES_URL + "?event=" + gameweekId;
             String jsonResponse = restTemplate.getForObject(url, String.class);

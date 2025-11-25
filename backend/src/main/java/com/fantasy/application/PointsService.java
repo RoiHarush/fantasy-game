@@ -12,7 +12,7 @@ import com.fantasy.infrastructure.repositories.UserGameDataRepository;
 import com.fantasy.domain.fantasyTeam.FantasyTeam;
 
 import com.fantasy.infrastructure.repositories.UserSquadRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
