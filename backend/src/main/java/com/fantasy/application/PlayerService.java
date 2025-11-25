@@ -257,7 +257,7 @@ public class PlayerService {
 
                 stats.setCleanSheet(goalsConceded == 0 && minutes >= 30);
                 stats.setCleanSheet30(minutes >= 30 && goalsConceded == 0);
-                stats.setCleanSheet45(minutes >= 45 && goalsConceded == 0);
+                stats.setCleanSheet45(minutes >= 46 && goalsConceded == 0);
                 stats.setCleanSheet60(minutes >= 60 && goalsConceded == 0);
                 stats.setStarted(starts == 1);
                 stats.setTotalPoints(gwPoints);

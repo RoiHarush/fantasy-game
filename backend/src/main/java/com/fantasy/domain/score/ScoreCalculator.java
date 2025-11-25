@@ -98,13 +98,13 @@ public class ScoreCalculator {
 
                 if (PlayerPosition.GOALKEEPER.equals(position)) {
                     if (minutes >= 60) points = 5;
-                    else if (minutes >= 45) points = 3;
+                    else if (minutes >= 46) points = 3;
                     else if (minutes >= 30) points = 2;
                     else points = 0;
                 }
                 else if (PlayerPosition.DEFENDER.equals(position)) {
                     if (minutes >= 60) points = 4;
-                    else if (minutes >= 45) points = 2;
+                    else if (minutes >= 46) points = 2;
                     else if (minutes >= 30) points = 1;
                     else points = 0;
                 } else if (PlayerPosition.MIDFIELDER.equals(position) && minutes >= 60) {
