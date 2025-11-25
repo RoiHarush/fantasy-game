@@ -413,6 +413,7 @@ public class PlayerService {
 
                 entity.setTotalPoints(total);
                 playerRepo.save(entity);
+                domainPlayer.getPointsByGameweek().put(currentGw, gwPoints);
             }
         } catch (Exception e) {
             log.error("Failed updating gameweek points: {}", e.getMessage(), e);
