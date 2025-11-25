@@ -34,7 +34,7 @@ export function FixtureCard({ fixture }) {
                 {awayTeam?.name || "TBD"}
             </span>
 
-            <span>{fixState}</span>
+            {/* <span>{fixState}</span> */}
         </div>
     );
 }
