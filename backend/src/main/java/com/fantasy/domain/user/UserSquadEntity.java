@@ -49,7 +49,8 @@ public class UserSquadEntity {
     @Column(name = "IR_id")
     private Integer irId;
 
-
+    @Column(name = "auto_subs_applied")
+    private boolean autoSubsApplied = false;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -78,7 +79,6 @@ public class UserSquadEntity {
     public Integer getFirstPickId() {
         return firstPickId;
     }
-
     public void setFirstPickId(Integer firstPickId) {
         this.firstPickId = firstPickId;
     }
@@ -86,8 +86,14 @@ public class UserSquadEntity {
     public Integer getIrId() {
         return irId;
     }
-
     public void setIrId(Integer irId) {
         this.irId = irId;
+    }
+
+    public boolean isAutoSubsApplied() {
+        return autoSubsApplied;
+    }
+    public void setAutoSubsApplied(boolean autoSubsApplied) {
+        this.autoSubsApplied = autoSubsApplied;
     }
 }

@@ -36,6 +36,8 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
 
     const leagueUser = league?.users?.find(u => u.id === user.id);
 
+    const isCalculated = currentGameweek?.calculated === true;
+
     return (
         <div className={Style.statusPage}>
             <h3>Current Team - {user.fantasyTeamName}</h3>
@@ -53,6 +55,19 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
                     </h2>
                 </div>
             </ColumnsBlock>
+
+            {currentGameweek && (
+                <div className={`${Style.statusBar} ${isCalculated ? Style.statusFinal : Style.statusProvisional}`}>
+                    <span>
+                        {isCalculated
+                            ? "Final Points & Lineups Updated"
+                            : "Live Points - Provisional"}
+                    </span>
+                    <span className={Style.statusBadge}>
+                        {isCalculated ? "UPDATED" : "LIVE"}
+                    </span>
+                </div>
+            )}
 
             <h3>Upcoming deadlines</h3>
 

@@ -112,6 +112,54 @@ public class GameWeekService {
         return chosenTime;
     }
 
+    @Transactional
+    public void updateGameWeekDeadlines() {
+        List<GameWeekEntity> allGameWeeks = gameWeekRepo.findAll();
+        List<GameWeekEntity> gameWeeksToUpdate = new ArrayList<>();
+
+        for (GameWeekEntity gw : allGameWeeks) {
+            List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gw.getId());
+
+            LocalDateTime newFirstKickoff = null;
+            LocalDateTime newLastKickoff = null;
+
+            if (!fixtures.isEmpty()) {
+                newFirstKickoff = fixtures.stream()
+                        .map(FixtureEntity::getKickoffTime)
+                        .filter(Objects::nonNull)
+                        .min(LocalDateTime::compareTo)
+                        .orElse(null);
+
+                newLastKickoff = fixtures.stream()
+                        .map(FixtureEntity::getKickoffTime)
+                        .filter(Objects::nonNull)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null);
+            }
+
+            if (newFirstKickoff == null) {
+                continue;
+            }
+
+            boolean isFirstKickoffChanged = !newFirstKickoff.equals(gw.getFirstKickoffTime());
+            boolean isLastKickoffChanged = !newLastKickoff.equals(gw.getLastKickoffTime());
+
+            if (isFirstKickoffChanged || isLastKickoffChanged) {
+                gw.setFirstKickoffTime(newFirstKickoff);
+                gw.setLastKickoffTime(newLastKickoff);
+
+                if (isFirstKickoffChanged) {
+                    LocalDateTime newTransferOpen = calculateTransferOpenTime(gw.getId(), newFirstKickoff);
+                    gw.setTransferOpenTime(newTransferOpen);
+                }
+
+                gameWeeksToUpdate.add(gw);
+            }
+        }
+
+        gameWeekRepo.saveAll(gameWeeksToUpdate);
+    }
+
 
     public List<GameWeekEntity> getAllGameweeks() {
         return gameWeekRepo.findAll();

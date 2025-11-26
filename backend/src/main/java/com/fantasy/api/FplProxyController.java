@@ -110,7 +110,7 @@ public class FplProxyController {
                     result.add(entry);
 
                 } catch (Exception e) {
-                    System.out.println("❌ Failed to fetch GW " + gw);
+                    System.out.println("Failed to fetch GW " + gw);
                 }
             }
 

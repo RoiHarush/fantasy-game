@@ -57,6 +57,8 @@ public class SquadMapper {
         if (e.getIrId() != null)
             squad.setIR(allPlayers.findById(e.getIrId()));
 
+        squad.setAutoSubsApplied(e.isAutoSubsApplied());
+
         return squad;
     }
 
@@ -93,6 +95,8 @@ public class SquadMapper {
 
         e.setFirstPickId(squad.getFirstPick() != null ? squad.getFirstPick().getId() : null);
         e.setIrId(squad.getIR() != null ? squad.getIR().getId() : null);
+
+        e.setAutoSubsApplied(squad.isAutoSubsApplied());
 
         return e;
     }

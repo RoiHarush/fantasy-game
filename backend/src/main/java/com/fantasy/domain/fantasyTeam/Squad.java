@@ -19,6 +19,7 @@ public class Squad implements Draftable {
     private Player IR = null;
     private final Map<PlayerPosition, Integer> minPlayersInPosition = new HashMap<>();
     private final Map<PlayerPosition, Integer> maxPlayersInPosition = new HashMap<>();
+    private boolean autoSubsApplied;
 
     public Squad() {
         setAllPlayers(new PlayerRegistry());
@@ -84,6 +85,14 @@ public class Squad implements Draftable {
 
     public void setIR(Player IR) {
         this.IR = IR;
+    }
+
+    public void setAutoSubsApplied(boolean autoSubsApplied) {
+        this.autoSubsApplied = autoSubsApplied;
+    }
+
+    public boolean isAutoSubsApplied() {
+        return autoSubsApplied;
     }
 
     public void setMinPlayersInPosition() {
@@ -409,12 +418,25 @@ public class Squad implements Draftable {
 
     public void autoSub(Map<Integer, Integer> minutesMap){
 
+        if (this.autoSubsApplied) {
+            System.out.println("Auto subs already applied for this squad. Skipping.");
+            return;
+        }
+
         boolean viceTurnedCap = false;
-        int captainMin = minutesMap.getOrDefault(this.captain.getId(), 0);
-        if (captainMin <= 0){
-            this.captain = this.viceCaptain;
-            this.viceCaptain = null;
-            viceTurnedCap = true;
+
+        int captainMin = 0;
+        if (this.captain != null)
+            captainMin = minutesMap.getOrDefault(this.captain.getId(), 0);
+
+        if (captainMin <= 0) {
+            if (this.viceCaptain != null) {
+                this.captain = this.viceCaptain;
+                this.viceCaptain = null;
+                viceTurnedCap = true;
+            } else {
+                this.captain = null;
+            }
         }
 
         Player gk = startingLineup.get(PlayerPosition.GOALKEEPER).getFirst();
@@ -458,5 +480,7 @@ public class Squad implements Draftable {
                 }
             }
         }
+
+        this.autoSubsApplied = true;
     }
 }

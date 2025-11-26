@@ -34,57 +34,68 @@ public class GameweekManager {
     private final PlayerGameweekStatsRepository statsRepo;
     private final PointsService pointsService;
     private final PlayerRegistry playerRegistry;
+    private final SystemStatusService systemStatusService;
 
     public GameweekManager(UserGameDataRepository gameDataRepository,
                            UserSquadRepository squadRepository,
                            GameWeekRepository gameweekRepository,
                            PlayerGameweekStatsRepository statsRepo,
                            PointsService pointsService,
-                           PlayerRegistry playerRegistry) {
+                           PlayerRegistry playerRegistry,
+                           SystemStatusService systemStatusService) {
         this.gameDataRepository = gameDataRepository;
         this.squadRepository = squadRepository;
         this.gameweekRepository = gameweekRepository;
         this.statsRepo = statsRepo;
         this.pointsService = pointsService;
         this.playerRegistry = playerRegistry;
+        this.systemStatusService = systemStatusService;
     }
 
     @Transactional
     public void openNextGameweek(int newGwId, boolean isSuperAdmin) {
 
-        log.info("Attempting to open next gameweek: GW {}", newGwId);
+        systemStatusService.setRolloverInProgress(true);
+        log.info("SYSTEM LOCKED: Starting rollover to GW {}", newGwId);
 
-        boolean openedSuccessfully = updateGameweeksStatus(newGwId);
+        try {
+            log.info("Attempting to open next gameweek: GW {}", newGwId);
 
-        if (!openedSuccessfully && !isSuperAdmin) {
-            log.warn("openNextGameweek: GW {} was not opened (status was not UPCOMING)", newGwId);
-            return;
+            boolean openedSuccessfully = updateGameweeksStatus(newGwId);
+
+            if (!openedSuccessfully && !isSuperAdmin) {
+                log.warn("openNextGameweek: GW {} was not opened (status was not UPCOMING)", newGwId);
+                return;
+            }
+
+            var gameDataEntities = gameDataRepository.findAllWithRelations();
+            log.info("Loaded {} users for GW rollover", gameDataEntities.size());
+
+            for (UserGameDataEntity gameDataEntity : gameDataEntities) {
+
+                var userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+
+                GameweekRollover.rolloverToNextGameweek(userGameData, newGwId);
+
+                var newNextSquadEntity = SquadMapper.toEntity(
+                        userGameData.getNextFantasyTeam().getSquad(),
+                        userGameData.getNextFantasyTeam().getGameweek()
+                );
+
+                newNextSquadEntity.setUser(gameDataEntity);
+                squadRepository.save(newNextSquadEntity);
+
+                gameDataEntity.setCurrentSquad(gameDataEntity.getNextSquad());
+                gameDataEntity.setNextSquad(newNextSquadEntity);
+
+                gameDataRepository.save(gameDataEntity);
+            }
+
+            log.info("Successfully opened GW {} and rolled over all squads", newGwId);
+        }finally {
+            systemStatusService.setRolloverInProgress(false);
+            log.info("SYSTEM UNLOCKED: Finished rollover to GW {}", newGwId);
         }
-
-        var gameDataEntities = gameDataRepository.findAllWithRelations();
-        log.info("Loaded {} users for GW rollover", gameDataEntities.size());
-
-        for (UserGameDataEntity gameDataEntity : gameDataEntities) {
-
-            var userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
-
-            GameweekRollover.rolloverToNextGameweek(userGameData, newGwId);
-
-            var newNextSquadEntity = SquadMapper.toEntity(
-                    userGameData.getNextFantasyTeam().getSquad(),
-                    userGameData.getNextFantasyTeam().getGameweek()
-            );
-
-            newNextSquadEntity.setUser(gameDataEntity);
-            squadRepository.save(newNextSquadEntity);
-
-            gameDataEntity.setCurrentSquad(gameDataEntity.getNextSquad());
-            gameDataEntity.setNextSquad(newNextSquadEntity);
-
-            gameDataRepository.save(gameDataEntity);
-        }
-
-        log.info("Successfully opened GW {} and rolled over all squads", newGwId);
     }
 
     @Transactional
@@ -97,7 +108,7 @@ public class GameweekManager {
                     return new RuntimeException("Gameweek not found");
                 });
 
-        if (gw.isCalculated()&& !isSuperAdmin) {
+        if (gw.isCalculated() && !isSuperAdmin) {
             log.warn("processGameweek: GW {} already marked as calculated, skipping", gameweekId);
             return;
         }

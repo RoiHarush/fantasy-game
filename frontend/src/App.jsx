@@ -20,6 +20,8 @@ import AdminUsersPage from "./Components/Pages/superAdmin/AdminUserPage";
 import AdminActionsPage from "./Components/Pages/superAdmin/AdminActionsPage";
 import LeagueControlPage from "./Components/Pages/Admin/LeagueControlPage";
 import SettingsPage from "./Components/Pages/SettingsTab/SettingsPage";
+import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
+
 
 function MainAppLayout() {
   const { user } = useAuth();
@@ -103,14 +105,34 @@ function App() {
 
       <Route element={<MainAppLayout />}>
         <Route path="/" element={<Navigate to="/status" replace />} />
-        <Route path="status" element={<StatusPage />} />
-        <Route path="points" element={<PointsPage />} />
-        <Route path="points/:userId" element={<OtherUserPointsWrapper />} />
-        <Route path="pick-team" element={<PickTeamPage />} />
+        <Route path="status" element={
+          <GameweekUpdatingGuard>
+            <StatusPage />
+          </GameweekUpdatingGuard>
+        } />
+        <Route path="points" element={
+          <GameweekUpdatingGuard>
+            <PointsPage />
+          </GameweekUpdatingGuard>
+        } />
+        <Route path="points/:userId" element={
+          <GameweekUpdatingGuard>
+            <OtherUserPointsWrapper />
+          </GameweekUpdatingGuard>
+        } />
+        <Route path="pick-team" element={
+          <GameweekUpdatingGuard>
+            <PickTeamPage />
+          </GameweekUpdatingGuard>
+        } />
         <Route path="league" element={<LeaguePage />} />
         <Route path="fixtures" element={<FixturesPage />} />
         <Route path="scout" element={<ScoutPage />} />
-        <Route path="transfer-window" element={<TransferWindowPage />} />
+        <Route path="transfer-window" element={
+          <GameweekUpdatingGuard>
+            <TransferWindowPage />
+          </GameweekUpdatingGuard>
+        } />
         <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />
 
         <Route path="settings" element={<SettingsPage />} />
