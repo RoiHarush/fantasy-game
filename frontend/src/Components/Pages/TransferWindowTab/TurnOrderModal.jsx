@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API_URL from '../../../config';
 import { useGameweek } from '../../../Context/GameweeksContext';
+import { getAuthHeaders } from '../../../services/authHelper';
 
 const styles = {
     overlay: {
@@ -99,11 +100,10 @@ export default function TurnOrderModal({ onClose, usersList }) {
     useEffect(() => {
         const fetchCurrentOrder = async () => {
             if (!nextGameweek) return;
-            const token = sessionStorage.getItem('token');
 
             try {
                 const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: getAuthHeaders()
                 });
 
                 if (res.ok) {
@@ -142,13 +142,9 @@ export default function TurnOrderModal({ onClose, usersList }) {
 
         setLoading(true);
         try {
-            const token = sessionStorage.getItem('token');
             const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(dto)
             });
 

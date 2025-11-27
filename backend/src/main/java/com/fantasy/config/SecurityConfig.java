@@ -32,6 +32,9 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/healthz").permitAll()
+
                         .requestMatchers("/api/players/player-assisted/**").authenticated()
                         .requestMatchers("/api/admin/**").authenticated()
 

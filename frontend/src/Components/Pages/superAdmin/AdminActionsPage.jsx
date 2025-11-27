@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import API_URL from '../../../config';
 import { useAuth } from '../../../Context/AuthContext';
+import { getAuthHeaders } from '../../../services/authHelper';
 
 const styles = {
     section: {
@@ -150,12 +151,11 @@ export default function AdminActionsPage() {
     const { user } = useAuth();
 
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
 
         const fetchPlayers = async () => {
             try {
                 const res = await fetch(`${API_URL}/api/players`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: getAuthHeaders()
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -171,7 +171,7 @@ export default function AdminActionsPage() {
         const fetchUsers = async () => {
             try {
                 const res = await fetch(`${API_URL}/api/admin/users-summary`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    headers: getAuthHeaders()
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -200,15 +200,11 @@ export default function AdminActionsPage() {
     const callAdminApi = async (endpoint, method = 'POST', body = null) => {
         setLoading(true);
         setMessage({ text: '', type: '' });
-        const token = sessionStorage.getItem('token');
 
         try {
             const res = await fetch(`${API_URL}${endpoint}`, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers: getAuthHeaders(),
                 body: body ? JSON.stringify(body) : null,
             });
 

@@ -121,7 +121,7 @@ public class GameweekManager {
                         (a, b) -> b
                 ));
 
-        log.info("Loaded minutes for {} players for GW {}", minutesMap.size(), gameweekId);
+        log.debug("Loaded minutes for {} players for GW {}", minutesMap.size(), gameweekId);
 
         var gameDataEntities = gameDataRepository.findAllWithRelations();
 

@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import API_URL from "../../../config";
 import Style from "../../../Styles/IRStatusTable.module.css";
+import { getAuthHeaders } from "../../../services/authHelper";
 
 function IRStatusTable() {
     const [irStatuses, setIrStatuses] = useState([]);
 
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
 
         fetch(`${API_URL}/api/users/ir-status`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: getAuthHeaders()
         })
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch");

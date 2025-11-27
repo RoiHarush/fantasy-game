@@ -1,6 +1,6 @@
 package com.fantasy.api;
 
-import com.fantasy.application.SessionManager;
+import com.fantasy.application.JwtService;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.user.*;
 import com.fantasy.dto.LoginRequest;
@@ -21,18 +21,18 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserRepository userRepo;
-    private final SessionManager sessionManager;
+    private final JwtService jwtService; // החלפנו את SessionManager ב-JwtService
     private final PasswordEncoder passwordEncoder;
     private final UserGameDataRepository userGameDataRepo;
     private final PlayerRegistry playerRegistry;
 
     public AuthController(UserRepository userRepo,
-                          SessionManager sessionManager,
+                          JwtService jwtService, // עדכון בנאי
                           PasswordEncoder passwordEncoder,
                           UserGameDataRepository userGameDataRepo,
                           PlayerRegistry playerRegistry) {
         this.userRepo = userRepo;
-        this.sessionManager = sessionManager;
+        this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.userGameDataRepo = userGameDataRepo;
         this.playerRegistry = playerRegistry;
@@ -45,11 +45,15 @@ public class AuthController {
 
         UserEntity user = userOpt.get();
 
+        if (!passwordEncoder.matches(req.password, user.getPassword())) {
+            return ResponseEntity.status(401).body("Wrong password");
+        }
+
+        String token = jwtService.generateToken(user.getId(), user.getRole().name());
+
         if (user.getRole().equals(UserRole.ROLE_SUPER_ADMIN)){
             User domainUser = UserMapper.toDomainUser(user);
-            String token = sessionManager.createSession(user.getId());
             UserDto userDto = UserMapper.toDto(domainUser);
-
             return ResponseEntity.ok(new LoginResponse(token, userDto));
         }
 
@@ -57,12 +61,6 @@ public class AuthController {
         if (dataOpt.isEmpty()) return ResponseEntity.status(401).body("User data not found");
 
         UserGameDataEntity userGameDataEntity = dataOpt.get();
-
-        if (!passwordEncoder.matches(req.password, user.getPassword())) {
-            return ResponseEntity.status(401).body("Wrong password");
-        }
-
-        String token = sessionManager.createSession(user.getId());
 
         User domainUser = UserMapper.toDomainUser(user);
         UserGameData userGameData = UserMapper.toDomainGameData(userGameDataEntity, playerRegistry);
@@ -72,14 +70,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(400).body("Missing or invalid token header");
-        }
-
-        String token = authHeader.substring(7);
-        sessionManager.removeSession(token);
-
-        return ResponseEntity.ok("Logged out successfully");
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok("Logged out successfully (Client should clear token)");
     }
 }

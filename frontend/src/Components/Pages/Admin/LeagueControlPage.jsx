@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import AssistManager from './AssistManager';
 import LockedPlayersManager from './LockedPlayersManager';
-import { useGameweek } from '../../../Context/GameweeksContext';
 
 const LeagueControlPage = () => {
-    const [activeTab, setActiveTab] = useState('locks');
-    const [canManageAssist, setCanManageAssist] = useState(true);
-    const { currentGameweek } = useGameweek();
+    const [activeTab, setActiveTab] = useState('assists');
 
     const styles = {
         pageContainer: {
@@ -45,12 +42,6 @@ const LeagueControlPage = () => {
         }
     };
 
-    useEffect(() => {
-        if (!currentGameweek) return;
-        setCanManageAssist(!currentGameweek.calculated);
-
-    }, [currentGameweek]);
-
     return (
         <div style={styles.pageContainer}>
 
@@ -59,7 +50,6 @@ const LeagueControlPage = () => {
                     <button
                         onClick={() => setActiveTab('assists')}
                         style={styles.tab(activeTab === 'assists')}
-                        disabled={canManageAssist}
                     >
                         Assist Control
                     </button>

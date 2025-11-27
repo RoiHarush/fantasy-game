@@ -9,22 +9,23 @@ export const AuthProvider = ({ children }) => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        try {
-            const storedUser = sessionStorage.getItem('loggedUser');
-            if (storedUser) {
+        const storedUser = localStorage.getItem('loggedUser');
+        const token = localStorage.getItem('token');
+
+        if (storedUser && token) {
+            try {
                 setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse stored user", e);
+                localStorage.clear();
             }
-        } catch (e) {
-            console.error("Failed to parse stored user", e);
-            sessionStorage.clear();
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     }, []);
 
     const login = (userData, token) => {
-        sessionStorage.setItem('loggedUser', JSON.stringify(userData));
-        sessionStorage.setItem('token', token);
+        localStorage.setItem('loggedUser', JSON.stringify(userData));
+        localStorage.setItem('token', token);
         setUser(userData);
 
         if (userData.role === 'ROLE_SUPER_ADMIN') {
@@ -35,14 +36,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        sessionStorage.clear();
+        localStorage.removeItem('token');
+        localStorage.removeItem('loggedUser');
         setUser(null);
         navigate('/login');
     };
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout }}>
-            {children}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

@@ -34,7 +34,7 @@ function SettingsPage() {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        const token = sessionStorage.getItem('token');
+        const token = localStorage.getItem('token');
 
         const payload = {};
         if (formData.name !== user.name) payload.name = formData.name;
@@ -53,7 +53,7 @@ function SettingsPage() {
         }
 
         try {
-            const updatedUser = await updateUserSettings(token, payload);
+            const updatedUser = await updateUserSettings(payload);
 
             login(updatedUser, token);
 
@@ -216,7 +216,7 @@ function SettingsPage() {
                                 onChange={handleChange}
                                 style={styles.input}
                                 placeholder="Required to save changes"
-                                disabled={!formData.newPassword && formData.name === user?.name && formData.username === user?.username && formData.teamName === user?.fantasyTeamName}
+                                disabled={!formData.newPassword && formData.name === user?.name && formData.userName === user?.userName && formData.teamName === user?.fantasyTeamName}
                             />
                         </div>
                     </div>

@@ -24,6 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class ChipsService {
 
@@ -101,6 +104,11 @@ public class ChipsService {
             log.warn("Invalid IR assignment for user {}: {}", userId, e.getMessage());
             throw e;
         }
+
+        PlayerEntity pEntity = playerRepo.findById(playerId)
+                .orElseThrow(() -> new PlayerNotFoundException("Player not found"));
+        pEntity.setState(player.getState());
+        playerRepo.save(pEntity);
 
         try {
             log.debug("Persisting updated squad for user {}", userId);
@@ -213,18 +221,33 @@ public class ChipsService {
             team.releaseIR(playerOut);
         } catch (IRException e) {
             log.warn("Invalid IR release for user {}: {}", userId, e.getMessage());
-            throw new RuntimeException("Invalid First Pick Captain assignment: " + e.getMessage());
+            throw new RuntimeException("Invalid IR release: " + e.getMessage());
         }
 
-        PlayerEntity playerEntity = playerRepo.findById(playerOutId)
-                .orElseThrow(() -> {
-                    log.error("Player entity {} not found in DB", playerOutId);
-                    return new RuntimeException("Player entity not found");
-                });
+        List<PlayerEntity> playersToUpdate = new ArrayList<>();
 
-        playerEntity.setState(playerOut.getState());
-        playerEntity.setOwnerId(playerOut.getOwnerId());
-        playerRepo.save(playerEntity);
+        PlayerEntity outEntity = playerRepo.findById(playerOutId).orElse(null);
+        if (outEntity != null) {
+            outEntity.setState(playerOut.getState());
+            outEntity.setOwnerId(playerOut.getOwnerId());
+            playersToUpdate.add(outEntity);
+        }
+
+        List<Player> activeSquad = new ArrayList<>();
+        team.getSquad().getStartingLineup().values().forEach(activeSquad::addAll);
+        team.getSquad().getBench().values().forEach(activeSquad::add);
+
+        for (Player p : activeSquad) {
+            if (p != null) {
+                PlayerEntity pEntity = playerRepo.findById(p.getId()).orElse(null);
+                if (pEntity != null) {
+                    pEntity.setState(p.getState());
+                    playersToUpdate.add(pEntity);
+                }
+            }
+        }
+
+        playerRepo.saveAll(playersToUpdate);
 
         UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
         if (nextSquadEntity == null) {

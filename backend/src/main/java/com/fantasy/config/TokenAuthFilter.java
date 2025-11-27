@@ -1,8 +1,6 @@
 package com.fantasy.config;
 
-import com.fantasy.application.SessionManager;
-import com.fantasy.domain.user.UserEntity;
-import com.fantasy.infrastructure.repositories.UserRepository;
+import com.fantasy.application.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,17 +14,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class TokenAuthFilter extends OncePerRequestFilter {
 
-    private final SessionManager sessionManager;
-    private final UserRepository userRepo;
+    private final JwtService jwtService;
 
-    public TokenAuthFilter(SessionManager sessionManager, UserRepository userRepo) {
-        this.sessionManager = sessionManager;
-        this.userRepo = userRepo;
+    public TokenAuthFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -42,24 +37,18 @@ public class TokenAuthFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        Integer userId = sessionManager.getUserId(token);
-        if (userId == null) {
+        if (!jwtService.isTokenValid(token)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        Optional<UserEntity> userOpt = userRepo.findById(userId);
-        if (userOpt.isEmpty()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        Integer userId = jwtService.extractUserId(token);
+        String role = jwtService.extractRole(token);
 
-        UserEntity user = userOpt.get();
-
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                user,
+                userId,
                 null,
                 authorities
         );

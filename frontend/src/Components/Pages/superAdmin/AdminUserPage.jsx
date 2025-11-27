@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API_URL from '../../../config';
 import { useAuth } from '../../../Context/AuthContext';
 import AdminUserEditModal from './AdminUserEditModal';
+import { getAuthHeaders } from '../../../services/authHelper';
 
 const styles = {
     table: {
@@ -45,13 +46,10 @@ export default function AdminUsersPage() {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
-        const token = sessionStorage.getItem('token');
 
         try {
             const res = await fetch(`${API_URL}/api/admin/users-summary`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers: getAuthHeaders()
             });
 
             if (!res.ok) {

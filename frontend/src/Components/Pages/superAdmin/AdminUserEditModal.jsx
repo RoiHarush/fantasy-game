@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API_URL from '../../../config';
+import { getAuthHeaders } from '../../../services/authHelper';
 
 const modalStyles = {
     overlay: {
@@ -96,10 +97,9 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
         const fetchDetails = async () => {
             setLoading(true);
             setError(null);
-            const token = sessionStorage.getItem('token');
             try {
                 const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    headers: getAuthHeaders()
                 });
                 if (!res.ok) throw new Error('Failed to fetch user details');
                 const data = await res.json();
@@ -115,7 +115,6 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
 
     const handleSave = async () => {
         setLoading(true);
-        const token = sessionStorage.getItem('token');
         const payload = {
             ...userData,
             password: newPassword ? newPassword : null
@@ -123,10 +122,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
         try {
             const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(userData),
             });
             if (!res.ok) throw new Error('Failed to save user details');

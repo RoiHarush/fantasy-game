@@ -4,30 +4,11 @@ import API_URL from "./config";
 import { useAuth } from "./Context/AuthContext";
 
 function NavButtons() {
-    const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
 
-    async function handleLogout() {
-        const token = sessionStorage.getItem("token");
-
-        if (token) {
-            try {
-                await fetch(`${API_URL}/api/auth/logout`, {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-            } catch (err) {
-                console.error("Logout request failed:", err);
-            }
-        }
-
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("userId");
-        sessionStorage.removeItem("username");
-        sessionStorage.removeItem("loggedUser");
-        navigate(0);
+    function handleLogout(e) {
+        e.preventDefault();
+        logout();
     }
 
     const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
@@ -132,17 +113,13 @@ function NavButtons() {
             </NavLink>
 
 
-            <NavLink
-                to="/"
+            <a
+                href="/"
                 onClick={handleLogout}
-                className={({ isActive }) =>
-                    isActive
-                        ? `${styles.navLink} ${styles.logoutLink} ${styles.activeLink}`
-                        : `${styles.navLink} ${styles.logoutLink}`
-                }
+                className={`${styles.navLink} ${styles.logoutLink}`}
             >
                 Logout
-            </NavLink>
+            </a>
         </nav>
     );
 }

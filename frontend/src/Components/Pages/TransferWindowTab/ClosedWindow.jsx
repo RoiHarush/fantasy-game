@@ -5,6 +5,7 @@ import { useGameweek } from "../../../Context/GameweeksContext";
 import { useAuth } from "../../../Context/AuthContext";
 import API_URL from "../../../config";
 import TurnOrderModal from "./TurnOrderModal";
+import { getAuthHeaders } from "../../../services/authHelper";
 
 function ClosedWindow() {
     const { nextGameweek } = useGameweek();
@@ -29,18 +30,16 @@ function ClosedWindow() {
     useEffect(() => {
         const fetchData = async () => {
             if (!nextGameweek) return;
-            const token = sessionStorage.getItem('token');
-            if (!token) return;
 
             try {
                 const usersRes = await fetch(`${API_URL}/api/users`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: getAuthHeaders()
                 });
                 const usersData = await usersRes.json();
                 setUsersList(usersData);
 
                 const orderRes = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: getAuthHeaders()
                 });
 
                 if (orderRes.ok) {

@@ -1,13 +1,11 @@
 import API_URL from "../config";
+import { getAuthHeaders } from "./authHelper";
 
-export const updateUserSettings = async (token, data) => {
+export const updateUserSettings = async (data) => {
     try {
         const response = await fetch(`${API_URL}/api/users/profile`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(data)
         });
 

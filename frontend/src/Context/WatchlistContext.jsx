@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import API_URL from "../config";
 import { useWebSocket } from "./WebSocketContext";
+import { getAuthHeaders } from "../services/authHelper";
 
 const WatchlistContext = createContext();
 
@@ -14,12 +15,9 @@ export function WatchlistProvider({ user, children }) {
             return;
         }
 
-        const token = sessionStorage.getItem('token');
 
         fetch(`${API_URL}/api/users/${user.id}/watchlist`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: getAuthHeaders()
         })
             .then(res => {
                 if (!res.ok) throw new Error(res.statusText);
@@ -54,16 +52,12 @@ export function WatchlistProvider({ user, children }) {
         });
 
         try {
-            const token = sessionStorage.getItem('token');
             const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
             await fetch(endpoint, {
                 method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ playerId }),
             });
         } catch (err) {

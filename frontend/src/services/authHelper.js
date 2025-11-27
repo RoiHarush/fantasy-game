@@ -1,5 +1,5 @@
 export function getAuthHeaders() {
-    const token = sessionStorage.getItem('token');
+    const token = localStorage.getItem('token');
     return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`

@@ -65,7 +65,7 @@ export default function Login() {
 
     return (
         <div className={styles.container}>
-            {/* {logoRows.map((row, i) => (
+            {logoRows.map((row, i) => (
                 <div
                     key={i}
                     className={styles["logo-row"]}
@@ -83,7 +83,7 @@ export default function Login() {
                 src="/UI/premier-league-logo.svg"
                 alt="Premier League Logo"
                 className={styles.premierLogo}
-            /> */}
+            />
 
             <h1 className={styles.title}>Fantasy Draft</h1>
 

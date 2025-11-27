@@ -125,8 +125,12 @@ public class PlayerMatchStatsService {
         boolean isCaptain = false;
         if (userId != null) {
             var squadOpt = userSquadRepo.findByUser_IdAndGameweek(userId, gw);
-            if (squadOpt.isPresent() && squadOpt.get().getCaptainId() == playerId) {
-                isCaptain = true;
+
+            if (squadOpt.isPresent()) {
+                Integer captainId = squadOpt.get().getCaptainId();
+                if (captainId != null && captainId == playerId) {
+                    isCaptain = true;
+                }
             }
         }
 

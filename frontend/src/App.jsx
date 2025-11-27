@@ -12,7 +12,6 @@ import PageLayout from "./Components/PageLayout";
 import Login from "./Components/Auth/Login";
 import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
 import { useEffect, useState } from "react";
-import API_URL from "./config";
 import LoadingPage from "./Components/General/LoadingPage";
 import DraftRoomWrapper from "./Components/Pages/DraftRoomTab/DraftRoomWrapper";
 import AdminDashboard from "./Components/Pages/superAdmin/AdminDashboard";
@@ -21,6 +20,8 @@ import AdminActionsPage from "./Components/Pages/superAdmin/AdminActionsPage";
 import LeagueControlPage from "./Components/Pages/Admin/LeagueControlPage";
 import SettingsPage from "./Components/Pages/SettingsTab/SettingsPage";
 import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
+import { fetchUserById } from "./services/usersService";
+import NotFoundPage from "./Components/Pages/NotFoundPage";
 
 
 function MainAppLayout() {
@@ -153,6 +154,8 @@ function App() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="actions" element={<AdminActionsPage />} />
       </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
@@ -165,31 +168,13 @@ function OtherUserPointsWrapper() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadUser() {
       setLoading(true);
       setError(null);
 
-      const token = sessionStorage.getItem('token');
-
       try {
-        const res = await fetch(`${API_URL}/api/users/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!res.ok) {
-          if (res.status === 404) throw new Error("User not found");
-          if (res.status === 403) throw new Error("Access Denied (Token expired?)");
-          throw new Error("Failed to fetch user");
-        }
-
-        let data;
-        try {
-          data = await res.json();
-        } catch {
-          throw new Error("Bad JSON response");
-        }
+        const data = await fetchUserById(userId);
 
         if (!cancelled) {
           setOtherUser(data);
@@ -201,6 +186,7 @@ function OtherUserPointsWrapper() {
         if (!cancelled) setLoading(false);
       }
     }
+
     loadUser();
     return () => (cancelled = true);
   }, [userId]);

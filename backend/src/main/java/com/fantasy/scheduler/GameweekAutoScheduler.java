@@ -51,7 +51,6 @@ public class GameweekAutoScheduler {
                 log.info("Gameweek {} finished (Safe time passed). Processing points & subs...", gw.getId());
                 try {
                     gameweekManager.processGameweek(gw.getId(), false);
-                    gameweekRepository.save(gw);
                     log.info("Successfully processed GW {}", gw.getId());
                 } catch (Exception e) {
                     log.error("Failed to process GW {}", gw.getId(), e);

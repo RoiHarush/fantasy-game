@@ -15,6 +15,11 @@ const AssistManager = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState([]);
 
+    const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
+    const isPastGW = currentGameweek && gameweek < currentGameweek.id;
+
+    const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
+
     useEffect(() => {
         if (currentGameweek && currentGameweek.id) {
             setGameweek(currentGameweek.id);
@@ -53,6 +58,11 @@ const AssistManager = () => {
     };
 
     const handleUpdate = async (playerId, action) => {
+        if (!canEdit) {
+            alert("Cannot edit assists for uncalculated gameweek!");
+            return;
+        }
+
         try {
             const updatedPlayer = await AdminService.updateAssist(playerId, gameweek, action);
 
@@ -128,7 +138,9 @@ const AssistManager = () => {
         searchContainer: { marginBottom: '1.5rem', position: 'relative' },
         searchInput: {
             width: '100%', padding: '1rem 1rem 1rem 3rem', borderRadius: '12px', border: '1px solid #e5e7eb',
-            fontSize: '1rem', outline: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', backgroundColor: 'white'
+            fontSize: '1rem', outline: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', backgroundColor: 'white',
+            opacity: canEdit ? 1 : 0.6,
+            cursor: canEdit ? 'text' : 'not-allowed'
         },
         searchIcon: { position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' },
         dropdown: {
@@ -147,14 +159,35 @@ const AssistManager = () => {
 
     const maxGameweekToShow = currentGameweek ? currentGameweek.id : 1;
 
+    const disabledBtnStyle = { opacity: 0.3, cursor: 'not-allowed' };
+
     return (
         <div style={styles.container}>
             <div style={styles.wrapper}>
 
                 <div style={styles.headerCard}>
                     <div>
-                        <h2 style={styles.title}>Assist Control</h2>
-                        <p style={styles.subtitle}>GW {gameweek} Live Updates</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h2 style={styles.title}>Assist Control</h2>
+                            {!canEdit && (
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    backgroundColor: '#fee2e2',
+                                    color: '#991b1b',
+                                    padding: '2px 8px',
+                                    borderRadius: '9999px',
+                                    border: '1px solid #fecaca',
+                                    fontWeight: 'bold',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}>
+                                    Locked
+                                    <img src="/Icons/lock.svg" alt="locked" style={{ width: '10px', height: '10px' }} />
+                                </span>
+                            )}
+                        </div>
+                        <p style={styles.subtitle}>GW {gameweek} Updates</p>
                     </div>
 
                     <div style={styles.selectWrapper}>
@@ -184,10 +217,11 @@ const AssistManager = () => {
                     </svg>
                     <input
                         type="text"
-                        placeholder="Search player to add assist..."
+                        placeholder={canEdit ? "Search player to add assist..." : "Gameweek is locked for editing..."}
                         style={styles.searchInput}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        disabled={!canEdit}
                     />
 
                     {searchResults.length > 0 && (
@@ -211,7 +245,8 @@ const AssistManager = () => {
                                     </div>
                                     <button
                                         onClick={() => handleUpdate(player.id, "ADD")}
-                                        style={styles.addBtn}
+                                        style={{ ...styles.addBtn, ...(!canEdit ? disabledBtnStyle : {}) }}
+                                        disabled={!canEdit}
                                     >
                                         Add Assist
                                     </button>
@@ -253,7 +288,8 @@ const AssistManager = () => {
                                         <div style={styles.controls}>
                                             <button
                                                 onClick={() => handleUpdate(item.playerId, "REMOVE")}
-                                                style={{ ...styles.btn, color: '#ef4444' }}
+                                                style={{ ...styles.btn, color: '#ef4444', ...(!canEdit ? disabledBtnStyle : {}) }}
+                                                disabled={!canEdit}
                                                 title="Remove Assist"
                                             >
                                                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +303,8 @@ const AssistManager = () => {
 
                                             <button
                                                 onClick={() => handleUpdate(item.playerId, "ADD")}
-                                                style={{ ...styles.btn, color: '#7c3aed' }}
+                                                style={{ ...styles.btn, color: '#7c3aed', ...(!canEdit ? disabledBtnStyle : {}) }}
+                                                disabled={!canEdit}
                                                 title="Add Assist"
                                             >
                                                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
