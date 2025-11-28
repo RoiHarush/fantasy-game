@@ -37,6 +37,9 @@ public class PlayerGameweekStatsEntity {
 
     private boolean started;
 
+    @Column(name = "penalties_conceded", nullable = false, columnDefinition = "integer default 0")
+    private int penaltiesConceded = 0;
+
     private int totalPoints;
 
     // --- Getters & Setters ---
@@ -93,6 +96,14 @@ public class PlayerGameweekStatsEntity {
 
     public int getOwnGoals() { return ownGoals; }
     public void setOwnGoals(int ownGoals) { this.ownGoals = ownGoals; }
+
+    public int getPenaltiesConceded() {
+        return penaltiesConceded;
+    }
+
+    public void setPenaltiesConceded(int penaltiesConceded) {
+        this.penaltiesConceded = penaltiesConceded;
+    }
 
     public boolean isStarted() { return started; }
     public void setStarted(boolean started) { this.started = started; }

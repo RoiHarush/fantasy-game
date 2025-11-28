@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import AssistManager from './AssistManager';
 import LockedPlayersManager from './LockedPlayersManager';
+import PenaltyManager from './PenaltyManager';
 
 const LeagueControlPage = () => {
     const [activeTab, setActiveTab] = useState('assists');
@@ -54,6 +55,12 @@ const LeagueControlPage = () => {
                         Assist Control
                     </button>
                     <button
+                        onClick={() => setActiveTab('penalties')}
+                        style={styles.tab(activeTab === 'penalties')}
+                    >
+                        Penalty Conceded
+                    </button>
+                    <button
                         onClick={() => setActiveTab('locks')}
                         style={styles.tab(activeTab === 'locks')}
                     >
@@ -63,11 +70,9 @@ const LeagueControlPage = () => {
             </div>
 
             <div style={styles.contentWrapper}>
-                {activeTab === 'assists' ? (
-                    <AssistManager />
-                ) : (
-                    <LockedPlayersManager />
-                )}
+                {activeTab === 'assists' && <AssistManager />}
+                {activeTab === 'penalties' && <PenaltyManager />}
+                {activeTab === 'locks' && <LockedPlayersManager />}
             </div>
         </div>
     );

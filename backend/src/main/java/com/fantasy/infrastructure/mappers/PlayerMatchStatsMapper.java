@@ -179,6 +179,18 @@ public class PlayerMatchStatsMapper {
             ));
         }
 
+        if (e.getPenaltiesConceded() > 0) {
+            int ptsPerConceded = ScoreCalculator.calculatePoints(
+                    new ScoreEvent(player, 0, ScoreType.PENALTY_CONCEDED)
+            );
+            stats.add(new PlayerMatchStatsDto.StatLine(
+                    "Penalties conceded",
+                    String.valueOf(e.getPenaltiesConceded()),
+                    e.getPenaltiesConceded() * ptsPerConceded,
+                    getIconPath("Penalties conceded")
+            ));
+        }
+
         // === Total ===
         stats.add(new PlayerMatchStatsDto.StatLine(
                 "Total",
@@ -214,6 +226,7 @@ public class PlayerMatchStatsMapper {
             case "Red cards": return "/Icons/red-card.svg";
             case "Penalties saved": return "/Icons/penalty-saved.svg";
             case "Penalties missed": return "/Icons/penalty-missed.svg";
+            case "Penalties conceded": return "/Icons/penalty-conceded.svg";
             case "Forward bonus": return "/Icons/forward-bonus.svg";
             case "Total": return "/Icons/total.svg";
             case "Captain bonus": return "/Icons/captain.svg";

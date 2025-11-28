@@ -79,6 +79,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             <th><img src="/Icons/own-goal.svg" alt="Own Goal" /></th>
                             <th><img src="/Icons/penalty-saved.svg" alt="Penalty Saved" /></th>
                             <th><img src="/Icons/penalty-missed.svg" alt="Penalty Missed" /></th>
+                            <th><img src="/Icons/penalty-conceded.svg" alt="Penalty Conceded" /></th>
                             <th><img src="/Icons/yellow-card.svg" alt="Yellow Card" /></th>
                             <th><img src="/Icons/red-card.svg" alt="Red Card" /></th>
                         </tr>
@@ -96,6 +97,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             <th>OG</th>
                             <th>PS</th>
                             <th>PM</th>
+                            <th>PC</th>
                             <th>YC</th>
                             <th>RC</th>
                         </tr>
@@ -119,6 +121,8 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             const og = stat.stats.find(s => s.name === "Own goals")?.value || "0";
                             const ps = stat.stats.find(s => s.name === "Penalties saved")?.value || "0";
 
+                            const pc = stat.stats.find(s => s.name === "Penalties conceded")?.value || "0";
+
 
                             return (
                                 <tr key={idx}>
@@ -134,6 +138,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                                     <td>{og}</td>
                                     <td>{ps}</td>
                                     <td>{pm}</td>
+                                    <td>{pc}</td>
                                     <td>{yc}</td>
                                     <td>{rc}</td>
                                 </tr>
@@ -154,6 +159,9 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Own goals")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties saved")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties missed")?.value || 0), 0)}</strong></td>
+
+                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties conceded")?.value || 0), 0)}</strong></td>
+
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Yellow cards")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Red cards")?.value || 0), 0)}</strong></td>
                         </tr>

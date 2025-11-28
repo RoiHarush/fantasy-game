@@ -2,6 +2,7 @@ package com.fantasy.infrastructure.repositories;
 
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
 import com.fantasy.dto.PlayerAssistedDto;
+import com.fantasy.dto.PlayerPenaltyDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,4 +18,9 @@ public interface PlayerGameweekStatsRepository extends JpaRepository<PlayerGamew
             "FROM PlayerGameweekStatsEntity s " +
             "WHERE s.gameweek = :gwId AND s.assists > 0")
     List<PlayerAssistedDto> findPlayersWithAssists(@Param("gwId") int gwId);
+
+    @Query("SELECT new com.fantasy.dto.PlayerPenaltyDto(s.player.id, s.player.viewName, s.penaltiesConceded, s.player.teamId) " +
+            "FROM PlayerGameweekStatsEntity s " +
+            "WHERE s.gameweek = :gameweek AND s.penaltiesConceded > 0")
+    List<PlayerPenaltyDto> findPlayersWithPenalties(@Param("gameweek") int gameweek);
 }

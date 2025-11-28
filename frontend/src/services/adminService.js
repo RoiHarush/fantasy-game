@@ -1,7 +1,6 @@
 import API_URL from '../config';
 import { getAuthHeaders } from './authHelper';
 
-
 export const AdminService = {
     getAssisters: async (gameweek) => {
         try {
@@ -28,6 +27,35 @@ export const AdminService = {
             return await response.json();
         } catch (error) {
             console.error("Error in updateAssist:", error);
+            throw error;
+        }
+    },
+
+    getPenaltiesConceded: async (gameweek) => {
+        try {
+            const response = await fetch(`${API_URL}/api/players/player-penalties/${gameweek}`, {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to fetch penalties');
+            return await response.json();
+        } catch (error) {
+            console.error("Error in getPenaltiesConceded:", error);
+            throw error;
+        }
+    },
+
+    updatePenaltyConceded: async (playerId, gameweek, action) => {
+        try {
+            const response = await fetch(`${API_URL}/api/players/admin/update-penalty`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ playerId, gameweek, action })
+            });
+            if (!response.ok) throw new Error('Failed to update penalty');
+            return await response.json();
+        } catch (error) {
+            console.error("Error in updatePenaltyConceded:", error);
             throw error;
         }
     },
@@ -59,5 +87,4 @@ export const AdminService = {
             throw error;
         }
     },
-
 };

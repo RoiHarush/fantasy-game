@@ -71,6 +71,24 @@ public class PlayerController {
         return ResponseEntity.ok(updated);
     }
 
+    @GetMapping("/player-penalties/{gwId}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<List<PlayerPenaltyDto>> getPlayersPenaltiesForGameWeek(@PathVariable int gwId){
+        List<PlayerPenaltyDto> result = playerService.getPlayersPenaltiesForGameWeek(gwId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/admin/update-penalty")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<PlayerPenaltyDto> updatePlayerPenalty(@RequestBody UpdatePenaltyRequest request) {
+        if (request.getPlayerId() == 0 || request.getGameweek() == 0 || request.getAction() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        PlayerPenaltyDto updated = playerService.updatePlayerPenalty(request);
+        return ResponseEntity.ok(updated);
+    }
+
     @PostMapping("/toggle-lock")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<PlayerDto> togglePlayerLock(@RequestParam int playerId, @RequestParam boolean lock) {

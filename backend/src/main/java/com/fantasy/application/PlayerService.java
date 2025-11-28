@@ -2,9 +2,7 @@ package com.fantasy.application;
 
 import com.fantasy.domain.player.*;
 import com.fantasy.domain.user.UserEntity;
-import com.fantasy.dto.PlayerAssistedDto;
-import com.fantasy.dto.PlayerDto;
-import com.fantasy.dto.UpdateAssistRequest;
+import com.fantasy.dto.*;
 import com.fantasy.infrastructure.mappers.PlayerMapper;
 import com.fantasy.infrastructure.repositories.*;
 import com.fantasy.domain.score.ScoreCalculator;
@@ -38,6 +36,7 @@ public class PlayerService {
     private final PlayerRegistry playerRegistry;
     private final UserRepository userRepo;
     private final PointsService pointsService;
+    private final UserSquadRepository squadRepo;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -50,13 +49,15 @@ public class PlayerService {
                          PlayerGameweekStatsRepository statsRepo,
                          PlayerRegistry playerRegistry,
                          UserRepository userRepo,
-                         PointsService pointsService) {
+                         PointsService pointsService,
+                         UserSquadRepository squadRepo) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
         this.playerRegistry = playerRegistry;
         this.userRepo = userRepo;
         this.pointsService = pointsService;
+        this.squadRepo = squadRepo;
     }
 
     private record PlayerLoadResult(
@@ -589,19 +590,85 @@ public class PlayerService {
             registryPlayer.getPointsByGameweek().put(request.getGameweek(), statsEntity.getTotalPoints());
         }
 
-        if (playerEntity.getOwnerId() != null && playerEntity.getOwnerId() != -1) {
+        Optional<Integer> historicOwnerId = squadRepo.findOwnerByPlayerAndGameweek(request.getPlayerId(), request.getGameweek());
+
+        if (historicOwnerId.isPresent()) {
+            Integer ownerId = historicOwnerId.get();
             try {
-                pointsService.calculateAndPersist(playerEntity.getOwnerId(), request.getGameweek());
-                log.info("Updated points for user {} due to manual assist update.", playerEntity.getOwnerId());
+                pointsService.calculateAndPersist(ownerId, request.getGameweek());
+                log.info("Recalculated points for user {} (historic owner) for GW {} due to manual update.", ownerId, request.getGameweek());
             } catch (Exception e) {
-                log.error("Failed to update user points after assist update: {}", e.getMessage());
+                log.error("Failed to update user points: {}", e.getMessage());
             }
+        } else {
+            log.info("No owner found for player {} in GW {}. Skipping user points calculation.", request.getPlayerId(), request.getGameweek());
         }
 
         return new PlayerAssistedDto(
                 statsEntity.getPlayer().getId(),
                 statsEntity.getPlayer().getViewName(),
                 statsEntity.getAssists(),
+                statsEntity.getPlayer().getTeamId()
+        );
+    }
+
+    public List<PlayerPenaltyDto> getPlayersPenaltiesForGameWeek(int gwId){
+        return statsRepo.findPlayersWithPenalties(gwId);
+    }
+
+    @Transactional
+    public PlayerPenaltyDto updatePlayerPenalty(UpdatePenaltyRequest request) {
+        PlayerGameweekStatsEntity statsEntity = statsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
+                .orElseThrow(() -> new RuntimeException("Stats not found for player id: " + request.getPlayerId()));
+
+        PlayerEntity playerEntity = statsEntity.getPlayer();
+        Player domainPlayer = PlayerMapper.toDomain(playerEntity, null);
+
+        ScoreEvent penaltyEvent = new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_CONCEDED);
+        int pointDelta = ScoreCalculator.calculatePoints(penaltyEvent);
+
+        boolean isAdd = "ADD".equalsIgnoreCase(request.getAction());
+
+        if (!isAdd && statsEntity.getPenaltiesConceded() <= 0) {
+            throw new RuntimeException("Cannot remove penalty from player with 0 penalties");
+        }
+
+        if (isAdd) {
+            statsEntity.setPenaltiesConceded(statsEntity.getPenaltiesConceded() + 1);
+            statsEntity.setTotalPoints(statsEntity.getTotalPoints() + pointDelta);
+        } else {
+            statsEntity.setPenaltiesConceded(statsEntity.getPenaltiesConceded() - 1);
+            statsEntity.setTotalPoints(statsEntity.getTotalPoints() - pointDelta);
+        }
+        statsRepo.save(statsEntity);
+
+        PlayerPointsEntity pointsEntity = pointsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
+                .orElseThrow(() -> new RuntimeException("Points entity not found"));
+
+        pointsEntity.setPoints(statsEntity.getTotalPoints());
+        pointsRepo.save(pointsEntity);
+
+        Player registryPlayer = playerRegistry.findById(playerEntity.getId());
+        if (registryPlayer != null) {
+            registryPlayer.getPointsByGameweek().put(request.getGameweek(), statsEntity.getTotalPoints());
+        }
+
+        Optional<Integer> historicOwnerId = squadRepo.findOwnerByPlayerAndGameweek(request.getPlayerId(), request.getGameweek());
+
+        if (historicOwnerId.isPresent()) {
+            Integer ownerId = historicOwnerId.get();
+            try {
+                pointsService.calculateAndPersist(ownerId, request.getGameweek());
+                log.info("Recalculated points for user {} (historic owner) for GW {} due to penalty update.", ownerId, request.getGameweek());
+            } catch (Exception e) {
+                log.error("Failed to update user points: {}", e.getMessage());
+            }
+        }
+
+        return new PlayerPenaltyDto(
+                statsEntity.getPlayer().getId(),
+                statsEntity.getPlayer().getViewName(),
+                statsEntity.getPenaltiesConceded(),
                 statsEntity.getPlayer().getTeamId()
         );
     }

@@ -16,4 +16,12 @@ public interface UserSquadRepository extends JpaRepository<UserSquadEntity, Long
 
     @Query("SELECT s FROM UserSquadEntity s WHERE s.gameweek IN :gameweeks")
     List<UserSquadEntity> findAllByGameweeks(@Param("gameweeks") List<Integer> gameweeks);
+
+    @Query("SELECT s.user.id FROM UserSquadEntity s " +
+            "LEFT JOIN s.startingLineup starter " +
+            "LEFT JOIN s.benchMap bench " +
+            "WHERE s.gameweek = :gameweek " +
+            "AND (starter = :playerId OR bench = :playerId)")
+    Optional<Integer> findOwnerByPlayerAndGameweek(@Param("playerId") int playerId,
+                                                   @Param("gameweek") int gameweek);
 }
