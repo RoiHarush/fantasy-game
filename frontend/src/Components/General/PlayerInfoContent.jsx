@@ -104,47 +104,49 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
 
                     </thead>
                     <tbody>
-                        {matchStats.map((stat, idx) => {
-                            const gw = idx + 1;
-                            const fixture = teamFixtures?.[gw] || teamFixtures?.[String(gw)];
-                            const opponent = fixture?.opponent || "Unknown";
+                        {matchStats
+                            .sort((a, b) => a.gameweekId - b.gameweekId)
+                            .map((stat, idx) => {
+                                const gw = stat.gameweekId;
 
-                            const totalRow = stat.stats.find(s => s.name === "Total");
-                            const minutes = stat.stats.find(s => s.name === "Minutes played")?.value || "0";
-                            const goals = stat.stats.find(s => s.name === "Goals")?.value || "0";
-                            const assists = stat.stats.find(s => s.name === "Assists")?.value || "0";
-                            const cs = stat.stats.find(s => s.name === "Clean sheets") ? 1 : 0;
-                            const gc = stat.stats.find(s => s.name === "Goals conceded")?.value || "0";
-                            const yc = stat.stats.find(s => s.name === "Yellow cards")?.value || "0";
-                            const rc = stat.stats.find(s => s.name === "Red cards")?.value || "0";
-                            const pm = stat.stats.find(s => s.name === "Penalties missed")?.value || "0";
-                            const og = stat.stats.find(s => s.name === "Own goals")?.value || "0";
-                            const ps = stat.stats.find(s => s.name === "Penalties saved")?.value || "0";
+                                const fixture = teamFixtures?.[gw] || teamFixtures?.[String(gw)];
+                                const opponent = fixture?.opponent || "Unknown";
 
-                            const pc = stat.stats.find(s => s.name === "Penalties conceded")?.value || "0";
+                                const totalRow = stat.stats.find(s => s.name === "Total");
+                                const minutes = stat.stats.find(s => s.name === "Minutes played")?.value || "0";
+                                const goals = stat.stats.find(s => s.name === "Goals")?.value || "0";
+                                const assists = stat.stats.find(s => s.name === "Assists")?.value || "0";
+                                const cs = stat.stats.find(s => s.name === "Clean sheets") ? 1 : 0;
+                                const gc = stat.stats.find(s => s.name === "Goals conceded")?.value || "0";
+                                const yc = stat.stats.find(s => s.name === "Yellow cards")?.value || "0";
+                                const rc = stat.stats.find(s => s.name === "Red cards")?.value || "0";
+                                const pm = stat.stats.find(s => s.name === "Penalties missed")?.value || "0";
+                                const og = stat.stats.find(s => s.name === "Own goals")?.value || "0";
+                                const ps = stat.stats.find(s => s.name === "Penalties saved")?.value || "0";
+                                const pc = stat.stats.find(s => s.name === "Penalties conceded")?.value || "0";
 
 
-                            return (
-                                <tr key={idx}>
-                                    <td>{gw}</td>
-                                    <td>{opponent}</td>
+                                return (
+                                    <tr key={idx}>
+                                        <td>{gw}</td>
+                                        <td>{opponent}</td>
 
-                                    <td>{totalRow?.points || 0}</td>
-                                    <td>{minutes}</td>
-                                    <td>{goals}</td>
-                                    <td>{assists}</td>
-                                    <td>{cs}</td>
-                                    <td>{gc}</td>
-                                    <td>{og}</td>
-                                    <td>{ps}</td>
-                                    <td>{pm}</td>
-                                    <td>{pc}</td>
-                                    <td>{yc}</td>
-                                    <td>{rc}</td>
-                                </tr>
+                                        <td>{totalRow?.points || 0}</td>
+                                        <td>{minutes}</td>
+                                        <td>{goals}</td>
+                                        <td>{assists}</td>
+                                        <td>{cs}</td>
+                                        <td>{gc}</td>
+                                        <td>{og}</td>
+                                        <td>{ps}</td>
+                                        <td>{pm}</td>
+                                        <td>{pc}</td>
+                                        <td>{yc}</td>
+                                        <td>{rc}</td>
+                                    </tr>
 
-                            );
-                        })}
+                                );
+                            })}
 
                         <tr className={Style.totalRow}>
                             <td><strong>Totals</strong></td>
@@ -159,9 +161,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Own goals")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties saved")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties missed")?.value || 0), 0)}</strong></td>
-
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties conceded")?.value || 0), 0)}</strong></td>
-
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Yellow cards")?.value || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Red cards")?.value || 0), 0)}</strong></td>
                         </tr>
