@@ -52,7 +52,7 @@ function PickTeamPage() {
     }, [user, nextGameweek]);
 
     async function saveTeam() {
-        if (!squad) return;
+        if (!squad) return false;
 
         const dto = {
             startingLineup: squad.startingLineup,
@@ -73,9 +73,10 @@ function PickTeamPage() {
             const updatedSquad = await saveTeamRequest(user.id, dto);
             setSquad(updatedSquad);
             setIsDirty(false);
-            alert("Team saved successfully!");
+            return true;
         } catch (err) {
-            alert("❌ Failed to save team:\n" + err.message);
+            console.error("Failed to save team:", err);
+            return false;
         }
     }
 

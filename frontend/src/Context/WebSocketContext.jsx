@@ -21,7 +21,7 @@ export function WebSocketProvider({ children }) {
 
         return () => {
             if (stomp.connected) {
-                stomp.disconnect(() => console.log("❌ Disconnected"));
+                stomp.disconnect(() => console.log("Disconnected"));
             }
         };
     }, []);

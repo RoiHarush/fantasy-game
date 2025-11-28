@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import API_URL from "../config";
-import { useWebSocket } from "./WebSocketContext";
 import { getAuthHeaders } from "../services/authHelper";
+import { useAuth } from "./AuthContext";
 
 const WatchlistContext = createContext();
 
-export function WatchlistProvider({ user, children }) {
+export function WatchlistProvider({ children }) {
     const [watchlist, setWatchlist] = useState([]);
-    const { subscribe, unsubscribe, connected } = useWebSocket();
+
+    const { user } = useAuth();
 
     useEffect(() => {
         if (!user?.id) {
@@ -15,32 +16,13 @@ export function WatchlistProvider({ user, children }) {
             return;
         }
 
-
         fetch(`${API_URL}/api/users/${user.id}/watchlist`, {
             headers: getAuthHeaders()
         })
-            .then(res => {
-                if (!res.ok) throw new Error(res.statusText);
-                return res.json();
-            })
+            .then(res => res.json())
             .then(setWatchlist)
-            .catch(err => console.error("Failed to fetch watchlist:", err));
+            .catch(console.error);
     }, [user]);
-
-    useEffect(() => {
-        if (!connected || !user?.id) return;
-
-        const sub = subscribe(`/topic/watchlist/${user.id}`, (msg) => {
-            if (!msg.body || msg.body === "undefined") return;
-            try {
-                const updated = JSON.parse(msg.body);
-                setWatchlist(Array.isArray(updated) ? updated : []);
-            } catch (err) {
-                console.error("Invalid JSON from WS:", msg.body);
-            }
-        });
-        return () => unsubscribe(sub);
-    }, [connected, user, subscribe, unsubscribe]);
 
     const toggleWatch = async (playerId, isWatched) => {
         setWatchlist((prev) => {
@@ -55,11 +37,17 @@ export function WatchlistProvider({ user, children }) {
             const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
-            await fetch(endpoint, {
+            const res = await fetch(endpoint, {
                 method,
-                headers: getAuthHeaders(),
+                headers: {
+                    ...getAuthHeaders(),
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({ playerId }),
             });
+
+            if (!res.ok) throw new Error("Server updated failed");
+
         } catch (err) {
             console.error("Failed to update watchlist:", err);
             setWatchlist((prev) => {
@@ -69,6 +57,7 @@ export function WatchlistProvider({ user, children }) {
                     return prev.filter((id) => id !== playerId);
                 }
             });
+            alert("Connection error: Could not update watchlist");
         }
     };
 

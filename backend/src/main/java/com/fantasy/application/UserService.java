@@ -11,7 +11,6 @@ import com.fantasy.dto.IrStatusDto;
 import com.fantasy.dto.SquadDto;
 import com.fantasy.dto.UpdateProfileDto;
 import com.fantasy.dto.UserDto;
-import com.fantasy.api.WatchlistSocketController;
 import com.fantasy.infrastructure.mappers.SquadMapper;
 import com.fantasy.infrastructure.mappers.UserMapper;
 import com.fantasy.infrastructure.repositories.UserGameDataRepository;
@@ -32,7 +31,6 @@ public class UserService {
     private final UserRepository userRepo;
     private final UserSquadRepository userSquadRepo;
     private final GameWeekService gameWeekService;
-    private final WatchlistSocketController watchlistSocketController;
     private final PlayerRegistry playerRegistry;
     private final PasswordEncoder passwordEncoder;
 
@@ -40,14 +38,12 @@ public class UserService {
                        UserRepository userRepo,
                        UserSquadRepository userSquadRepo,
                        GameWeekService gameWeekService,
-                       WatchlistSocketController watchlistSocketController,
                        PlayerRegistry playerRegistry,
                        PasswordEncoder passwordEncoder) {
         this.userSquadRepo = userSquadRepo;
         this.gameWeekService = gameWeekService;
         this.gameDataRepo = gameDataRepo;
         this.userRepo = userRepo;
-        this.watchlistSocketController = watchlistSocketController;
         this.playerRegistry = playerRegistry;
         this.passwordEncoder = passwordEncoder;
     }
@@ -254,7 +250,6 @@ public class UserService {
         if (!watchedPlayers.contains(playerId)) {
             watchedPlayers.add(playerId);
             gameDataRepo.save(gameDataEntity);
-            watchlistSocketController.sendWatchlistUpdate(userId, watchedPlayers);
         }
     }
 
@@ -267,7 +262,6 @@ public class UserService {
 
         if (watchedPlayers.remove(Integer.valueOf(playerId))) {
             gameDataRepo.save(gameDataEntity);
-            watchlistSocketController.sendWatchlistUpdate(userId, watchedPlayers);
         }
     }
 

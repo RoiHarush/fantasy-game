@@ -180,7 +180,7 @@ function OtherUserPointsWrapper() {
           setOtherUser(data);
         }
       } catch (err) {
-        console.error("❌ Fetch error:", err.message);
+        console.error("Fetch error:", err.message);
         if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setLoading(false);

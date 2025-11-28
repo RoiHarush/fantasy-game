@@ -7,4 +7,8 @@ export default defineConfig({
   define: {
     global: 'window',
   },
+  esbuild: {
+    drop: ['console', 'debugger'],
+    pure: ['alert']
+  },
 });

@@ -8,9 +8,8 @@
     overflow: hidden;
     background: linear-gradient(90deg, #9b2fff 0%, #00eaff 100%);
     background-size: 200% 200%;
-    animation: gradientMove 10s ease infinite;
+    animation: gradientMove 15s ease infinite;
     font-family: "Poppins", sans-serif;
-
     padding: 20px;
     box-sizing: border-box;
 }
@@ -29,135 +28,209 @@
     }
 }
 
-.logo-row {
+.logosBackground {
     position: absolute;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: center;
-    width: 100vw;
-    opacity: 0.25;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 1;
 }
 
-.logo-row img {
-    width: 60px;
-    height: 60px;
+.marqueeRow {
+    position: absolute;
+    width: 100%;
+    overflow: hidden;
+    left: 0;
+    display: flex;
+}
+
+.marqueeTrack {
+    display: flex;
+    gap: 3rem;
+    width: max-content;
+    animation: scroll var(--duration) linear infinite var(--direction);
+    will-change: transform;
+}
+
+.marqueeTrack img {
+    width: 55px;
+    height: 55px;
     object-fit: contain;
-    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
+    opacity: 0.35;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: opacity 0.3s ease;
+}
+
+.marqueeTrack img:hover {
+    opacity: 0.8;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.contentWrapper {
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 .title {
-    font-size: 2.2rem;
+    font-size: 2.5rem;
     font-weight: 700;
     color: white;
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
-    z-index: 2;
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     margin-bottom: 2rem;
     text-align: center;
 }
 
 .card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 18px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-    padding: 2rem 1.5rem;
-
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    padding: 2.5rem 2rem;
     width: 100%;
-    max-width: 380px;
-
+    max-width: 400px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    color: #fff;
-    z-index: 2;
-    animation: fadeIn 0.4s ease;
     box-sizing: border-box;
 }
 
 .input {
     width: 100%;
-    padding: 0.8rem;
-    margin-bottom: 1.2rem;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     outline: none;
-    background: rgba(255, 255, 255, 0.08);
-    color: #f5f5f5;
-    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 1rem;
     transition: all 0.2s ease;
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .input:focus {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: #9b2fff;
-    box-shadow: 0 0 10px rgba(155, 47, 255, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: #fff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
 .button {
     width: 100%;
-    padding: 0.8rem;
-    margin-top: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
     border: none;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #9b2fff 0%, #00eaff 100%);
-    color: white;
-    font-size: 1rem;
-    font-weight: 600;
+    border-radius: 12px;
+    background: white;
+    color: #9b2fff;
+    font-size: 1.1rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.25s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.button:hover,
-.button:focus {
+.button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(155, 47, 255, 0.45);
-    outline: 2px solid #00eaff;
-    outline-offset: 2px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    background: #f0f0f0;
 }
 
 .error {
-    color: #ff5252;
+    color: #ffcccc;
+    background: rgba(255, 0, 0, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
     font-size: 0.9rem;
     margin-bottom: 1rem;
     text-align: center;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+    width: 100%;
+    border: 1px solid rgba(255, 0, 0, 0.3);
 }
 
 .premierLogo {
-    width: 110px;
+    width: 130px;
     height: auto;
     margin-bottom: 1rem;
-    z-index: 2;
-    filter: drop-shadow(0 0 18px rgba(155, 47, 255, 0.45)) drop-shadow(0 0 25px rgba(0, 234, 255, 0.35));
-    animation: logoPulse 5s ease-in-out infinite alternate;
-    fill: url(#logoGradient);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
 @media (min-width: 480px) {
     .title {
-        font-size: 3rem;
-        margin-bottom: 2.2rem;
+        font-size: 3.5rem;
+    }
+}
+
+.logoWrapper {
+    position: relative;
+    width: 130px;
+    height: auto;
+    margin-bottom: 1rem;
+
+    -webkit-mask-image: url("/UI/premier-league-logo.svg");
+    mask-image: url("/UI/premier-league-logo.svg");
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+.premierLogo {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.logoWrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 100%;
+    height: 100%;
+
+    background: linear-gradient(100deg,
+            transparent 20%,
+            rgba(255, 255, 255, 0.9) 50%,
+            transparent 80%);
+
+    transform: skewX(-20deg);
+
+    animation: lightningSwipe 7s infinite ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes lightningSwipe {
+    0% {
+        left: -150%;
     }
 
-    .card {
-        padding: 2.5rem 2rem;
+    35% {
+        left: 150%;
+    }
+
+    100% {
+        left: 150%;
     }
 }

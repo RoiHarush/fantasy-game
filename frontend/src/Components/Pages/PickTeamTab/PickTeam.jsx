@@ -6,6 +6,7 @@ import IRManager from "./IR/IRManager";
 import FirstPickManager from "./FirstPickCaptain/FirstPickManager";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
+import { useState } from "react";
 
 function PickTeam({
     user,
@@ -21,6 +22,17 @@ function PickTeam({
     setIsDirty,
 }) {
     const { players } = usePlayers();
+    const [showSavedMessage, setShowSavedMessage] = useState(false);
+
+    const handleSave = async () => {
+        const success = await saveTeam();
+
+        if (success) {
+            setShowSavedMessage(true);
+            // setTimeout(() => setShowSavedMessage(false), 3000);
+        }
+    };
+
 
     return (
         <div className={Style.pickTeamScreen}>
@@ -73,11 +85,18 @@ function PickTeam({
                 <div className={Style.saveContainer}>
                     <button
                         className={`${Style.btn} ${Style.saveTeam}`}
-                        onClick={saveTeam}
+                        onClick={handleSave}
                         disabled={!isDirty}
                     >
                         Save Team
                     </button>
+
+                    {showSavedMessage && (
+                        <div className={Style.savedMessage}>
+                            Your team has been saved
+                        </div>
+                    )}
+
                 </div>
 
                 <div className={Style.fixtures}>

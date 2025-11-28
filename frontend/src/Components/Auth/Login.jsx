@@ -9,17 +9,17 @@ export default function Login() {
     const [error, setError] = useState("");
 
     const { login } = useAuth();
-
     const disallowed = /[\sא-ת]/;
 
     const logos = useMemo(() => {
         return Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);
     }, []);
+
     const logoRows = useMemo(() => {
         function shuffle(arr) {
             return [...arr].sort(() => Math.random() - 0.5);
         }
-        return Array.from({ length: 10 }, () => shuffle(logos));
+        return Array.from({ length: 8 }, () => shuffle(logos));
     }, [logos]);
 
     function handleUsernameChange(e) {
@@ -54,61 +54,71 @@ export default function Login() {
             }
 
             const data = await res.json();
-
             login(data.user, data.token);
 
         } catch (err) {
-            console.error(err);
             setError("Error while sign-in");
         }
     }
 
     return (
         <div className={styles.container}>
-            {logoRows.map((row, i) => (
-                <div
-                    key={i}
-                    className={styles["logo-row"]}
-                    style={{
-                        top: `${i * 10}%`,
-                    }}
-                >
-                    {row.map((logo, index) => (
-                        <img key={index} src={`/Logos/${logo}`} alt={`logo-${index}`} />
-                    ))}
+            <div className={styles.logosBackground}>
+                {logoRows.map((row, i) => (
+                    <div
+                        key={i}
+                        className={styles.marqueeRow}
+                        style={{
+                            top: `${i * 12}%`,
+                            '--direction': i % 2 === 0 ? 'normal' : 'reverse',
+                            '--duration': '120s'
+                        }}
+                    >
+                        <div className={styles.marqueeTrack}>
+                            {row.map((logo, index) => (
+                                <img key={`a-${index}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
+                            ))}
+                            {row.map((logo, index) => (
+                                <img key={`b-${index}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className={styles.contentWrapper}>
+                <div className={styles.logoWrapper}>
+                    <img
+                        src="/UI/premier-league-logo.svg"
+                        alt="Premier League Logo"
+                        className={styles.premierLogo}
+                    />
                 </div>
-            ))}
 
-            <img
-                src="/UI/premier-league-logo.svg"
-                alt="Premier League Logo"
-                className={styles.premierLogo}
-            />
+                <h1 className={styles.title}>Fantasy Draft</h1>
 
-            <h1 className={styles.title}>Fantasy Draft</h1>
+                <form className={styles.card} onSubmit={handleSubmit}>
+                    <input
+                        className={styles.input}
+                        placeholder="Username"
+                        value={username}
+                        onChange={handleUsernameChange}
+                    />
+                    <input
+                        className={styles.input}
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={handlePasswordChange}
+                    />
 
-            <form className={styles.card} onSubmit={handleSubmit}>
-                <input
-                    className={styles.input}
-                    placeholder="Username"
-                    value={username}
-                    onChange={handleUsernameChange}
-                />
-                <input
-                    className={styles.input}
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={handlePasswordChange}
-                />
+                    {error && <div className={styles.error}>{error}</div>}
 
-                {error && <div className={styles.error}>{error}</div>}
-
-                <button type="submit" className={styles.button}>
-                    Sign In
-                </button>
-            </form>
+                    <button type="submit" className={styles.button}>
+                        Sign In
+                    </button>
+                </form>
+            </div>
         </div>
-
     );
 }

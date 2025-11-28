@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import API_URL from "../config";
+import { useSystemStatus } from "./SystemStatusContext";
 
 const GameweekContext = createContext();
 
@@ -9,7 +10,11 @@ export function GameweekProvider({ children }) {
     const [nextGameweek, setNextGameweek] = useState(null);
     const [lastGameweek, setLastGameweek] = useState(null);
 
-    useEffect(() => {
+    const { isSystemLocked } = useSystemStatus();
+
+    const fetchAllData = useCallback(() => {
+        console.log("Fetching fresh Gameweek data...");
+
         fetch(`${API_URL}/api/gameweeks`)
             .then(res => res.json())
             .then(data => {
@@ -17,7 +22,6 @@ export function GameweekProvider({ children }) {
                 setGameweeks(sorted);
             })
             .catch(err => console.error("Failed to fetch gameweeks:", err));
-
 
         fetch(`${API_URL}/api/gameweeks/current`)
             .then(res => res.json())
@@ -34,6 +38,12 @@ export function GameweekProvider({ children }) {
             .then(setLastGameweek)
             .catch(err => console.error("Failed to fetch last gameweek:", err));
     }, []);
+
+    useEffect(() => {
+        if (!isSystemLocked) {
+            fetchAllData();
+        }
+    }, [isSystemLocked, fetchAllData]);
 
     return (
         <GameweekContext.Provider value={{

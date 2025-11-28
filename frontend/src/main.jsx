@@ -11,21 +11,27 @@ import { TeamsProvider } from "./Context/TeamsContext.jsx";
 import { WebSocketProvider } from "./Context/WebSocketContext.jsx";
 import RootApp from "./RootApp.jsx";
 import { AuthProvider } from "./Context/AuthContext.jsx";
+import { WatchlistProvider } from "./Context/WatchlistContext.jsx";
+import { SystemStatusProvider } from "./Context/SystemStatusContext.jsx";
 
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <WebSocketProvider>
-          <GameweekProvider>
-            <PlayersProvider>
-              <TeamsProvider>
-                <RootApp />
-              </TeamsProvider>
-            </PlayersProvider>
-          </GameweekProvider>
-        </WebSocketProvider>
+        <WatchlistProvider>
+          <WebSocketProvider>
+            <SystemStatusProvider>
+              <GameweekProvider>
+                <PlayersProvider>
+                  <TeamsProvider>
+                    <RootApp />
+                  </TeamsProvider>
+                </PlayersProvider>
+              </GameweekProvider>
+            </SystemStatusProvider>
+          </WebSocketProvider>
+        </WatchlistProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

@@ -9,23 +9,45 @@ import com.fantasy.domain.user.UserGameData;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.*;
+
 public class GameweekRollover {
 
-    public static void rolloverToNextGameweek(UserGameData user, int gameweek){
-        FantasyTeam next = user.getNextFantasyTeam();
+    private static final Logger logger = LoggerFactory.getLogger(GameweekRollover.class);
 
-        if (next == null)
-            throw new RuntimeException("UserGameData dont have squads!");
+    public static void rolloverToNextGameweek(UserGameData user, int currentGameweek) {
+        int targetGameweek = currentGameweek + 1;
 
-        Squad newSquad = copySquad(next.getSquad());
+        if (user.getNextFantasyTeam() != null && user.getNextFantasyTeam().getGameweek() == targetGameweek) {
+            logger.info("Skipping rollover for user {}: Next team already exists for GW {}", user.getId(), targetGameweek);
+            return;
+        }
 
-        FantasyTeam newTeam = new FantasyTeam(gameweek + 1, newSquad);
-        user.setCurrentFantasyTeam(next);
-        user.setNextFantasyTeam(newTeam);
+        FantasyTeam teamBecomingCurrent = user.getNextFantasyTeam();
+
+        if (teamBecomingCurrent == null) {
+            logger.error("Critical failure: User {} has no 'next' squad prepared for rollover!", user.getId());
+            throw new RuntimeException("UserGameData " + user.getId() + " has no next squad prepared!");
+        }
+
+        Squad newSquad = copySquad(teamBecomingCurrent.getSquad());
+
+        FantasyTeam newNextTeam = new FantasyTeam(targetGameweek, newSquad);
+
+        user.setCurrentFantasyTeam(teamBecomingCurrent);
+        user.setNextFantasyTeam(newNextTeam);
+
         Map<String, Boolean> activeChips = user.getActiveChips();
-        activeChips.put("FIRST_PICK_CAPTAIN", false);
-        user.setActiveChips(activeChips);
-        user.getPointsByGameweek().put(gameweek, 0);
+        if (activeChips != null) {
+            activeChips.put("FIRST_PICK_CAPTAIN", false);
+            user.setActiveChips(activeChips);
+        }
+
+        user.getPointsByGameweek().put(currentGameweek, 0);
+
+        logger.debug("Rollover successful for user {} to GW {}", user.getId(), targetGameweek);
     }
 
     private static Squad copySquad(Squad squad){

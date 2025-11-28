@@ -31,9 +31,11 @@
 
 .saveContainer {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     margin-top: 15px;
 }
+
 
 .saveTeam {
     padding: 10px 20px;
@@ -121,4 +123,36 @@
 .chipButton:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+.savedMessage {
+    margin-top: 12px;
+    padding: 12px;
+    text-align: center;
+    background-color: #2a0036;
+    color: #33ff99;
+    font-size: 18px;
+    border-radius: 6px;
+    animation: fadeIn 0.3s ease-out;
+
+    width: 100%;
+    display: flex;
+    justify-content: center;
+
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
