@@ -21,13 +21,13 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserRepository userRepo;
-    private final JwtService jwtService; // החלפנו את SessionManager ב-JwtService
+    private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final UserGameDataRepository userGameDataRepo;
     private final PlayerRegistry playerRegistry;
 
     public AuthController(UserRepository userRepo,
-                          JwtService jwtService, // עדכון בנאי
+                          JwtService jwtService,
                           PasswordEncoder passwordEncoder,
                           UserGameDataRepository userGameDataRepo,
                           PlayerRegistry playerRegistry) {

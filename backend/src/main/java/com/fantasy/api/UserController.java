@@ -7,6 +7,7 @@ import com.fantasy.dto.UpdateProfileDto;
 import com.fantasy.dto.UserDto;
 import com.fantasy.application.UserService;
 
+import com.fantasy.infrastructure.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,9 +21,11 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepo;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRepository userRepo) {
         this.userService = userService;
+        this.userRepo = userRepo;
     }
 
     @GetMapping
@@ -44,20 +47,22 @@ public class UserController {
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileDto request, Authentication authentication) {
         try {
-            UserEntity currentUser = (UserEntity) authentication.getPrincipal();
-            int userId = currentUser.getId();
+            String userIdString = authentication.getName();
+
+            int userId = Integer.parseInt(userIdString);
 
             UserDto updatedUser = userService.updateUserProfile(userId, request);
 
             return ResponseEntity.ok(updatedUser);
 
-        } catch (ClassCastException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid authentication principal");
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid Token: User ID is not a number"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An error occurred"));
         }
     }
 

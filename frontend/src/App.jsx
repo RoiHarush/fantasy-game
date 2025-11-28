@@ -22,6 +22,7 @@ import SettingsPage from "./Components/Pages/SettingsTab/SettingsPage";
 import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
 import { fetchUserById } from "./services/usersService";
 import NotFoundPage from "./Components/Pages/NotFoundPage";
+import Footer from "./Footer";
 
 
 function MainAppLayout() {
@@ -42,6 +43,7 @@ function MainAppLayout() {
       <main>
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }

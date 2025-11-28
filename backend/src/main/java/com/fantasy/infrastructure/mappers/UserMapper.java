@@ -55,7 +55,7 @@ public class UserMapper {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
-        dto.setUserName(user.getUsername());
+        dto.setUsername(user.getUsername());
         dto.setFantasyTeamName(userGameData.getFantasyTeamName());
         dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
         dto.setRole(user.getRole().name());
@@ -67,7 +67,7 @@ public class UserMapper {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
-        dto.setUserName(user.getUsername());
+        dto.setUsername(user.getUsername());
         dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
         dto.setRole(user.getRole().name());
 

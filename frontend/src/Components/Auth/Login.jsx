@@ -119,6 +119,10 @@ export default function Login() {
                     </button>
                 </form>
             </div>
+
+            <div className={styles.disclaimer}>
+                Educational Project | Not affiliated with the Premier League
+            </div>
         </div>
     );
 }

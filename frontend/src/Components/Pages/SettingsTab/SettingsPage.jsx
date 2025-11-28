@@ -6,7 +6,7 @@ function SettingsPage() {
     const { user, login } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
-        userName: '',
+        username: '',
         teamName: '',
         currentPassword: '',
         newPassword: ''
@@ -19,7 +19,7 @@ function SettingsPage() {
             setFormData(prev => ({
                 ...prev,
                 name: user.name || '',
-                userName: user.userName || '',
+                username: user.username || '',
                 teamName: user.fantasyTeamName || ''
             }));
         }
@@ -38,7 +38,7 @@ function SettingsPage() {
 
         const payload = {};
         if (formData.name !== user.name) payload.name = formData.name;
-        if (formData.userName !== user.userName) payload.userName = formData.userName;
+        if (formData.username !== user.username) payload.username = formData.username;
         if (formData.teamName !== user.fantasyTeamName) payload.teamName = formData.teamName;
 
         if (formData.newPassword) {
@@ -185,7 +185,7 @@ function SettingsPage() {
                         <input
                             type="text"
                             name="username"
-                            value={formData.userName}
+                            value={formData.username}
                             onChange={handleChange}
                             style={styles.input}
                             placeholder="e.g. john123"
@@ -216,7 +216,7 @@ function SettingsPage() {
                                 onChange={handleChange}
                                 style={styles.input}
                                 placeholder="Required to save changes"
-                                disabled={!formData.newPassword && formData.name === user?.name && formData.userName === user?.userName && formData.teamName === user?.fantasyTeamName}
+                                disabled={!formData.newPassword && formData.name === user?.name && formData.username === user?.username && formData.teamName === user?.fantasyTeamName}
                             />
                         </div>
                     </div>

@@ -9,13 +9,23 @@ export const updateUserSettings = async (data) => {
             body: JSON.stringify(data)
         });
 
+        const contentType = response.headers.get("content-type");
+        let errorData;
+
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            errorData = await response.json();
+        } else {
+            const text = await response.text();
+            errorData = { error: text || "Unknown error occurred" };
+        }
+
         if (!response.ok) {
-            const errorData = await response.json();
             throw new Error(errorData.error || "Failed to update settings");
         }
 
-        return await response.json();
+        return errorData;
     } catch (error) {
+        console.error("Update failed:", error);
         throw error;
     }
 };
