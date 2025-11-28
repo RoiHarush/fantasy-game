@@ -346,7 +346,11 @@ public class PlayerService {
                         events.add(new ScoreEvent(domainPlayer, 0, ScoreType.FROM_BENCH));
                 }
 
-                for (int i = 0; i < goals; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.GOAL));
+                for (int i = 0; i < goals; i++) {
+                    ScoreEvent ev = new ScoreEvent(domainPlayer, 0, ScoreType.GOAL);
+                    ev.setGoalIndex(i + 1);
+                    events.add(ev);
+                }
                 for (int i = 0; i < assists; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.ASSIST));
 
                 if (minutes >= 30 && goalsConceded == 0)
