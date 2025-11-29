@@ -25,6 +25,7 @@ public class TransferWindowScheduler {
         this.gameWeekRepository = gameWeekRepository;
     }
 
+
     @Scheduled(cron = "0 * * * * *")
     public void checkAndOpenTransferWindow() {
         if (transferWindowService.isActiveWindow()) {
@@ -41,7 +42,10 @@ public class TransferWindowScheduler {
                 return;
             }
 
-            if (now.isAfter(nextGw.getTransferOpenTime()) || now.isEqual(nextGw.getTransferOpenTime())) {
+            boolean timeReached = now.isAfter(nextGw.getTransferOpenTime()) || now.isEqual(nextGw.getTransferOpenTime());
+
+            if (timeReached && !nextGw.isTransferWindowProcessed()) {
+
                 log.info("Transfer window open time reached for GW {}", nextGw.getId());
 
                 try {

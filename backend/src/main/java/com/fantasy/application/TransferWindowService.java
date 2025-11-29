@@ -115,6 +115,11 @@ public class TransferWindowService {
         var gameWeek = gameWeekRepo.findById(gameWeekId)
                 .orElseThrow(() -> new RuntimeException("GameWeek not found: " + gameWeekId));
 
+        if (gameWeek.isTransferWindowProcessed()) {
+            log.warn("Transfer window for GW {} was already processed.", gameWeekId);
+            return;
+        }
+
         List<TransferPickEntity> order = gameWeek.getTransferOrder();
         if (order == null || order.isEmpty())
             throw new RuntimeException("Transfer order not defined for GW " + gameWeekId);
@@ -124,6 +129,9 @@ public class TransferWindowService {
         this.turnManager.startWindow();
         this.currentGameWeekId = gameWeekId;
         this.activeWindow = true;
+
+        gameWeek.setTransferWindowProcessed(true);
+        gameWeekRepo.save(gameWeek);
 
         int firstUser = turnManager.getCurrentUserId().orElse(-1);
 

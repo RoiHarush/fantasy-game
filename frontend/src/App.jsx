@@ -134,8 +134,7 @@ function App() {
         <Route path="scout" element={<ScoutPage />} />
         <Route path="transfer-window" element={
           <GameweekUpdatingGuard>
-            {/* <TransferWindowPage /> */}
-            <ClosedWindow />
+            <TransferWindowPage />
           </GameweekUpdatingGuard>
         } />
         <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />

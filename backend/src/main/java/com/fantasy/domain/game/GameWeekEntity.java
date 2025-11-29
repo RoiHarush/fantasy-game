@@ -24,6 +24,9 @@ public class GameWeekEntity {
     @Column(columnDefinition = "boolean default false")
     private boolean calculated = false;
 
+    @Column(name = "transfer_window_processed", nullable = false, columnDefinition = "boolean default false")
+    private boolean transferWindowProcessed = false;
+
     public GameWeekEntity() {}
 
     public GameWeekEntity(int id, String name, LocalDateTime firstKickoffTime,
@@ -58,4 +61,11 @@ public class GameWeekEntity {
 
     public boolean isCalculated() { return calculated; }
     public void setCalculated(boolean calculated) { this.calculated = calculated; }
+
+    public boolean isTransferWindowProcessed() {
+        return transferWindowProcessed;
+    }
+    public void setTransferWindowProcessed(boolean transferWindowProcessed) {
+        this.transferWindowProcessed = transferWindowProcessed;
+    }
 }

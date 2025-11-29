@@ -93,8 +93,10 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 }));
 
                 const playerIn = players.find(p => p.id === playerInId);
-                const inName = playerIn ? playerIn.viewName : "Player";
-                setLastTransferMessage(`${userName || "User"} signed ${inName}`);
+                const inName = playerIn ? playerIn.viewName : "Player In";
+                const playerOut = players.find(p => p.id === playerOutId)
+                const outName = playerOut ? playerOut.viewName : "Player Out"
+                setLastTransferMessage(`${userName || "User"} signed ${inName} | over ${outName}`);
             }
 
             if (event.event === "turn_passed") {
@@ -206,7 +208,6 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                     )}
                 </div>
 
-                {/* תיקון: הצגת הרמז רק אם יש ערך תקין ב-turnsLeft (לא null) */}
                 {!isIrRound && currentTurnUserId !== user.id && turnsLeft !== null && (
                     <div className={Style.turnHint}>
                         {turnsLeft === 1 ? "You're next!" : `Your turn in ${turnsLeft} turns`}

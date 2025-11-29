@@ -37,6 +37,7 @@ public class PlayerService {
     private final UserRepository userRepo;
     private final PointsService pointsService;
     private final UserSquadRepository squadRepo;
+    private final ScoringLogicService scoringLogic;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -50,7 +51,8 @@ public class PlayerService {
                          PlayerRegistry playerRegistry,
                          UserRepository userRepo,
                          PointsService pointsService,
-                         UserSquadRepository squadRepo) {
+                         UserSquadRepository squadRepo,
+                         ScoringLogicService scoringLogic) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
@@ -58,6 +60,7 @@ public class PlayerService {
         this.userRepo = userRepo;
         this.pointsService = pointsService;
         this.squadRepo = squadRepo;
+        this.scoringLogic = scoringLogic;
     }
 
     private record PlayerLoadResult(
@@ -200,75 +203,34 @@ public class PlayerService {
             );
 
             for (JsonNode gw : history) {
-                int round = gw.get("round").asInt();
-                int minutes = gw.get("minutes").asInt();
-                int goals = gw.get("goals_scored").asInt();
-                int assists = gw.get("assists").asInt();
-                int goalsConceded = gw.get("goals_conceded").asInt();
-                int starts = gw.get("starts").asInt();
-                int yellow = gw.get("yellow_cards").asInt();
-                int red = gw.get("red_cards").asInt();
-                int ownGoals = gw.get("own_goals").asInt();
-                int pensSaved = gw.get("penalties_saved").asInt();
-                int pensMissed = gw.get("penalties_missed").asInt();
 
-                List<ScoreEvent> events = new ArrayList<>();
-
-                if (minutes > 0) {
-                    events.add(new ScoreEvent(domainPlayer, 0, starts == 1 ? ScoreType.PLAYED : ScoreType.FROM_BENCH));
-                }
-                for (int i = 0; i < goals; i++) {
-                    ScoreEvent ev = new ScoreEvent(domainPlayer, 0, ScoreType.GOAL);
-                    ev.setGoalIndex(i + 1);
-                    events.add(ev);
-                }
-                for (int i = 0; i < assists; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.ASSIST));
-
-                if (minutes >= 30 && goalsConceded == 0)
-                    events.add(new ScoreEvent(domainPlayer, minutes, ScoreType.CLEAN_SHEET));
-
-                if (goalsConceded > 0) {
-                    ScoreEvent ev = new ScoreEvent(domainPlayer, minutes, ScoreType.GOAL_CONCEDED);
-                    ev.setGoalsConceded(goalsConceded);
-                    events.add(ev);
-                }
-
-                for (int i = 0; i < yellow; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.YELLOW_CARD));
-                for (int i = 0; i < red; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.RED_CARD));
-                for (int i = 0; i < ownGoals; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.OWN_GOAL));
-                for (int i = 0; i < pensSaved; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_SAVE));
-                for (int i = 0; i < pensMissed; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_MISS));
-
-                int gwPoints = ScoreCalculator.calculatePointsForPlayer(events);
+                RawGameStats rawStats = new RawGameStats(
+                        gw.get("minutes").asInt(),
+                        gw.get("goals_scored").asInt(),
+                        gw.get("assists").asInt(),
+                        gw.get("goals_conceded").asInt(),
+                        gw.get("yellow_cards").asInt(),
+                        gw.get("red_cards").asInt(),
+                        gw.get("penalties_saved").asInt(),
+                        gw.get("penalties_missed").asInt(),
+                        gw.get("own_goals").asInt(),
+                        gw.get("starts").asInt() == 1,
+                        gw.get("opponent_team").asInt(),
+                        gw.get("was_home").asBoolean()
+                );
 
                 PlayerGameweekStatsEntity stats = new PlayerGameweekStatsEntity();
                 stats.setPlayer(player);
-                stats.setGameweek(round);
-                stats.setOpponentTeamId(gw.get("opponent_team").asInt());
-                stats.setWasHome(gw.get("was_home").asBoolean());
-                stats.setMinutesPlayed(minutes);
-                stats.setGoals(goals);
-                stats.setAssists(assists);
-                stats.setGoalsConceded(goalsConceded);
-                stats.setYellowCards(yellow);
-                stats.setRedCards(red);
-                stats.setPenaltiesSaved(pensSaved);
-                stats.setPenaltiesMissed(pensMissed);
-                stats.setOwnGoals(ownGoals);
+                stats.setGameweek(gw.get("round").asInt());
 
-                stats.setCleanSheet(goalsConceded == 0 && minutes >= 30);
-                stats.setCleanSheet30(minutes >= 30 && goalsConceded == 0);
-                stats.setCleanSheet45(minutes >= 46 && goalsConceded == 0);
-                stats.setCleanSheet60(minutes >= 60 && goalsConceded == 0);
-                stats.setStarted(starts == 1);
-                stats.setTotalPoints(gwPoints);
+                scoringLogic.updateStatsEntity(stats, domainPlayer, rawStats);
+
+                statsList.add(stats);
 
                 PlayerPointsEntity pp = new PlayerPointsEntity();
                 pp.setPlayer(player);
-                pp.setGameweek(round);
-                pp.setPoints(gwPoints);
-
-                statsList.add(stats);
+                pp.setGameweek(stats.getGameweek());
+                pp.setPoints(stats.getTotalPoints());
                 pointsList.add(pp);
             }
         } catch (Exception e) {
@@ -284,28 +246,15 @@ public class PlayerService {
             for (PlayerEntity entity : players) {
                 String historyUrl = FPL_PLAYER_URL + entity.getId() + "/";
                 ResponseEntity<String> historyRes = restTemplate.getForEntity(historyUrl, String.class);
-                JsonNode history = mapper.readTree(historyRes.getBody()).get("history");
-
-                if (history == null || history.isEmpty()) {
-                    PlayerPointsEntity emptyPoints = pointsRepo
-                            .findByPlayer_IdAndGameweek(entity.getId(), currentGw)
-                            .orElseGet(() -> {
-                                PlayerPointsEntity pp = new PlayerPointsEntity();
-                                pp.setPlayer(entity);
-                                pp.setGameweek(currentGw);
-                                return pp;
-                            });
-                    emptyPoints.setPoints(0);
-                    pointsRepo.save(emptyPoints);
-                    continue;
-                }
+                JsonNode historyNode = mapper.readTree(historyRes.getBody()).get("history");
 
                 JsonNode latest = null;
-                for (JsonNode gw : history) {
-                    int round = gw.get("round").asInt();
-                    if (round == currentGw) {
-                        latest = gw;
-                        break;
+                if (historyNode != null && !historyNode.isEmpty()) {
+                    for (JsonNode gw : historyNode) {
+                        if (gw.get("round").asInt() == currentGw) {
+                            latest = gw;
+                            break;
+                        }
                     }
                 }
 
@@ -323,53 +272,23 @@ public class PlayerService {
                     continue;
                 }
 
-                int minutes = latest.get("minutes").asInt();
-                int goals = latest.get("goals_scored").asInt();
-                int assists = latest.get("assists").asInt();
-                int yellow = latest.get("yellow_cards").asInt();
-                int red = latest.get("red_cards").asInt();
-                int ownGoals = latest.get("own_goals").asInt();
-                int pensSaved = latest.get("penalties_saved").asInt();
-                int pensMissed = latest.get("penalties_missed").asInt();
-                int goalsConceded = latest.get("goals_conceded").asInt();
-                int starts = latest.get("starts").asInt();
-
                 Player domainPlayer = playerRegistry.findById(entity.getId());
-                if (domainPlayer == null)
-                    continue;
+                if (domainPlayer == null) continue;
 
-                List<ScoreEvent> events = new ArrayList<>();
-
-                if (minutes > 0) {
-                    if (starts == 1)
-                        events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PLAYED));
-                    else
-                        events.add(new ScoreEvent(domainPlayer, 0, ScoreType.FROM_BENCH));
-                }
-
-                for (int i = 0; i < goals; i++) {
-                    ScoreEvent ev = new ScoreEvent(domainPlayer, 0, ScoreType.GOAL);
-                    ev.setGoalIndex(i + 1);
-                    events.add(ev);
-                }
-                for (int i = 0; i < assists; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.ASSIST));
-
-                if (minutes >= 30 && goalsConceded == 0)
-                    events.add(new ScoreEvent(domainPlayer, minutes, ScoreType.CLEAN_SHEET));
-
-                if (goalsConceded > 0) {
-                    ScoreEvent ev = new ScoreEvent(domainPlayer, minutes, ScoreType.GOAL_CONCEDED);
-                    ev.setGoalsConceded(goalsConceded);
-                    events.add(ev);
-                }
-
-                for (int i = 0; i < yellow; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.YELLOW_CARD));
-                for (int i = 0; i < red; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.RED_CARD));
-                for (int i = 0; i < ownGoals; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.OWN_GOAL));
-                for (int i = 0; i < pensSaved; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_SAVE));
-                for (int i = 0; i < pensMissed; i++) events.add(new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_MISS));
-
-                int gwPoints = ScoreCalculator.calculatePointsForPlayer(events);
+                RawGameStats rawStats = new RawGameStats(
+                        latest.get("minutes").asInt(),
+                        latest.get("goals_scored").asInt(),
+                        latest.get("assists").asInt(),
+                        latest.get("goals_conceded").asInt(),
+                        latest.get("yellow_cards").asInt(),
+                        latest.get("red_cards").asInt(),
+                        latest.get("penalties_saved").asInt(),
+                        latest.get("penalties_missed").asInt(),
+                        latest.get("own_goals").asInt(),
+                        latest.get("starts").asInt() == 1,
+                        latest.get("opponent_team").asInt(),
+                        latest.get("was_home").asBoolean()
+                );
 
                 PlayerGameweekStatsEntity stats = statsRepo
                         .findByPlayer_IdAndGameweek(entity.getId(), currentGw)
@@ -377,29 +296,11 @@ public class PlayerService {
 
                 stats.setPlayer(entity);
                 stats.setGameweek(currentGw);
-                stats.setOpponentTeamId(latest.get("opponent_team").asInt());
-                stats.setWasHome(latest.get("was_home").asBoolean());
-                stats.setMinutesPlayed(minutes);
-                stats.setGoals(goals);
-                stats.setAssists(assists);
-                stats.setGoalsConceded(goalsConceded);
-                stats.setYellowCards(yellow);
-                stats.setRedCards(red);
-                stats.setPenaltiesSaved(latest.get("penalties_saved").asInt());
-                stats.setPenaltiesMissed(latest.get("penalties_missed").asInt());
-                stats.setOwnGoals(ownGoals);
 
-                boolean cleanSheet = goalsConceded == 0 && minutes >= 30;
-                stats.setCleanSheet(cleanSheet);
-                stats.setCleanSheet30(minutes >= 30 && goalsConceded == 0);
-                stats.setCleanSheet45(minutes >= 45 && goalsConceded == 0);
-                stats.setCleanSheet60(minutes >= 60 && goalsConceded == 0);
-
-                stats.setStarted(starts == 1);
-                stats.setTotalPoints(gwPoints);
+                scoringLogic.updateStatsEntity(stats, domainPlayer, rawStats);
                 statsRepo.save(stats);
 
-                PlayerPointsEntity existing = pointsRepo
+                PlayerPointsEntity existingPoints = pointsRepo
                         .findByPlayer_IdAndGameweek(entity.getId(), currentGw)
                         .orElseGet(() -> {
                             PlayerPointsEntity pp = new PlayerPointsEntity();
@@ -408,8 +309,8 @@ public class PlayerService {
                             return pp;
                         });
 
-                existing.setPoints(gwPoints);
-                pointsRepo.save(existing);
+                existingPoints.setPoints(stats.getTotalPoints());
+                pointsRepo.save(existingPoints);
 
                 int total = pointsRepo.findByPlayer_Id(entity.getId())
                         .stream()
@@ -418,7 +319,8 @@ public class PlayerService {
 
                 entity.setTotalPoints(total);
                 playerRepo.save(entity);
-                domainPlayer.getPointsByGameweek().put(currentGw, gwPoints);
+
+                domainPlayer.getPointsByGameweek().put(currentGw, stats.getTotalPoints());
             }
         } catch (Exception e) {
             log.error("Failed updating gameweek points: {}", e.getMessage(), e);
