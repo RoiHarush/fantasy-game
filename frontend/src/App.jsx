@@ -23,6 +23,7 @@ import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
 import { fetchUserById } from "./services/usersService";
 import NotFoundPage from "./Components/Pages/NotFoundPage";
 import Footer from "./Footer";
+import ClosedWindow from "./Components/Pages/TransferWindowTab/ClosedWindow";
 
 
 function MainAppLayout() {
@@ -133,7 +134,8 @@ function App() {
         <Route path="scout" element={<ScoutPage />} />
         <Route path="transfer-window" element={
           <GameweekUpdatingGuard>
-            <TransferWindowPage />
+            {/* <TransferWindowPage /> */}
+            <ClosedWindow />
           </GameweekUpdatingGuard>
         } />
         <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />
