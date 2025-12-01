@@ -1,6 +1,6 @@
 package com.fantasy.config;
 
-import com.fantasy.application.JwtService;
+import com.fantasy.domain.auth.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

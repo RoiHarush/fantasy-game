@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import styles from "./Styles/NavButtons.module.css";
-import API_URL from "./config";
 import { useAuth } from "./Context/AuthContext";
 
 function NavButtons() {

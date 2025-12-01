@@ -5,9 +5,12 @@ import { getAuthHeaders } from "../../../services/authHelper";
 export default function IRSignModal({ player, user, onClose }) {
     const handleConfirm = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/transfer-window/replace-ir`, {
+            const res = await fetch(`${API_URL}/api/market/ir-sign`, {
                 method: "POST",
-                headers: getAuthHeaders(),
+                headers: {
+                    ...getAuthHeaders(),
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({
                     userId: user.id,
                     playerId: player.id
@@ -19,10 +22,10 @@ export default function IRSignModal({ player, user, onClose }) {
                 throw new Error(msg);
             }
 
-            console.log("✅ IR player signed successfully");
+            console.log("IR player signed successfully");
             onClose();
         } catch (err) {
-            console.error("❌ Failed to sign IR player:", err);
+            console.error("Failed to sign IR player:", err);
             alert(err.message || "Error signing IR player");
         }
     };

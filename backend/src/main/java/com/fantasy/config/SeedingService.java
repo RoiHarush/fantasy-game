@@ -1,11 +1,14 @@
 package com.fantasy.config;
 
 import com.fantasy.domain.game.GameWeekEntity;
+import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueEntity;
+import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.player.PlayerEntity;
+import com.fantasy.domain.player.PlayerRepository;
+import com.fantasy.domain.team.*;
 import com.fantasy.domain.transfer.TransferPickEntity;
 import com.fantasy.domain.user.*;
-import com.fantasy.infrastructure.repositories.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
 package com.fantasy.domain.league;
 
-import com.fantasy.domain.user.UserGameData;
+import com.fantasy.domain.team.UserGameData;
 
 import java.util.Comparator;
 

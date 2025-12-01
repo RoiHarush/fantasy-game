@@ -1,11 +1,10 @@
 package com.fantasy.config;
 
-import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.game.FixtureService;
+import com.fantasy.domain.game.GameWeekService;
+import com.fantasy.domain.player.*;
 import com.fantasy.domain.realWorldData.TeamEntity;
-import com.fantasy.domain.user.*;
-import com.fantasy.application.*;
-import com.fantasy.infrastructure.mappers.PlayerMapper;
-import com.fantasy.infrastructure.repositories.*;
+import com.fantasy.domain.realWorldData.TeamService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -26,6 +25,7 @@ public class StartupLoader {
 
     private final TeamService teamService;
     private final PlayerService playerService;
+    private final PlayerSyncService playerSyncService;
     private final GameWeekService gameWeekService;
     private final FixtureService fixtureService;
 
@@ -38,6 +38,7 @@ public class StartupLoader {
     @Autowired
     public StartupLoader(TeamService teamService,
                          PlayerService playerService,
+                         PlayerSyncService playerSyncService,
                          GameWeekService gameWeekService,
                          FixtureService fixtureService,
                          PlayerRepository playerRepo,
@@ -46,6 +47,7 @@ public class StartupLoader {
                          SeedingService seedingService) {
         this.teamService = teamService;
         this.playerService = playerService;
+        this.playerSyncService = playerSyncService;
         this.gameWeekService = gameWeekService;
         this.fixtureService = fixtureService;
         this.playerRepo = playerRepo;
@@ -83,7 +85,7 @@ public class StartupLoader {
 
         if (playersCount == 0) {
             log.info("Loading players from API...");
-            playerService.loadPlayersFromApi();
+            playerSyncService.loadPlayersFromApi();
             updatePlayersPhotosFromApi();
         } else {
             log.info("Players already exist ({})", playersCount);

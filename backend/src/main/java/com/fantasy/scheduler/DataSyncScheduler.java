@@ -1,9 +1,10 @@
 package com.fantasy.scheduler;
 
-import com.fantasy.application.FixtureService;
-import com.fantasy.application.GameWeekService;
-import com.fantasy.application.PlayerService;
-import com.fantasy.infrastructure.repositories.FixtureRepository;
+import com.fantasy.domain.game.FixtureService;
+import com.fantasy.domain.game.GameWeekService;
+import com.fantasy.domain.player.PlayerService;
+import com.fantasy.domain.game.FixtureRepository;
+import com.fantasy.domain.player.PlayerSyncService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,14 +17,14 @@ public class DataSyncScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(DataSyncScheduler.class);
 
-    private final PlayerService playerService;
+    private final PlayerSyncService playerSyncService;
     private final FixtureService fixtureService;
     private final GameWeekService gameWeekService;
     private final FixtureRepository fixtureRepository;
 
-    public DataSyncScheduler(PlayerService playerService, FixtureService fixtureService,
+    public DataSyncScheduler(PlayerSyncService playerSyncService, FixtureService fixtureService,
                              GameWeekService gameWeekService, FixtureRepository fixtureRepository) {
-        this.playerService = playerService;
+        this.playerSyncService = playerSyncService;
         this.fixtureService = fixtureService;
         this.gameWeekService = gameWeekService;
         this.fixtureRepository = fixtureRepository;
@@ -44,7 +45,7 @@ public class DataSyncScheduler {
         log.info("Starting Periodic Data Sync...");
 
         try {
-            playerService.refreshBasicPlayerData();
+            playerSyncService.refreshBasicPlayerData();
             log.info("Players data synced successfully.");
         } catch (Exception e) {
             log.error("Error syncing players: ", e);

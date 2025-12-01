@@ -102,7 +102,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
             if (!nextGameweek) return;
 
             try {
-                const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
+                const res = await fetch(`${API_URL}/api/market/turn-order/${nextGameweek.id}`, {
                     headers: getAuthHeaders()
                 });
 
@@ -142,7 +142,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
 
         setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
+            const res = await fetch(`${API_URL}/api/market/set-order/${nextGameweek.id}`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(dto)

@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import Style from "../../Styles/PlayerInfoModal.module.css";
-import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import API_URL from "../../config";
 import Switcher from "./Switcher";
 import { useFixtures } from "../../Context/FixturesContext";
 import PlayerInfoContent from "./PlayerInfoContent";
-
+import useLockBodyScroll from "../../hooks/useLockBodyScroll";
 
 function PlayerInfoModal({ player, onClose }) {
+    useLockBodyScroll();
+
     const { getFixturesForTeam } = useFixtures();
-    const [tab, setTab] = useState("stats");
+    const [tab, setTab] = useState("fixtures");
     const [matchStats, setMatchStats] = useState([]);
     const [teamFixtures, setTeamFixtures] = useState({});
 
@@ -64,26 +65,26 @@ function PlayerInfoModal({ player, onClose }) {
                         />
                     </div>
                     <div className={Style.right}>
-                        <div className={Style.position}>{positionMap[player.position]}</div>
+                        <div className={Style.positionTag}>{positionMap[player.position]}</div>
                         <h2 className={Style.name}>{player.firstName} {player.lastName}</h2>
-                        <div className={Style.team}>
-                            <TeamLogo teamId={player.teamId} /> {player.teamName}
-                        </div>
-                        <div className={Style.points}>
-                            <span>Total Points:</span> <strong>{player.points}</strong>
-                        </div>
+
+                        <div className={Style.teamName}>{player.teamName}</div>
                     </div>
                 </div>
 
-                <Switcher active={tab} options={["fixtures", "stats"]} onChange={setTab} />
+                <div className={Style.bodyContent}>
+                    <div className={Style.switcherWrapper}>
+                        <Switcher active={tab} options={["fixtures", "stats"]} onChange={setTab} />
+                    </div>
 
-                <div className={Style.tabContent}>
-                    <PlayerInfoContent
-                        player={player}
-                        tab={tab}
-                        teamFixtures={teamFixtures}
-                        matchStats={matchStats}
-                    />
+                    <div className={Style.tabContent}>
+                        <PlayerInfoContent
+                            player={player}
+                            tab={tab}
+                            teamFixtures={teamFixtures}
+                            matchStats={matchStats}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

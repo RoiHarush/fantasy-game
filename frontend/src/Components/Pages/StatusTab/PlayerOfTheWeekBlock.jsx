@@ -10,11 +10,21 @@ import { usePlayers } from "../../../Context/PlayersContext";
 function PlayerOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
     const { players } = usePlayers();
+
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const visibleCount = isMobile ? 3 : 5;
+    const cardWidth = isMobile ? 100 : 120;
+
     const [topPlayers, setTopPlayers] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
-    const visibleCount = 5;
-    const cardWidth = 130 + 25;
     const [isTransitioning, setIsTransitioning] = useState(false);
 
     useEffect(() => {
@@ -43,21 +53,24 @@ function PlayerOfTheWeekBlock() {
                 ];
 
                 setTopPlayers(circular);
-                setCurrentIndex(visibleCount);
+
+                if (currentGameweek) {
+
+                    const gwIndex = Math.min(currentGameweek.id - 1, 37);
+
+                    let targetIndex = visibleCount + gwIndex - (visibleCount - 1);
+
+                    setCurrentIndex(targetIndex);
+                } else {
+                    setCurrentIndex(visibleCount);
+                }
+
             } catch (err) {
-                console.error("❌ Failed to load players of the week:", err);
+                console.error("Failed to load players of the week:", err);
             }
         }
         fetchPlayers();
-    }, []);
-
-    useEffect(() => {
-        if (currentGameweek && topPlayers.length > 0) {
-            const total = 38;
-            const gwIndex = Math.min(currentGameweek.id - 1, total - 1);
-            setCurrentIndex(gwIndex + visibleCount + 1);
-        }
-    }, [currentGameweek, topPlayers]);
+    }, [visibleCount, currentGameweek]);
 
     const next = () => {
         if (topPlayers.length === 0) return;
@@ -76,13 +89,13 @@ function PlayerOfTheWeekBlock() {
         setIsTransitioning(false);
 
         if (currentIndex >= total + visibleCount) {
-            setCurrentIndex(visibleCount);
+            setCurrentIndex(currentIndex - total);
         } else if (currentIndex < visibleCount) {
-            setCurrentIndex(total + visibleCount - 1);
+            setCurrentIndex(currentIndex + total);
         }
     };
 
-    const offset = (currentIndex - visibleCount) * cardWidth * -1;
+    const offset = currentIndex * cardWidth * -1;
 
     return (
         <div className={styles.block}>
@@ -111,7 +124,7 @@ function PlayerOfTheWeekBlock() {
                                 className={styles.cardWrapper}
                                 onClick={() => p?.id && setSelectedPlayer(p)}
                             >
-                                <PlayerOfWeekCard player={p} />
+                                <PlayerOfWeekCard player={p} size={isMobile ? "small" : "normal"} />
                             </div>
                         ))}
                     </div>

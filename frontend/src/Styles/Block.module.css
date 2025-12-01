@@ -1,28 +1,22 @@
 .block {
     background: #2a0030;
     border-radius: 12px;
-    margin: 20px 0;
+    margin: 12px 0;
     color: #fff;
     overflow: hidden;
     width: 100%;
     box-sizing: border-box;
-}
-
-.block,
-.splitBlock,
-.pickTeamBlock {
     position: relative;
-    height: auto;
 }
 
 .blockImage {
     position: absolute;
     bottom: 0;
-    left: 0;
-    width: clamp(50px, 18vw, 70px);
-    left: -11px;
+    left: -10px;
+    width: clamp(50px, 15vw, 70px);
     height: auto;
     pointer-events: none;
+    opacity: 0.6;
 }
 
 .blockHeader {
@@ -30,17 +24,15 @@
     color: black;
     font-weight: bold;
     text-align: center;
-    padding: 8px 12px;
-    font-size: 1rem;
-
-    width: 98%;
-    max-width: calc(100% - 16px);
-    margin: 0 auto;
+    padding: 6px 10px;
+    font-size: 0.95rem;
+    width: auto;
+    margin: 0 8px;
     border-radius: 0 0 12px 12px;
 }
 
 .blockContent {
-    padding: 20px;
+    padding: 16px;
     text-align: center;
 }
 
@@ -49,10 +41,11 @@
     grid-template-columns: 1fr;
     align-items: stretch;
     text-align: center;
+    width: 100%;
 }
 
 .blockColumns2>div {
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -63,16 +56,18 @@
     grid-template-columns: 1fr;
     background: #2a0030;
     border-radius: 12px;
-    margin: 20px 0;
+    margin: 12px 0;
     overflow: hidden;
     color: #fff;
     box-sizing: border-box;
+    width: 100%;
 }
 
 .splitItem {
     display: flex;
     flex-direction: column;
     text-align: center;
+    position: relative;
 }
 
 .splitHeader {
@@ -80,39 +75,28 @@
     color: black;
     font-weight: bold;
     text-align: center;
-    padding: 8px 12px;
-    font-size: 1rem;
+    padding: 6px 10px;
+    font-size: 0.95rem;
 
-    width: 90%;
-    max-width: calc(100% - 24px);
-    margin: 0 auto;
+    width: auto;
+    margin: 0 12px;
     border-radius: 0 0 12px 12px;
 }
 
-.splitItem:first-child .splitHeader,
-.splitItem:last-child .splitHeader {
-    background: linear-gradient(90deg, #00ff94, #00e5ff);
-}
-
 .splitContent {
-    padding: 20px;
-    font-size: 1.2rem;
+    padding: 16px;
+    font-size: 1.1rem;
 }
 
 .splitItem:not(:last-child) {
-    position: relative;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.splitItem:not(:last-child)::after {
-    display: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .pointsBlock {
     width: 100%;
     background-color: #2c0032;
     border-radius: 8px;
-    padding: 20px;
+    padding: 16px;
     text-align: center;
     color: white;
     display: flex;
@@ -120,24 +104,27 @@
     justify-content: center;
     align-items: center;
     box-sizing: border-box;
-}
-
-.pointsBlockHeader {
-    font-size: 100%;
-    font-weight: 400;
     margin-bottom: 10px;
 }
 
+.pointsBlockHeader {
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+
 .pointsBlockValue {
-    font-size: 150%;
-    font-weight: 600;
+    font-size: 1.8rem;
+    font-weight: 700;
     color: cyan;
+    line-height: 1;
 }
 
 .pickTeamBlock {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    margin: 20px 0;
+    margin: 12px 0;
     color: #000;
     overflow: hidden;
     width: 100%;
@@ -149,22 +136,66 @@
     background: #2c0032;
     color: cyan;
     font-weight: bold;
-    text-align: center;
-    padding: 8px 12px;
-    font-size: 1rem;
-    width: 90%;
-    margin: 0 auto;
+    padding: 6px 10px;
+    font-size: 0.95rem;
+    width: auto;
+    margin: 0 12px;
     border-radius: 0 0 12px 12px;
 }
 
 .pickTeamBlockValue {
-    font-size: 150%;
-    font-weight: 600;
+    font-size: 1.8rem;
+    font-weight: 700;
     color: black;
-    margin-top: 12px;
+    margin: 16px 0;
+}
+
+@media (max-width: 768px) {
+
+    .pointsBlock {
+        width: 140px;
+        margin: 0 auto 10px auto;
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    .pointsBlockHeader {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+
+    .pointsBlockValue {
+        font-size: 1.6rem;
+    }
+
+    .pickTeamBlock {
+        margin: 10px 0;
+        width: 100%;
+    }
+
+    .pickTeamBlockHeader {
+        padding: 4px 10px;
+        font-size: 0.85rem;
+    }
+
+    .pickTeamBlockValue {
+        font-size: 1.1rem;
+        margin: 10px 0;
+    }
+
+    .blockImage {
+        width: 40px;
+        opacity: 0.4;
+    }
 }
 
 @media (min-width: 768px) {
+
+    .block,
+    .splitBlock,
+    .pickTeamBlock {
+        margin: 20px 0;
+    }
 
     .blockColumns2 {
         grid-template-columns: 1fr 1fr;
@@ -179,8 +210,8 @@
     }
 
     .splitItem:not(:last-child)::after {
-        display: block;
         content: "";
+        display: block;
         position: absolute;
         top: 20px;
         bottom: 20px;
@@ -189,7 +220,17 @@
         background: rgba(255, 255, 255, 0.2);
     }
 
+    .splitItem:nth-child(2) .blockImage {
+        display: none;
+    }
+
+    .blockContent,
+    .blockColumns2>div {
+        padding: 20px;
+    }
+
     .pointsBlock {
         width: 150px;
+        margin-bottom: 0;
     }
 }

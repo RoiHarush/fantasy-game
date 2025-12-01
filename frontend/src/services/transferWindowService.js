@@ -2,7 +2,7 @@ import API_URL from "../config";
 import { getAuthHeaders } from "./authHelper";
 
 export async function fetchTransferWindowState() {
-    const res = await fetch(`${API_URL}/api/transfer-window/state`, {
+    const res = await fetch(`${API_URL}/api/market/state`, {
         headers: getAuthHeaders()
     });
     if (!res.ok) throw new Error("Failed to fetch transfer window state");
@@ -10,7 +10,7 @@ export async function fetchTransferWindowState() {
 }
 
 export async function passTurn(userId) {
-    const res = await fetch(`${API_URL}/api/transfer-window/pass?userId=${userId}`, {
+    const res = await fetch(`${API_URL}/api/market/pass?userId=${userId}`, {
         method: "POST",
         headers: getAuthHeaders()
     });

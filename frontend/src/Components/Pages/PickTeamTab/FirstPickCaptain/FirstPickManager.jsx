@@ -19,8 +19,8 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
     const handleConfirm = async () => {
         try {
             const endpoint = isActive
-                ? `${API_URL}/api/chips/first-pick-captain/release?userId=${userId}`
-                : `${API_URL}/api/chips/first-pick-captain?userId=${userId}`;
+                ? `${API_URL}/api/teams/${userId}/chips/first-pick-captain/release`
+                : `${API_URL}/api/teams/${userId}/chips/first-pick-captain`;
 
             const res = await fetch(endpoint, {
                 method: "POST",
@@ -36,11 +36,12 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
             const updatedSquad = await res.json();
             setSquad(updatedSquad);
 
-            alert(`✅ Captain Chip ${isActive ? "cancelled" : "activated"} successfully!`);
+            alert(`Captain Chip ${isActive ? "cancelled" : "activated"} successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
                 headers: getAuthHeaders()
             });
+
             if (chipRes.ok) {
                 const updatedChips = await chipRes.json();
                 setChips(updatedChips);
@@ -49,7 +50,7 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
             setShowConfirmModal(false);
         } catch (err) {
             console.error("Chip toggle failed:", err);
-            alert("❌ Unexpected error while toggling chip");
+            alert("Unexpected error while toggling chip");
         }
     };
 

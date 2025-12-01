@@ -12,7 +12,7 @@ function Header() {
         <header className={styles.header}>
             <div className={styles.topSection}>
                 <div className={styles.topBar}>
-                    <img src={headerLogo} alt="Fantasy Draft Logo" className={styles.headerLogo} />
+                    <img src={headerLogo} alt="Fantasy Draft Logo" className={styles.logo} />
                     <span className={styles.version}>(The Fun Version)</span>
                 </div>
                 <img src="/UI/pattern-1_header.png" alt="" className={styles.pattern} />

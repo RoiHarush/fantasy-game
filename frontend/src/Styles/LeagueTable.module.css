@@ -25,8 +25,10 @@
     font-size: 0.9rem;
 }
 
-.full table {
-    min-width: 700px;
+@media (min-width: 768px) {
+    .full table {
+        min-width: 700px;
+    }
 }
 
 .leagueTable-head {
@@ -92,4 +94,45 @@
 .full::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+    .full {
+        overflow-x: hidden;
+    }
+
+    .full table {
+        min-width: 100%;
+        table-layout: fixed;
+    }
+
+    .leagueTable th,
+    .leagueTable td {
+        padding: 8px 4px;
+        font-size: 0.8rem;
+    }
+
+    .leagueTable th:nth-child(1) {
+        width: 12%;
+    }
+
+    .leagueTable th:nth-child(2) {
+        width: 52%;
+    }
+
+    .leagueTable th:nth-child(3) {
+        width: 18%;
+    }
+
+    .leagueTable th:nth-child(4) {
+        width: 18%;
+    }
+
+    .userName {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
+    }
 }

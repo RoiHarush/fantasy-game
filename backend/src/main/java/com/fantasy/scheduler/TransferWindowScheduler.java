@@ -1,9 +1,8 @@
 package com.fantasy.scheduler;
 
-import com.fantasy.application.TransferWindowService;
-
 import com.fantasy.domain.game.GameWeekEntity;
-import com.fantasy.infrastructure.repositories.GameWeekRepository;
+import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.transfer.TransferMarketService; // שים לב ל-Import החדש
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,20 +16,16 @@ public class TransferWindowScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(TransferWindowScheduler.class);
 
-    private final TransferWindowService transferWindowService;
+    private final TransferMarketService transferMarketService;
     private final GameWeekRepository gameWeekRepository;
 
-    public TransferWindowScheduler(TransferWindowService transferWindowService, GameWeekRepository gameWeekRepository) {
-        this.transferWindowService = transferWindowService;
+    public TransferWindowScheduler(TransferMarketService transferMarketService, GameWeekRepository gameWeekRepository) {
+        this.transferMarketService = transferMarketService;
         this.gameWeekRepository = gameWeekRepository;
     }
 
-
     @Scheduled(cron = "0 * * * * *")
     public void checkAndOpenTransferWindow() {
-        if (transferWindowService.isActiveWindow()) {
-            return;
-        }
 
         LocalDateTime now = LocalDateTime.now();
         Optional<GameWeekEntity> upcomingGwOpt = gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING");
@@ -49,8 +44,8 @@ public class TransferWindowScheduler {
                 log.info("Transfer window open time reached for GW {}", nextGw.getId());
 
                 try {
-                    transferWindowService.openTransferWindow(nextGw.getId());
-                    log.info("Transfer window opened successfully.");
+                    transferMarketService.openTransferWindow(nextGw.getId());
+                    log.info("Triggered open transfer window.");
                 } catch (Exception e) {
                     log.error("Failed to auto-open transfer window for GW {}", nextGw.getId(), e);
                 }

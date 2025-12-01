@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Style from "../../Styles/PlayerModal.module.css";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import API_URL from "../../config";
 import { useTeams } from "../../Context/TeamsContext";
-import { useRef } from "react";
 
 function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
     const [matchData, setMatchData] = useState(null);
@@ -40,13 +39,19 @@ function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
     const baseTotal = totalLine ? totalLine.points : 0;
     const finalTotal = matchData.captain ? baseTotal * 2 : baseTotal;
 
-    const noMatchPlayed =
-        !hasStats ||
-        (matchData.stats.length === 1 && matchData.stats[0].name === "Total" && matchData.stats[0].points === 0);
+    const matchPlayed = matchData.homeScore !== null && matchData.homeScore !== undefined;
+
+    const hasPlayerStats = matchData.stats && matchData.stats.length > 0 && matchData.stats.some(s => s.value > 0 || s.points !== 0);
+
+    const handleOverlayClick = (e) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
 
     return (
-        <div className={Style.overlay}>
-            <div className={Style.modal}>
+        <div className={Style.overlay} onClick={handleOverlayClick}>
+            <div className={Style.modal} onClick={(e) => e.stopPropagation()}>
                 <button className={Style.closeBtn} onClick={onClose}>✕</button>
 
                 <h2 className={Style.playerName}>{matchData.playerName}</h2>
@@ -72,40 +77,24 @@ function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {noMatchPlayed ? (
+                        {!hasPlayerStats ? (
                             <>
                                 <tr>
-                                    <td>
-                                        <div className={Style.statCellContent}>
-                                            <img
-                                                src="/Icons/stopwatch.svg"
-                                                alt="Minutes played"
-                                                className={Style.statIcon}
-                                            />
-                                            <span>Minutes played</span>
-                                        </div>
+                                    <td colSpan="3" className={Style.noDataRow}>
+                                        {matchPlayed
+                                            ? "Player did not play in this match."
+                                            : "Fixture has not started yet."}
                                     </td>
-                                    <td>0</td>
-                                    <td>0</td>
                                 </tr>
                                 <tr className={Style.totalRow}>
                                     <td>
                                         <div className={Style.statCellContent}>
-                                            <img
-                                                src="/Icons/total.svg"
-                                                alt="Total"
-                                                className={Style.statIcon}
-                                            />
+                                            <img src="/Icons/total.svg" alt="Total" className={Style.statIcon} />
                                             <strong>Total</strong>
                                         </div>
                                     </td>
                                     <td></td>
                                     <td><strong>0</strong></td>
-                                </tr>
-                                <tr>
-                                    <td colSpan="3" className={Style.noDataRow}>
-                                        No data available for this fixture yet.
-                                    </td>
                                 </tr>
                             </>
                         ) : (

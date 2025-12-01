@@ -2,7 +2,7 @@ import API_URL from "../config";
 import { getAuthHeaders } from "./authHelper";
 
 export async function fetchUserChips(userId) {
-    const res = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+    const res = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
         headers: getAuthHeaders()
     });
     if (!res.ok) throw new Error("Failed to fetch chips");
@@ -10,9 +10,12 @@ export async function fetchUserChips(userId) {
 }
 
 export async function saveTeamRequest(userId, dto) {
-    const res = await fetch(`${API_URL}/api/pick?userId=${userId}`, {
+    const res = await fetch(`${API_URL}/api/teams/${userId}/save`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify(dto)
     });
 

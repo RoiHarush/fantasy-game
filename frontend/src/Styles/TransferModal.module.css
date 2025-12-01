@@ -1,40 +1,52 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 3000;
+    padding: 10px;
 }
 
 .modal {
-    background: #00c6ff;
-    background: #953dd9;
+    background: #4a148c;
     color: #fff;
     border-radius: 14px;
-    width: 90%;
-    max-width: 950px;
-    padding: 24px;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
-
 h3 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     margin-bottom: 12px;
+    line-height: 1.4;
 }
 
 .subtitle {
     margin-top: 20px;
-    font-size: 1.1rem;
-    color: #ddd;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    color: #e0e0e0;
 }
 
 .section {
-    margin-top: 10px;
+    margin-top: 5px;
     border-radius: 10px;
     overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -46,91 +58,130 @@ h3 {
 
 .table th {
     text-align: left;
-    background: rgba(255, 255, 255, 0.05);
-    color: #bfbfbf;
-    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ccc;
+    padding: 10px;
+    font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 .table td {
-    padding: 10px 12px;
+    padding: 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    vertical-align: middle;
 }
 
 .playerCell {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    font-weight: 500;
 }
 
-.kit {
-    width: 24px;
-    height: 24px;
+.player-shirt {
+    width: 32px;
+    height: auto;
 }
 
 .green {
     color: #00ff90;
+    font-weight: 700;
 }
 
 .replaceBtn {
     background: linear-gradient(to right, #00ffcc, #00bfff);
-    /* background: #953dd9; */
     border: none;
     border-radius: 6px;
     padding: 6px 12px;
     color: black;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: 0.2s;
+    font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 .replaceBtn:hover {
-    filter: brightness(1.15);
+    filter: brightness(1.1);
 }
 
 .cancelBtnSmall {
-    background: #444;
-    color: #eee;
-    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 6px;
-    padding: 6px 12px;
+    padding: 4px 10px;
     cursor: pointer;
+    font-size: 0.8rem;
 }
 
 .closeBtn {
-    margin-top: 16px;
-    background: #444;
+    margin-top: 20px;
+    background: #333;
     border: none;
-    color: #eee;
+    color: #fff;
     border-radius: 8px;
-    padding: 8px 16px;
+    padding: 10px;
     cursor: pointer;
-    font-weight: 500;
-}
-
-.closeBtn:hover {
-    background: #555;
+    font-weight: 600;
+    align-self: flex-end;
 }
 
 
-.player-shirt {
-    width: 40px;
-    height: auto;
-    margin-right: 10px;
-    vertical-align: middle;
-    transition: transform 0.2s ease;
-}
+@media (max-width: 768px) {
+    .hideOnMobile {
+        display: none;
+    }
 
-.player-shirt:hover {
-    transform: scale(1.05);
-}
+    .modal {
+        padding: 12px;
+        width: 95%;
+        max-height: 95vh;
+    }
 
-.playerCell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 500;
-}
+    h3 {
+        font-size: 0.95rem;
+        margin-bottom: 6px;
+    }
 
-.playerCell span {
-    font-size: 0.95rem;
+    .subtitle {
+        font-size: 0.9rem;
+        margin-top: 10px;
+        margin-bottom: 6px;
+    }
+
+    .section {
+        margin-top: 0;
+    }
+
+    .table th,
+    .table td {
+        padding: 4px 6px;
+        font-size: 0.8rem;
+        height: 36px;
+    }
+
+    .playerCell {
+        gap: 6px;
+    }
+
+    .player-shirt {
+        width: 24px;
+    }
+
+    .replaceBtn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+
+    .cancelBtnSmall {
+        padding: 2px 6px;
+        font-size: 0.7rem;
+    }
+
+    .closeBtn {
+        margin-top: 10px;
+        padding: 6px 16px;
+        font-size: 0.85rem;
+    }
 }

@@ -4,8 +4,6 @@ import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.score.Exception.ScoreException;
 import com.fantasy.domain.score.Exception.UnknownScoreRuleException;
-import com.fantasy.domain.scoreEvent.ScoreEvent;
-import com.fantasy.domain.scoreEvent.ScoreType;
 
 import java.util.HashMap;
 import java.util.List;

@@ -120,3 +120,50 @@
     height: auto;
     opacity: 0.85;
 }
+
+@media (max-width: 768px) {
+    .player-card {
+        width: 13vw;
+        max-width: 85px;
+        height: auto;
+        margin: 0;
+    }
+
+    .player-shirt {
+        width: 85%;
+        margin-bottom: 2px;
+    }
+
+    .player-name {
+        font-size: 9px;
+        width: 110%;
+        padding: 2px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.1;
+    }
+
+    .player-nextMatch,
+    .player-points {
+        font-size: 9px;
+        padding: 2px 0;
+        width: 110%;
+    }
+
+    .captain-badge,
+    .vice-badge {
+        width: 9px;
+        height: 9px;
+        font-size: 6px;
+        left: -4px;
+    }
+
+    .injury-icon {
+        width: 9px;
+        height: 9px;
+        font-size: 9px;
+        top: 2px;
+        right: 2px;
+    }
+}

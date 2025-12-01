@@ -18,12 +18,12 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
     if (!player) return null;
 
     return (
-        <>
+        <div className={Style.tableWrapper}>
             {tab === "fixtures" ? (
                 <table className={Style.table}>
                     <thead>
                         <tr>
-                            <th>Date</th>
+                            <th className={Style.hideOnMobile}>Date</th>
                             <th>GW</th>
                             <th>Opponent</th>
                             <th>FDR</th>
@@ -36,18 +36,20 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             .map(([gw, fixture]) => {
                                 const opponent = fixture.opponent || "Unknown";
                                 const difficulty = fixture.difficulty || 3;
+
                                 const date = fixture.kickoffTime
                                     ? new Date(fixture.kickoffTime).toLocaleString("en-GB", {
                                         day: "2-digit",
                                         month: "short",
                                         hour: "2-digit",
                                         minute: "2-digit",
-                                        timeZoneName: "short"
-                                    })
+                                        hour12: false
+                                    }).replace(",", "")
                                     : "-";
+
                                 return (
                                     <tr key={gw}>
-                                        <td>{date}</td>
+                                        <td className={`${Style.dateCell} ${Style.hideOnMobile}`}>{date}</td>
                                         <td>{gw}</td>
                                         <td>{opponent}</td>
                                         <td>
@@ -64,7 +66,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                     </tbody>
                 </table>
             ) : (
-                <table className={Style.table}>
+                <table className={Style.statsTable}>
                     <thead>
                         <tr className={Style.iconRow}>
                             <th></th>
@@ -87,7 +89,6 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                         <tr>
                             <th>GW</th>
                             <th>OPP</th>
-
                             <th>PTS</th>
                             <th>MP</th>
                             <th>GS</th>
@@ -101,14 +102,12 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                             <th>YC</th>
                             <th>RC</th>
                         </tr>
-
                     </thead>
                     <tbody>
                         {matchStats
                             .sort((a, b) => a.gameweekId - b.gameweekId)
                             .map((stat, idx) => {
                                 const gw = stat.gameweekId;
-
                                 const fixture = teamFixtures?.[gw] || teamFixtures?.[String(gw)];
                                 const opponent = fixture?.opponent || "Unknown";
 
@@ -125,13 +124,12 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                                 const ps = stat.stats.find(s => s.name === "Penalties saved")?.value || "0";
                                 const pc = stat.stats.find(s => s.name === "Penalties conceded")?.value || "0";
 
-
                                 return (
                                     <tr key={idx}>
-                                        <td>{gw}</td>
+                                        <td><strong>{gw}</strong></td>
                                         <td>{opponent}</td>
 
-                                        <td>{totalRow?.points || 0}</td>
+                                        <td className={Style.pointsCell}><strong>{totalRow?.points || 0}</strong></td>
                                         <td>{minutes}</td>
                                         <td>{goals}</td>
                                         <td>{assists}</td>
@@ -144,13 +142,12 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                                         <td>{yc}</td>
                                         <td>{rc}</td>
                                     </tr>
-
                                 );
                             })}
 
                         <tr className={Style.totalRow}>
-                            <td><strong>Totals</strong></td>
                             <td></td>
+                            <td><strong>Total</strong></td>
 
                             <td><strong>{matchStats.reduce((a, b) => a + (b.stats.find(s => s.name === "Total")?.points || 0), 0)}</strong></td>
                             <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Minutes played")?.value || 0), 0)}</strong></td>
@@ -167,9 +164,8 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                         </tr>
                     </tbody>
                 </table>
-
             )}
-        </>
+        </div>
     );
 }
 

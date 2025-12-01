@@ -33,6 +33,12 @@
     width: 100%;
 }
 
+.filtersWrapper {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
 .view select,
 .sort select {
     background: white;
@@ -112,7 +118,6 @@
     content: "✔";
     color: #888;
     font-size: 28px;
-    /* וי גדול שמתאים לגודל התיבה */
     position: absolute;
     top: 50%;
     left: 50%;
@@ -128,7 +133,6 @@
     content: "✔";
     color: white;
     font-size: 28px;
-    /* אותו גודל כמו בהובר */
     position: absolute;
     top: 50%;
     left: 50%;
@@ -196,4 +200,89 @@
 
 .compareSelected {
     background-color: rgba(0, 212, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+    .scoutWrapper {
+        padding: 10px 0;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .view h3,
+    .sort h3,
+    .search h3 {
+        display: block !important;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+        color: #ccc;
+    }
+
+    .controls {
+        padding: 0 15px;
+    }
+
+    .controlsTop {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .search {
+        max-width: 100%;
+    }
+
+    .filtersWrapper {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .view,
+    .sort {
+        width: 50%;
+    }
+
+    .view select,
+    .sort select {
+        width: 100%;
+    }
+
+    .statusRow {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 10px;
+        margin-top: 10px;
+        align-items: center;
+    }
+
+    .availableButton {
+        position: relative;
+        right: auto;
+        justify-content: center;
+        width: 100%;
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    .availableButton input[type="checkbox"] {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #ccc;
+    }
+
+    .availableButton input[type="checkbox"]:checked::after,
+    .availableButton input[type="checkbox"]:hover::after {
+        font-size: 20px;
+    }
+
+    .checkbox-message {
+        font-size: 14px;
+    }
+
+    .message {
+        width: 100%;
+        text-align: center;
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
 }

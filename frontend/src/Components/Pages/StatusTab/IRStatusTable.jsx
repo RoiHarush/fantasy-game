@@ -7,8 +7,7 @@ function IRStatusTable() {
     const [irStatuses, setIrStatuses] = useState([]);
 
     useEffect(() => {
-
-        fetch(`${API_URL}/api/users/ir-status`, {
+        fetch(`${API_URL}/api/teams/ir-status`, {
             headers: getAuthHeaders()
         })
             .then(res => {

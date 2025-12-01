@@ -7,6 +7,7 @@ import Style from "../../../Styles/PlayerRow.module.css";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import TeamShortNames from "../../../Utils/teamNameMap";
 import Portal from "../../../Portal";
+import { ArrowRightLeft } from "lucide-react";
 
 function PlayerRow({
     player,
@@ -113,13 +114,19 @@ function PlayerRow({
                 <td>
                     <button
                         className={`${Style.compareBtn} ${isSelectedForCompare ? Style.selectedCompare : ""}`}
-                        onClick={() => !isSelectedForCompare && onCompare?.(player)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            !isSelectedForCompare && onCompare?.(player);
+                        }}
                         disabled={isSelectedForCompare}
                     >
-                        {isSelectedForCompare ? "Selected" : "Compare"}
+                        <ArrowRightLeft size={16} className={Style.compareIcon} />
+                        <span className={Style.compareText}>
+                            {isSelectedForCompare ? "Selected" : "Compare"}
+                        </span>
                     </button>
-
                 </td>
+
                 <td>
                     <WatchButton playerId={player.id} />
                 </td>

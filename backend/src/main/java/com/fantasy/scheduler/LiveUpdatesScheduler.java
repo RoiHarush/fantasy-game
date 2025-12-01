@@ -1,13 +1,13 @@
 package com.fantasy.scheduler;
 
-import com.fantasy.application.FixtureService;
-import com.fantasy.application.LiveScoreManager;
-import com.fantasy.application.PointsService;
+import com.fantasy.domain.game.FixtureService;
+import com.fantasy.domain.score.LiveScoreManager;
+import com.fantasy.domain.score.PointsService;
 
 import com.fantasy.domain.game.GameWeekEntity;
-import com.fantasy.infrastructure.repositories.FixtureRepository;
-import com.fantasy.infrastructure.repositories.GameWeekRepository;
-import com.fantasy.infrastructure.repositories.UserGameDataRepository;
+import com.fantasy.domain.game.FixtureRepository;
+import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.team.UserGameDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;

@@ -16,7 +16,7 @@ export function WatchlistProvider({ children }) {
             return;
         }
 
-        fetch(`${API_URL}/api/users/${user.id}/watchlist`, {
+        fetch(`${API_URL}/api/teams/${user.id}/watchlist`, {
             headers: getAuthHeaders()
         })
             .then(res => res.json())
@@ -34,7 +34,7 @@ export function WatchlistProvider({ children }) {
         });
 
         try {
-            const endpoint = `${API_URL}/api/users/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
+            const endpoint = `${API_URL}/api/teams/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
             const res = await fetch(endpoint, {

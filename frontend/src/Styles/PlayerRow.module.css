@@ -78,6 +78,7 @@
     align-items: center;
     gap: 4px;
     justify-content: center;
+    margin: 0 auto;
 }
 
 .compareBtn {
@@ -89,6 +90,12 @@
     padding: 6px 10px;
     cursor: pointer;
     transition: all 0.2s ease;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 auto;
 }
 
 .selectedCompare {
@@ -109,6 +116,8 @@
     background: linear-gradient(90deg, #00ff94, #00e5ff);
     color: black;
     font-weight: bold;
+    display: block;
+    margin: 0 auto;
 }
 
 .tradeBtn {
@@ -166,4 +175,81 @@
     height: 22px;
     opacity: 0.7;
     filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
+    display: block;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+
+    .fixtureCell {
+        display: none;
+    }
+
+    .playerMainCell {
+        border: none;
+        width: 100%;
+        overflow: hidden;
+        padding-left: 0 !important;
+    }
+
+    .playerCell {
+        min-width: 0;
+        gap: 2px;
+    }
+
+    .infoIconWrapper {
+        width: 14px;
+        margin-right: 1px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .playerShirt {
+        width: 24px;
+    }
+
+    .playerName {
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 70px;
+        margin-left: 2px;
+    }
+
+    .playerSubinfo {
+        font-size: 9px;
+    }
+
+    .compareText {
+        display: none;
+    }
+
+    .compareBtn {
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        gap: 0;
+        margin: 0 auto;
+    }
+
+    .signBtn,
+    .ownerBadge {
+        padding: 3px 5px;
+        font-size: 9px;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    td {
+        padding: 4px 0 !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    td:first-child {
+        text-align: left;
+        padding-left: 0 !important;
+    }
 }

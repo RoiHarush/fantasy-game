@@ -38,7 +38,7 @@ function ClosedWindow() {
                 const usersData = await usersRes.json();
                 setUsersList(usersData);
 
-                const orderRes = await fetch(`${API_URL}/api/league-admin/manual-turn/${nextGameweek.id}`, {
+                const orderRes = await fetch(`${API_URL}/api/market/turn-order/${nextGameweek.id}`, {
                     headers: getAuthHeaders()
                 });
 

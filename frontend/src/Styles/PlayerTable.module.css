@@ -104,3 +104,68 @@
     border: none;
     background: transparent;
 }
+
+@media (max-width: 768px) {
+    .tableContainer {
+        border: none;
+        height: calc(100vh - 280px);
+        min-height: 400px;
+        width: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        background: white;
+    }
+
+    .tableContainer table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .tableContainer th:nth-child(3),
+    .tableContainer th:nth-child(4),
+    .tableContainer th:nth-child(5),
+    .tableContainer td:nth-child(3),
+    .tableContainer td:nth-child(4),
+    .tableContainer td:nth-child(5) {
+        display: none;
+    }
+
+    .tableContainer th {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 20;
+        font-size: 11px;
+        padding: 10px 0;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .tableContainer th:nth-child(1) {
+        width: 28%;
+        padding-left: 0 !important;
+        text-align: left;
+    }
+
+    .tableContainer th:nth-child(2) {
+        width: 12%;
+    }
+
+    .tableContainer th:nth-child(6),
+    .tableContainer th:nth-child(7),
+    .tableContainer th:nth-child(8) {
+        width: 20%;
+    }
+
+    .tableContainer td,
+    .tableContainer th {
+        padding: 5px 0;
+        font-size: 0.8rem;
+    }
+
+    .tableContainer td:first-child,
+    .tableContainer th:first-child {
+        padding-left: 0 !important;
+    }
+}

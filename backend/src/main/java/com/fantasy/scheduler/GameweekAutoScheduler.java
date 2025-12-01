@@ -1,8 +1,8 @@
 package com.fantasy.scheduler;
 
-import com.fantasy.application.GameweekManager;
+import com.fantasy.domain.game.GameweekManager;
 import com.fantasy.domain.game.GameWeekEntity;
-import com.fantasy.infrastructure.repositories.GameWeekRepository;
+import com.fantasy.domain.game.GameWeekRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;

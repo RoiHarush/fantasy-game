@@ -56,3 +56,66 @@
     margin-top: 2px;
     letter-spacing: 0.5px;
 }
+
+@media (max-width: 768px) {
+
+    .pitchFrame {
+        position: relative;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 3/4;
+        background: url("/UI/pitch-default.svg") no-repeat;
+        background-size: 170% 105%;
+        background-position: center top;
+        overflow: hidden;
+    }
+
+    .pitch {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: grid;
+        grid-template-rows: 0.8fr 1fr 1fr 1.2fr auto;
+        grid-template-columns: repeat(12, 1fr);
+        padding: 0;
+    }
+
+    .bench {
+        grid-column: 1 / -1;
+        grid-row: 5;
+        align-self: end;
+        justify-self: center;
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+        width: 95%;
+        padding: 5px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+    }
+
+    .bench-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .bench-label {
+        font-size: 6px;
+        font-weight: 700;
+        color: #333;
+        margin-top: 2px;
+        letter-spacing: 0.5px;
+    }
+
+    .row {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 6.6%;
+        margin: 0;
+    }
+}

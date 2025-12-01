@@ -24,7 +24,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
     const handleConfirmAssign = async (player) => {
         try {
             const res = await fetch(
-                `${API_URL}/api/chips/ir?userId=${userId}&playerId=${player.id}`,
+                `${API_URL}/api/teams/${userId}/chips/ir?playerId=${player.id}`,
                 {
                     method: "POST",
                     headers: getAuthHeaders()
@@ -33,15 +33,15 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
 
             if (!res.ok) {
                 const msg = await res.text();
-                alert(`❌ Failed to assign IR: ${msg}`);
+                alert(`Failed to assign IR: ${msg}`);
                 return;
             }
 
             const updatedSquad = await res.json();
             setSquad(updatedSquad);
-            alert(`✅ IR assigned successfully!`);
+            alert(`IR assigned successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
                 headers: getAuthHeaders()
             });
             if (chipRes.ok) {
@@ -51,7 +51,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
 
         } catch (err) {
             console.error("IR request failed:", err);
-            alert("❌ Unexpected error while processing IR");
+            alert("Unexpected error while processing IR");
         } finally {
             setConfirmIRPlayer(null);
             setShowIRModal(false);
@@ -61,7 +61,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
     const handleConfirmRelease = async (playerOut) => {
         try {
             const res = await fetch(
-                `${API_URL}/api/chips/ir/release?userId=${userId}&playerOutId=${playerOut.id}`,
+                `${API_URL}/api/teams/${userId}/chips/ir/release?playerOutId=${playerOut.id}`,
                 {
                     method: "POST",
                     headers: getAuthHeaders()
@@ -70,15 +70,15 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
 
             if (!res.ok) {
                 const msg = await res.text();
-                alert(`❌ Failed to release IR: ${msg}`);
+                alert(`Failed to release IR: ${msg}`);
                 return;
             }
 
             const updatedSquad = await res.json();
             setSquad(updatedSquad);
-            alert(`✅ IR released successfully!`);
+            alert(`IR released successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/chips/user/${userId}`, {
+            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
                 headers: getAuthHeaders()
             });
             if (chipRes.ok) {
@@ -88,7 +88,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
 
         } catch (err) {
             console.error("IR release failed:", err);
-            alert("❌ Unexpected error while releasing IR");
+            alert("Unexpected error while releasing IR");
         } finally {
             setConfirmReleasePlayer(null);
             setShowReleaseModal(false);

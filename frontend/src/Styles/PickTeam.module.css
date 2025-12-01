@@ -156,3 +156,44 @@
         transform: translateY(0);
     }
 }
+
+
+@media (max-width: 768px) {
+    .chipBar {
+        flex-wrap: nowrap;
+        gap: 8px;
+        width: 100%;
+        padding: 0 10px;
+        box-sizing: border-box;
+    }
+
+    .chipCard {
+        width: auto;
+        flex: 1;
+        min-width: 0;
+        min-height: auto;
+        padding: 8px 4px;
+    }
+
+    .chipTitle {
+        font-size: 0.65rem;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+    }
+
+    .chipIcon {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 2px;
+    }
+
+    .chipButton {
+        font-size: 0.65rem;
+        padding: 3px 0;
+        width: 100%;
+        margin: 0;
+    }
+}

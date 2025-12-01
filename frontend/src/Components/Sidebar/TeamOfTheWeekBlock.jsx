@@ -22,7 +22,7 @@ function TeamOfTheWeekBlock() {
 
                 setDreamTeam(data.team);
             } catch (err) {
-                console.error("❌ Failed to fetch Dream Team:", err);
+                console.error("Failed to fetch Dream Team:", err);
             }
         }
 

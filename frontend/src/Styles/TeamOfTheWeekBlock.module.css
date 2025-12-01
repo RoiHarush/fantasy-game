@@ -5,6 +5,7 @@
     overflow: hidden;
     font-family: "Poppins", sans-serif;
     width: 100%;
+    margin-bottom: 20px;
 }
 
 .header {
@@ -24,16 +25,15 @@
 }
 
 .tableWrapper {
-    max-height: none;
-    overflow-x: auto;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 .table {
     width: 100%;
-    min-width: 450px;
-
     border-collapse: collapse;
     font-size: 0.9rem;
+    table-layout: fixed;
 }
 
 .table thead {
@@ -47,16 +47,42 @@
 .table th,
 .table td {
     text-align: center;
-    padding: 8px 10px;
+    padding: 8px 4px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+
+.table th:nth-child(1) {
+    width: 15%;
+}
+
+.table th:nth-child(2) {
+    width: 55%;
+}
+
+.table th:nth-child(3) {
+    width: 15%;
+}
+
+.table th:nth-child(4) {
+    width: 15%;
+}
+
 
 .playerCell {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     justify-content: flex-start;
-    min-width: 200px;
+    width: 100%;
+}
+
+.playerCell span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .photo {
@@ -64,6 +90,13 @@
     height: 28px;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.player-shirt {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .points {
@@ -76,22 +109,4 @@
     padding: 14px;
     color: #777;
     font-size: 0.9rem;
-}
-
-.player-shirt {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    margin-right: 6px;
-    vertical-align: middle;
-}
-
-.tableWrapper::-webkit-scrollbar {
-    height: 6px;
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.tableWrapper::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
 }

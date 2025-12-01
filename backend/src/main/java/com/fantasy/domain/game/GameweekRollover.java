@@ -1,17 +1,16 @@
 package com.fantasy.domain.game;
 
-import com.fantasy.domain.fantasyTeam.FantasyTeam;
-import com.fantasy.domain.fantasyTeam.Squad;
+import com.fantasy.domain.team.FantasyTeam;
+import com.fantasy.domain.team.Squad;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.player.PlayerRegistry;
-import com.fantasy.domain.user.UserGameData;
+import com.fantasy.domain.team.UserGameData;
 
 import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
 
 public class GameweekRollover {
 

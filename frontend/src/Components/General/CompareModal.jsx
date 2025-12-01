@@ -5,8 +5,11 @@ import Switcher from "./Switcher";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import { useFixtures } from "../../Context/FixturesContext";
 import API_URL from "../../config";
+import useLockBodyScroll from "../../hooks/useLockBodyScroll";
 
 function CompareModal({ players, onClose }) {
+    useLockBodyScroll();
+
     const { getFixturesForTeam } = useFixtures();
     const [tab, setTab] = useState("fixtures");
     const [leftStats, setLeftStats] = useState([]);

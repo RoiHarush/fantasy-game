@@ -1,31 +1,91 @@
-.table {
-    width: 90%;
-    margin: 20px auto;
+.tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 5px;
+}
+
+.statsTable {
+    width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
-    color: #000;
+    font-size: 0.85rem;
+    color: #333;
+
+    min-width: 650px;
+    table-layout: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    color: #333;
 }
 
 .table th,
-.table td {
-    border-bottom: 1px solid #ddd;
-    padding: 8px;
+.table td,
+.statsTable th,
+.statsTable td {
+    border-bottom: 1px solid #eee;
+    padding: 10px 4px;
     text-align: center;
+    white-space: nowrap;
+    background: #fff;
+}
+
+.table thead th,
+.statsTable thead th {
+    background: #f8f8f8;
+    color: #666;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.iconRow img {
+    width: 18px;
+    height: 18px;
+    opacity: 0.6;
+    margin-bottom: 2px;
+}
+
+.iconRow th {
+    border: none;
+    padding-bottom: 4px;
+    background: transparent !important;
+}
+
+.pointsCell {
+    background-color: #f0f8ff;
+    font-weight: 700;
+    color: #38003c;
 }
 
 .totalRow td {
+    background-color: #fafafa;
     font-weight: 700;
+    border-top: 2px solid #ccc;
+}
+
+.dateCell {
+    font-weight: 500;
+    color: #222;
 }
 
 .fdrBox {
     display: inline-block;
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    font-weight: 600;
-    text-align: center;
-    line-height: 26px;
-    font-size: 0.85rem;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
 }
 
 .lightFdr {
@@ -36,30 +96,57 @@
     color: #fff;
 }
 
-.table thead {
-    background: linear-gradient(135deg, #efefef, #e0e0e0);
-    font-weight: 700;
-}
 
-.table th {
-    position: sticky;
-    top: 0;
-    background: #fafafa;
-    z-index: 2;
-}
+@media (max-width: 768px) {
 
-.table tbody tr:hover {
-    background: #f6faff;
-}
+    .hideOnMobile {
+        display: none;
+    }
 
-.iconRow img {
-    width: 20px;
-    height: 20px;
-    opacity: 0.85;
-}
+    .table th,
+    .table td {
+        padding: 6px 2px;
+        font-size: 0.75rem;
+    }
 
-.iconRow th {
-    padding-bottom: 4px;
-    border: none;
-    background: transparent;
+    .fdrBox {
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+    }
+
+    .statsTable {
+        min-width: 800px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .stickyCol1 {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #fff;
+        border-right: 1px solid #f0f0f0;
+        min-width: 40px;
+    }
+
+    .stickyCol2 {
+        position: sticky;
+        left: 40px;
+        z-index: 2;
+        background: #fff;
+        border-right: 2px solid #e0e0e0;
+        min-width: 80px;
+    }
+
+    .statsTable thead .stickyCol1,
+    .statsTable thead .stickyCol2 {
+        z-index: 4 !important;
+        background: #f8f8f8;
+    }
+
+    .stickyCol1,
+    .stickyCol2 {
+        z-index: 3;
+    }
 }

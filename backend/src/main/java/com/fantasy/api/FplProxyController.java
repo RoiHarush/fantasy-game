@@ -1,11 +1,11 @@
 package com.fantasy.api;
 
-import com.fantasy.application.GameWeekService;
+import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.realWorldData.TeamName;
-import com.fantasy.infrastructure.repositories.PlayerRepository;
+import com.fantasy.domain.player.PlayerRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;

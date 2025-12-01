@@ -23,3 +23,14 @@
 .fixtures {
     width: 100%;
 }
+
+@media (max-width: 768px) {
+    .contentWrapper {
+        width: 100%;
+    }
+
+    .title {
+        font-size: 1.3rem;
+        text-align: center;
+    }
+}
