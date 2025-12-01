@@ -2,13 +2,18 @@ package com.fantasy.domain.team;
 
 import com.fantasy.domain.team.Exceptions.FantasyTeamException;
 import com.fantasy.domain.team.Exceptions.IRException;
+import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.user.UserRepository;
+import com.fantasy.domain.user.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/teams")
@@ -16,9 +21,11 @@ public class FantasyTeamController {
 
     private static final Logger log = LoggerFactory.getLogger(FantasyTeamController.class);
     private final FantasyTeamService fantasyTeamService;
+    private final UserRepository userRepository;
 
-    public FantasyTeamController(FantasyTeamService fantasyTeamService) {
+    public FantasyTeamController(FantasyTeamService fantasyTeamService, UserRepository userRepository) {
         this.fantasyTeamService = fantasyTeamService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/{userId}/squad")
@@ -83,6 +90,9 @@ public class FantasyTeamController {
 
     @GetMapping("/{userId}/watchlist")
     public ResponseEntity<List<Integer>> getWatchlist(@PathVariable int userId) {
+        Optional<UserEntity> userEntity = userRepository.findById(userId);
+        if (userEntity.isPresent() && userEntity.get().getRole().equals(UserRole.ROLE_SUPER_ADMIN))
+            return ResponseEntity.ok(new ArrayList<>());
         return ResponseEntity.ok(fantasyTeamService.getWatchlist(userId));
     }
 

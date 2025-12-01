@@ -10,7 +10,8 @@ public class GameWeekMapper {
                 entity.getLastKickoffTime(),
                 entity.getStatus(),
                 entity.getTransferOpenTime(),
-                entity.isCalculated()
+                entity.isCalculated(),
+                entity.isTransferWindowProcessed()
         );
     }
 }

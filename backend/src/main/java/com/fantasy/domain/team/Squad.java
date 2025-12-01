@@ -372,6 +372,7 @@ public class Squad implements Draftable {
 
     public void releaseIR(Player playerOut) {
         if (IR == null) throw new IRException("There is no IR to release");
+        if (this.allPlayers.getPlayers().size() < 15 || this.bench.get("S3") == null) throw new IRException("Squad not full yet!");
         ensurePlayersInSquad(playerOut);
         makeTransfer(IR, playerOut);
         IR = null;

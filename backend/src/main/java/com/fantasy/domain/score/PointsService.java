@@ -1,11 +1,9 @@
 package com.fantasy.domain.score;
 
 import com.fantasy.domain.team.*;
-import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.game.GameweekHistoryDto;
 import com.fantasy.domain.user.UserMapper;
-import com.fantasy.domain.player.PlayerPointsRepository;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -24,21 +22,15 @@ public class PointsService {
     private final UserGameDataRepository gameDataRepo;
     private final UserSquadRepository userSquadRepo;
     private final UserPointsRepository userPointsRepo;
-    private final GameWeekService gameWeekService;
-    private final PlayerPointsRepository playerPointsRepo;
     private final PlayerRegistry playerRegistry;
 
     public PointsService(UserGameDataRepository gameDataRepo,
                          UserSquadRepository userSquadRepo,
                          UserPointsRepository userPointsRepo,
-                         GameWeekService gameWeekService,
-                         PlayerPointsRepository playerPointsRepo,
                          PlayerRegistry playerRegistry) {
         this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
         this.userPointsRepo = userPointsRepo;
-        this.gameWeekService = gameWeekService;
-        this.playerPointsRepo = playerPointsRepo;
         this.playerRegistry = playerRegistry;
     }
 
@@ -111,7 +103,7 @@ public class PointsService {
         return gameDataRepo.findByUserId(userId)
                 .map(e -> {
                     int total = UserMapper.toDomainGameData(e, playerRegistry).getTotalPoints();
-                    log.info("Total points result → user={}, total={}", userId, total);
+                    log.debug("Total points result → user={}, total={}", userId, total);
                     return total;
                 })
                 .orElse(0);

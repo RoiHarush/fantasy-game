@@ -45,6 +45,7 @@ function PickTeam({
                     setSquad={setSquad}
                     chips={chips}
                     setChips={setChips}
+                    transferWindowProcessed={nextGameweek.transferWindowProcessed}
                 />
 
                 <FirstPickManager

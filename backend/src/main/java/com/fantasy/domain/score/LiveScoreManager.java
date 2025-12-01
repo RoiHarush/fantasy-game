@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -30,7 +29,6 @@ public class LiveScoreManager {
     private final ScoringLogicService scoringLogic;
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
-    private final ApplicationEventPublisher eventPublisher;
     private final FixtureRepository fixtureRepository;
 
     public LiveScoreManager(PlayerGameweekStatsRepository statsRepository,
@@ -40,7 +38,6 @@ public class LiveScoreManager {
                             ScoringLogicService scoringLogic,
                             RestTemplate restTemplate,
                             ObjectMapper mapper,
-                            ApplicationEventPublisher eventPublisher,
                             FixtureRepository fixtureRepository) {
         this.statsRepository = statsRepository;
         this.pointsRepository = pointsRepository;
@@ -49,7 +46,6 @@ public class LiveScoreManager {
         this.scoringLogic = scoringLogic;
         this.restTemplate = restTemplate;
         this.mapper = mapper;
-        this.eventPublisher = eventPublisher;
         this.fixtureRepository = fixtureRepository;
     }
 

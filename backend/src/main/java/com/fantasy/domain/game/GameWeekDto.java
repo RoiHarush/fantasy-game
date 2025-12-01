@@ -10,9 +10,10 @@ public class GameWeekDto {
     private String status;
     private LocalDateTime transferOpenTime;
     private boolean calculated;
+    private boolean transferWindowProcessed;
 
     public GameWeekDto(int id, String name, LocalDateTime firstKickoffTime, LocalDateTime lastKickoffTime,
-                       String status, LocalDateTime transferOpenTime, boolean calculated) {
+                       String status, LocalDateTime transferOpenTime, boolean calculated, boolean transferWindowProcessed) {
         this.id = id;
         this.name = name;
         this.firstKickoffTime = firstKickoffTime;
@@ -20,6 +21,7 @@ public class GameWeekDto {
         this.status = status;
         this.transferOpenTime = transferOpenTime;
         this.calculated = calculated;
+        this.transferWindowProcessed = transferWindowProcessed;
     }
 
     public int getId() { return id; }
@@ -29,5 +31,7 @@ public class GameWeekDto {
     public String getStatus() { return status; }
     public LocalDateTime getTransferOpenTime() { return transferOpenTime; }
     public boolean isCalculated() { return calculated; }
-
+    public boolean isTransferWindowProcessed() {
+        return transferWindowProcessed;
+    }
 }

@@ -1,13 +1,12 @@
 package com.fantasy.domain.user;
 
-import com.fantasy.domain.team.UserGameDataRepository; // רק בשביל שם הקבוצה לתצוגה
+import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserGameDataEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service

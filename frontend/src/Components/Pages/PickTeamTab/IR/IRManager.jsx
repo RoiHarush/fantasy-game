@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
@@ -7,8 +7,7 @@ import API_URL from "../../../../config";
 import { usePlayers } from "../../../../Context/PlayersContext";
 import { getAuthHeaders } from "../../../../services/authHelper";
 
-
-function IRManager({ userId, squad, setSquad, chips, setChips }) {
+function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowProcessed }) {
     const [showIRModal, setShowIRModal] = useState(false);
     const [confirmIRPlayer, setConfirmIRPlayer] = useState(null);
     const [showReleaseModal, setShowReleaseModal] = useState(false);
@@ -17,6 +16,42 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
 
     const isActive = chips.active?.IR === true;
     const isUsedUp = chips.remaining?.IR <= 0;
+
+    const playersCount = useMemo(() => {
+        if (!squad) return 0;
+        let count = 0;
+        if (squad.startingLineup) {
+            Object.values(squad.startingLineup).forEach((playersArray) => {
+                if (Array.isArray(playersArray)) {
+                    count += playersArray.length;
+                }
+            });
+        }
+        if (squad.bench) {
+            Object.values(squad.bench).forEach((playerId) => {
+                if (playerId) count += 1;
+            });
+        }
+        return count;
+    }, [squad]);
+
+
+    const isReleaseDisabled = playersCount < 15 || transferWindowProcessed;
+
+    const isPlayDisabled = isUsedUp || transferWindowProcessed;
+
+
+    const getReleaseTitle = () => {
+        if (transferWindowProcessed) return "Cannot release IR after deadline";
+        if (playersCount < 15) return "Squad must be full (15 players) to release IR";
+        return "Release IR Player";
+    };
+
+    const getPlayTitle = () => {
+        if (transferWindowProcessed) return "Cannot assign IR after deadline";
+        if (isUsedUp) return "Unavailable";
+        return "Play IR Chip";
+    };
 
     const openIRModal = () => setShowIRModal(true);
     const openReleaseModal = () => setShowReleaseModal(true);
@@ -108,6 +143,8 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
                 <button
                     className={`${Style.chipButton} ${Style.active}`}
                     onClick={openReleaseModal}
+                    disabled={isReleaseDisabled}
+                    title={getReleaseTitle()}
                 >
                     Release
                 </button>
@@ -115,7 +152,8 @@ function IRManager({ userId, squad, setSquad, chips, setChips }) {
                 <button
                     className={Style.chipButton}
                     onClick={openIRModal}
-                    disabled={isUsedUp}
+                    disabled={isPlayDisabled}
+                    title={getPlayTitle()}
                 >
                     {isUsedUp ? "Unavailable" : "Play"}
                 </button>
