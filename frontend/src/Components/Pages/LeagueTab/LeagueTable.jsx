@@ -7,7 +7,7 @@ function LeagueTable({ currentUser, league, compact = false }) {
             <table>
                 <thead className={Style["leagueTable-head"]}>
                     <tr>
-                        <th>Rank</th>
+                        <th className={Style.rankColumn}>Rank</th>
                         <th className={Style.teamHeader}>Team</th>
                         <th>GW</th>
                         <th>TOT</th>
@@ -19,7 +19,8 @@ function LeagueTable({ currentUser, league, compact = false }) {
                             key={user.id}
                             className={user.id === currentUser.id ? Style.currentUserRow : ""}
                         >
-                            <td>{user.rank}</td>
+                            <td className={Style.rankColumn}>{user.rank}</td>
+
                             <td className={Style.teamCell}>
                                 <TableUser user={user} currentUser={currentUser} />
                             </td>

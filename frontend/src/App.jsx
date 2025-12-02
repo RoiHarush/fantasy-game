@@ -23,7 +23,6 @@ import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
 import { fetchUserById } from "./services/usersService";
 import NotFoundPage from "./Components/Pages/NotFoundPage";
 import Footer from "./Footer";
-import ClosedWindow from "./Components/Pages/TransferWindowTab/ClosedWindow";
 
 
 function MainAppLayout() {

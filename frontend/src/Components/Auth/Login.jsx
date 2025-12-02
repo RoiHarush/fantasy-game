@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "../../Styles/Login.module.css";
 import API_URL from "../../config";
 import { useAuth } from "../../Context/AuthContext";
@@ -8,8 +9,20 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    const { login } = useAuth();
+    const { login, user } = useAuth();
+    const navigate = useNavigate();
+
     const disallowed = /[\sא-ת]/;
+
+    useEffect(() => {
+        if (user) {
+            if (user.role === 'ROLE_SUPER_ADMIN') {
+                navigate('/admin', { replace: true });
+            } else {
+                navigate('/status', { replace: true });
+            }
+        }
+    }, [user, navigate]);
 
     const logos = useMemo(() => {
         return Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);

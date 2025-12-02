@@ -20,6 +20,7 @@ function PickTeam({
     saveTeam,
     isDirty,
     setIsDirty,
+    refreshPlayerData
 }) {
     const { players } = usePlayers();
     const [showSavedMessage, setShowSavedMessage] = useState(false);
@@ -46,6 +47,7 @@ function PickTeam({
                     chips={chips}
                     setChips={setChips}
                     transferWindowProcessed={nextGameweek.transferWindowProcessed}
+                    refreshPlayerData={refreshPlayerData}
                 />
 
                 <FirstPickManager

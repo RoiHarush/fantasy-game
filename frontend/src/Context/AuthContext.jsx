@@ -23,6 +23,20 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
+    useEffect(() => {
+        const handleStorageChange = (event) => {
+            if (event.key === 'token' || event.key === 'loggedUser') {
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
+
     const login = (userData, token) => {
         localStorage.setItem('loggedUser', JSON.stringify(userData));
         localStorage.setItem('token', token);

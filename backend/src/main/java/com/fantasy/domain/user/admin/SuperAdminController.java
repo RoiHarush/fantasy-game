@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
 public class SuperAdminController {
 
 
@@ -56,22 +56,26 @@ public class SuperAdminController {
 
 
     @PostMapping("/update-gameweeks")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public void updateGameweeks(){
         gameWeekService.loadFromApiAndSave();
     }
 
     @PostMapping("/refresh-players")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public void refreshPlayers(){
         playerSyncService.refreshBasicPlayerData();
     }
 
     @PostMapping("/players/update-points")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> updateCurrentGwPoints(@RequestParam int gw) {
         playerSyncService.updateGameweekPoints(gw);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/user/{userId}/squad/{gw}")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> saveSquadForGameweek(
             @PathVariable int userId,
             @PathVariable int gw,
@@ -82,12 +86,14 @@ public class SuperAdminController {
     }
 
     @PostMapping("/sync-current")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> syncCurrent() {
         playerSyncService.fullSyncCurrentGw();
         return ResponseEntity.ok("Synced current gameweek successfully.");
     }
 
     @PostMapping("/sync/")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> syncForGw(@RequestParam int gw) {
         playerSyncService.fullSyncForGw(gw);
         return ResponseEntity.ok("Synced gameweek " + gw + " successfully.");
@@ -105,6 +111,7 @@ public class SuperAdminController {
     }
 
     @PostMapping("/close-transfer-window")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> closeTransferWindow() {
         try {
             marketService.closeWindow();
@@ -116,6 +123,7 @@ public class SuperAdminController {
     }
 
     @PostMapping("/open/{gw}")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> openNextGameweek(@PathVariable int gw) {
         try {
             gameweekManager.openNextGameweek(gw, true);
@@ -127,6 +135,7 @@ public class SuperAdminController {
     }
 
     @PostMapping("/process-gameweek/{gameweek}")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public String processGameweek(@PathVariable int gameweek) {
         String message;
         try {
@@ -139,6 +148,7 @@ public class SuperAdminController {
     }
 
     @GetMapping("/users-summary")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<List<AdminUserSummaryDto>> getUsersSummary() {
         List<UserEntity> users = userRepo.findAll();
         Map<Integer, UserGameDataEntity> gameDataMap = gameDataRepo.findAll().stream()
@@ -161,6 +171,7 @@ public class SuperAdminController {
     }
 
     @GetMapping("/user-details/{userId}")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<AdminUserDetailsDto> getFullUserDetails(@PathVariable int userId) {
         try {
             AdminUserDetailsDto userDetails = adminUserService.getFullUserDetails(userId);
@@ -171,6 +182,7 @@ public class SuperAdminController {
     }
 
     @PutMapping("/user-details/{userId}")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> updateFullUserDetails(@PathVariable int userId, @RequestBody AdminUserDetailsDto dto) {
         try {
             adminUserService.updateFullUserDetails(userId, dto);
@@ -179,5 +191,4 @@ public class SuperAdminController {
             return ResponseEntity.badRequest().build();
         }
     }
-
 }

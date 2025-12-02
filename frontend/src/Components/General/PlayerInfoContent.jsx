@@ -24,7 +24,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                     <thead>
                         <tr>
                             <th className={Style.hideOnMobile}>Date</th>
-                            <th>GW</th>
+                            <th className={Style.gwColumn}>GW</th>
                             <th>Opponent</th>
                             <th>FDR</th>
                         </tr>
@@ -50,7 +50,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                                 return (
                                     <tr key={gw}>
                                         <td className={`${Style.dateCell} ${Style.hideOnMobile}`}>{date}</td>
-                                        <td>{gw}</td>
+                                        <td className={Style.gwColumn}>{gw}</td>
                                         <td>{opponent}</td>
                                         <td>
                                             <span
@@ -87,7 +87,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                         </tr>
 
                         <tr>
-                            <th>GW</th>
+                            <th className={Style.gwColumn}>GW</th>
                             <th>OPP</th>
                             <th>PTS</th>
                             <th>MP</th>
@@ -126,7 +126,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
 
                                 return (
                                     <tr key={idx}>
-                                        <td><strong>{gw}</strong></td>
+                                        <td className={Style.gwColumn}><strong>{gw}</strong></td>
                                         <td>{opponent}</td>
 
                                         <td className={Style.pointsCell}><strong>{totalRow?.points || 0}</strong></td>

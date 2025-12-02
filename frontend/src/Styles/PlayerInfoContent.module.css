@@ -116,9 +116,16 @@
     }
 
     .statsTable {
-        min-width: 800px;
+        min-width: 100%;
         border-collapse: separate;
         border-spacing: 0;
+    }
+
+    .gwColumn {
+        min-width: 35px;
+        text-align: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
     .stickyCol1 {

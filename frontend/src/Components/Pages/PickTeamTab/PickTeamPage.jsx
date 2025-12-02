@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchUserChips, saveTeamRequest } from "../../../services/pickTeamService";
 import { fetchPlayerDataForGameweek, fetchSquadForGameweek } from "../../../services/squadService";
@@ -18,6 +18,16 @@ function PickTeamPage() {
     const [isDirty, setIsDirty] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const refreshPlayerData = useCallback(async () => {
+        if (!user || !nextGameweek) return;
+        try {
+            const data = await fetchPlayerDataForGameweek(user.id, nextGameweek.id);
+            setPlayerData(data);
+        } catch (err) {
+            console.error("Failed to refresh player data", err);
+        }
+    }, [user, nextGameweek]);
 
     useEffect(() => {
         if (!user || !nextGameweek) return;
@@ -103,6 +113,7 @@ function PickTeamPage() {
                     saveTeam={saveTeam}
                     isDirty={isDirty}
                     setIsDirty={setIsDirty}
+                    refreshPlayerData={refreshPlayerData}
                 />
             }
             right={<UserSidebar user={user} />}

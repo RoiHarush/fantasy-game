@@ -7,7 +7,7 @@ import API_URL from "../../../../config";
 import { usePlayers } from "../../../../Context/PlayersContext";
 import { getAuthHeaders } from "../../../../services/authHelper";
 
-function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowProcessed }) {
+function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData }) {
     const [showIRModal, setShowIRModal] = useState(false);
     const [confirmIRPlayer, setConfirmIRPlayer] = useState(null);
     const [showReleaseModal, setShowReleaseModal] = useState(false);
@@ -84,6 +84,8 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
                 setChips(updatedChips);
             }
 
+            if (refreshPlayerData) await refreshPlayerData();
+
         } catch (err) {
             console.error("IR request failed:", err);
             alert("Unexpected error while processing IR");
@@ -120,6 +122,8 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
                 const updatedChips = await chipRes.json();
                 setChips(updatedChips);
             }
+
+            if (refreshPlayerData) await refreshPlayerData();
 
         } catch (err) {
             console.error("IR release failed:", err);

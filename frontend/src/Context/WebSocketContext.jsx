@@ -14,6 +14,8 @@ export function WebSocketProvider({ children }) {
         const socket = new SockJS(`${API_URL}/ws`);
         const stomp = over(socket);
 
+        stomp.debug = () => { };
+
         stomp.connect({}, () => {
             stompClientRef.current = stomp;
             setConnected(true);
@@ -21,7 +23,7 @@ export function WebSocketProvider({ children }) {
 
         return () => {
             if (stomp.connected) {
-                stomp.disconnect(() => console.log("Disconnected"));
+                stomp.disconnect(() => { });
             }
         };
     }, []);
@@ -61,4 +63,3 @@ export function WebSocketProvider({ children }) {
 export function useWebSocket() {
     return useContext(WebSocketContext);
 }
-

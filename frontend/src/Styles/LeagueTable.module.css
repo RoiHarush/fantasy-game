@@ -112,12 +112,24 @@
         font-size: 0.8rem;
     }
 
+    .rankColumn {
+        min-width: 30px;
+        text-align: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .teamCell,
+    .teamHeader {
+        padding-left: 12px !important;
+    }
+
     .leagueTable th:nth-child(1) {
-        width: 12%;
+        width: 10%;
     }
 
     .leagueTable th:nth-child(2) {
-        width: 52%;
+        width: 54%;
     }
 
     .leagueTable th:nth-child(3) {
@@ -133,6 +145,6 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 140px;
+        max-width: 130px;
     }
 }

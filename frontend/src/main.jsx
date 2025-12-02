@@ -9,10 +9,11 @@ import { PlayersProvider } from "./Context/PlayersContext.jsx";
 import { GameweekProvider } from "./Context/GameweeksContext.jsx";
 import { TeamsProvider } from "./Context/TeamsContext.jsx";
 import { WebSocketProvider } from "./Context/WebSocketContext.jsx";
-import RootApp from "./RootApp.jsx";
 import { AuthProvider } from "./Context/AuthContext.jsx";
 import { WatchlistProvider } from "./Context/WatchlistContext.jsx";
 import { SystemStatusProvider } from "./Context/SystemStatusContext.jsx";
+import { FixturesProvider } from "./Context/FixturesContext.jsx";
+import App from "./App.jsx";
 
 
 createRoot(document.getElementById("root")).render(
@@ -25,7 +26,9 @@ createRoot(document.getElementById("root")).render(
               <GameweekProvider>
                 <PlayersProvider>
                   <TeamsProvider>
-                    <RootApp />
+                    <FixturesProvider>
+                      <App />
+                    </FixturesProvider>
                   </TeamsProvider>
                 </PlayersProvider>
               </GameweekProvider>

@@ -13,8 +13,10 @@ function ClosedWindow() {
     const navigate = useNavigate();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [usersList, setUsersList] = useState([]);
     const [currentOrder, setCurrentOrder] = useState([]);
+    const [opening, setOpening] = useState(false);
 
     const parseDateArray = (dateArray) => {
         if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
@@ -26,6 +28,37 @@ function ClosedWindow() {
         : new Date();
 
     const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
+
+    const onClickOpenWindow = () => {
+        setShowConfirmModal(true);
+    };
+
+    const performOpenWindow = async () => {
+        if (!nextGameweek) return;
+
+        setOpening(true);
+        try {
+            const res = await fetch(`${API_URL}/api/admin/open-transfer-window/${nextGameweek.id}`, {
+                method: "POST",
+                headers: getAuthHeaders()
+            });
+
+            if (res.ok) {
+                setShowConfirmModal(false);
+                window.location.reload();
+            } else {
+                const msg = await res.text();
+                alert(`Failed to open window: ${msg}`);
+                setShowConfirmModal(false);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error opening window");
+            setShowConfirmModal(false);
+        } finally {
+            setOpening(false);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -84,85 +117,30 @@ function ClosedWindow() {
                     margin: '20px auto',
                 }}
             >
-                <div
-                    style={{
-                        color: '#00e5ff',
-                        fontWeight: 'bold',
-                        marginBottom: '15px',
-                        textAlign: 'center',
-                        borderBottom: '1px solid rgba(255,255,255,0.12)',
-                        paddingBottom: '8px',
-                        fontSize: '1.1rem'
-                    }}
-                >
+                <div style={{ color: '#00e5ff', fontWeight: 'bold', marginBottom: '15px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: '8px', fontSize: '1.1rem' }}>
                     Upcoming Draft Order (GW {nextGameweek?.id})
                 </div>
-
                 {currentOrder.length > 0 ? (
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '12px',
-                            marginTop: '10px'
-                        }}
-                    >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {currentOrder.slice(0, 7).map((name, index) => (
-                                <div
-                                    key={index}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        padding: '8px 12px',
-                                        backgroundColor: 'rgba(255,255,255,0.05)',
-                                        borderRadius: '6px',
-                                        borderLeft: '3px solid #10b981',
-                                        color: 'white',
-                                        fontSize: '0.95rem'
-                                    }}
-                                >
-                                    <span style={{ color: '#9ca3af', width: '24px' }}>
-                                        {index + 1}.
-                                    </span>
+                                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: '3px solid #10b981', color: 'white', fontSize: '0.95rem' }}>
+                                    <span style={{ color: '#9ca3af', width: '24px' }}>{index + 1}.</span>
                                     <span style={{ fontWeight: '500' }}>{name}</span>
                                 </div>
                             ))}
                         </div>
-
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {currentOrder.slice(7, 14).map((name, index) => (
-                                <div
-                                    key={index + 7}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        padding: '8px 12px',
-                                        backgroundColor: 'rgba(255,255,255,0.05)',
-                                        borderRadius: '6px',
-                                        borderLeft: '3px solid #3b82f6',
-                                        color: 'white',
-                                        fontSize: '0.95rem'
-                                    }}
-                                >
-                                    <span style={{ color: '#9ca3af', width: '24px' }}>
-                                        {index + 8}.
-                                    </span>
+                                <div key={index + 7} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: '3px solid #3b82f6', color: 'white', fontSize: '0.95rem' }}>
+                                    <span style={{ color: '#9ca3af', width: '24px' }}>{index + 8}.</span>
                                     <span style={{ fontWeight: '500' }}>{name}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 ) : (
-                    <div
-                        style={{
-                            color: '#9ca3af',
-                            textAlign: 'center',
-                            fontStyle: 'italic',
-                            fontSize: '0.9rem',
-                            padding: '12px'
-                        }}
-                    >
+                    <div style={{ color: '#9ca3af', textAlign: 'center', fontStyle: 'italic', fontSize: '0.9rem', padding: '12px' }}>
                         Draft order hasn't been set yet.
                     </div>
                 )}
@@ -176,22 +154,40 @@ function ClosedWindow() {
             </button>
 
             {isAdmin && (
-                <div style={{ marginTop: '30px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ marginTop: '30px', width: '100%', display: 'flex', justifyContent: 'center', gap: '15px' }}>
                     <button
                         style={{
-                            backgroundColor: '#00e5ff',
-                            color: 'white',
+                            backgroundColor: 'transparent',
+                            color: '#00e5ff',
                             padding: '10px 20px',
                             borderRadius: '6px',
                             border: '1px solid #00e5ff',
                             cursor: 'pointer',
                             fontWeight: '600',
                             fontSize: '0.9rem',
-                            opacity: 0.9
                         }}
                         onClick={() => setIsModalOpen(true)}
                     >
                         Manage Draft Order
+                    </button>
+
+                    <button
+                        style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            cursor: opening ? 'not-allowed' : 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            opacity: opening ? 0.7 : 1,
+                            boxShadow: '0 2px 5px rgba(239, 68, 68, 0.3)'
+                        }}
+                        onClick={onClickOpenWindow}
+                        disabled={opening}
+                    >
+                        {opening ? "Opening..." : "Open Window NOW"}
                     </button>
                 </div>
             )}
@@ -201,6 +197,84 @@ function ClosedWindow() {
                     onClose={() => setIsModalOpen(false)}
                     usersList={usersList}
                 />
+            )}
+
+            {showConfirmModal && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999
+                }}>
+                    <div style={{
+                        backgroundColor: '#1f2937',
+                        padding: '25px',
+                        borderRadius: '12px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                        border: '1px solid #374151'
+                    }}>
+                        <div style={{
+                            fontSize: '3rem',
+                            marginBottom: '10px'
+                        }}>
+                        </div>
+                        <h3 style={{
+                            color: '#fff',
+                            fontSize: '1.5rem',
+                            marginBottom: '10px',
+                            fontWeight: '700'
+                        }}>
+                            Are you sure?
+                        </h3>
+                        <p style={{
+                            color: '#9ca3af',
+                            marginBottom: '25px',
+                            lineHeight: '1.5'
+                        }}>
+                            You are about to open the <strong>Transfer Window</strong> immediately.
+                            This action will allow all users to start making transfers.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setShowConfirmModal(false)}
+                                style={{
+                                    padding: '10px 20px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #4b5563',
+                                    backgroundColor: 'transparent',
+                                    color: '#d1d5db',
+                                    cursor: 'pointer',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={performOpenWindow}
+                                disabled={opening}
+                                style={{
+                                    padding: '10px 20px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    cursor: opening ? 'wait' : 'pointer',
+                                    fontWeight: '600',
+                                    boxShadow: '0 4px 6px rgba(239, 68, 68, 0.2)'
+                                }}
+                            >
+                                {opening ? "Opening..." : "Yes, Open it"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
