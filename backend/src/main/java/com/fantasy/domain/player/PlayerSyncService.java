@@ -241,7 +241,16 @@ public class PlayerSyncService {
                 int fplId = node.get("id").asInt();
                 if (!node.get("can_select").asBoolean()) continue;
 
-                PlayerEntity entity = playerRepo.findById(fplId).orElse(new PlayerEntity());
+                PlayerEntity entity = playerRepo.findById(fplId).orElseGet(() -> {
+                    PlayerEntity e = new PlayerEntity();
+                    e.setId(fplId);
+                    e.setOwnerId(-1);
+                    e.setState(PlayerState.NONE);
+                    e.setTotalPoints(0);
+                    e.setPhoto(node.get("code").asText());
+                    return e;
+                });
+
                 updateEntityBasicData(entity, node);
                 playerRepo.save(entity);
 
@@ -411,6 +420,9 @@ public class PlayerSyncService {
         entity.setTeamId(node.get("team").asInt());
         entity.setInjured(!node.get("status").asText().equals("a"));
         entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
+
+        String code = node.get("code").asText();
+        entity.setPhoto(code);
 
         if (node.has("chance_of_playing_this_round") && !node.get("chance_of_playing_this_round").isNull()) {
             entity.setChanceOfPlayingThisRound(node.get("chance_of_playing_this_round").asInt());

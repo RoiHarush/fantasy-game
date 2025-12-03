@@ -104,8 +104,8 @@ public class FantasyTeamService {
 
     @Transactional
     public void saveTeamForPrevGameweek(int userId, SquadDto dto, int gw) {
-        if (gw >= gameWeekService.getCurrentGameweek().getId())
-            throw new RuntimeException("Can only update previous gameweeks");
+//        if (gw >= gameWeekService.getCurrentGameweek().getId())
+//            throw new RuntimeException("Can only update previous gameweeks");
 
         UserGameDataEntity gameDataEntity = getGameDataEntity(userId);
         UserSquadEntity squad = userSquadRepo.findByUser_IdAndGameweek(userId, gw)

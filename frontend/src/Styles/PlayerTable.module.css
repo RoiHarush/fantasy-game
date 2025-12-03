@@ -1,58 +1,46 @@
-.tableContainer {
-    min-height: 500px;
-    max-height: 500px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    background: #fff;
-    position: relative;
-}
-
-.tableContainer table {
+.mainTable {
     width: 100%;
     border-collapse: collapse;
     font-family: Arial, sans-serif;
     font-size: 0.95rem;
 }
 
-.tableContainer thead {
-    border-bottom: 1px solid #ddd;
+.mainTable thead {
+    background: #fff;
+    z-index: 10;
 }
 
-.tableContainer thead th {
-    position: sticky;
-    top: 0;
-    background: #fff;
+.mainTable th {
+    background: #f8f9fa;
     color: #555;
     font-weight: 600;
     text-align: left;
-    padding: 10px 12px;
-    z-index: 2;
+    padding: 12px;
     font-size: 0.85rem;
     white-space: nowrap;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 2px solid #ddd;
 }
 
-.tableContainer thead th:nth-child(2),
-.tableContainer thead th:nth-child(3),
-.tableContainer thead th:nth-child(4),
-.tableContainer td:nth-child(2),
-.tableContainer td:nth-child(3),
-.tableContainer td:nth-child(4) {
+.mainTable th:nth-child(2),
+.mainTable th:nth-child(3),
+.mainTable th:nth-child(4),
+.mainTable td:nth-child(2),
+.mainTable td:nth-child(3),
+.mainTable td:nth-child(4) {
     text-align: center;
 }
 
-.tableContainer tbody tr {
+.mainTable tbody tr {
     background: #fff;
-    height: 56px;
+    height: 64px;
     border-bottom: 1px solid #eee;
-    transition: background 0.15s ease;
 }
 
-.tableContainer tbody tr:hover {
-    background: #f9f9f9;
+.mainTable tbody tr:hover {
+    background: #f0f8ff;
 }
 
-.tableContainer td {
+.mainTable td {
     color: #222;
     padding: 8px 12px;
     vertical-align: middle;
@@ -60,112 +48,51 @@
     white-space: nowrap;
 }
 
-.tableContainer td:last-child {
+.mainTable td:last-child {
     text-align: center;
 }
 
-.tableContainer button {
+.mainTable button {
     min-width: 70px;
-    padding: 5px 12px;
+    padding: 6px 12px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.85rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
-.tableContainer button:hover:not(:disabled) {
+.mainTable button:hover:not(:disabled) {
     opacity: 0.9;
+    transform: translateY(-1px);
 }
 
-.tableContainer button:disabled {
+.mainTable button:disabled {
     background: #e0e0e0;
-    color: #777;
-    cursor: default;
-}
-
-.tableContainer td:first-child,
-.tableContainer th:first-child {
-    padding-left: 16px;
-}
-
-.tableContainer td:last-child,
-.tableContainer th:last-child {
-    padding-right: 16px;
-}
-
-.tableContainer:focus {
-    outline: none;
-}
-
-.tableContainer tbody tr:empty td {
-    border: none;
-    background: transparent;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
 }
 
 @media (max-width: 768px) {
-    .tableContainer {
-        border: none;
-        height: calc(100vh - 280px);
-        min-height: 400px;
-        width: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        background: white;
-    }
 
-    .tableContainer table {
-        width: 100%;
-        table-layout: fixed;
-    }
-
-    .tableContainer th:nth-child(3),
-    .tableContainer th:nth-child(4),
-    .tableContainer th:nth-child(5),
-    .tableContainer td:nth-child(3),
-    .tableContainer td:nth-child(4),
-    .tableContainer td:nth-child(5) {
-        display: none;
-    }
-
-    .tableContainer th {
-        position: sticky;
-        top: 0;
-        background: #fff;
-        z-index: 20;
-        font-size: 11px;
-        padding: 10px 0;
-        text-align: center;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    .tableContainer th:nth-child(1) {
-        width: 28%;
-        padding-left: 0 !important;
-        text-align: left;
-    }
-
-    .tableContainer th:nth-child(2) {
-        width: 12%;
-    }
-
-    .tableContainer th:nth-child(6),
-    .tableContainer th:nth-child(7),
-    .tableContainer th:nth-child(8) {
-        width: 20%;
-    }
-
-    .tableContainer td,
-    .tableContainer th {
-        padding: 5px 0;
+    .mainTable th,
+    .mainTable td {
+        padding: 8px 4px;
         font-size: 0.8rem;
     }
 
-    .tableContainer td:first-child,
-    .tableContainer th:first-child {
-        padding-left: 0 !important;
+    .mainTable th:nth-child(4),
+    .mainTable th:nth-child(5),
+    .mainTable td:nth-child(4),
+    .mainTable td:nth-child(5) {
+        display: none;
+    }
+
+    .mainTable th:nth-child(1) {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }

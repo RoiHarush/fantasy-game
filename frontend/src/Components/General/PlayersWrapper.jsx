@@ -5,7 +5,7 @@ import ControlsBar from "./ControlsBar";
 import Style from "../../Styles/ScoutWrapper.module.css";
 import CompareModal from "./CompareModal";
 
-function PlayersWrapper({ user, mode = "scout", onPlayerSelect, currentTurnUserId, irPosition }) {
+function PlayersWrapper({ user, mode = "scout", onPlayerSelect, currentTurnUserId, irPosition, allTeamFixtures }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeButton, setActiveButton] = useState("All players");
     const [viewFilter, setViewFilter] = useState("All");
@@ -86,6 +86,7 @@ function PlayersWrapper({ user, mode = "scout", onPlayerSelect, currentTurnUserI
                 currentTurnUserId={currentTurnUserId}
                 onCompare={handleCompare}
                 comparePlayers={comparePlayers}
+                allTeamFixtures={allTeamFixtures}
             />
 
             {showCompareModal && (

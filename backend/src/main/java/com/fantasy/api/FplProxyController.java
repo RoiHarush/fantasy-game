@@ -1,11 +1,10 @@
 package com.fantasy.api;
 
 import com.fantasy.domain.game.GameWeekService;
-import com.fantasy.domain.player.Player;
-import com.fantasy.domain.player.PlayerEntity;
-import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.player.*;
 import com.fantasy.domain.realWorldData.TeamName;
-import com.fantasy.domain.player.PlayerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -19,6 +18,8 @@ import java.util.Map;
 @RequestMapping("/api/fpl")
 @CrossOrigin(origins = "http://localhost:5173")
 public class FplProxyController {
+
+    private static final Logger log = LoggerFactory.getLogger(PlayerSyncService.class);
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final GameWeekService gameWeekService;
@@ -110,7 +111,7 @@ public class FplProxyController {
                     result.add(entry);
 
                 } catch (Exception e) {
-                    System.out.println("Failed to fetch GW " + gw);
+                    log.info("Failed to fetch gw: {}", gw );
                 }
             }
 

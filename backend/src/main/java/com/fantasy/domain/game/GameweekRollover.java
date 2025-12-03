@@ -51,7 +51,7 @@ public class GameweekRollover {
 
     private static Squad copySquad(Squad squad){
         PlayerRegistry pr = new PlayerRegistry();
-        Map<PlayerPosition, List<Player>> starting = new HashMap<>();
+                Map<PlayerPosition, List<Player>> starting = new HashMap<>();
         Map<String, Player> bench = new LinkedHashMap<>();
 
         starting.put(PlayerPosition.GOALKEEPER, new ArrayList<>());

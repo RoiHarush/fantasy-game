@@ -7,6 +7,7 @@ import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
 import { passTurn } from "../../../services/transferWindowService";
+import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
 
 function TransferWindow({ user, allUsers, initialWindowState }) {
     const { players, setPlayers } = usePlayers();
@@ -26,6 +27,8 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
     const [isIrRound, setIsIrRound] = useState(initialWindowState?.currentRound === 'IR');
     const [irPosition, setIrPosition] = useState(null);
+
+    const allTeamFixtures = useAllTeamFixtures();
 
     const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
@@ -225,6 +228,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 onPlayerSelect={setSelectedPlayerIn}
                 currentTurnUserId={currentTurnUserId}
                 irPosition={isIrRound ? irPosition : null}
+                allTeamFixtures={allTeamFixtures}
             />
 
             {selectedPlayerIn && (

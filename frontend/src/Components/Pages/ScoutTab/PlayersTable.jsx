@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from "react";
+import React, { useMemo } from "react";
+import { TableVirtuoso } from "react-virtuoso";
 import Style from "../../../Styles/PlayerTable.module.css";
 import PlayerRow from "./PlayerRow";
 import { useGameweek } from "../../../Context/GameweeksContext";
@@ -11,87 +12,74 @@ function PlayerTable({
     currentTurnUserId,
     onCompare,
     comparePlayers,
+    allTeamFixtures
 }) {
     const { currentGameweek } = useGameweek();
     const currentGw = currentGameweek?.id ?? 1;
-    const upcomingGws = [currentGw + 1, currentGw + 2, currentGw + 3].filter((gw) => gw <= 38);
 
-    const rowHeight = 64;
-    const buffer = 10;
-    const containerRef = useRef(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [visibleCount, setVisibleCount] = useState(0);
-
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const handleScroll = () => setScrollTop(container.scrollTop);
-        container.addEventListener("scroll", handleScroll);
-
-        setVisibleCount(Math.ceil(container.clientHeight / rowHeight));
-
-        return () => {
-            if (container) {
-                container.removeEventListener("scroll", handleScroll);
-            }
-        };
-    }, []);
-
-
-    const totalHeight = players.length * rowHeight;
-    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
-    const endIndex = Math.min(players.length, startIndex + visibleCount + buffer * 2);
-    const visiblePlayers = players.slice(startIndex, endIndex);
-
-    const topSpacerHeight = startIndex * rowHeight;
-    const bottomSpacerHeight = totalHeight - (endIndex * rowHeight);
+    const upcomingGws = useMemo(() =>
+        [currentGw + 1, currentGw + 2, currentGw + 3].filter((gw) => gw <= 38),
+        [currentGw]);
 
     return (
-        <div className={Style.tableContainer} ref={containerRef}>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>Pts</th>
+        <div style={{ height: "calc(100vh - 280px)", width: "100%", background: "#fff" }}>
+            <TableVirtuoso
+                data={players}
+                context={{ comparePlayers }}
+
+                components={{
+                    Table: ({ style, ...props }) => (
+                        <table
+                            {...props}
+                            style={{ ...style, width: '100%', borderCollapse: 'collapse' }}
+                            className={Style.mainTable}
+                        />
+                    ),
+                    TableRow: (props) => {
+                        const isSelected = props.context?.comparePlayers?.some(p => p.id === props.item.id);
+                        return (
+                            <tr
+                                {...props}
+                                className={isSelected ? Style.compareSelected : ""}
+                            />
+                        );
+                    },
+                    TableHead: React.forwardRef((props, ref) => (
+                        <thead {...props} ref={ref} style={{ background: '#fff', zIndex: 10 }} />
+                    ))
+                }}
+
+                fixedHeaderContent={() => (
+                    <tr className={Style.headerRow}>
+                        <th style={{ width: '250px' }}>Player</th>
+                        <th style={{ width: '50px' }}>Pts</th>
                         {upcomingGws.map((gw) => (
-                            <th key={gw}>GW{gw}</th>
+                            <th key={gw} style={{ width: '80px' }}>GW{gw}</th>
                         ))}
-                        <th>Compare</th>
-                        <th>Watchlist</th>
-                        {mode === "scout" && <th>Owner</th>}
-                        {mode === "transfer" && <th>Sign</th>}
+                        <th style={{ width: '100px' }}>Compare</th>
+                        <th style={{ width: '60px' }}>Watchlist</th>
+                        {mode === "scout" && <th style={{ width: '100px' }}>Owner</th>}
+                        {mode === "transfer" && <th style={{ width: '80px' }}>Sign</th>}
                     </tr>
-                </thead>
+                )}
 
-                <tbody>
-                    {topSpacerHeight > 0 && (
-                        <tr style={{ height: `${topSpacerHeight}px` }}>
-                            <td colSpan="10"></td>
-                        </tr>
-                    )}
-
-                    {visiblePlayers.map((player) => (
+                itemContent={(index, player) => {
+                    const teamFixtures = allTeamFixtures ? allTeamFixtures[player.teamId] : {};
+                    return (
                         <PlayerRow
-                            key={player.id}
                             player={player}
                             user={user}
                             mode={mode}
                             currentTurnUserId={currentTurnUserId}
                             upcomingGws={upcomingGws}
                             onCompare={onCompare}
-                            comparePlayers={comparePlayers}
+                            isSelectedForCompare={comparePlayers?.some(p => p.id === player.id)}
                             onPlayerSelect={onPlayerSelect}
+                            teamFixtures={teamFixtures}
                         />
-                    ))}
-
-                    {bottomSpacerHeight > 0 && (
-                        <tr style={{ height: `${bottomSpacerHeight}px` }}>
-                            <td colSpan="10"></td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
+                    );
+                }}
+            />
         </div>
     );
 }

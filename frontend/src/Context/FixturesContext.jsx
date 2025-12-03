@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import API_URL from "../config";
+import { getAuthHeaders } from "../services/authHelper";
 
 const FixturesContext = createContext();
 
@@ -12,8 +13,11 @@ export function FixturesProvider({ children }) {
         if (cache[teamId]) return cache[teamId];
 
         try {
-            const res = await fetch(`${API_URL}/api/fixtures/team/${teamId}`);
-            if (!res.ok) throw new Error("Failed to fetch fixtures");
+            const res = await fetch(`${API_URL}/api/fixtures/team/${teamId}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (!res.ok) throw new Error(`Failed to fetch fixtures for team ${teamId}`);
             const data = await res.json();
 
             setCache(prev => ({ ...prev, [teamId]: data }));
