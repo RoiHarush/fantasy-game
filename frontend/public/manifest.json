@@ -1,0 +1,20 @@
+{
+    "name": "Fantasy",
+    "short_name": "Fantasy",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#5a1b8c",
+    "theme_color": "#5a1b8c",
+    "icons": [
+        {
+            "src": "/UI/icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/UI/icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
