@@ -2,12 +2,9 @@ package com.fantasy.scheduler;
 
 import com.fantasy.domain.game.FixtureService;
 import com.fantasy.domain.score.LiveScoreManager;
-import com.fantasy.domain.score.PointsService;
-
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.GameWeekRepository;
-import com.fantasy.domain.team.UserGameDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,21 +22,15 @@ public class LiveUpdatesScheduler {
     private final GameWeekRepository gameweekRepository;
     private final FixtureService fixtureService;
     private final LiveScoreManager liveScoreManager;
-    private final PointsService pointsService;
-    private final UserGameDataRepository userGameDataRepository;
 
     public LiveUpdatesScheduler(FixtureRepository fixtureRepository,
                                 GameWeekRepository gameweekRepository,
                                 FixtureService fixtureService,
-                                LiveScoreManager liveScoreManager,
-                                PointsService pointsService,
-                                UserGameDataRepository userGameDataRepository) {
+                                LiveScoreManager liveScoreManager) {
         this.fixtureRepository = fixtureRepository;
         this.gameweekRepository = gameweekRepository;
         this.fixtureService = fixtureService;
         this.liveScoreManager = liveScoreManager;
-        this.pointsService = pointsService;
-        this.userGameDataRepository = userGameDataRepository;
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -59,14 +50,6 @@ public class LiveUpdatesScheduler {
             try {
                 fixtureService.updateFixturesForGameweek(gwId);
                 liveScoreManager.updateLiveScores(gwId);
-
-                userGameDataRepository.findAll().forEach(userGameData -> {
-                    try {
-                        pointsService.calculateAndPersist(userGameData.getUser().getId(), gwId);
-                    } catch (Exception e) {
-                        log.error("Failed to calc live points for user ID {}", userGameData.getUser().getId(), e);
-                    }
-                });
 
             } catch (Exception e) {
                 log.error("Critical error during live updates cycle", e);

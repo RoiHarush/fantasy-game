@@ -5,25 +5,39 @@ import Style from "../../../Styles/Status.module.css";
 import IRStatusTable from "./IRStatusTable";
 import PlayerOfTheWeekBlock from "./PlayerOfTheWeekBlock";
 import { fetchUserPoints } from "../../../services/pointsService";
+import { fetchDailyStatus } from "../../../services/gameweekService";
+import DailyStatusTable from "./DailyStatusTable";
 
 function Status({ user, league, currentGameweek, nextGameweek }) {
 
     const [gwPoints, setGwPoints] = useState("-");
+    const [dailyStatus, setDailyStatus] = useState([]);
 
     useEffect(() => {
-        const loadLivePoints = async () => {
+        const loadData = async () => {
             if (user?.id && currentGameweek?.id) {
                 try {
-                    const points = await fetchUserPoints(user.id, currentGameweek.id);
+                    const [points, statusData] = await Promise.all([
+                        fetchUserPoints(user.id, currentGameweek.id).catch(err => {
+                            console.error("Failed to fetch live points:", err);
+                            return "-";
+                        }),
+                        fetchDailyStatus(currentGameweek.id).catch(err => {
+                            console.error("Failed to fetch daily status:", err);
+                            return [];
+                        })
+                    ]);
+
                     setGwPoints(points);
+                    setDailyStatus(statusData);
+
                 } catch (err) {
-                    console.error("Failed to fetch live points:", err);
-                    setGwPoints("-");
+                    console.error("General error loading status page data:", err);
                 }
             }
         };
 
-        loadLivePoints();
+        loadData();
     }, [user?.id, currentGameweek?.id]);
 
     const parseDateArray = (dateArray) => {
@@ -35,7 +49,6 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
     const gwStart = nextGameweek?.firstKickoffTime ? parseDateArray(nextGameweek.firstKickoffTime) : null;
 
     const leagueUser = league?.users?.find(u => u.id === user.id);
-
     const isCalculated = currentGameweek?.calculated === true;
 
     return (
@@ -56,17 +69,11 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
                 </div>
             </ColumnsBlock>
 
-            {currentGameweek && (
-                <div className={`${Style.statusBar} ${isCalculated ? Style.statusFinal : Style.statusProvisional}`}>
-                    <span>
-                        {isCalculated
-                            ? "Final Points & Lineups Updated"
-                            : "Live Points - Provisional"}
-                    </span>
-                    <span className={Style.statusBadge}>
-                        {isCalculated ? "UPDATED" : "LIVE"}
-                    </span>
-                </div>
+            {dailyStatus.length > 0 && (
+                <DailyStatusTable
+                    dailyStatus={dailyStatus}
+                    isGameweekFinished={isCalculated}
+                />
             )}
 
             <h3>Upcoming deadlines</h3>

@@ -97,6 +97,20 @@ public class PointsService {
         return result;
     }
 
+    public int calculateLiveUserPoints(int userId, int gw) {
+        UserGameDataEntity gameDataEntity = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("UserGameData entity not found"));
+
+        UserSquadEntity squadEntity = userSquadRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw)
+                .orElseThrow(() -> new RuntimeException("Squad snapshot not found for gw " + gw));
+
+        Squad squad = SquadMapper.toDomain(squadEntity, playerRegistry);
+
+        FantasyTeam team = new FantasyTeam(gw, squad);
+
+        return team.calculatePoints();
+    }
+
     public int getUserTotalPoints(int userId) {
         log.debug("Fetching total points for user {}", userId);
 

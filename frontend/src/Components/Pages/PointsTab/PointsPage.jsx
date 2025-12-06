@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGameweek } from "../../../Context/GameweeksContext";
-import { fetchUserPoints } from "../../../services/pointsService";
+import { fetchUserLivePoints, fetchUserPoints } from "../../../services/pointsService";
 import { fetchPlayerDataForGameweek, fetchSquadForGameweek } from "../../../services/squadService";
 import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
@@ -33,9 +33,15 @@ function PointsPage({ displayedUser }) {
         async function load() {
             setLoading(true);
             try {
+                const isLiveGameweek = currentGameweek && selectedGameweek.id === currentGameweek.id;
+
+                const pointsPromise = isLiveGameweek
+                    ? fetchUserLivePoints(targetUser.id, selectedGameweek.id)
+                    : fetchUserPoints(targetUser.id, selectedGameweek.id);
+
                 const [squadRes, pointsRes, playerDataRes] = await Promise.all([
                     fetchSquadForGameweek(targetUser.id, selectedGameweek.id),
-                    fetchUserPoints(targetUser.id, selectedGameweek.id),
+                    pointsPromise,
                     fetchPlayerDataForGameweek(targetUser.id, selectedGameweek.id)
                 ]);
 

@@ -33,6 +33,12 @@ public class PointsController {
         return ResponseEntity.ok(points);
     }
 
+    @GetMapping("/{userId}/{gwId}/live")
+    public ResponseEntity<Integer> getLiveUserPoints(@PathVariable int userId, @PathVariable int gwId) {
+        int livePoints = pointsService.calculateLiveUserPoints(userId, gwId);
+        return ResponseEntity.ok(livePoints);
+    }
+
     @GetMapping("/{userId}/history")
     public ResponseEntity<List<GameweekHistoryDto>> getUserHistory(@PathVariable Integer userId) {
         List<GameweekHistoryDto> history = pointsService.getUserHistory(userId);

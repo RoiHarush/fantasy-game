@@ -15,11 +15,15 @@ public class GameWeekService {
 
     private final GameWeekRepository gameWeekRepo;
     private final FixtureRepository fixtureRepo;
+    private final GameweekDailyStatusRepository dailyStatusRepo;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public GameWeekService(GameWeekRepository gameWeekRepo, FixtureRepository fixtureRepo) {
+    public GameWeekService(GameWeekRepository gameWeekRepo,
+                           FixtureRepository fixtureRepo,
+                           GameweekDailyStatusRepository dailyStatusRepo) {
         this.gameWeekRepo = gameWeekRepo;
         this.fixtureRepo = fixtureRepo;
+        this.dailyStatusRepo = dailyStatusRepo;
     }
 
     public void loadFromApiAndSave() {
@@ -87,7 +91,7 @@ public class GameWeekService {
     private LocalDateTime calculateTransferOpenTime(int gameweekId, LocalDateTime firstKickoff) {
         List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gameweekId);
 
-        LocalDateTime chosenTime = firstKickoff.minusMinutes(70);
+        LocalDateTime chosenTime = firstKickoff.minusMinutes(75);
 
         if (fixtures.isEmpty()) {
             return chosenTime;
@@ -96,7 +100,7 @@ public class GameWeekService {
         fixtures.sort(Comparator.comparing(FixtureEntity::getKickoffTime));
 
         for (FixtureEntity fixture : fixtures) {
-            LocalDateTime candidate = fixture.getKickoffTime().minusMinutes(70);
+            LocalDateTime candidate = fixture.getKickoffTime().minusMinutes(75);
             if (candidate.isBefore(firstKickoff)) {
                 chosenTime = candidate;
             } else {
@@ -154,6 +158,24 @@ public class GameWeekService {
         gameWeekRepo.saveAll(gameWeeksToUpdate);
     }
 
+    public List<GameweekDailyStatusDto> getGameweekDailyStatus(int gwId) {
+        List<LocalDate> matchDates = fixtureRepo.findMatchDatesByGameweekId(gwId);
+
+        matchDates.sort(LocalDate::compareTo);
+
+        List<GameweekDailyStatusDto> result = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+
+        for (LocalDate date : matchDates) {
+            boolean isCalculated = dailyStatusRepo
+                    .findByGameweekIdAndMatchDate(gwId, date)
+                    .map(GameweekDailyStatus::isCalculated)
+                    .orElse(false);
+
+            result.add(new GameweekDailyStatusDto(date, isCalculated, date.equals(today)));
+        }
+        return result;
+    }
 
     public List<GameWeekEntity> getAllGameweeks() {
         return gameWeekRepo.findAll();

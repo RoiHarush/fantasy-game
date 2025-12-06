@@ -1,5 +1,6 @@
 package com.fantasy.domain.game;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,11 @@ public class GameWeekController {
         return gameWeekService.getAllGameweeks().stream()
                 .map(GameWeekMapper::toDto)
                 .toList();
+    }
+
+    @GetMapping("/{gwId}/daily-status")
+    public ResponseEntity<List<GameweekDailyStatusDto>> getDailyStatus(@PathVariable int gwId) {
+        return ResponseEntity.ok(gameWeekService.getGameweekDailyStatus(gwId));
     }
 
     @GetMapping("/current")
