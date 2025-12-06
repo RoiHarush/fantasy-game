@@ -3,11 +3,11 @@ import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchAllUsers } from "../../../services/usersService";
 import { fetchTransferWindowState } from "../../../services/transferWindowService";
 import { fetchSquadForGameweek } from "../../../services/squadService";
+import { useAuth } from "../../../Context/AuthContext";
 import PageLayout from "../../PageLayout";
 import TransferWindow from "./TransferWindow";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import LoadingPage from "../../General/LoadingPage";
-import { useAuth } from "../../../Context/AuthContext";
 
 function TransferWindowPage() {
     const { user } = useAuth();

@@ -148,20 +148,22 @@
     }
 
     .player-name {
-        font-size: 9px;
-        width: 110%;
+        width: 130%;
         padding: 2px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
         white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.1;
+        font-size: clamp(7px, 2.2vw, 10px);
     }
 
     .player-nextMatch,
     .player-points {
         font-size: 9px;
         padding: 2px 0;
-        width: 110%;
+        width: 130%;
     }
 
     .captain-badge,

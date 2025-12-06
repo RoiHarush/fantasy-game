@@ -51,13 +51,25 @@ function PlayerTable({
 
                 fixedHeaderContent={() => (
                     <tr className={Style.headerRow}>
-                        <th style={{ width: '250px' }}>Player</th>
+                        <th style={{ width: '200px' }}>Player</th>
                         <th style={{ width: '50px' }}>Pts</th>
+
                         {upcomingGws.map((gw) => (
-                            <th key={gw} style={{ width: '80px' }}>GW{gw}</th>
+                            <th key={gw} style={{ width: '80px' }} className={Style.hiddenOnMobile}>
+                                GW{gw}
+                            </th>
                         ))}
-                        <th style={{ width: '100px' }}>Compare</th>
-                        <th style={{ width: '60px' }}>Watchlist</th>
+
+                        <th style={{ width: '100px' }}>
+                            <span className={Style.desktopText}>Compare</span>
+                            <span className={Style.mobileText}>CMP</span>
+                        </th>
+
+                        <th style={{ width: '60px' }}>
+                            <span className={Style.desktopText}>Watchlist</span>
+                            <span className={Style.mobileText}>Watch</span>
+                        </th>
+
                         {mode === "scout" && <th style={{ width: '100px' }}>Owner</th>}
                         {mode === "transfer" && <th style={{ width: '80px' }}>Sign</th>}
                     </tr>

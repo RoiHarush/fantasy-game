@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchSquadForGameweek } from "../../../services/squadService";
+import { useAuth } from "../../../Context/AuthContext";
 import PageLayout from "../../PageLayout";
 import UserSquadSidebar from "../../Sidebar/UserSquadSidebar";
 import Scout from "./Scout";
 import LoadingPage from "../../General/LoadingPage";
-import { useAuth } from "../../../Context/AuthContext";
 
 function ScoutPage() {
     const { user } = useAuth();

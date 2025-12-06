@@ -86,47 +86,62 @@ const PlayerRow = memo(function PlayerRow({
                     }}
                     disabled={isSelectedForCompare}
                 >
-                    <ArrowRightLeft size={16} className={Style.compareIcon} />
+                    <ArrowRightLeft size={18} className={Style.compareIcon} />
                     <span className={Style.compareText}>
                         {isSelectedForCompare ? "Selected" : "Compare"}
                     </span>
                 </button>
             </td>
 
-            <td><WatchButton playerId={player.id} /></td>
+            <td className={Style.squareBtnCell}>
+                <div className={Style.watchWrapper}>
+                    <WatchButton playerId={player.id} />
+                </div>
+            </td>
 
             {mode === "scout" && (
                 <td>
-                    <span className={`${Style.ownerBadge} ${player.available ? Style.ownerFree : player.ownerId === user.id ? Style.ownerMe : ""}`}>
+                    <span
+                        className={`${Style.ownerBadge} ${player.available
+                            ? Style.ownerFree
+                            : player.ownerId === user.id
+                                ? Style.ownerMe
+                                : Style.ownerOther
+                            }`}
+                    >
                         {ownerLabel}
                     </span>
-                </td>
+                </td >
             )}
 
-            {mode === "transfer" && (
-                <td>
-                    {player.available ? (
-                        <button
-                            className={Style.signBtn}
-                            disabled={!isMyTurn}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                isMyTurn && onPlayerSelect?.(player);
-                            }}
-                        >
-                            {isMyTurn ? "Sign" : "Wait"}
-                        </button>
-                    ) : (
-                        <img src="/Icons/lock.svg" alt="Locked" className={Style.lockIcon} />
-                    )}
-                </td>
-            )}
+            {
+                mode === "transfer" && (
+                    <td>
+                        {player.available ? (
+                            <button
+                                className={Style.signBtn}
+                                disabled={!isMyTurn}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    isMyTurn && onPlayerSelect?.(player);
+                                }}
+                            >
+                                {isMyTurn ? "Sign" : "Wait"}
+                            </button>
+                        ) : (
+                            <img src="/Icons/lock.svg" alt="Locked" className={Style.lockIcon} />
+                        )}
+                    </td>
+                )
+            }
 
-            {showInfo && (
-                <Portal>
-                    <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />
-                </Portal>
-            )}
+            {
+                showInfo && (
+                    <Portal>
+                        <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />
+                    </Portal>
+                )
+            }
         </>
     );
 });

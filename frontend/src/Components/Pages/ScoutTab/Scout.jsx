@@ -1,16 +1,16 @@
-import Style from "../../../Styles/Scout.module.css";
 import { usePlayers } from "../../../Context/PlayersContext";
-import PlayersWrapper from "../../General/PlayersWrapper";
 import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
+import Style from "../../../Styles/Scout.module.css";
+import PlayersWrapper from "../../General/PlayersWrapper";
 
 function Scout({ user }) {
     const { players } = usePlayers();
 
+    const allTeamFixtures = useAllTeamFixtures();
+
     if (!players || players.length === 0) {
         return <div>Loading players...</div>;
     }
-
-    const allTeamFixtures = useAllTeamFixtures();
 
     return (
         <div className={Style.scoutPage}>

@@ -10,6 +10,7 @@
     font-weight: 600;
     transition: all 0.2s ease;
     margin: 0 auto;
+    border: 1px solid #ccc;
 }
 
 .watched {
@@ -44,33 +45,27 @@
 
 @media (max-width: 768px) {
     .watchBtn {
-        padding: 0;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        width: 32px !important;
+        height: 32px !important;
+
+        padding: 0 !important;
+        border-radius: 8px !important;
+
+        display: flex !important;
         justify-content: center;
+        align-items: center;
+        margin: 0 auto;
     }
 
     .btnText {
-        display: none;
-    }
-
-    .notWatched {
-        border: 1px solid #ddd;
-        background: white;
-        color: #aaa;
-    }
-
-    .watched {
-        background: #37003c;
-        border-color: #37003c;
-        color: #fff;
+        display: none !important;
     }
 
     .icon {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
+        margin: 0 !important;
     }
 }

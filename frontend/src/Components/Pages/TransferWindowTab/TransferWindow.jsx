@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import Style from "../../../Styles/TransferWindow.module.css";
 import { usePlayers } from "../../../Context/PlayersContext";
-import ReplacementModal from "./ReplacementModal";
 import { useWebSocket } from "../../../Context/WebSocketContext";
+import { passTurn } from "../../../services/transferWindowService";
+import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
+import Style from "../../../Styles/TransferWindow.module.css";
+import ReplacementModal from "./ReplacementModal";
 import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
-import { passTurn } from "../../../services/transferWindowService";
-import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
 
 function TransferWindow({ user, allUsers, initialWindowState }) {
     const { players, setPlayers } = usePlayers();
