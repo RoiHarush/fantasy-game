@@ -3,8 +3,19 @@ import Style from '../../../Styles/Status.module.css';
 
 function DailyStatusTable({ dailyStatus, isGameweekFinished }) {
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
+    const formatDate = (dateInput) => {
+        if (!dateInput) return "";
+
+        let date;
+
+        if (Array.isArray(dateInput)) {
+            date = new Date(dateInput[0], dateInput[1] - 1, dateInput[2]);
+        } else {
+            date = new Date(dateInput);
+        }
+
+        if (isNaN(date.getTime())) return "Invalid Date";
+
         return date.toLocaleDateString('en-GB', {
             weekday: 'long',
             day: 'numeric',
