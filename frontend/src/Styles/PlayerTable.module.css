@@ -43,10 +43,6 @@
     border-bottom: 1px solid #eee;
 }
 
-.mainTable tbody tr:hover {
-    background: #f0f8ff;
-}
-
 .mainTable td {
     color: #222;
     padding: 8px 12px;

@@ -99,6 +99,15 @@ const LeagueAdminRoute = ({ children }) => {
 function App() {
   const { loading } = useAuth();
 
+  useEffect(() => {
+    if (import.meta.env.MODE === "development") {
+      document.title = "Fantasy Draft - Dev";
+    } else {
+      document.title = "Fantasy Draft";
+    }
+  }, []);
+
+
   if (loading) {
     return <div><LoadingPage /></div>;
   }

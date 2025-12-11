@@ -161,7 +161,6 @@ public class GameweekManager {
             pointsService.calculateAndPersist(userGameData.getId(), gameweekId);
         }
 
-        gw.setStatus("FINISHED");
         gw.setCalculated(true);
         gameweekRepository.save(gw);
 

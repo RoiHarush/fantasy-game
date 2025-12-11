@@ -63,7 +63,7 @@ const PlayerRow = memo(function PlayerRow({
 
             {upcomingGws.map((gw) => {
                 const fixture = teamFixtures?.[String(gw)];
-                if (!fixture) return <td key={gw}>-</td>;
+                if (!fixture) return <td key={gw} className={Style.fixtureCell}>-</td>;
 
                 const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
                 const fullName = match ? match[1].trim() : fixture.opponent;

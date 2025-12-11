@@ -104,20 +104,30 @@ public class PlayerService {
             teamFixturesMap.computeIfAbsent(f.getAwayTeamId(), k -> new ArrayList<>()).add(f);
         }
 
+        Map<Integer, String> teamNamesMap = teamRepo.findAll().stream()
+                .collect(Collectors.toMap(
+                        TeamEntity::getId,
+                        t -> t.getShortName() != null ? t.getShortName() : t.getName()
+                ));
+
         List<Integer> playerIds = new ArrayList<>();
         if (squadEntity.getStartingLineup() != null) playerIds.addAll(squadEntity.getStartingLineup());
         if (squadEntity.getBenchMap() != null) playerIds.addAll(squadEntity.getBenchMap().values());
 
         return playerIds.stream()
-                .map(id -> mapPlayerToDataDto(id, gwId, teamFixturesMap))
+                .map(id -> mapPlayerToDataDto(id, gwId, teamFixturesMap, teamNamesMap))
                 .toList();
     }
 
-    private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId, Map<Integer, List<FixtureEntity>> teamFixturesMap) {
+    private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId,
+                                             Map<Integer, List<FixtureEntity>> teamFixturesMap,
+                                             Map<Integer, String> teamNamesMap) {
+
         Player player = playerRegistry.findById(playerId);
         if (player == null) return new PlayerDataDto(playerId, 0, null);
 
         List<FixtureEntity> myFixtures = teamFixturesMap.getOrDefault(player.getTeamId(), List.of());
+
         boolean hasStarted = myFixtures.stream().anyMatch(FixtureEntity::isStarted);
 
         Integer points = null;
@@ -125,9 +135,27 @@ public class PlayerService {
 
         if (hasStarted) {
             Optional<PlayerPointsEntity> pointsOpt = pointsRepo.findByPlayer_IdAndGameweek(playerId, gwId);
-            points = pointsOpt.map(PlayerPointsEntity::getPoints).orElse(0);
-        } else {
-            nextFixture = fixtureService.getNextFixtureDisplayForTeam(player.getTeamId());
+
+            if (pointsOpt.isPresent()) {
+                points = pointsOpt.get().getPoints();
+            } else {
+                points = 0;
+            }
+        }
+
+        if (points == null) {
+            if (myFixtures.isEmpty()) {
+                nextFixture = "Blank";
+            } else {
+                nextFixture = myFixtures.stream()
+                        .map(f -> {
+                            boolean isHome = f.getHomeTeamId() == player.getTeamId();
+                            int opponentId = isHome ? f.getAwayTeamId() : f.getHomeTeamId();
+                            String oppName = teamNamesMap.getOrDefault(opponentId, "UNK");
+                            return oppName + (isHome ? " (H)" : " (A)");
+                        })
+                        .collect(Collectors.joining(", "));
+            }
         }
 
         return new PlayerDataDto(playerId, points, nextFixture);

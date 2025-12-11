@@ -126,20 +126,16 @@ public class FixtureService {
 
     @Transactional
     public void updateFixturesForGameweek(int gameweekId) {
-
-        log.info("Checking for fixture updates → gameweek {}", gameweekId);
+        log.debug("Periodic check: Updating fixtures for GW {}", gameweekId);
 
         try {
             String url = FIXTURES_URL + "?event=" + gameweekId;
-            log.debug("Calling API: {}", url);
+            log.debug("Fetching updates from FPL API for GW {}", gameweekId);
 
             String jsonResponse = restTemplate.getForObject(url, String.class);
             JsonNode root = mapper.readTree(jsonResponse);
 
             List<FixtureEntity> dbFixtures = fixtureRepo.findByGameweekId(gameweekId);
-
-            log.debug("Loaded {} fixtures from DB for GW {}", dbFixtures.size(), gameweekId);
-
             Map<Integer, FixtureEntity> fixtureMap = dbFixtures.stream()
                     .collect(Collectors.toMap(FixtureEntity::getId, Function.identity()));
 
@@ -149,24 +145,19 @@ public class FixtureService {
                 int id = node.get("id").asInt();
                 FixtureEntity entity = fixtureMap.get(id);
 
-                if (entity == null) {
-                    log.debug("Fixture {} not found in DB, skipping.", id);
-                    continue;
-                }
+                if (entity == null) continue;
 
                 boolean changed = false;
 
                 Integer newHomeScore = node.get("team_h_score").isNull() ? null : node.get("team_h_score").asInt();
                 Integer newAwayScore = node.get("team_a_score").isNull() ? null : node.get("team_a_score").asInt();
 
-                if (!Objects.equals(entity.getHomeTeamScore(), newHomeScore)) {
+                if (!Objects.equals(entity.getHomeTeamScore(), newHomeScore) || !Objects.equals(entity.getAwayTeamScore(), newAwayScore)) {
                     changed = true;
                     entity.setHomeTeamScore(newHomeScore);
-                }
-
-                if (!Objects.equals(entity.getAwayTeamScore(), newAwayScore)) {
-                    changed = true;
                     entity.setAwayTeamScore(newAwayScore);
+
+                    log.info("SCORE CHANGE detected in Game ID {}: {}-{}", id, newHomeScore, newAwayScore);
                 }
 
                 boolean started = node.get("started").asBoolean();
@@ -176,22 +167,22 @@ public class FixtureService {
                 if (entity.isStarted() != started) {
                     changed = true;
                     entity.setStarted(started);
+                    log.info("Game ID {} started status changed to: {}", id, started); // התחלת משחק זה מעניין
                 }
 
                 if (entity.isFinished() != finished) {
                     changed = true;
                     entity.setFinished(finished);
+                    log.info("Game ID {} finished.", id);
                 }
 
                 if (entity.getMinutes() != minutes) {
                     changed = true;
                     entity.setMinutes(minutes);
+                    log.debug("Game ID {} time update: {} minutes", id, minutes);
                 }
 
-                String kickoffUtc = node.has("kickoff_time") && !node.get("kickoff_time").isNull()
-                        ? node.get("kickoff_time").asText()
-                        : null;
-
+                String kickoffUtc = node.has("kickoff_time") && !node.get("kickoff_time").isNull() ? node.get("kickoff_time").asText() : null;
                 if (kickoffUtc != null) {
                     LocalDateTime apiKickoff = LocalDateTime.ofInstant(Instant.parse(kickoffUtc), ZoneId.systemDefault());
                     if (!apiKickoff.isEqual(entity.getKickoffTime())) {
@@ -207,7 +198,7 @@ public class FixtureService {
 
             if (!toUpdate.isEmpty()) {
                 fixtureRepo.saveAll(toUpdate);
-                log.info("Updated {} fixtures in GW {}", toUpdate.size(), gameweekId);
+                log.info("Cycle Summary: Updated {} fixtures in GW {}", toUpdate.size(), gameweekId);
             } else {
                 log.debug("No fixture changes detected for GW {}", gameweekId);
             }

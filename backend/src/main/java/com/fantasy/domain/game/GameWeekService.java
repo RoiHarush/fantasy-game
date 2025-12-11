@@ -2,11 +2,14 @@ package com.fantasy.domain.game;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URL;
-import java.time.*;
+import java.net.URI;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -16,7 +19,10 @@ public class GameWeekService {
     private final GameWeekRepository gameWeekRepo;
     private final FixtureRepository fixtureRepo;
     private final GameweekDailyStatusRepository dailyStatusRepo;
+
     private final ObjectMapper mapper = new ObjectMapper();
+
+    private GameWeekService self;
 
     public GameWeekService(GameWeekRepository gameWeekRepo,
                            FixtureRepository fixtureRepo,
@@ -26,11 +32,16 @@ public class GameWeekService {
         this.dailyStatusRepo = dailyStatusRepo;
     }
 
+    @Autowired
+    public void setSelf(@Lazy GameWeekService self) {
+        this.self = self;
+    }
+
     public void loadFromApiAndSave() {
         try {
-            JsonNode root = mapper.readTree(new URL(API_URL));
+            JsonNode root = mapper.readTree(URI.create(API_URL).toURL());
 
-            saveGameWeeks(root);
+            self.saveGameWeeks(root);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to load Gameweeks from API", e);
@@ -39,7 +50,6 @@ public class GameWeekService {
 
     @Transactional
     public void saveGameWeeks(JsonNode root) {
-
         List<GameWeekEntity> gameWeeksToSave = new ArrayList<>();
 
         for (JsonNode gwNode : root.get("events")) {
@@ -50,37 +60,17 @@ public class GameWeekService {
                     : gwNode.get("finished").asBoolean() ? "FINISHED"
                     : "UPCOMING";
 
-            List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(id);
-
-            LocalDateTime firstKickoff = null;
-            LocalDateTime lastKickoff = null;
-
-            if (!fixtures.isEmpty()) {
-                firstKickoff = fixtures.stream()
-                        .map(FixtureEntity::getKickoffTime)
-                        .filter(Objects::nonNull)
-                        .min(LocalDateTime::compareTo)
-                        .orElse(null);
-
-                lastKickoff = fixtures.stream()
-                        .map(FixtureEntity::getKickoffTime)
-                        .filter(Objects::nonNull)
-                        .max(LocalDateTime::compareTo)
-                        .orElse(null);
-            }
-
-            if (firstKickoff == null) continue;
+            KickoffTimes kickoffs = calculateKickoffTimes(id);
+            if (kickoffs == null) continue;
 
             GameWeekEntity gw = gameWeekRepo.findById(id)
-                    .orElse(new GameWeekEntity(id, name, firstKickoff, lastKickoff, status));
+                    .orElse(new GameWeekEntity(id, name, kickoffs.first, kickoffs.last, status));
 
             gw.setName(name);
-            gw.setFirstKickoffTime(firstKickoff);
-            gw.setLastKickoffTime(lastKickoff);
+            gw.setFirstKickoffTime(kickoffs.first);
+            gw.setLastKickoffTime(kickoffs.last);
             gw.setStatus(status);
-
-            LocalDateTime transferOpen = calculateTransferOpenTime(id, firstKickoff);
-            gw.setTransferOpenTime(transferOpen);
+            gw.setTransferOpenTime(calculateTransferOpenTime(id, kickoffs.first));
 
             gameWeeksToSave.add(gw);
         }
@@ -88,9 +78,59 @@ public class GameWeekService {
         gameWeekRepo.saveAll(gameWeeksToSave);
     }
 
-    private LocalDateTime calculateTransferOpenTime(int gameweekId, LocalDateTime firstKickoff) {
+    @Transactional
+    public void updateGameWeekDeadlines() {
+        List<GameWeekEntity> allGameWeeks = gameWeekRepo.findAll();
+        List<GameWeekEntity> gameWeeksToUpdate = new ArrayList<>();
+
+        for (GameWeekEntity gw : allGameWeeks) {
+            KickoffTimes kickoffs = calculateKickoffTimes(gw.getId());
+            if (kickoffs == null) continue;
+
+            boolean isFirstKickoffChanged = !Objects.equals(kickoffs.first, gw.getFirstKickoffTime());
+            boolean isLastKickoffChanged = !Objects.equals(kickoffs.last, gw.getLastKickoffTime());
+
+            if (isFirstKickoffChanged || isLastKickoffChanged) {
+                gw.setFirstKickoffTime(kickoffs.first);
+                gw.setLastKickoffTime(kickoffs.last);
+
+                if (isFirstKickoffChanged) {
+                    gw.setTransferOpenTime(calculateTransferOpenTime(gw.getId(), kickoffs.first));
+                }
+
+                gameWeeksToUpdate.add(gw);
+            }
+        }
+
+        gameWeekRepo.saveAll(gameWeeksToUpdate);
+    }
+
+    private record KickoffTimes(LocalDateTime first, LocalDateTime last) {}
+
+    private KickoffTimes calculateKickoffTimes(int gameweekId) {
         List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gameweekId);
 
+        if (fixtures.isEmpty()) return null;
+
+        LocalDateTime first = fixtures.stream()
+                .map(FixtureEntity::getKickoffTime)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+
+        LocalDateTime last = fixtures.stream()
+                .map(FixtureEntity::getKickoffTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        if (first == null) return null;
+
+        return new KickoffTimes(first, last);
+    }
+
+    private LocalDateTime calculateTransferOpenTime(int gameweekId, LocalDateTime firstKickoff) {
+        List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gameweekId);
         LocalDateTime chosenTime = firstKickoff.minusMinutes(75);
 
         if (fixtures.isEmpty()) {
@@ -110,57 +150,8 @@ public class GameWeekService {
         return chosenTime;
     }
 
-    @Transactional
-    public void updateGameWeekDeadlines() {
-        List<GameWeekEntity> allGameWeeks = gameWeekRepo.findAll();
-        List<GameWeekEntity> gameWeeksToUpdate = new ArrayList<>();
-
-        for (GameWeekEntity gw : allGameWeeks) {
-            List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gw.getId());
-
-            LocalDateTime newFirstKickoff = null;
-            LocalDateTime newLastKickoff = null;
-
-            if (!fixtures.isEmpty()) {
-                newFirstKickoff = fixtures.stream()
-                        .map(FixtureEntity::getKickoffTime)
-                        .filter(Objects::nonNull)
-                        .min(LocalDateTime::compareTo)
-                        .orElse(null);
-
-                newLastKickoff = fixtures.stream()
-                        .map(FixtureEntity::getKickoffTime)
-                        .filter(Objects::nonNull)
-                        .max(LocalDateTime::compareTo)
-                        .orElse(null);
-            }
-
-            if (newFirstKickoff == null) {
-                continue;
-            }
-
-            boolean isFirstKickoffChanged = !newFirstKickoff.equals(gw.getFirstKickoffTime());
-            boolean isLastKickoffChanged = !newLastKickoff.equals(gw.getLastKickoffTime());
-
-            if (isFirstKickoffChanged || isLastKickoffChanged) {
-                gw.setFirstKickoffTime(newFirstKickoff);
-                gw.setLastKickoffTime(newLastKickoff);
-
-                if (isFirstKickoffChanged) {
-                    LocalDateTime newTransferOpen = calculateTransferOpenTime(gw.getId(), newFirstKickoff);
-                    gw.setTransferOpenTime(newTransferOpen);
-                }
-
-                gameWeeksToUpdate.add(gw);
-            }
-        }
-
-        gameWeekRepo.saveAll(gameWeeksToUpdate);
-    }
-
     public List<GameweekDailyStatusDto> getGameweekDailyStatus(int gwId) {
         List<LocalDate> matchDates = fixtureRepo.findMatchDatesByGameweekId(gwId);
-
         matchDates.sort(LocalDate::compareTo);
 
         List<GameweekDailyStatusDto> result = new ArrayList<>();
@@ -182,11 +173,17 @@ public class GameWeekService {
     }
 
     public GameWeekDto getCurrentGameweek() {
-        return gameWeekRepo.findAll().stream()
+        Optional<GameWeekDto> liveGw = gameWeekRepo.findAll().stream()
                 .filter(gw -> "LIVE".equalsIgnoreCase(gw.getStatus()))
                 .findFirst()
-                .map(GameWeekMapper::toDto)
-                .orElse(null);
+                .map(GameWeekMapper::toDto);
+
+        if (liveGw.isPresent()) return liveGw.get();
+
+        GameWeekDto lastFinished = getLastFinishedGameweek();
+        if (lastFinished != null) return lastFinished;
+
+        return getNextGameweek();
     }
 
     public GameWeekDto getNextGameweek() {

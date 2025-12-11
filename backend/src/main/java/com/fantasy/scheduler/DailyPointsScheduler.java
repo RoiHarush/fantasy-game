@@ -59,19 +59,12 @@ public class DailyPointsScheduler {
 
     private void checkAndCalculateForDate(int gwId, LocalDate date) {
         Optional<GameweekDailyStatus> statusOpt = dailyStatusRepository.findByGameweekIdAndMatchDate(gwId, date);
+
         if (statusOpt.isPresent() && statusOpt.get().isCalculated()) {
             return;
         }
 
         if (date.isAfter(LocalDate.now())) {
-            return;
-        }
-
-        GameWeekEntity gw = gameweekRepository.findById(gwId).orElseThrow();
-        LocalDate lastMatchDateOfGw = gw.getLastKickoffTime().toLocalDate();
-
-        if (date.equals(lastMatchDateOfGw)) {
-            log.info("Date {} is the last day of GW {}. Skipping daily calc (AutoScheduler will handle final process).", date, gwId);
             return;
         }
 
@@ -85,17 +78,29 @@ public class DailyPointsScheduler {
 
         LocalDateTime safeTime = lastGame.get().getKickoffTime().plusHours(HOURS_BUFFER);
 
-        if (LocalDateTime.now().isAfter(safeTime)) {
-            log.info("Safe time passed for Date {} in GW {}. Starting calculation...", date, gwId);
-
-            performBulkCalculation(gwId);
-
-            GameweekDailyStatus status = statusOpt.orElse(new GameweekDailyStatus(gwId, date));
-            status.markAsCalculated();
-            dailyStatusRepository.save(status);
-
-            log.info("Date {} marked as CALCULATED.", date);
+        if (LocalDateTime.now().isBefore(safeTime)) {
+            return;
         }
+
+
+        GameWeekEntity gw = gameweekRepository.findById(gwId).orElseThrow();
+        LocalDate lastMatchDateOfGw = gw.getLastKickoffTime().toLocalDate();
+
+        if (date.equals(lastMatchDateOfGw)) {
+            log.info("Safe time passed for Date {} (Last Day of GW {}). Skipping daily calc to let AutoScheduler handle final process.", date, gwId);
+            return;
+        }
+
+
+        log.info("Safe time passed for Date {} in GW {}. Starting calculation...", date, gwId);
+
+        performBulkCalculation(gwId);
+
+        GameweekDailyStatus status = statusOpt.orElse(new GameweekDailyStatus(gwId, date));
+        status.markAsCalculated();
+        dailyStatusRepository.save(status);
+
+        log.info("Date {} marked as CALCULATED.", date);
     }
 
     private void performBulkCalculation(int gwId) {
