@@ -96,6 +96,7 @@ public class FplProxyController {
                     entry.put("teamId", player.getTeamId());
                     entry.put("points", topScorerPoints.getPoints());
                     entry.put("photo", player.getPhoto());
+                    entry.put("position", player.getPosition().getCode());
 
                     result.add(entry);
                 }
