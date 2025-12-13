@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
@@ -49,9 +50,10 @@ public class FixtureService {
             saveFixtures(fixtures);
             log.info("Successfully loaded & saved {} fixtures.", fixtures.size());
 
+        } catch (HttpServerErrorException.ServiceUnavailable e) {
+            log.warn("Skipping fixture sync: FPL Game is currently updating (503).");
         } catch (Exception e) {
-            log.error("Failed to load fixtures from API", e);
-            throw new RuntimeException("Failed to load fixtures from API", e);
+            log.error("Failed to load fixtures from API: {}", e.getMessage(), e);
         }
     }
 

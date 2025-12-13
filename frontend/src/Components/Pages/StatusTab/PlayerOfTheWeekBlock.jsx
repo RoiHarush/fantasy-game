@@ -124,7 +124,7 @@ function PlayerOfTheWeekBlock() {
                                 className={styles.cardWrapper}
                                 onClick={() => p?.id && setSelectedPlayer(p)}
                             >
-                                <PlayerOfWeekCard player={p} size={isMobile ? "small" : "normal"} />
+                                <PlayerOfWeekCard player={getPlayerById(players, p.id)} size={isMobile ? "small" : "normal"} />
                             </div>
                         ))}
                     </div>

@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface PlayerPointsRepository extends JpaRepository<PlayerPointsEntity, Long> {
     List<PlayerPointsEntity> findByPlayer_Id(Integer playerId);
     Optional<PlayerPointsEntity> findByPlayer_IdAndGameweek(Integer playerId, int gameweek);
+    PlayerPointsEntity findFirstByGameweekOrderByPointsDesc(int gameweek);
 }

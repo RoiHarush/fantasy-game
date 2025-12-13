@@ -19,19 +19,22 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173")
 public class FplProxyController {
 
-    private static final Logger log = LoggerFactory.getLogger(PlayerSyncService.class);
+    private static final Logger log = LoggerFactory.getLogger(FplProxyController.class);
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final GameWeekService gameWeekService;
     private final PlayerRegistry playerRegistry;
     private final PlayerRepository playerRepo;
+    private final PlayerPointsRepository pointsRepo;
 
     public FplProxyController(GameWeekService gameWeekService,
                               PlayerRegistry playerRegistry,
-                              PlayerRepository playerRepo) {
+                              PlayerRepository playerRepo,
+                              PlayerPointsRepository pointsRepo) {
         this.gameWeekService = gameWeekService;
         this.playerRegistry = playerRegistry;
         this.playerRepo = playerRepo;
+        this.pointsRepo = pointsRepo;
     }
 
     @GetMapping("/dream-team/{gw}")
@@ -75,51 +78,34 @@ public class FplProxyController {
     @GetMapping("/players-of-the-week")
     public ResponseEntity<?> getPlayersOfTheWeek() {
         try {
-            RestTemplate restTemplate = new RestTemplate();
             List<Map<String, Object>> result = new ArrayList<>();
 
             int currentGw = gameWeekService.getCurrentGameweek().getId();
 
             for (int gw = 1; gw <= currentGw; gw++) {
-                try {
-                    String url = "https://fantasy.premierleague.com/api/dream-team/" + gw + "/";
-                    Map<String, Object> apiData = restTemplate.getForObject(url, Map.class);
 
-                    if (apiData == null || !apiData.containsKey("top_player"))
-                        continue;
+                PlayerPointsEntity topScorerPoints = pointsRepo.findFirstByGameweekOrderByPointsDesc(gw);
 
-                    Map<String, Object> topPlayer = (Map<String, Object>) apiData.get("top_player");
-                    int playerId = (int) topPlayer.get("id");
-
-                    Player player = playerRegistry.findById(playerId);
-                    if (player == null) continue;
-
-                    PlayerEntity playerEntity = playerRepo.findById(playerId).orElse(null);
-
-                    String photo = null;
-                    if (playerEntity != null)
-                        photo = playerEntity.getPhoto();
+                if (topScorerPoints != null) {
+                    PlayerEntity player = topScorerPoints.getPlayer();
 
                     Map<String, Object> entry = new LinkedHashMap<>();
-                    entry.put("id", playerId);
+                    entry.put("id", player.getId());
                     entry.put("gameweek", gw);
                     entry.put("playerName", player.getViewName());
                     entry.put("teamId", player.getTeamId());
-                    entry.put("points", player.getPointsByGameweek().getOrDefault(gw, 0));
-                    entry.put("photo", photo);
+                    entry.put("points", topScorerPoints.getPoints());
+                    entry.put("photo", player.getPhoto());
 
                     result.add(entry);
-
-                } catch (Exception e) {
-                    log.info("Failed to fetch gw: {}", gw );
                 }
             }
 
             return ResponseEntity.ok(Map.of("playersOfTheWeek", result));
 
         } catch (Exception e) {
+            log.error("Error fetching players of the week internally", e);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch players of the week"));
         }
     }
-
 }

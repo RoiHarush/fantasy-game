@@ -2,7 +2,6 @@ package com.fantasy.scheduler;
 
 import com.fantasy.domain.game.FixtureService;
 import com.fantasy.domain.game.GameWeekService;
-import com.fantasy.domain.player.PlayerService;
 import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.player.PlayerSyncService;
 import org.slf4j.Logger;
@@ -32,39 +31,39 @@ public class DataSyncScheduler {
 
     @Scheduled(cron = "0 0 */2 * * *")
     public void syncGeneralData() {
-
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTimeLimit = now.minusMinutes(140);
+
         boolean hasActiveGames = fixtureRepository.hasActiveFixtures(now, startTimeLimit);
 
         if (hasActiveGames) {
-            log.info("Skipping Periodic Data Sync. Active games detected ({} - {}). Live updates are running.", startTimeLimit, now);
+            log.info("Skipping Periodic Data Sync. Active games detected.");
             return;
         }
 
-        log.info("Starting Periodic Data Sync...");
+        log.info("Starting Periodic Data Sync");
 
         try {
             playerSyncService.refreshBasicPlayerData();
-            log.info("Players data synced successfully.");
+            log.info("Players synced.");
         } catch (Exception e) {
-            log.error("Error syncing players: ", e);
+            log.error("Unexpected error syncing players: {}", e.getMessage());
         }
 
         try {
             fixtureService.loadFromApiAndSave();
-            log.info("Fixtures schedule synced successfully.");
+            log.info("Fixtures synced.");
         } catch (Exception e) {
-            log.error("Error syncing fixtures: ", e);
+            log.error("Unexpected error syncing fixtures: {}", e.getMessage());
         }
 
         try {
             gameWeekService.updateGameWeekDeadlines();
-            log.info("GameWeek deadlines updated successfully.");
+            log.info("GameWeek deadlines synced.");
         } catch (Exception e) {
-            log.error("Error updating GameWeek deadlines: ", e);
+            log.error("Unexpected error updating deadlines: {}", e.getMessage());
         }
 
-        log.info("Periodic Data Sync completed.");
+        log.info("Periodic Data Sync process finished.");
     }
 }
