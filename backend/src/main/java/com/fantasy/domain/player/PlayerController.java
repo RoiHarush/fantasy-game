@@ -94,4 +94,11 @@ public class PlayerController {
         PlayerDto updated = playerSyncService.togglePlayerLock(playerId, lock);
         return ResponseEntity.ok(updated);
     }
+
+    @PostMapping("/admin/update-position")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<Void> updatePlayerPosition(@RequestBody UpdatePositionRequest request) {
+        playerSyncService.updatePlayerPosition(request);
+        return ResponseEntity.ok().build();
+    }
 }

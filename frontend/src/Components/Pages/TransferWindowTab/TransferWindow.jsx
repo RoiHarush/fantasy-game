@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { usePlayers } from "../../../Context/PlayersContext";
 import { useWebSocket } from "../../../Context/WebSocketContext";
 import { passTurn } from "../../../services/transferWindowService";
@@ -30,6 +30,11 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
     const allTeamFixtures = useAllTeamFixtures();
 
+    const playersRef = useRef(players);
+    useEffect(() => {
+        playersRef.current = players;
+    }, [players]);
+
     const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
     function turnsUntilMyTurn() {
@@ -49,7 +54,6 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
         if (!connected) return;
 
         const handleTransferEvent = (event) => {
-
             if (event.event === "window_opened") {
                 setIsWindowOpen(true);
                 setCurrentTurnUserId(event.userId);
@@ -77,11 +81,8 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
             if (event.event === "ir_round_started") {
                 setIsWindowOpen(true);
                 setCurrentTurnUserId(event.userId);
-
-                if (event.turnOrder && event.turnOrder.length > 0) {
-                    setTurnOrder(event.turnOrder);
-                }
-
+                setLastTransferMessage(null);
+                if (event.turnOrder) setTurnOrder(event.turnOrder);
                 setIrPosition(event.irPosition);
                 if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
                 setIsIrRound(true);
@@ -89,16 +90,24 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
             if (event.event === "transfer_done") {
                 const { userId, playerOutId, playerInId, userName } = event;
+
                 setPlayers(prev => prev.map(p => {
                     if (p.id === playerInId) return { ...p, available: false, ownerId: userId };
                     if (p.id === playerOutId) return { ...p, available: true, ownerId: null };
                     return p;
                 }));
 
-                const playerIn = players.find(p => p.id === playerInId);
+                setTurnsUsed(prev => ({
+                    ...prev,
+                    [userId]: (prev[userId] || 0) + 1
+                }));
+
+                const currentPlayers = playersRef.current;
+                const playerIn = currentPlayers.find(p => p.id === playerInId);
                 const inName = playerIn ? playerIn.viewName : "Player In";
-                const playerOut = players.find(p => p.id === playerOutId)
-                const outName = playerOut ? playerOut.viewName : "Player Out"
+                const playerOut = currentPlayers.find(p => p.id === playerOutId);
+                const outName = playerOut ? playerOut.viewName : "Player Out";
+
                 setLastTransferMessage(`${userName || "User"} signed ${inName} | over ${outName}`);
             }
 
@@ -109,7 +118,8 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
         subscribe("/topic/transfers", handleTransferEvent);
         return () => unsubscribe("/topic/transfers");
-    }, [connected, subscribe, unsubscribe, setPlayers, players, user]);
+
+    }, [connected, subscribe, unsubscribe, user.id]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 

@@ -87,4 +87,53 @@ export const AdminService = {
             throw error;
         }
     },
+
+    updatePlayerPosition: async (playerId, positionId) => {
+        try {
+            const response = await fetch(`${API_URL}/api/players/admin/update-position`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ playerId, positionId })
+            });
+            if (!response.ok) throw new Error('Failed to update position');
+            return true;
+        } catch (error) {
+            console.error("Error in updatePlayerPosition:", error);
+            throw error;
+        }
+    },
+
+    getDraftConfig: async () => {
+        const response = await fetch(`${API_URL}/api/admin/draft/config`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) return null;
+        return await response.json();
+    },
+
+    deleteDraft: async () => {
+        const response = await fetch(`${API_URL}/api/admin/draft/config`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to delete draft');
+        return true;
+    },
+
+    scheduleDraft: async (time) => {
+        const response = await fetch(`${API_URL}/api/admin/draft/schedule`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ scheduledTime: time })
+        });
+        return response.ok;
+    },
+
+    openDraftNow: async () => {
+        return await fetch(`${API_URL}/api/admin/draft/open-now`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+    }
 };

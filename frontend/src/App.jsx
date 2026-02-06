@@ -8,12 +8,10 @@ import FixturesPage from "./Components/Pages/FixturesTab/FixturePage";
 import LeaguePage from "./Components/Pages/LeagueTab/LeaguePage";
 import PointsPage from "./Components/Pages/PointsTab/PointsPage";
 import ScoutPage from "./Components/Pages/ScoutTab/ScoutPage";
-import PageLayout from "./Components/PageLayout";
 import Login from "./Components/Auth/Login";
 import TransferWindowPage from "./Components/Pages/TransferWindowTab/TransferWindowPage";
 import { useEffect, useState } from "react";
 import LoadingPage from "./Components/General/LoadingPage";
-import DraftRoomWrapper from "./Components/Pages/DraftRoomTab/DraftRoomWrapper";
 import AdminDashboard from "./Components/Pages/superAdmin/AdminDashboard";
 import AdminUsersPage from "./Components/Pages/superAdmin/AdminUserPage";
 import AdminActionsPage from "./Components/Pages/superAdmin/AdminActionsPage";
@@ -23,6 +21,7 @@ import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
 import { fetchUserById } from "./services/usersService";
 import NotFoundPage from "./Components/Pages/NotFoundPage";
 import Footer from "./Footer";
+import DraftRoomPage from "./Components/Pages/DraftRoomTab/DraftRoomPage";
 
 
 function MainAppLayout() {
@@ -145,7 +144,11 @@ function App() {
             <TransferWindowPage />
           </GameweekUpdatingGuard>
         } />
-        <Route path="draft-room" element={<PageLayout left={<DraftRoomWrapper />} />} />
+        <Route path="draft-room" element={
+          <GameweekUpdatingGuard>
+            <DraftRoomPage />
+          </GameweekUpdatingGuard>
+        } />
 
         <Route path="settings" element={<SettingsPage />} />
 

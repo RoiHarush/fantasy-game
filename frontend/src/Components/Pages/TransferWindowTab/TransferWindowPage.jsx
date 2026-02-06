@@ -8,6 +8,7 @@ import PageLayout from "../../PageLayout";
 import TransferWindow from "./TransferWindow";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import LoadingPage from "../../General/LoadingPage";
+import ClosedWindow from "./ClosedWindow";
 
 function TransferWindowPage() {
     const { user } = useAuth();
@@ -77,23 +78,27 @@ function TransferWindowPage() {
     }
 
     return (
-        <PageLayout
-            left={
-                <TransferWindow
-                    user={user}
-                    allUsers={users}
-                    initialWindowState={windowState}
-                />
-            }
-            right={
-                <TransferUserSidebar
-                    users={users}
-                    currentUserId={selectedUserId}
-                    onUserChange={setSelectedUserId}
-                    squad={selectedUserSquad}
-                />
-            }
-        />
+        windowState.isOpen && !windowState.isDraftMode ? (
+            <PageLayout
+                left={
+                    <TransferWindow
+                        user={user}
+                        allUsers={users}
+                        initialWindowState={windowState}
+                    />
+                }
+                right={
+                    <TransferUserSidebar
+                        users={users}
+                        currentUserId={selectedUserId}
+                        onUserChange={setSelectedUserId}
+                        squad={selectedUserSquad}
+                    />
+                }
+            />
+        ) : (
+            <ClosedWindow />
+        )
     );
 }
 

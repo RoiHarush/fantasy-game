@@ -35,6 +35,8 @@ public class TransferMarketService {
     private boolean activeWindow = false;
     private int currentGameWeekId = -1;
 
+    private boolean isDraftMode = false;
+
     public TransferMarketService(PlayerRepository playerRepo,
                                  GameWeekRepository gameWeekRepo,
                                  GameWeekService gameWeekService,
@@ -54,7 +56,7 @@ public class TransferMarketService {
     }
 
     @Transactional
-    public void openTransferWindow(int gameWeekId) {
+    public void openTransferWindow(int gameWeekId, boolean ignoreProcessed, List<Integer> draftOrder) {
         if (activeWindow) {
             log.warn("Attempted to open transfer window for GW {}, but window is already active.", gameWeekId);
             return;
@@ -63,28 +65,43 @@ public class TransferMarketService {
         var gameWeek = gameWeekRepo.findById(gameWeekId)
                 .orElseThrow(() -> new RuntimeException("GameWeek not found: " + gameWeekId));
 
-        if (gameWeek.isTransferWindowProcessed()) {
+        if (!ignoreProcessed && gameWeek.isTransferWindowProcessed()) {
             log.warn("Transfer window for GW {} was already processed.", gameWeekId);
             return;
         }
 
-        List<TransferPickEntity> order = gameWeek.getTransferOrder();
-        if (order == null || order.isEmpty())
+        this.isDraftMode = ignoreProcessed;
+
+        List<TransferPickEntity> finalOrderEntities;
+        if (isDraftMode && draftOrder != null) {
+            finalOrderEntities = new ArrayList<>();
+            for (int i = 0; i < draftOrder.size(); i++) {
+                TransferPickEntity pick = new TransferPickEntity();
+                pick.setUserId(draftOrder.get(i));
+                pick.setPosition(i);
+                finalOrderEntities.add(pick);
+            }
+        } else {
+            finalOrderEntities = gameWeek.getTransferOrder();
+        }
+
+        if (finalOrderEntities == null || finalOrderEntities.isEmpty())
             throw new RuntimeException("Transfer order not defined for GW " + gameWeekId);
 
-        List<Integer> eligibleForIRRound = findUsersEligibleForIR(order);
+        List<Integer> eligibleForIRRound = isDraftMode ? new ArrayList<>() : findUsersEligibleForIR(finalOrderEntities);
 
-        this.turnManager = new TransferTurnManager(order, eligibleForIRRound);
+        this.turnManager = new TransferTurnManager(finalOrderEntities, eligibleForIRRound);
         this.turnManager.startWindow();
         this.currentGameWeekId = gameWeekId;
         this.activeWindow = true;
 
-        gameWeek.setTransferWindowProcessed(true);
-        gameWeekRepo.save(gameWeek);
+        if (!ignoreProcessed) {
+            gameWeek.setTransferWindowProcessed(true);
+            gameWeekRepo.save(gameWeek);
+        }
 
         int firstUser = turnManager.getCurrentUserId().orElse(-1);
-
-        log.info("Transfer window OPENED for GW {} | First turn: UserID {}", gameWeekId, firstUser);
+        log.info("Transfer window OPENED | DraftMode: {} | GW: {}", isDraftMode, gameWeekId);
 
         webSocketController.sendWindowOpenedEvent(
                 firstUser,
@@ -94,6 +111,12 @@ public class TransferMarketService {
                 turnManager.getUserTotalTurns()
         );
     }
+
+    @Transactional
+    public void openTransferWindow(int gameWeekId) {
+        openTransferWindow(gameWeekId, false, null);
+    }
+
 
     public void passTurn(int userId) {
         validateTurn(userId);
@@ -114,8 +137,11 @@ public class TransferMarketService {
         turnManager.closeWindow();
         activeWindow = false;
 
-        generateNextWeekOrder();
+        if (!isDraftMode) {
+            generateNextWeekOrder();
+        }
 
+        this.isDraftMode = false;
         webSocketController.sendWindowClosedEvent();
         log.info("Transfer window CLOSED for GW {}", currentGameWeekId);
     }
@@ -433,6 +459,7 @@ public class TransferMarketService {
         Map<String, Object> state = new HashMap<>();
         state.put("isOpen", activeWindow);
         state.put("gameWeekId", currentGameWeekId);
+        state.put("isDraftMode", isDraftMode);
 
         if (activeWindow && turnManager != null) {
             state.put("currentUserId", turnManager.getCurrentUserId().orElse(null));

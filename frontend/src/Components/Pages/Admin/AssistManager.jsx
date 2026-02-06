@@ -42,7 +42,6 @@ const AssistManager = () => {
         loadAssisters();
     }, [gameweek]);
 
-    // חיפוש מנורמל
     useEffect(() => {
         if (searchTerm.length < 2 || !players) {
             setSearchResults([]);

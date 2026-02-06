@@ -25,8 +25,10 @@ public class TransferMarketController {
             return ResponseEntity.ok("Transfer successful");
         } catch (FantasyTeamException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            return ResponseEntity.internalServerError().body("Server error: " + e.getMessage());
         }
     }
 

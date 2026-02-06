@@ -451,4 +451,20 @@ public class PlayerSyncService {
                 node.get("was_home").asBoolean()
         );
     }
+
+
+    @Transactional
+    public void updatePlayerPosition(UpdatePositionRequest request) {
+        PlayerEntity entity = playerRepo.findById(request.getPlayerId())
+                .orElseThrow(() -> new RuntimeException("Player not found"));
+
+        PlayerPosition newPos = PlayerPosition.fromId(request.getPositionId());
+        entity.setPosition(newPos);
+        playerRepo.save(entity);
+
+        Player registryPlayer = playerRegistry.findById(request.getPlayerId());
+        if (registryPlayer != null) {
+            registryPlayer.setPosition(newPos);
+        }
+    }
 }
