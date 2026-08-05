@@ -29,15 +29,18 @@ public class FixtureService {
     private final TeamRepository teamRepo;
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
+    private final FixturePersistenceService persistenceService;
 
     public FixtureService(FixtureRepository fixtureRepo,
                           TeamRepository teamRepo,
                           RestTemplate restTemplate,
-                          ObjectMapper mapper) {
+                          ObjectMapper mapper,
+                          FixturePersistenceService persistenceService) {
         this.fixtureRepo = fixtureRepo;
         this.teamRepo = teamRepo;
         this.restTemplate = restTemplate;
         this.mapper = mapper;
+        this.persistenceService = persistenceService;
     }
 
     public void loadFromApiAndSave() {
@@ -47,13 +50,14 @@ public class FixtureService {
             List<FixtureEntity> fixtures = fetchFixturesFromApi();
             log.debug("Fetched {} fixtures from FPL API", fixtures.size());
 
-            saveFixtures(fixtures);
+            persistenceService.saveAll(fixtures);
             log.info("Successfully loaded & saved {} fixtures.", fixtures.size());
 
         } catch (HttpServerErrorException.ServiceUnavailable e) {
-            log.warn("Skipping fixture sync: FPL Game is currently updating (503).");
+            throw new IllegalStateException("FPL fixtures are temporarily unavailable (503)", e);
         } catch (Exception e) {
             log.error("Failed to load fixtures from API: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed to load fixtures from FPL", e);
         }
     }
 
@@ -117,13 +121,6 @@ public class FixtureService {
 
         log.debug("Finished parsing fixtures from API → total={}", fixtures.size());
         return fixtures;
-    }
-
-    @Transactional
-    public void saveFixtures(List<FixtureEntity> fixtures) {
-        log.debug("Saving {} fixtures to DB...", fixtures.size());
-        fixtureRepo.saveAll(fixtures);
-        log.debug("Fixtures saved.");
     }
 
     @Transactional
@@ -207,6 +204,7 @@ public class FixtureService {
 
         } catch (Exception e) {
             log.error("Error updating fixtures for GW {}", gameweekId, e);
+            throw new IllegalStateException("Failed to update fixtures for gameweek " + gameweekId, e);
         }
     }
 

@@ -1,17 +1,31 @@
-FROM eclipse-temurin:21-jdk-jammy AS builder
-WORKDIR /app
+FROM eclipse-temurin:21-jdk-jammy AS build
 
-COPY . .
+WORKDIR /workspace
 
-RUN chmod +x ./gradlew
-RUN ./gradlew clean build -x test --no-daemon
+COPY gradlew gradlew
+COPY gradle gradle
+COPY build.gradle settings.gradle ./
+
+RUN chmod +x gradlew \
+    && ./gradlew dependencies --no-daemon
+
+COPY src src
+
+RUN ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-jammy
+
+RUN groupadd --system fantasy \
+    && useradd --system --gid fantasy --home-dir /app fantasy
+
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+COPY --from=build --chown=fantasy:fantasy /workspace/build/libs/app.jar app.jar
 
-ENV PORT=8080
+USER fantasy
+
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

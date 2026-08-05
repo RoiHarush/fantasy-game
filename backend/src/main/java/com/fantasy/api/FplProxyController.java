@@ -21,20 +21,19 @@ public class FplProxyController {
 
     private static final Logger log = LoggerFactory.getLogger(FplProxyController.class);
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final GameWeekService gameWeekService;
-    private final PlayerRegistry playerRegistry;
-    private final PlayerRepository playerRepo;
+    private final PlayerRepository playerRepository;
     private final PlayerPointsRepository pointsRepo;
 
     public FplProxyController(GameWeekService gameWeekService,
-                              PlayerRegistry playerRegistry,
-                              PlayerRepository playerRepo,
-                              PlayerPointsRepository pointsRepo) {
+                              PlayerRepository playerRepository,
+                              PlayerPointsRepository pointsRepo,
+                              RestTemplate restTemplate) {
         this.gameWeekService = gameWeekService;
-        this.playerRegistry = playerRegistry;
-        this.playerRepo = playerRepo;
+        this.playerRepository = playerRepository;
         this.pointsRepo = pointsRepo;
+        this.restTemplate = restTemplate;
     }
 
     @GetMapping("/dream-team/{gw}")
@@ -54,7 +53,7 @@ public class FplProxyController {
             for (Map<String, Object> entry : fplTeam) {
                 int playerId = (int) entry.get("element");
 
-                Player player = playerRegistry.findById(playerId);
+                PlayerEntity player = playerRepository.findById(playerId).orElse(null);
                 if (player == null) continue;
 
                 Map<String, Object> p = new LinkedHashMap<>();
@@ -62,7 +61,9 @@ public class FplProxyController {
                 p.put("team", TeamName.fromId(player.getTeamId()).getCode());
                 p.put("teamId", player.getTeamId());
                 p.put("position", player.getPosition().getCode());
-                p.put("points", player.getPointsByGameweek().getOrDefault(gw, 0));
+                p.put("points", pointsRepo.findByPlayer_IdAndGameweek(playerId, gw)
+                        .map(PlayerPointsEntity::getPoints)
+                        .orElse(0));
 
                 result.add(p);
             }

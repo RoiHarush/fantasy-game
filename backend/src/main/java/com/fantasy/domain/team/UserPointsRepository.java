@@ -14,5 +14,6 @@ public interface UserPointsRepository extends JpaRepository<UserPointsEntity, Lo
     int sumPointsByUserId(@Param("userId") int userId);
 
     List<UserPointsEntity> findByGameweek(int gameweek);
+    List<UserPointsEntity> findByGameweekAndUser_League_Id(int gameweek, Long leagueId);
 
 }

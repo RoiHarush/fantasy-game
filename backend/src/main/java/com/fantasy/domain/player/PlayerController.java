@@ -1,7 +1,8 @@
 package com.fantasy.domain.player;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import com.fantasy.domain.league.LeagueAccessService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,26 +12,35 @@ import java.util.List;
 public class PlayerController {
 
     private final PlayerService playerService;
-    private final PlayerSyncService playerSyncService;
+    private final LeagueAccessService leagueAccessService;
 
     public PlayerController(PlayerService playerService,
-                            PlayerSyncService playerSyncService) {
+                            LeagueAccessService leagueAccessService) {
         this.playerService = playerService;
-        this.playerSyncService = playerSyncService;
+        this.leagueAccessService = leagueAccessService;
     }
 
 
     @GetMapping
-    public List<PlayerDto> getPlayers() {
-        return playerService.getAllPlayers();
+    public List<PlayerDto> getPlayers(Authentication authentication) {
+        Integer userId = authentication != null ? Integer.parseInt(authentication.getName()) : null;
+        return playerService.getAllPlayers(userId);
     }
 
     @GetMapping("/{playerId}/match-stats")
     public PlayerMatchStatsDto getMatchStats(
             @PathVariable int playerId,
             @RequestParam int gw,
-            @RequestParam(required = false) Integer userId
+            @RequestParam(required = false) Integer userId,
+            Authentication authentication
     ) {
+        if (userId != null) {
+            if (authentication == null) {
+                userId = null;
+            } else {
+                leagueAccessService.requireSameLeague(Integer.parseInt(authentication.getName()), userId);
+            }
+        }
         return playerService.getMatchStats(playerId, gw, userId);
     }
 
@@ -42,63 +52,11 @@ public class PlayerController {
     @GetMapping("/squad-data")
     public ResponseEntity<List<PlayerDataDto>> getSquadData(
             @RequestParam int userId,
-            @RequestParam int gw) {
+            @RequestParam int gw,
+            Authentication authentication) {
+        leagueAccessService.requireSameLeague(Integer.parseInt(authentication.getName()), userId);
         List<PlayerDataDto> result = playerService.getSquadDataForGameweek(userId, gw);
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/player-assisted/{gwId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<List<PlayerAssistedDto>> getPlayersAssistForGameWeek(@PathVariable int gwId){
-        List<PlayerAssistedDto> result = playerService.getPlayersAssistForGameWeek(gwId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/player-penalties/{gwId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<List<PlayerPenaltyDto>> getPlayersPenaltiesForGameWeek(@PathVariable int gwId){
-        List<PlayerPenaltyDto> result = playerService.getPlayersPenaltiesForGameWeek(gwId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/locked-players")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<List<PlayerDto>> getLockedPlayers() {
-        return ResponseEntity.ok(playerService.getLockedPlayers());
-    }
-
-
-    @PostMapping("/admin/update-assist")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<PlayerAssistedDto> updatePlayerAssist(@RequestBody UpdateAssistRequest request) {
-        if (request.getPlayerId() == 0 || request.getGameweek() == 0 || request.getAction() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        PlayerAssistedDto updated = playerSyncService.updatePlayerAssist(request);
-        return ResponseEntity.ok(updated);
-    }
-
-    @PostMapping("/admin/update-penalty")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<PlayerPenaltyDto> updatePlayerPenalty(@RequestBody UpdatePenaltyRequest request) {
-        if (request.getPlayerId() == 0 || request.getGameweek() == 0 || request.getAction() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        PlayerPenaltyDto updated = playerSyncService.updatePlayerPenalty(request);
-        return ResponseEntity.ok(updated);
-    }
-
-    @PostMapping("/toggle-lock")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<PlayerDto> togglePlayerLock(@RequestParam int playerId, @RequestParam boolean lock) {
-        PlayerDto updated = playerSyncService.togglePlayerLock(playerId, lock);
-        return ResponseEntity.ok(updated);
-    }
-
-    @PostMapping("/admin/update-position")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<Void> updatePlayerPosition(@RequestBody UpdatePositionRequest request) {
-        playerSyncService.updatePlayerPosition(request);
-        return ResponseEntity.ok().build();
-    }
 }

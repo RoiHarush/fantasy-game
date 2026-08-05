@@ -3,6 +3,11 @@ package com.fantasy.domain.transfer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
-public interface DraftConfigRepository extends JpaRepository<DraftConfig, Integer> {
+public interface DraftConfigRepository extends JpaRepository<DraftConfig, Long> {
+    Optional<DraftConfig> findByLeague_Id(Long leagueId);
+    List<DraftConfig> findAllByProcessedFalse();
 }

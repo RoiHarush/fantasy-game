@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,15 +14,19 @@ public class TeamService {
     private static final String API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/";
 
     private final TeamRepository teamRepo;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
+    private final RestTemplate restTemplate;
 
-    public TeamService(TeamRepository teamRepo) {
+    public TeamService(TeamRepository teamRepo, ObjectMapper mapper, RestTemplate restTemplate) {
         this.teamRepo = teamRepo;
+        this.mapper = mapper;
+        this.restTemplate = restTemplate;
     }
 
     public List<TeamEntity> fetchTeamsFromApi() {
         try {
-            JsonNode root = mapper.readTree(new URL(API_URL));
+            String response = restTemplate.getForObject(API_URL, String.class);
+            JsonNode root = mapper.readTree(response);
             JsonNode teams = root.get("teams");
 
             List<TeamEntity> entities = new ArrayList<>();

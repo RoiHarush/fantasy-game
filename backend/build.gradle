@@ -22,10 +22,12 @@ dependencies {
 
     // Spring Data JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.flywaydb:flyway-core'
 
     // Database (H2 for dev, easy to test)
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
     // Jackson
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'

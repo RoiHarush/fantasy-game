@@ -6,6 +6,7 @@ import com.fantasy.domain.score.PointsService;
 import com.fantasy.domain.team.UserGameDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true")
 public class DailyPointsScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(DailyPointsScheduler.class);
@@ -48,6 +50,7 @@ public class DailyPointsScheduler {
         int gwId = liveGw.get().getId();
 
         List<LocalDate> activeDates = fixtureRepository.findByGameweekId(gwId).stream()
+                .filter(fixture -> fixture.getKickoffTime() != null)
                 .map(f -> f.getKickoffTime().toLocalDate())
                 .distinct()
                 .collect(Collectors.toList());
@@ -94,7 +97,10 @@ public class DailyPointsScheduler {
 
         log.info("Safe time passed for Date {} in GW {}. Starting calculation...", date, gwId);
 
-        performBulkCalculation(gwId);
+        if (!performBulkCalculation(gwId)) {
+            log.error("Daily point calculation for GW {} on {} had failures; date remains pending", gwId, date);
+            return;
+        }
 
         GameweekDailyStatus status = statusOpt.orElse(new GameweekDailyStatus(gwId, date));
         status.markAsCalculated();
@@ -103,13 +109,16 @@ public class DailyPointsScheduler {
         log.info("Date {} marked as CALCULATED.", date);
     }
 
-    private void performBulkCalculation(int gwId) {
-        userGameDataRepository.findAll().parallelStream().forEach(userGameData -> {
+    private boolean performBulkCalculation(int gwId) {
+        boolean allSucceeded = true;
+        for (Integer userId : userGameDataRepository.findAllRealUserIds()) {
             try {
-                pointsService.calculateAndPersist(userGameData.getUser().getId(), gwId);
+                pointsService.calculateAndPersist(userId, gwId);
             } catch (Exception e) {
-                log.error("Error calculating points for user {}", userGameData.getUser().getId(), e);
+                allSucceeded = false;
+                log.error("Error calculating points for user {}", userId, e);
             }
-        });
+        }
+        return allSucceeded;
     }
 }

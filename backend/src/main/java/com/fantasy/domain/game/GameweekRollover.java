@@ -4,7 +4,6 @@ import com.fantasy.domain.team.FantasyTeam;
 import com.fantasy.domain.team.Squad;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
-import com.fantasy.domain.player.PlayerRegistry;
 import com.fantasy.domain.team.UserGameData;
 
 import java.util.*;
@@ -50,8 +49,8 @@ public class GameweekRollover {
     }
 
     private static Squad copySquad(Squad squad){
-        PlayerRegistry pr = new PlayerRegistry();
-                Map<PlayerPosition, List<Player>> starting = new HashMap<>();
+        List<Player> players = new ArrayList<>();
+        Map<PlayerPosition, List<Player>> starting = new HashMap<>();
         Map<String, Player> bench = new LinkedHashMap<>();
 
         starting.put(PlayerPosition.GOALKEEPER, new ArrayList<>());
@@ -62,17 +61,17 @@ public class GameweekRollover {
         for (PlayerPosition pp : PlayerPosition.values()){
             for (Player player : squad.getStartingLineup().get(pp)){
                 starting.get(pp).add(player);
-                pr.add(player);
+                players.add(player);
             }
         }
 
         for (String key : squad.getBench().keySet()){
             bench.put(key, squad.getBench().get(key));
-            pr.add(squad.getBench().get(key));
+            if (squad.getBench().get(key) != null) players.add(squad.getBench().get(key));
         }
 
         Squad result = new Squad();
-        result.setAllPlayers(pr);
+        result.setAllPlayers(players);
         result.setStartingLineup(starting);
         result.setBench(bench);
         result.setFirstPick(squad.getFirstPick());

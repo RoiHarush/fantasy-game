@@ -5,10 +5,13 @@ import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.FixtureService;
 import com.fantasy.domain.realWorldData.TeamEntity;
 import com.fantasy.domain.realWorldData.TeamRepository;
-import com.fantasy.domain.user.UserEntity;
-import com.fantasy.domain.user.UserRepository;
 import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.team.UserGameDataEntity;
+import com.fantasy.domain.team.UserGameDataRepository;
+import com.fantasy.domain.league.LeagueRepository;
+import com.fantasy.domain.league.LeagueEntity;
+import com.fantasy.domain.score.LeagueScoringService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +28,10 @@ public class PlayerService {
     private final TeamRepository teamRepo;
     private final FixtureRepository fixtureRepo;
     private final UserSquadRepository userSquadRepo;
-    private final UserRepository userRepo;
     private final FixtureService fixtureService;
-    private final PlayerRegistry playerRegistry;
+    private final LeagueRepository leagueRepo;
+    private final UserGameDataRepository gameDataRepo;
+    private final LeagueScoringService leagueScoringService;
 
     public PlayerService(PlayerRepository playerRepo,
                          PlayerPointsRepository pointsRepo,
@@ -35,65 +39,127 @@ public class PlayerService {
                          TeamRepository teamRepo,
                          FixtureRepository fixtureRepo,
                          UserSquadRepository userSquadRepo,
-                         UserRepository userRepo,
                          FixtureService fixtureService,
-                         PlayerRegistry playerRegistry) {
+                         LeagueRepository leagueRepo,
+                         UserGameDataRepository gameDataRepo,
+                         LeagueScoringService leagueScoringService) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
         this.teamRepo = teamRepo;
         this.fixtureRepo = fixtureRepo;
         this.userSquadRepo = userSquadRepo;
-        this.userRepo = userRepo;
         this.fixtureService = fixtureService;
-        this.playerRegistry = playerRegistry;
+        this.leagueRepo = leagueRepo;
+        this.gameDataRepo = gameDataRepo;
+        this.leagueScoringService = leagueScoringService;
     }
 
 
-    public List<PlayerDto> getAllPlayers() {
+    public List<PlayerDto> getAllPlayers(Integer requestingUserId) {
         List<PlayerPointsEntity> allPoints = pointsRepo.findAll();
         Map<Integer, List<PlayerPointsEntity>> pointsByPlayer =
                 allPoints.stream().collect(Collectors.groupingBy(p -> p.getPlayer().getId()));
 
-        Map<Integer, String> ownerNameMap = userRepo.findAll().stream()
-                .collect(Collectors.toMap(UserEntity::getId, UserEntity::getName));
+        Map<Integer, PlayerOwnership> ownershipByPlayer = loadLeagueOwnership(requestingUserId);
+        LeagueEntity scoringLeague = requestingUserId == null
+                ? null
+                : leagueRepo.findFirstByUsers_Id(requestingUserId).orElse(null);
+        Map<Integer, Integer> leaguePointsByPlayer = new HashMap<>();
+        if (scoringLeague != null) {
+            for (PlayerGameweekStatsEntity stats : statsRepo.findAll()) {
+                leaguePointsByPlayer.merge(
+                        stats.getPlayer().getId(),
+                        leagueScoringService.calculatePlayerPoints(stats, scoringLeague),
+                        Integer::sum
+                );
+            }
+        }
 
         return playerRepo.findAll().stream()
                 .map(p -> {
-                    String ownerName = (p.getOwnerId() != null && p.getOwnerId() > 0)
-                            ? ownerNameMap.get(p.getOwnerId()) : null;
+                    PlayerOwnership ownership = ownershipByPlayer.get(p.getId());
+                    Integer ownerId = ownership != null ? ownership.userId() : null;
+                    String ownerName = ownership != null ? ownership.userName() : null;
+                    PlayerPosition effectivePosition = scoringLeague == null
+                            ? p.getPosition()
+                            : scoringLeague.effectivePosition(p);
+                    boolean locked = scoringLeague == null
+                            ? false
+                            : scoringLeague.isPlayerLocked(p.getId());
+                    boolean available = ownerId == null && !locked;
 
+                    if (scoringLeague != null) {
+                        return PlayerMapper.toDtoWithTotalPoints(
+                                p,
+                                leaguePointsByPlayer.getOrDefault(p.getId(), 0),
+                                ownerId,
+                                ownerName,
+                                available,
+                                effectivePosition
+                        );
+                    }
                     return PlayerMapper.toDto(
-                            p,
-                            pointsByPlayer.getOrDefault(p.getId(), List.of()),
-                            ownerName
-                    );
+                                p,
+                                pointsByPlayer.getOrDefault(p.getId(), List.of()),
+                                ownerId,
+                                ownerName,
+                                available,
+                                effectivePosition
+                        );
                 })
                 .collect(Collectors.toList());
     }
+
+    private Map<Integer, PlayerOwnership> loadLeagueOwnership(Integer requestingUserId) {
+        if (requestingUserId == null) {
+            return Map.of();
+        }
+
+        return leagueRepo.findFirstByUsers_Id(requestingUserId)
+                .map(league -> {
+                    Map<Integer, PlayerOwnership> ownership = new HashMap<>();
+                    for (UserGameDataEntity gameData : gameDataRepo.findAllByLeagueIdWithSquads(league.getId())) {
+                        UserSquadEntity squad = gameData.getNextSquad() != null
+                                ? gameData.getNextSquad()
+                                : gameData.getCurrentSquad();
+                        if (squad == null) continue;
+
+                        PlayerOwnership owner = new PlayerOwnership(
+                                gameData.getUser().getId(),
+                                gameData.getUser().getName()
+                        );
+                        addOwnership(ownership, squad.getStartingLineup(), owner);
+                        addOwnership(ownership, squad.getBenchMap().values(), owner);
+                        if (squad.getIrId() != null) {
+                            ownership.put(squad.getIrId(), owner);
+                        }
+                    }
+                    return ownership;
+                })
+                .orElseGet(Map::of);
+    }
+
+    private void addOwnership(Map<Integer, PlayerOwnership> ownership,
+                              Collection<Integer> playerIds,
+                              PlayerOwnership owner) {
+        if (playerIds == null) return;
+        for (Integer playerId : playerIds) {
+            if (playerId != null) ownership.put(playerId, owner);
+        }
+    }
+
+    private record PlayerOwnership(Integer userId, String userName) {}
 
     public long countPlayers() {
         return playerRepo.count();
     }
 
-    public List<PlayerDto> getLockedPlayers() {
-        List<PlayerEntity> locked = playerRepo.findByState(PlayerState.LOCKED);
-        return locked.stream()
-                .map(p -> PlayerMapper.toDto(p, null, null))
-                .collect(Collectors.toList());
-    }
-
-    public List<PlayerAssistedDto> getPlayersAssistForGameWeek(int gwId){
-        return statsRepo.findPlayersWithAssists(gwId);
-    }
-
-    public List<PlayerPenaltyDto> getPlayersPenaltiesForGameWeek(int gwId){
-        return statsRepo.findPlayersWithPenalties(gwId);
-    }
-
-
     public List<PlayerDataDto> getSquadDataForGameweek(int userId, int gwId) {
-        UserSquadEntity squadEntity = userSquadRepo.findByUser_IdAndGameweek(userId, gwId)
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("No game data found for user " + userId));
+        int gameDataId = gameData.getId();
+        UserSquadEntity squadEntity = userSquadRepo.findByUser_IdAndGameweek(gameDataId, gwId)
                 .orElseThrow(() -> new RuntimeException("No squad found for user " + userId + " in GW " + gwId));
 
         List<FixtureEntity> gwFixtures = fixtureService.getFixturesByGameweek(gwId);
@@ -115,15 +181,16 @@ public class PlayerService {
         if (squadEntity.getBenchMap() != null) playerIds.addAll(squadEntity.getBenchMap().values());
 
         return playerIds.stream()
-                .map(id -> mapPlayerToDataDto(id, gwId, teamFixturesMap, teamNamesMap))
+                .map(id -> mapPlayerToDataDto(id, gwId, teamFixturesMap, teamNamesMap, gameData.getLeague()))
                 .toList();
     }
 
     private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId,
                                              Map<Integer, List<FixtureEntity>> teamFixturesMap,
-                                             Map<Integer, String> teamNamesMap) {
+                                             Map<Integer, String> teamNamesMap,
+                                             LeagueEntity scoringLeague) {
 
-        Player player = playerRegistry.findById(playerId);
+        Player player = loadDomainPlayer(playerId);
         if (player == null) return new PlayerDataDto(playerId, 0, null);
 
         List<FixtureEntity> myFixtures = teamFixturesMap.getOrDefault(player.getTeamId(), List.of());
@@ -135,12 +202,9 @@ public class PlayerService {
 
         if (hasStarted) {
             Optional<PlayerPointsEntity> pointsOpt = pointsRepo.findByPlayer_IdAndGameweek(playerId, gwId);
-
-            if (pointsOpt.isPresent()) {
-                points = pointsOpt.get().getPoints();
-            } else {
-                points = 0;
-            }
+            points = statsRepo.findByPlayer_IdAndGameweek(playerId, gwId)
+                    .map(stats -> leagueScoringService.calculatePlayerPoints(stats, scoringLeague))
+                    .orElseGet(() -> pointsOpt.map(PlayerPointsEntity::getPoints).orElse(0));
         }
 
         if (points == null) {
@@ -163,7 +227,7 @@ public class PlayerService {
 
 
     public List<PlayerMatchStatsDto> getAllMatchStats(int playerId) {
-        Player player = playerRegistry.findById(playerId);
+        Player player = loadDomainPlayer(playerId);
         if (player == null) throw new RuntimeException("Player not found: " + playerId);
 
         var playerTeam = teamRepo.findById(player.getTeamId())
@@ -173,13 +237,13 @@ public class PlayerService {
         List<PlayerMatchStatsDto> results = new ArrayList<>();
 
         for (var e : allStats) {
-            results.add(buildMatchStatsDto(player, e, playerTeam, e.getGameweek(), null));
+            results.add(buildMatchStatsDto(player, e, playerTeam, e.getGameweek(), null, null));
         }
         return results;
     }
 
     public PlayerMatchStatsDto getMatchStats(int playerId, int gw, Integer userId) {
-        Player player = playerRegistry.findById(playerId);
+        Player player = loadDomainPlayer(playerId);
         if (player == null) throw new RuntimeException("Player not found: " + playerId);
 
         var playerTeam = teamRepo.findById(player.getTeamId())
@@ -188,8 +252,13 @@ public class PlayerService {
         var statsOpt = statsRepo.findByPlayer_IdAndGameweek(playerId, gw);
 
         boolean isCaptain = false;
+        LeagueEntity scoringLeague = null;
         if (userId != null) {
-            var squadOpt = userSquadRepo.findByUser_IdAndGameweek(userId, gw);
+            UserGameDataEntity gameData = gameDataRepo.findByUserId(userId).orElse(null);
+            var squadOpt = gameData == null
+                    ? Optional.<UserSquadEntity>empty()
+                    : userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), gw);
+            scoringLeague = gameData != null ? gameData.getLeague() : null;
             if (squadOpt.isPresent()) {
                 Integer captainId = squadOpt.get().getCaptainId();
                 if (captainId != null && captainId == playerId) {
@@ -199,13 +268,18 @@ public class PlayerService {
         }
 
         if (statsOpt.isPresent()) {
-            return buildMatchStatsDto(player, statsOpt.get(), playerTeam, gw, isCaptain);
+            return buildMatchStatsDto(player, statsOpt.get(), playerTeam, gw, isCaptain, scoringLeague);
         }
 
         return buildEmptyMatchStats(player, gw, playerTeam);
     }
 
-    private PlayerMatchStatsDto buildMatchStatsDto(Player player, PlayerGameweekStatsEntity stats, TeamEntity playerTeam, int gw, Boolean isCaptain) {
+    private PlayerMatchStatsDto buildMatchStatsDto(Player player,
+                                                    PlayerGameweekStatsEntity stats,
+                                                    TeamEntity playerTeam,
+                                                    int gw,
+                                                    Boolean isCaptain,
+                                                    LeagueEntity scoringLeague) {
         TeamEntity opponent = teamRepo.findById(stats.getOpponentTeamId()).orElse(null);
         boolean wasHome = stats.isWasHome();
 
@@ -226,7 +300,30 @@ public class PlayerService {
             awayScore = fixture.getAwayTeamScore();
         }
 
-        PlayerMatchStatsDto dto = PlayerMatchStatsMapper.toDto(player, stats, homeTeam, awayTeam, homeScore, awayScore, Boolean.TRUE.equals(isCaptain));
+        var scoreBreakdown = leagueScoringService.calculatePlayerScore(stats, scoringLeague);
+        Player effectivePlayer = player;
+        if (scoringLeague != null) {
+            PlayerPosition effectivePosition = scoringLeague.getPlayerPositionOverrides()
+                    .getOrDefault(player.getId(), player.getPosition());
+            effectivePlayer = new Player(
+                    player.getId(),
+                    player.getFirstName(),
+                    player.getLastName(),
+                    effectivePosition,
+                    player.getTeamId(),
+                    player.getViewName()
+            );
+        }
+        PlayerMatchStatsDto dto = PlayerMatchStatsMapper.toDto(
+                effectivePlayer,
+                stats,
+                homeTeam,
+                awayTeam,
+                homeScore,
+                awayScore,
+                Boolean.TRUE.equals(isCaptain),
+                scoreBreakdown
+        );
 
         if (homeTeam != null) {
             dto.setHomeTeamId(homeTeam.getId());
@@ -287,5 +384,11 @@ public class PlayerService {
         }
 
         return PlayerMatchStatsDto.empty(player, null, null, null, null);
+    }
+
+    private Player loadDomainPlayer(int playerId) {
+        return playerRepo.findById(playerId)
+                .map(entity -> PlayerMapper.toDomain(entity, pointsRepo.findByPlayer_Id(playerId)))
+                .orElse(null);
     }
 }

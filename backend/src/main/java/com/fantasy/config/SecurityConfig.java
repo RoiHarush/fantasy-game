@@ -2,6 +2,7 @@ package com.fantasy.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,6 +23,15 @@ import java.util.Arrays;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    private final java.util.List<String> allowedOrigins;
+
+    public SecurityConfig(@Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}") String allowedOrigins) {
+        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, TokenAuthFilter tokenAuthFilter) throws Exception {
         http
@@ -34,15 +44,14 @@ public class SecurityConfig {
 
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/healthz").permitAll()
+                        .requestMatchers("/actuator/health/**").permitAll()
 
-                        .requestMatchers("/api/players/player-assisted/**").authenticated()
-                        .requestMatchers("/api/admin/**").authenticated()
+                        .requestMatchers("/api/players/squad-data").authenticated()
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_SUPER_ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/teams/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/gameweeks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/fixtures/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/league/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/fpl/**").permitAll()
 
                         .anyRequest().authenticated()
@@ -66,11 +75,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://fantasy-draft-sigma.vercel.app"
-        ));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

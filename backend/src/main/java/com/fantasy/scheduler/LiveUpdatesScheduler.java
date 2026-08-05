@@ -7,6 +7,7 @@ import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.GameWeekRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true")
 public class LiveUpdatesScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(LiveUpdatesScheduler.class);

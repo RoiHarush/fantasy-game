@@ -2,9 +2,7 @@ package com.fantasy.domain.team;
 
 import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.player.Player;
-import com.fantasy.domain.player.PlayerEntity;
-import com.fantasy.domain.player.PlayerRegistry;
-import com.fantasy.domain.player.PlayerRepository;
+import com.fantasy.domain.league.LeaguePlayerCatalog;
 import com.fantasy.domain.team.Exceptions.FantasyTeamException;
 import com.fantasy.domain.player.exception.PlayerNotFoundException;
 import com.fantasy.domain.user.UserEntity;
@@ -15,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,22 +25,19 @@ public class FantasyTeamService {
     private final UserGameDataRepository gameDataRepo;
     private final UserSquadRepository userSquadRepo;
     private final GameWeekService gameWeekService;
-    private final PlayerRegistry playerRegistry;
-    private final PlayerRepository playerRepo;
     private final UserRepository userRepo;
+    private final LeaguePlayerCatalog leaguePlayerCatalog;
 
     public FantasyTeamService(UserGameDataRepository gameDataRepo,
                               UserSquadRepository userSquadRepo,
                               GameWeekService gameWeekService,
-                              PlayerRegistry playerRegistry,
-                              PlayerRepository playerRepo,
-                              UserRepository userRepo) {
+                              UserRepository userRepo,
+                              LeaguePlayerCatalog leaguePlayerCatalog) {
         this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
         this.gameWeekService = gameWeekService;
-        this.playerRegistry = playerRegistry;
-        this.playerRepo = playerRepo;
         this.userRepo = userRepo;
+        this.leaguePlayerCatalog = leaguePlayerCatalog;
     }
 
     public SquadDto getSquadForGameweek(int userId, Integer gw) {
@@ -56,13 +50,13 @@ public class FantasyTeamService {
         if (effectiveGw < currentGw) {
             return userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), effectiveGw)
                     .map(entity -> {
-                        Squad squad = SquadMapper.toDomain(entity, playerRegistry);
+                        Squad squad = SquadMapper.toDomain(entity, catalogFor(gameData));
                         return SquadMapper.toDto(squad);
                     })
                     .orElse(null);
         }
 
-        UserGameData user = UserMapper.toDomainGameData(gameData, playerRegistry);
+        UserGameData user = UserMapper.toDomainGameData(gameData, catalogFor(gameData));
         Squad squad;
         if (effectiveGw == currentGw) {
             squad = user.getCurrentFantasyTeam().getSquad();
@@ -81,12 +75,13 @@ public class FantasyTeamService {
         log.info("Saving team for user {}", userId);
 
         UserGameDataEntity gameDataEntity = getGameDataEntity(userId);
-        UserGameData userDomain = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+        Map<Integer, Player> leaguePlayers = catalogFor(gameDataEntity);
+        UserGameData userDomain = UserMapper.toDomainGameData(gameDataEntity, leaguePlayers);
         FantasyTeam team = userDomain.getNextFantasyTeam();
 
         if (team == null) throw new RuntimeException("UserGameData has no next fantasy team");
 
-        Squad squad = SquadMapper.fromDto(dto, playerRegistry);
+        Squad squad = SquadMapper.fromDto(dto, leaguePlayers);
 
         try {
             boolean firstPickUsed = Boolean.TRUE.equals(userDomain.getActiveChips().get("FIRST_PICK_CAPTAIN"));
@@ -96,7 +91,6 @@ public class FantasyTeamService {
             throw e;
         }
 
-        updatePlayerStatesInDb(squad);
         saveSquadToDb(gameDataEntity, team);
 
         return SquadMapper.toDto(squad);
@@ -129,7 +123,7 @@ public class FantasyTeamService {
 
     public UserChipsDto getUserChips(int userId) {
         UserGameDataEntity entity = getGameDataEntity(userId);
-        UserGameData domain = UserMapper.toDomainGameData(entity, playerRegistry);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
         return UserChipMapper.toDto(domain);
     }
 
@@ -138,18 +132,18 @@ public class FantasyTeamService {
         log.info("Assigning IR: User={}, Player={}", userId, playerId);
 
         UserGameDataEntity entity = getGameDataEntity(userId);
-        UserGameData domain = UserMapper.toDomainGameData(entity, playerRegistry);
+        Map<Integer, Player> leaguePlayers = catalogFor(entity);
+        UserGameData domain = UserMapper.toDomainGameData(entity, leaguePlayers);
         FantasyTeam team = domain.getNextFantasyTeam();
 
         domain.useChip("IR");
 
-        Player player = playerRegistry.findById(playerId);
+        Player player = leaguePlayers.get(playerId);
         if (player == null) throw new PlayerNotFoundException("Player not found: " + playerId);
 
         team.setIR(player);
 
         saveGameDataChips(entity, domain);
-        updateSinglePlayerState(playerId, player.getState());
         saveSquadToDb(entity, team);
 
         return SquadMapper.toDto(team.getSquad());
@@ -160,19 +154,18 @@ public class FantasyTeamService {
         log.info("Releasing IR: User={}, PlayerOut={}", userId, playerOutId);
 
         UserGameDataEntity entity = getGameDataEntity(userId);
-        UserGameData domain = UserMapper.toDomainGameData(entity, playerRegistry);
+        Map<Integer, Player> leaguePlayers = catalogFor(entity);
+        UserGameData domain = UserMapper.toDomainGameData(entity, leaguePlayers);
         FantasyTeam team = domain.getNextFantasyTeam();
 
         domain.deactivateChip("IR");
 
-        Player playerOut = playerRegistry.findById(playerOutId);
+        Player playerOut = leaguePlayers.get(playerOutId);
         if (playerOut == null) throw new PlayerNotFoundException("Player not found");
 
         team.releaseIR(playerOut);
 
         saveGameDataChips(entity, domain);
-        updatePlayerStatesInDb(team.getSquad());
-        updateSinglePlayerState(playerOutId, playerOut.getState());
         saveSquadToDb(entity, team);
 
         return SquadMapper.toDto(team.getSquad());
@@ -181,7 +174,7 @@ public class FantasyTeamService {
     @Transactional
     public SquadDto assignFirstPickCaptain(int userId) {
         UserGameDataEntity entity = getGameDataEntity(userId);
-        UserGameData domain = UserMapper.toDomainGameData(entity, playerRegistry);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
         FantasyTeam team = domain.getNextFantasyTeam();
 
         domain.useChip("FIRST_PICK_CAPTAIN");
@@ -196,7 +189,7 @@ public class FantasyTeamService {
     @Transactional
     public SquadDto releaseFirstPickCaptain(int userId) {
         UserGameDataEntity entity = getGameDataEntity(userId);
-        UserGameData domain = UserMapper.toDomainGameData(entity, playerRegistry);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
         FantasyTeam team = domain.getNextFantasyTeam();
 
         domain.deactivateChip("FIRST_PICK_CAPTAIN");
@@ -230,13 +223,14 @@ public class FantasyTeamService {
         return getGameDataEntity(userId).getWatchedPlayers();
     }
 
-    public List<IrStatusDto> getIrStatuses() {
-        List<UserGameDataEntity> allTeams = gameDataRepo.findAllWithRelations();
+    @Transactional(readOnly = true)
+    public List<IrStatusDto> getIrStatuses(long leagueId) {
+        List<UserGameDataEntity> allTeams = gameDataRepo.findAllByLeagueIdWithSquads(leagueId);
         Map<Integer, String> userNames = userRepo.findAll().stream()
                 .collect(Collectors.toMap(UserEntity::getId, UserEntity::getName));
 
         return allTeams.stream().map(team -> {
-            UserGameData domain = UserMapper.toDomainGameData(team, playerRegistry);
+            UserGameData domain = UserMapper.toDomainGameData(team, catalogFor(team));
             var squad = domain.getNextFantasyTeam() != null ? domain.getNextFantasyTeam().getSquad() : null;
             var ir = squad != null ? squad.getIR() : null;
 
@@ -256,6 +250,10 @@ public class FantasyTeamService {
                 .orElseThrow(() -> new RuntimeException("UserGameData not found for user: " + userId));
     }
 
+    private Map<Integer, Player> catalogFor(UserGameDataEntity gameData) {
+        return leaguePlayerCatalog.load(gameData.getLeague());
+    }
+
     private void saveSquadToDb(UserGameDataEntity gameDataEntity, FantasyTeam team) {
         UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
         if (nextSquadEntity == null) throw new RuntimeException("Next squad entity structure missing");
@@ -273,29 +271,4 @@ public class FantasyTeamService {
         gameDataRepo.save(entity);
     }
 
-    private void updatePlayerStatesInDb(Squad squad) {
-        List<PlayerEntity> playersToUpdate = new ArrayList<>();
-        List<Player> allSquadPlayers = new ArrayList<>();
-
-        squad.getStartingLineup().values().forEach(allSquadPlayers::addAll);
-        squad.getBench().values().forEach(allSquadPlayers::add);
-        if (squad.getIR() != null) allSquadPlayers.add(squad.getIR());
-
-        for (Player p : allSquadPlayers) {
-            if (p != null) {
-                playerRepo.findById(p.getId()).ifPresent(pEntity -> {
-                    pEntity.setState(p.getState());
-                    playersToUpdate.add(pEntity);
-                });
-            }
-        }
-        playerRepo.saveAll(playersToUpdate);
-    }
-
-    private void updateSinglePlayerState(int playerId, com.fantasy.domain.player.PlayerState state) {
-        playerRepo.findById(playerId).ifPresent(p -> {
-            p.setState(state);
-            playerRepo.save(p);
-        });
-    }
 }

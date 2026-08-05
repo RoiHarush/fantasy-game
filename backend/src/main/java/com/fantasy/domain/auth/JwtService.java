@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -16,7 +17,32 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    private static final String SECRET_KEY = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+    private final Key signingKey;
+    private final long expirationMillis;
+
+    public JwtService(@Value("${app.jwt.secret}") String secretKey,
+                      @Value("${app.jwt.expiration-millis:86400000}") long expirationMillis) {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET must be configured");
+        }
+
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("JWT_SECRET must be a valid Base64 value", exception);
+        }
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT_SECRET must decode to at least 32 bytes");
+        }
+        if (expirationMillis <= 0) {
+            throw new IllegalStateException("JWT expiration must be positive");
+        }
+
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        this.expirationMillis = expirationMillis;
+    }
 
     public String generateToken(Integer userId, String role) {
         Map<String, Object> claims = new HashMap<>();
@@ -27,12 +53,11 @@ public class JwtService {
     private String createToken(Map<String, Object> claims, String subject) {
         long now = System.currentTimeMillis();
 
-        long duration = 1000L * 60 * 60 * 24 * 30 * 9;
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(now + duration))
+                .setExpiration(new Date(now + expirationMillis))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -69,7 +94,6 @@ public class JwtService {
     }
 
     private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
 }

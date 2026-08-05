@@ -2,6 +2,7 @@ package com.fantasy.domain.league;
 
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/league")
@@ -14,7 +15,7 @@ public class LeagueController {
     }
 
     @GetMapping
-    public LeagueDto getLiveLeague() {
-        return leagueService.getLiveLeagueDto();
+    public LeagueDto getLiveLeague(Authentication authentication) {
+        return leagueService.getLiveLeagueDto(Integer.parseInt(authentication.getName()));
     }
 }

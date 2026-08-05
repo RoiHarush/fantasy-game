@@ -17,18 +17,22 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public ResponseEntity<List<UserDto>> getAllUsers(Authentication authentication) {
+        return ResponseEntity.ok(userService.getAllUsers(authenticatedUserId(authentication)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable int id) {
-        return ResponseEntity.ok(userService.getUserById(id));
+    public ResponseEntity<UserDto> getUserById(@PathVariable int id, Authentication authentication) {
+        return ResponseEntity.ok(userService.getUserById(authenticatedUserId(authentication), id));
     }
 
     @PutMapping("/profile")
     public ResponseEntity<UserDto> updateProfile(@RequestBody UpdateProfileDto request, Authentication authentication) {
-        int userId = Integer.parseInt(authentication.getName());
+        int userId = authenticatedUserId(authentication);
         return ResponseEntity.ok(userService.updateUserProfile(userId, request));
+    }
+
+    private int authenticatedUserId(Authentication authentication) {
+        return Integer.parseInt(authentication.getName());
     }
 }

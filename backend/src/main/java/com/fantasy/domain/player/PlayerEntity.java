@@ -20,11 +20,7 @@ public class PlayerEntity {
 
     private Integer teamId;
 
-    @Enumerated(EnumType.STRING)
-    private PlayerState state;
-
     private boolean injured;
-    private Integer ownerId;
     private int totalPoints;
 
     @Column(length = 255)
@@ -59,14 +55,8 @@ public class PlayerEntity {
     public Integer getTeamId() { return teamId; }
     public void setTeamId(Integer teamId) { this.teamId = teamId; }
 
-    public PlayerState getState() { return state; }
-    public void setState(PlayerState state) { this.state = state; }
-
     public boolean isInjured() { return injured; }
     public void setInjured(boolean injured) { this.injured = injured; }
-
-    public Integer getOwnerId() { return ownerId; }
-    public void setOwnerId(Integer ownerId) { this.ownerId = ownerId; }
 
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }

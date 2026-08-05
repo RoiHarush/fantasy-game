@@ -3,6 +3,8 @@ package com.fantasy.domain.transfer;
 import com.fantasy.domain.team.Exceptions.FantasyTeamException;
 import com.fantasy.domain.team.IRSignRequestDto;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,8 +21,9 @@ public class TransferMarketController {
     }
 
     @PostMapping("/transfer")
-    public ResponseEntity<String> makeTransfer(@RequestBody TransferRequestDto request) {
+    public ResponseEntity<String> makeTransfer(@RequestBody TransferRequestDto request, Authentication authentication) {
         try {
+            request.setUserId(authenticatedUserId(authentication));
             marketService.processTransfer(request);
             return ResponseEntity.ok("Transfer successful");
         } catch (FantasyTeamException e) {
@@ -33,9 +36,10 @@ public class TransferMarketController {
     }
 
     @PostMapping("/pass")
-    public ResponseEntity<String> passTurn(@RequestParam int userId) {
+    public ResponseEntity<String> passTurn(@RequestParam(required = false) Integer userId,
+                                           Authentication authentication) {
         try {
-            marketService.passTurn(userId);
+            marketService.passTurn(authenticatedUserId(authentication));
             return ResponseEntity.ok("Turn passed");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -43,8 +47,9 @@ public class TransferMarketController {
     }
 
     @PostMapping("/ir-sign")
-    public ResponseEntity<String> signIR(@RequestBody IRSignRequestDto request) {
+    public ResponseEntity<String> signIR(@RequestBody IRSignRequestDto request, Authentication authentication) {
         try {
+            request.setUserId(authenticatedUserId(authentication));
             marketService.replaceIRPlayer(request);
             return ResponseEntity.ok("IR Signed");
         } catch (Exception e) {
@@ -54,9 +59,9 @@ public class TransferMarketController {
 
 
     @PostMapping("/open/{gwId}")
-    public ResponseEntity<String> openWindow(@PathVariable int gwId) {
+    public ResponseEntity<String> openWindow(@PathVariable int gwId, Authentication authentication) {
         try {
-            marketService.openTransferWindow(gwId);
+            marketService.openTransferWindowForUser(authenticatedUserId(authentication), gwId);
             return ResponseEntity.ok("Window opened");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -64,13 +69,28 @@ public class TransferMarketController {
     }
 
     @GetMapping("/turn-order/{gwId}")
-    public ResponseEntity<List<Integer>> getTurns(@PathVariable int gwId) {
-        return ResponseEntity.ok(marketService.getCurrentTurnOrder(gwId));
+    public ResponseEntity<List<Integer>> getTurns(@PathVariable int gwId, Authentication authentication) {
+        return ResponseEntity.ok(marketService.getCurrentTurnOrder(authenticatedUserId(authentication), gwId));
     }
 
 
     @GetMapping("/state")
-    public ResponseEntity<Map<String, Object>> getState() {
-        return ResponseEntity.ok(marketService.getCurrentWindowState());
+    public ResponseEntity<Map<String, Object>> getState(Authentication authentication) {
+        return ResponseEntity.ok(marketService.getCurrentWindowState(authenticatedUserId(authentication)));
+    }
+
+    @PostMapping("/draft-pick/{playerId}")
+    public ResponseEntity<String> makeDraftPick(@PathVariable int playerId,
+                                                 Authentication authentication) {
+        try {
+            marketService.processDraftPick(authenticatedUserId(authentication), playerId);
+            return ResponseEntity.ok("Draft pick completed");
+        } catch (FantasyTeamException | IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(exception.getMessage());
+        }
+    }
+
+    private int authenticatedUserId(Authentication authentication) {
+        return Integer.parseInt(authentication.getName());
     }
 }

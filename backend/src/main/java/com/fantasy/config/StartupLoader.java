@@ -14,8 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
-import java.net.URL;
 import java.util.*;
 
 @Component
@@ -29,11 +29,9 @@ public class StartupLoader {
     private final GameWeekService gameWeekService;
     private final FixtureService fixtureService;
 
-    private final PlayerRepository playerRepo;
-    private final PlayerPointsRepository pointsRepo;
-    private final PlayerRegistry playerRegistry;
-
-    private final SeedingService seedingService;
+    private final PlayerRepository playerRepository;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper mapper;
 
     @Autowired
     public StartupLoader(TeamService teamService,
@@ -41,19 +39,17 @@ public class StartupLoader {
                          PlayerSyncService playerSyncService,
                          GameWeekService gameWeekService,
                          FixtureService fixtureService,
-                         PlayerRepository playerRepo,
-                         PlayerPointsRepository pointsRepo,
-                         PlayerRegistry playerRegistry,
-                         SeedingService seedingService) {
+                         PlayerRepository playerRepository,
+                         RestTemplate restTemplate,
+                         ObjectMapper mapper) {
         this.teamService = teamService;
         this.playerService = playerService;
         this.playerSyncService = playerSyncService;
         this.gameWeekService = gameWeekService;
         this.fixtureService = fixtureService;
-        this.playerRepo = playerRepo;
-        this.pointsRepo = pointsRepo;
-        this.playerRegistry = playerRegistry;
-        this.seedingService = seedingService;
+        this.playerRepository = playerRepository;
+        this.restTemplate = restTemplate;
+        this.mapper = mapper;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -61,8 +57,6 @@ public class StartupLoader {
         log.info("=== STARTUP SEQUENCE BEGIN ===");
 
         loadStaticData();
-        loadRegistries();
-        seedingService.seedAndInitializeDB();
 
         log.info("=== STARTUP COMPLETE ===");
     }
@@ -106,24 +100,13 @@ public class StartupLoader {
         }
     }
 
-    public void loadRegistries() {
-        log.info("Loading registries to memory...");
-
-        var players = playerRepo.findAll().stream()
-                .map(p -> PlayerMapper.toDomain(p, pointsRepo.findByPlayer_Id(p.getId())))
-                .toList();
-
-        playerRegistry.addMany(players);
-        log.info("Finished loading Players to Registry ({} players)", players.size());
-    }
-
     private void updatePlayersPhotosFromApi() {
         log.info("Updating player photos using FPL code field...");
 
         try {
             String url = "https://fantasy.premierleague.com/api/bootstrap-static/";
-            var mapper = new ObjectMapper();
-            var root = mapper.readTree(new URL(url));
+            String response = restTemplate.getForObject(url, String.class);
+            var root = mapper.readTree(response);
             var elements = root.get("elements");
 
             Map<Integer, String> apiCodes = new HashMap<>();
@@ -136,7 +119,7 @@ public class StartupLoader {
             }
 
             if (!apiCodes.isEmpty()) {
-                seedingService.persistPlayerPhotoUpdates(apiCodes);
+                persistPlayerPhotoUpdates(apiCodes);
             }
 
             log.info("Updated photo codes for {} players.", apiCodes.size());
@@ -144,5 +127,16 @@ public class StartupLoader {
         } catch (Exception e) {
             log.error("Failed to update player photos: {}", e.getMessage(), e);
         }
+    }
+
+    private void persistPlayerPhotoUpdates(Map<Integer, String> apiCodes) {
+        var players = playerRepository.findAll();
+        players.forEach(player -> {
+            String photoCode = apiCodes.get(player.getId());
+            if (photoCode != null && !photoCode.isBlank()) {
+                player.setPhoto(photoCode);
+            }
+        });
+        playerRepository.saveAll(players);
     }
 }

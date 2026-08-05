@@ -1,9 +1,9 @@
 package com.fantasy.domain.score;
 
 import com.fantasy.domain.team.*;
-import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.player.PlayerGameweekStatsEntity;
+import com.fantasy.domain.player.PlayerGameweekStatsRepository;
 import com.fantasy.domain.game.GameweekHistoryDto;
-import com.fantasy.domain.user.UserMapper;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -13,8 +13,12 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class PointsService {
 
     private static final Logger log = LoggerFactory.getLogger(PointsService.class);
@@ -22,16 +26,19 @@ public class PointsService {
     private final UserGameDataRepository gameDataRepo;
     private final UserSquadRepository userSquadRepo;
     private final UserPointsRepository userPointsRepo;
-    private final PlayerRegistry playerRegistry;
+    private final PlayerGameweekStatsRepository statsRepo;
+    private final LeagueScoringService leagueScoringService;
 
     public PointsService(UserGameDataRepository gameDataRepo,
                          UserSquadRepository userSquadRepo,
                          UserPointsRepository userPointsRepo,
-                         PlayerRegistry playerRegistry) {
+                         PlayerGameweekStatsRepository statsRepo,
+                         LeagueScoringService leagueScoringService) {
         this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
         this.userPointsRepo = userPointsRepo;
-        this.playerRegistry = playerRegistry;
+        this.statsRepo = statsRepo;
+        this.leagueScoringService = leagueScoringService;
     }
 
     @Transactional
@@ -50,10 +57,7 @@ public class PointsService {
                     return new RuntimeException("Squad snapshot not found for gw " + gw);
                 });
 
-        Squad squad = SquadMapper.toDomain(squadEntity, playerRegistry);
-        FantasyTeam team = new FantasyTeam(gw, squad);
-
-        int points = team.calculatePoints();
+        int points = calculateSquadPoints(gameDataEntity, squadEntity, gw);
 
         UserPointsEntity pointsEntity = userPointsRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw)
                 .orElseGet(() -> {
@@ -104,22 +108,14 @@ public class PointsService {
         UserSquadEntity squadEntity = userSquadRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw)
                 .orElseThrow(() -> new RuntimeException("Squad snapshot not found for gw " + gw));
 
-        Squad squad = SquadMapper.toDomain(squadEntity, playerRegistry);
-
-        FantasyTeam team = new FantasyTeam(gw, squad);
-
-        return team.calculatePoints();
+        return calculateSquadPoints(gameDataEntity, squadEntity, gw);
     }
 
     public int getUserTotalPoints(int userId) {
         log.debug("Fetching total points for user {}", userId);
 
         return gameDataRepo.findByUserId(userId)
-                .map(e -> {
-                    int total = UserMapper.toDomainGameData(e, playerRegistry).getTotalPoints();
-                    log.debug("Total points result → user={}, total={}", userId, total);
-                    return total;
-                })
+                .map(UserGameDataEntity::getTotalPoints)
                 .orElse(0);
     }
 
@@ -150,5 +146,21 @@ public class PointsService {
         log.debug("History built → user={}, entries={}", userId, history.size());
 
         return history;
+    }
+
+    private int calculateSquadPoints(UserGameDataEntity gameData,
+                                     UserSquadEntity squad,
+                                     int gameweek) {
+        if (gameData.getLeague() == null) {
+            throw new IllegalStateException("User is not assigned to a league");
+        }
+        Map<Integer, PlayerGameweekStatsEntity> statsByPlayer = statsRepo.findByGameweek(gameweek)
+                .stream()
+                .collect(Collectors.toMap(
+                        stats -> stats.getPlayer().getId(),
+                        Function.identity(),
+                        (first, second) -> second
+                ));
+        return leagueScoringService.calculateSquadPoints(gameData.getLeague(), squad, statsByPlayer);
     }
 }

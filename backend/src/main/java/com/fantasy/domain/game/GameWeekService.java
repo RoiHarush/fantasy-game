@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -20,16 +20,21 @@ public class GameWeekService {
     private final FixtureRepository fixtureRepo;
     private final GameweekDailyStatusRepository dailyStatusRepo;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
+    private final RestTemplate restTemplate;
 
     private GameWeekService self;
 
     public GameWeekService(GameWeekRepository gameWeekRepo,
                            FixtureRepository fixtureRepo,
-                           GameweekDailyStatusRepository dailyStatusRepo) {
+                           GameweekDailyStatusRepository dailyStatusRepo,
+                           ObjectMapper mapper,
+                           RestTemplate restTemplate) {
         this.gameWeekRepo = gameWeekRepo;
         this.fixtureRepo = fixtureRepo;
         this.dailyStatusRepo = dailyStatusRepo;
+        this.mapper = mapper;
+        this.restTemplate = restTemplate;
     }
 
     @Autowired
@@ -39,7 +44,8 @@ public class GameWeekService {
 
     public void loadFromApiAndSave() {
         try {
-            JsonNode root = mapper.readTree(URI.create(API_URL).toURL());
+            String response = restTemplate.getForObject(API_URL, String.class);
+            JsonNode root = mapper.readTree(response);
 
             self.saveGameWeeks(root);
 
@@ -137,7 +143,10 @@ public class GameWeekService {
             return chosenTime;
         }
 
-        fixtures.sort(Comparator.comparing(FixtureEntity::getKickoffTime));
+        fixtures = fixtures.stream()
+                .filter(fixture -> fixture.getKickoffTime() != null)
+                .sorted(Comparator.comparing(FixtureEntity::getKickoffTime))
+                .toList();
 
         for (FixtureEntity fixture : fixtures) {
             LocalDateTime candidate = fixture.getKickoffTime().minusMinutes(75);

@@ -1,6 +1,7 @@
 package com.fantasy.domain.team;
 
 import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.league.LeagueEntity;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -51,6 +52,10 @@ public class UserGameDataEntity {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserEntity user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "league_id")
+    private LeagueEntity league;
+
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -73,4 +78,6 @@ public class UserGameDataEntity {
 
     public UserEntity getUser() { return user; }
     public void setUser(UserEntity user) { this.user = user; }
+    public LeagueEntity getLeague() { return league; }
+    public void setLeague(LeagueEntity league) { this.league = league; }
 }

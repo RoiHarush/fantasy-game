@@ -2,9 +2,10 @@ package com.fantasy.scheduler;
 
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
-import com.fantasy.domain.transfer.TransferMarketService; // שים לב ל-Import החדש
+import com.fantasy.domain.transfer.TransferMarketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true")
 public class TransferWindowScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(TransferWindowScheduler.class);
@@ -44,7 +46,9 @@ public class TransferWindowScheduler {
                 log.info("Transfer window open time reached for GW {}", nextGw.getId());
 
                 try {
-                    transferMarketService.openTransferWindow(nextGw.getId());
+                    transferMarketService.openTransferWindowForAllLeagues(nextGw.getId());
+                    nextGw.setTransferWindowProcessed(true);
+                    gameWeekRepository.save(nextGw);
                     log.info("Triggered open transfer window.");
                 } catch (Exception e) {
                     log.error("Failed to auto-open transfer window for GW {}", nextGw.getId(), e);

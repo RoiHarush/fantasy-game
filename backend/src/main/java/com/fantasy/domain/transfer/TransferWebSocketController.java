@@ -16,114 +16,111 @@ public class TransferWebSocketController {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public void sendWindowOpenedEvent(
-            int firstUserId,
-            List<Integer> initialOrder,
-            List<Integer> turnOrder,
-            Map<Integer, Integer> turnsUsed,
-            Map<Integer, Integer> totalTurns
-    ) {
+    public void sendWindowOpenedEvent(long leagueId,
+                                      int firstUserId,
+                                      List<Integer> initialOrder,
+                                      List<Integer> turnOrder,
+                                      Map<Integer, Integer> turnsUsed,
+                                      Map<Integer, Integer> totalTurns) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "window_opened");
+        event.put("leagueId", leagueId);
         event.put("userId", firstUserId);
         event.put("initialOrder", initialOrder);
         event.put("turnOrder", turnOrder);
         event.put("turnsUsed", turnsUsed);
-        event.put("totalTurns", totalTurns); // <---
-        messagingTemplate.convertAndSend("/topic/transfers", event);
+        event.put("totalTurns", totalTurns);
+        send(leagueId, event);
     }
 
-
-    public void sendTransferDoneEvent(int userId, int playerOutId, int playerInId, String userName) {
-        messagingTemplate.convertAndSend("/topic/transfers",
-                new TransferEvent("transfer_done", userId, playerOutId, playerInId, userName));
+    public void sendTransferDoneEvent(long leagueId,
+                                      int userId,
+                                      int playerOutId,
+                                      int playerInId,
+                                      String userName) {
+        send(leagueId, new TransferEvent(
+                "transfer_done",
+                leagueId,
+                userId,
+                playerOutId,
+                playerInId,
+                userName
+        ));
     }
 
-    public void sendTransferDoneEvent(int userId, Integer playerInId, String userName) {
-        messagingTemplate.convertAndSend("/topic/transfers",
-                new TransferEvent("transfer_done", userId, null, playerInId, userName));
+    public void sendTransferDoneEvent(long leagueId, int userId, Integer playerInId, String userName) {
+        send(leagueId, new TransferEvent(
+                "transfer_done",
+                leagueId,
+                userId,
+                null,
+                playerInId,
+                userName
+        ));
     }
 
-    public void sendTurnStartedEvent(
-            int userId,
-            List<Integer> turnOrder,
-            String roundType,
-            Map<Integer, Integer> turnsUsed
-    ) {
+    public void sendTurnStartedEvent(long leagueId,
+                                     int userId,
+                                     List<Integer> turnOrder,
+                                     String roundType,
+                                     Map<Integer, Integer> turnsUsed) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "turn_started");
+        event.put("leagueId", leagueId);
         event.put("userId", userId);
         event.put("turnOrder", turnOrder);
         event.put("roundType", roundType);
         event.put("turnsUsed", turnsUsed);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
+        send(leagueId, event);
     }
 
-    public void sendIRTurnStartedEvent(int userId, String irPosition, List<Integer> turnOrder, Map<Integer, Integer> turnsUsed) {
+    public void sendIRTurnStartedEvent(long leagueId,
+                                       int userId,
+                                       String irPosition,
+                                       List<Integer> turnOrder,
+                                       Map<Integer, Integer> turnsUsed) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "ir_round_started");
+        event.put("leagueId", leagueId);
         event.put("userId", userId);
         event.put("irPosition", irPosition);
         event.put("turnOrder", turnOrder);
         event.put("turnsUsed", turnsUsed);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
+        send(leagueId, event);
     }
 
-    public void sendTurnStartedEvent(int userId, List<Integer> turnOrder) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("event", "turn_started");
-        event.put("userId", userId);
-        event.put("turnOrder", turnOrder);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
-    }
-
-    public void sendIRTurnStartedEvent(int userId, String irPosition, List<Integer> turnOrder) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("event", "ir_round_started");
-        event.put("userId", userId);
-        event.put("irPosition", irPosition);
-        event.put("turnOrder", turnOrder);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
-    }
-
-    public void sendPassEvent(int userId, String userName) {
+    public void sendPassEvent(long leagueId, int userId, String userName) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "turn_passed");
+        event.put("leagueId", leagueId);
         event.put("userId", userId);
         event.put("userName", userName);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
+        send(leagueId, event);
     }
 
-    public void sendWindowClosedEvent() {
-        messagingTemplate.convertAndSend("/topic/transfers",
-                new TransferEvent("window_closed"));
+    public void sendWindowClosedEvent(long leagueId) {
+        send(leagueId, new TransferEvent("window_closed", leagueId, null, null, null, null));
     }
 
-    public void sendInfoMessage(int userId, String message) {
+    public void sendInfoMessage(long leagueId, int userId, String message) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "info_message");
+        event.put("leagueId", leagueId);
         event.put("userId", userId);
         event.put("message", message);
-        messagingTemplate.convertAndSend("/topic/transfers", event);
+        send(leagueId, event);
+    }
+
+    private void send(long leagueId, Object event) {
+        messagingTemplate.convertAndSend("/topic/leagues/" + leagueId + "/transfers", event);
     }
 
     public record TransferEvent(
             String event,
+            Long leagueId,
             Integer userId,
             Integer playerOutId,
             Integer playerInId,
             String userName
-    ) {
-        public TransferEvent(String event, Integer userId, Integer playerOutId, Integer playerInId) {
-            this(event, userId, playerOutId, playerInId, null);
-        }
-
-        public TransferEvent(String event, Integer userId) {
-            this(event, userId, null, null, null);
-        }
-
-        public TransferEvent(String event) {
-            this(event, null, null, null, null);
-        }
-    }
+    ) {}
 }

@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Squad implements Draftable {
-    private PlayerRegistry allPlayers;
+    private final Map<Integer, Player> playersById = new LinkedHashMap<>();
     private Map<PlayerPosition, List<Player>> startingLineup;
     private Map<String, Player> bench;
     private Player captain;
@@ -22,7 +22,6 @@ public class Squad implements Draftable {
     private boolean autoSubsApplied;
 
     public Squad() {
-        setAllPlayers(new PlayerRegistry());
         setStartingLineup(new HashMap<>());
         setBench(new LinkedHashMap<>());
         setMinPlayersInPosition();
@@ -32,11 +31,16 @@ public class Squad implements Draftable {
     // <editor-fold desc="Getters and Setters">
 
     public List<Player> getAllPlayers() {
-        return allPlayers.getPlayers();
+        return new ArrayList<>(playersById.values());
     }
 
-    public void setAllPlayers(PlayerRegistry players) {
-        this.allPlayers = players;
+    public void setAllPlayers(Collection<Player> players) {
+        playersById.clear();
+        if (players != null) {
+            players.stream()
+                    .filter(Objects::nonNull)
+                    .forEach(player -> playersById.put(player.getId(), player));
+        }
     }
 
     public Map<PlayerPosition , List<Player>> getStartingLineup() {
@@ -110,12 +114,12 @@ public class Squad implements Draftable {
     }
 
     public Player getPlayerById(int id) {
-        return this.allPlayers.findById(id);
+        return playersById.get(id);
     }
     // </editor-fold>
 
     public void loadPlayer(Player player) {
-        this.allPlayers.add(player);
+        if (player != null) playersById.put(player.getId(), player);
     }
 
     @Override
@@ -125,20 +129,26 @@ public class Squad implements Draftable {
     }
 
     public void makePick(Player player) {
-        if (this.allPlayers.getPlayers().size() >= 15)
+        if (playersById.size() >= 15)
             throw new MaxPicksUsagesException("Cant make over 15 picks!");
-        if (this.allPlayers.findById(player.getId()) != null)
+        if (playersById.containsKey(player.getId()))
             throw new PlayerAlreadyPickedException("Player already picked in this squad!");
-        List<Player> playersByPosition = this.allPlayers.getPlayersByPosition(player.getPosition());
-        if (playersByPosition != null && (playersByPosition.size() >= this.maxPlayersInPosition.get(player.getPosition())))
+        long playersInPosition = playersById.values().stream()
+                .filter(existing -> existing.getPosition() == player.getPosition())
+                .count();
+        if (playersInPosition >= this.maxPlayersInPosition.get(player.getPosition()))
             throw new MaxPositionCapacityException("Cant pick more players from this position: " + player.getPosition());
-        this.allPlayers.add(player);
-        if (this.allPlayers.getPlayers().size() == 1)
+        playersById.put(player.getId(), player);
+        if (playersById.size() == 1)
             firstPick = player;
     }
 
     public void makeTransfer(Player playerIn, Player playerOut) {
-        this.allPlayers.transferPlayers(playerIn, playerOut);
+        if (playerIn == null || playerOut == null) {
+            throw new NullPointerException("playerIn or playerOut is null");
+        }
+        playersById.remove(playerOut.getId());
+        playersById.put(playerIn.getId(), playerIn);
 
         boolean replaced = false;
 
@@ -265,16 +275,12 @@ public class Squad implements Draftable {
     }
 
     public void assignIR(Player ir){
-        if (this.allPlayers.findById(ir.getId()) == null){
+        if (!playersById.containsKey(ir.getId())){
             throw new IRException("This player is not in squad!");
         }
 
         if (this.IR != null){
             throw new IRException("ir slot already taken!");
-        }
-
-        if (!ir.isInjured()){
-            throw new IRException("This player is not injured!");
         }
 
         updateSquadWithoutIR(ir);
@@ -299,7 +305,7 @@ public class Squad implements Draftable {
         }else
             removeIRFromBench(ir);
 
-        this.allPlayers.removePlayer(ir);
+        playersById.remove(ir.getId());
         if (this.captain.equals(ir))
             setDefaultCaptain();
 
@@ -355,7 +361,7 @@ public class Squad implements Draftable {
 
     private void ensurePlayersInSquad(Player... players) {
         for (Player player : players) {
-            if (this.allPlayers.findById(player.getId()) == null) {
+            if (!playersById.containsKey(player.getId())) {
                 throw new CantFindPlayerInSquadException("Player not in the squad!");
             }
         }
@@ -367,12 +373,12 @@ public class Squad implements Draftable {
         else
             bench.put("S3", player);
 
-        this.allPlayers.add(player);
+        playersById.put(player.getId(), player);
     }
 
     public void releaseIR(Player playerOut) {
         if (IR == null) throw new IRException("There is no IR to release");
-        if (this.allPlayers.getPlayers().size() < 15 || this.bench.get("S3") == null) throw new IRException("Squad not full yet!");
+        if (playersById.size() < 15 || this.bench.get("S3") == null) throw new IRException("Squad not full yet!");
         ensurePlayersInSquad(playerOut);
         makeTransfer(IR, playerOut);
         IR = null;

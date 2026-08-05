@@ -27,6 +27,22 @@ public interface UserGameDataRepository extends JpaRepository<UserGameDataEntity
     List<UserGameDataEntity> findAllWithRelations();
 
     @Query("""
+    SELECT DISTINCT g FROM UserGameDataEntity g
+    JOIN FETCH g.user
+    LEFT JOIN FETCH g.currentSquad
+    LEFT JOIN FETCH g.nextSquad
+    WHERE g.league.id = :leagueId
+    """)
+    List<UserGameDataEntity> findAllByLeagueIdWithSquads(@Param("leagueId") Long leagueId);
+
+    List<UserGameDataEntity> findByLeague_Id(Long leagueId);
+
+    List<UserGameDataEntity> findByLeagueIsNull();
+
+    @Query("SELECT g.user.id FROM UserGameDataEntity g WHERE g.user IS NOT NULL")
+    List<Integer> findAllRealUserIds();
+
+    @Query("""
     SELECT g.id AS userId, key(c) AS chipName, value(c) AS chipCount
     FROM UserGameDataEntity g
     JOIN g.chips c

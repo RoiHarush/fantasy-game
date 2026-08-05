@@ -4,16 +4,17 @@ import com.fantasy.domain.score.PointsService;
 import com.fantasy.application.SystemStatusService;
 import com.fantasy.domain.team.Squad;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
-import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.player.Player;
+import com.fantasy.domain.league.LeaguePlayerCatalog;
 import com.fantasy.domain.team.UserGameData;
 import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.player.PlayerGameweekStatsRepository;
 
 import com.fantasy.domain.team.SquadMapper;
-import com.fantasy.domain.user.UserMapper;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.user.UserMapper;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class GameweekManager {
     private final GameWeekRepository gameweekRepository;
     private final PlayerGameweekStatsRepository statsRepo;
     private final PointsService pointsService;
-    private final PlayerRegistry playerRegistry;
+    private final LeaguePlayerCatalog leaguePlayerCatalog;
     private final SystemStatusService systemStatusService;
 
     // תוספות חדשות
@@ -47,7 +48,7 @@ public class GameweekManager {
                            GameWeekRepository gameweekRepository,
                            PlayerGameweekStatsRepository statsRepo,
                            PointsService pointsService,
-                           PlayerRegistry playerRegistry,
+                           LeaguePlayerCatalog leaguePlayerCatalog,
                            SystemStatusService systemStatusService,
                            GameweekDailyStatusRepository dailyStatusRepository,
                            FixtureRepository fixtureRepository) {
@@ -56,7 +57,7 @@ public class GameweekManager {
         this.gameweekRepository = gameweekRepository;
         this.statsRepo = statsRepo;
         this.pointsService = pointsService;
-        this.playerRegistry = playerRegistry;
+        this.leaguePlayerCatalog = leaguePlayerCatalog;
         this.systemStatusService = systemStatusService;
         this.dailyStatusRepository = dailyStatusRepository;
         this.fixtureRepository = fixtureRepository;
@@ -73,7 +74,7 @@ public class GameweekManager {
 
             boolean openedSuccessfully = updateGameweeksStatus(newGwId);
 
-            if (!openedSuccessfully && !isSuperAdmin) {
+            if (!openedSuccessfully) {
                 log.warn("openNextGameweek: GW {} was not opened (status was not UPCOMING)", newGwId);
                 return;
             }
@@ -82,21 +83,24 @@ public class GameweekManager {
             log.info("Loaded {} users for GW rollover", gameDataEntities.size());
 
             for (UserGameDataEntity gameDataEntity : gameDataEntities) {
+                UserSquadEntity preparedSquad = gameDataEntity.getNextSquad();
+                if (preparedSquad == null || preparedSquad.getGameweek() != newGwId) {
+                    throw new IllegalStateException(
+                            "UserGameData " + gameDataEntity.getId() + " has no prepared squad for GW " + newGwId
+                    );
+                }
 
-                var userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
-
-                GameweekRollover.rolloverToNextGameweek(userGameData, newGwId);
-
-                var newNextSquadEntity = SquadMapper.toEntity(
-                        userGameData.getNextFantasyTeam().getSquad(),
-                        userGameData.getNextFantasyTeam().getGameweek()
-                );
-
-                newNextSquadEntity.setUser(gameDataEntity);
+                UserSquadEntity newNextSquadEntity = squadRepository
+                        .findByUser_IdAndGameweek(gameDataEntity.getId(), newGwId + 1)
+                        .orElseGet(UserSquadEntity::new);
+                copySquad(preparedSquad, newNextSquadEntity, newGwId + 1, gameDataEntity);
                 squadRepository.save(newNextSquadEntity);
 
-                gameDataEntity.setCurrentSquad(gameDataEntity.getNextSquad());
+                gameDataEntity.setCurrentSquad(preparedSquad);
                 gameDataEntity.setNextSquad(newNextSquadEntity);
+                if (gameDataEntity.getActiveChips() != null) {
+                    gameDataEntity.getActiveChips().put("FIRST_PICK_CAPTAIN", false);
+                }
 
                 gameDataRepository.save(gameDataEntity);
             }
@@ -137,7 +141,8 @@ public class GameweekManager {
 
         for (UserGameDataEntity gameDataEntity : gameDataEntities) {
 
-            UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, playerRegistry);
+            Map<Integer, Player> leaguePlayers = leaguePlayerCatalog.load(gameDataEntity.getLeague());
+            UserGameData userGameData = UserMapper.toDomainGameData(gameDataEntity, leaguePlayers);
 
             var squadEntity = squadRepository
                     .findByUser_IdAndGameweek(userGameData.getId(), gameweekId)
@@ -148,7 +153,7 @@ public class GameweekManager {
                 throw new RuntimeException("Squad not found for userGameData " + userGameData.getId() + " for GW " + gameweekId);
             }
 
-            Squad squad = SquadMapper.toDomain(squadEntity, playerRegistry);
+            Squad squad = SquadMapper.toDomain(squadEntity, leaguePlayers);
 
             squad.autoSub(minutesMap);
 
@@ -158,7 +163,7 @@ public class GameweekManager {
 
             squadRepository.save(updatedEntity);
 
-            pointsService.calculateAndPersist(userGameData.getId(), gameweekId);
+            pointsService.calculateAndPersist(gameDataEntity.getUser().getId(), gameweekId);
         }
 
         gw.setCalculated(true);
@@ -183,6 +188,22 @@ public class GameweekManager {
                 log.info("Marked date {} in GW {} as calculated (Final process).", date, gwId);
             }
         }
+    }
+
+    private void copySquad(UserSquadEntity source,
+                           UserSquadEntity target,
+                           int targetGameweek,
+                           UserGameDataEntity owner) {
+        target.setGameweek(targetGameweek);
+        target.setUser(owner);
+        target.setStartingLineup(new java.util.ArrayList<>(source.getStartingLineup()));
+        target.setBenchMap(new java.util.LinkedHashMap<>(source.getBenchMap()));
+        target.setFormation(new java.util.LinkedHashMap<>(source.getFormation()));
+        target.setCaptainId(source.getCaptainId());
+        target.setViceCaptainId(source.getViceCaptainId());
+        target.setFirstPickId(source.getFirstPickId());
+        target.setIrId(source.getIrId());
+        target.setAutoSubsApplied(false);
     }
 
     private boolean updateGameweeksStatus(int newGwId) {

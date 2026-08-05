@@ -1,7 +1,7 @@
 package com.fantasy.domain.user;
 
 import com.fantasy.domain.team.*;
-import com.fantasy.domain.player.PlayerRegistry;
+import com.fantasy.domain.player.Player;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,7 +11,7 @@ public class UserMapper {
 
     // === Entity -> Domain (Game Data) ===
     public static UserGameData toDomainGameData(UserGameDataEntity e,
-                                                PlayerRegistry globalPlayers) {
+                                                Map<Integer, Player> players) {
         if (e == null) return null;
 
         Map<Integer, Integer> points = new HashMap<>();
@@ -29,13 +29,13 @@ public class UserMapper {
                 e.getWatchedPlayers() != null ? new ArrayList<>(e.getWatchedPlayers()) : new ArrayList<>());
 
         if (e.getCurrentSquad() != null) {
-            Squad squad = SquadMapper.toDomain(e.getCurrentSquad(), globalPlayers);
+            Squad squad = SquadMapper.toDomain(e.getCurrentSquad(), players);
             FantasyTeam current = new FantasyTeam(e.getCurrentSquad().getGameweek(), squad);
             userGameData.setCurrentFantasyTeam(current);
         }
 
         if (e.getNextSquad() != null) {
-            Squad squad = SquadMapper.toDomain(e.getNextSquad(), globalPlayers);
+            Squad squad = SquadMapper.toDomain(e.getNextSquad(), players);
             FantasyTeam next = new FantasyTeam(e.getNextSquad().getGameweek(), squad);
             userGameData.setNextFantasyTeam(next);
         }

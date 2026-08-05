@@ -35,19 +35,20 @@ public class LeagueService {
     }
 
     @Transactional(readOnly = true)
-    public LeagueDto getLiveLeagueDto() {
+    public LeagueDto getLiveLeagueDto(int requestingUserId) {
 
-        LeagueEntity league = leagueRepo.findAll().stream().findFirst()
-                .orElseThrow(() -> new RuntimeException("No league found in database"));
+        LeagueEntity league = leagueRepo.findFirstByUsers_Id(requestingUserId)
+                .orElseThrow(() -> new IllegalStateException("User is not in a league"));
 
         List<UserEntity> usersInLeague = league.getUsers();
 
-        Map<Integer, UserGameDataEntity> gameDataMap = gameDataRepo.findAll().stream()
+        Map<Integer, UserGameDataEntity> gameDataMap = gameDataRepo.findByLeague_Id(league.getId()).stream()
                 .collect(Collectors.toMap(gd -> gd.getUser().getId(), gd -> gd));
 
         int currentGwId = gameWeekService.getCurrentGameweek().getId();
 
-        Map<Integer, Integer> gwPointsMap = userPointsRepo.findByGameweek(currentGwId).stream()
+        Map<Integer, Integer> gwPointsMap = userPointsRepo
+                .findByGameweekAndUser_League_Id(currentGwId, league.getId()).stream()
                 .collect(Collectors.toMap(
                         upe -> upe.getUser().getId(),
                         UserPointsEntity::getPoints

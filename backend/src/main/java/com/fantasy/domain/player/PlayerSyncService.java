@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,32 +31,29 @@ public class PlayerSyncService {
     private final PlayerRepository playerRepo;
     private final PlayerPointsRepository pointsRepo;
     private final PlayerGameweekStatsRepository statsRepo;
-    private final PlayerRegistry playerRegistry;
-    private final UserSquadRepository squadRepo;
-    private final ScoringLogicService scoringLogic;
+    private final PlayerStatsUpdater statsUpdater;
     private final GameWeekService gameWeekService;
+    private final PlayerSyncPersistenceService persistenceService;
 
-    private final ApplicationEventPublisher eventPublisher;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper mapper;
 
     public PlayerSyncService(PlayerRepository playerRepo,
                              PlayerPointsRepository pointsRepo,
                              PlayerGameweekStatsRepository statsRepo,
-                             PlayerRegistry playerRegistry,
-                             UserSquadRepository squadRepo,
-                             ScoringLogicService scoringLogic,
+                             PlayerStatsUpdater statsUpdater,
                              GameWeekService gameWeekService,
-                             ApplicationEventPublisher eventPublisher) {
+                             PlayerSyncPersistenceService persistenceService,
+                             RestTemplate restTemplate,
+                             ObjectMapper mapper) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
-        this.playerRegistry = playerRegistry;
-        this.squadRepo = squadRepo;
-        this.scoringLogic = scoringLogic;
+        this.statsUpdater = statsUpdater;
         this.gameWeekService = gameWeekService;
-        this.eventPublisher = eventPublisher;
+        this.persistenceService = persistenceService;
+        this.restTemplate = restTemplate;
+        this.mapper = mapper;
     }
 
 
@@ -72,7 +69,11 @@ public class PlayerSyncService {
 
         try {
             PlayerLoadResult result = fetchPlayersAndHistoryData();
-            persistPlayerData(result);
+            persistenceService.persistInitialLoad(
+                    result.playersToSave(),
+                    result.allStatsToSave(),
+                    result.allPointsToSave()
+            );
             long duration = System.currentTimeMillis() - startTime;
             log.info("Finished loading players in {} seconds.", (duration / 1000));
         } catch (Exception e) {
@@ -96,26 +97,29 @@ public class PlayerSyncService {
         List<PlayerGameweekStatsEntity> allStatsToSave = Collections.synchronizedList(new ArrayList<>());
         List<PlayerPointsEntity> allPointsToSave = Collections.synchronizedList(new ArrayList<>());
 
-        ExecutorService executor = Executors.newFixedThreadPool(20);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         AtomicInteger counter = new AtomicInteger(0);
 
         log.info("Fetching history for all players in parallel...");
 
-        for (PlayerEntity player : playersToProcess) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                try {
-                    processPlayerHistory(player, allStatsToSave, allPointsToSave);
-                    counter.incrementAndGet();
-                } catch (Exception e) {
-                    log.error("Error processing player {}: {}", player.getId(), e.getMessage());
-                }
-            }, executor);
-            futures.add(future);
-        }
+        try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
+            for (PlayerEntity player : playersToProcess) {
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
+                        processPlayerHistory(player, allStatsToSave, allPointsToSave);
+                        counter.incrementAndGet();
+                    } catch (Exception e) {
+                        throw new CompletionException(
+                                "Failed to load history for player " + player.getId(),
+                                e
+                        );
+                    }
+                }, executor);
+                futures.add(future);
+            }
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        executor.shutdown();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        }
 
         Map<Integer, Integer> playerTotalPoints = new HashMap<>();
         for (PlayerPointsEntity pp : allPointsToSave) {
@@ -128,43 +132,30 @@ public class PlayerSyncService {
         return new PlayerLoadResult(playersToProcess, allStatsToSave, allPointsToSave);
     }
 
-    @Transactional
-    public void persistPlayerData(PlayerLoadResult result) {
-        log.info("Saving initial players to DB...");
-        playerRepo.saveAll(result.playersToSave());
-        statsRepo.saveAll(result.allStatsToSave());
-        pointsRepo.saveAll(result.allPointsToSave());
-        playerRepo.saveAll(result.playersToSave());
-    }
+    private void processPlayerHistory(PlayerEntity player,
+                                      List<PlayerGameweekStatsEntity> statsList,
+                                      List<PlayerPointsEntity> pointsList) throws Exception {
+        String historyUrl = FPL_PLAYER_URL + player.getId() + "/";
+        ResponseEntity<String> historyRes = restTemplate.getForEntity(historyUrl, String.class);
+        JsonNode historyRoot = mapper.readTree(historyRes.getBody());
+        JsonNode history = historyRoot.get("history");
 
-    private void processPlayerHistory(PlayerEntity player, List<PlayerGameweekStatsEntity> statsList, List<PlayerPointsEntity> pointsList) {
-        try {
-            String historyUrl = FPL_PLAYER_URL + player.getId() + "/";
-            ResponseEntity<String> historyRes = restTemplate.getForEntity(historyUrl, String.class);
-            JsonNode historyRoot = mapper.readTree(historyRes.getBody());
-            JsonNode history = historyRoot.get("history");
+        if (history == null || history.isEmpty()) return;
 
-            if (history == null || history.isEmpty()) return;
+        for (JsonNode gw : history) {
+            RawGameStats rawStats = mapJsonToRawStats(gw);
 
-            Player domainPlayer = new Player(player.getId(), player.getFirstName(), player.getLastName(), player.getPosition(), player.getTeamId(), player.getViewName());
+            PlayerGameweekStatsEntity stats = new PlayerGameweekStatsEntity();
+            stats.setPlayer(player);
+            stats.setGameweek(gw.get("round").asInt());
+            statsUpdater.update(stats, rawStats);
+            statsList.add(stats);
 
-            for (JsonNode gw : history) {
-                RawGameStats rawStats = mapJsonToRawStats(gw);
-
-                PlayerGameweekStatsEntity stats = new PlayerGameweekStatsEntity();
-                stats.setPlayer(player);
-                stats.setGameweek(gw.get("round").asInt());
-                scoringLogic.updateStatsEntity(stats, domainPlayer, rawStats);
-                statsList.add(stats);
-
-                PlayerPointsEntity pp = new PlayerPointsEntity();
-                pp.setPlayer(player);
-                pp.setGameweek(stats.getGameweek());
-                pp.setPoints(stats.getTotalPoints());
-                pointsList.add(pp);
-            }
-        } catch (Exception e) {
-            log.error("Failed to parse history for player {}: {}", player.getId(), e.getMessage());
+            PlayerPointsEntity pp = new PlayerPointsEntity();
+            pp.setPlayer(player);
+            pp.setGameweek(stats.getGameweek());
+            pp.setPoints(stats.getTotalPoints());
+            pointsList.add(pp);
         }
     }
 
@@ -195,16 +186,13 @@ public class PlayerSyncService {
                     continue;
                 }
 
-                Player domainPlayer = playerRegistry.findById(entity.getId());
-                if (domainPlayer == null) continue;
-
                 RawGameStats rawStats = mapJsonToRawStats(latest);
 
                 PlayerGameweekStatsEntity stats = statsRepo.findByPlayer_IdAndGameweek(entity.getId(), currentGw)
                         .orElseGet(PlayerGameweekStatsEntity::new);
                 stats.setPlayer(entity);
                 stats.setGameweek(currentGw);
-                scoringLogic.updateStatsEntity(stats, domainPlayer, rawStats);
+                statsUpdater.update(stats, rawStats);
                 statsRepo.save(stats);
 
                 PlayerPointsEntity existingPoints = pointsRepo.findByPlayer_IdAndGameweek(entity.getId(), currentGw)
@@ -221,11 +209,10 @@ public class PlayerSyncService {
                 entity.setTotalPoints(total);
                 playerRepo.save(entity);
 
-                domainPlayer.getPointsByGameweek().put(currentGw, stats.getTotalPoints());
-
             }
         } catch (Exception e) {
             log.error("Failed updating gameweek points: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed updating gameweek points", e);
         }
     }
 
@@ -245,8 +232,6 @@ public class PlayerSyncService {
                 PlayerEntity entity = playerRepo.findById(fplId).orElseGet(() -> {
                     PlayerEntity e = new PlayerEntity();
                     e.setId(fplId);
-                    e.setOwnerId(-1);
-                    e.setState(PlayerState.NONE);
                     e.setTotalPoints(0);
                     e.setPhoto(node.get("code").asText());
                     return e;
@@ -255,153 +240,31 @@ public class PlayerSyncService {
                 updateEntityBasicData(entity, node);
                 playerRepo.save(entity);
 
-                Player domainPlayer = playerRegistry.findById(entity.getId());
-                if (domainPlayer == null) {
-                    playerRegistry.add(new Player(entity.getId(), entity.getFirstName(), entity.getLastName(), entity.getPosition(), entity.getTeamId(), entity.getViewName()));
-                } else {
-                    domainPlayer.setTeamId(entity.getTeamId());
-                    domainPlayer.setInjured(entity.isInjured());
-                }
             }
         } catch (HttpServerErrorException.ServiceUnavailable e) {
-            log.warn("Skipping player sync: FPL Game is currently updating (503).");
+            throw new IllegalStateException("FPL player data is temporarily unavailable (503)", e);
         } catch (Exception e) {
             log.error("Failed refreshing basic player data: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed refreshing basic player data", e);
         }
     }
 
 
     @Transactional
     public void fullSyncCurrentGw() {
-        int gwId = gameWeekService.getNextGameweek().getId();
+        var currentGameweek = gameWeekService.getCurrentGameweek();
+        if (currentGameweek == null) {
+            throw new IllegalStateException("No current gameweek is available");
+        }
+        int gwId = currentGameweek.getId();
         fullSyncForGw(gwId);
     }
 
     @Transactional
     public void fullSyncForGw(int gwId) {
-        List<UserSquadEntity> gwSquads = squadRepo.findByGameweek(gwId);
-        List<PlayerEntity> allPlayers = playerRepo.findAll();
-
-        allPlayers.forEach(p -> { p.setOwnerId(-1); p.setState(PlayerState.NONE); });
-
-        for (UserSquadEntity squad : gwSquads) {
-            int userId = squad.getUser().getId();
-            setOwnership(squad.getStartingLineup(), userId, PlayerState.STARTING);
-            setOwnership(squad.getBenchMap().values(), userId, PlayerState.BENCH);
-        }
-        playerRepo.saveAll(allPlayers);
-
-        playerRegistry.getPlayers().forEach(p -> { p.setOwnerId(-1); p.setState(PlayerState.NONE); });
-        for (UserSquadEntity squad : gwSquads) {
-            int userId = squad.getUser().getId();
-            updateRegistryOwnership(squad.getStartingLineup(), userId, PlayerState.STARTING);
-            updateRegistryOwnership(squad.getBenchMap().values(), userId, PlayerState.BENCH);
-        }
-        log.info("Ownership sync completed for GW {}", gwId);
-    }
-
-    private void setOwnership(Collection<Integer> ids, int ownerId, PlayerState state) {
-        if(ids == null) return;
-        for (Integer pid : ids) {
-            playerRepo.findById(pid).ifPresent(p -> {
-                p.setOwnerId(ownerId);
-                p.setState(state);
-            });
-        }
-    }
-
-    private void updateRegistryOwnership(Collection<Integer> ids, int ownerId, PlayerState state) {
-        if(ids == null) return;
-        for (Integer pid : ids) {
-            Player p = playerRegistry.findById(pid);
-            if (p != null) {
-                p.setOwnerId(ownerId);
-                p.setState(state);
-            }
-        }
-    }
-
-
-    @Transactional
-    public PlayerAssistedDto updatePlayerAssist(UpdateAssistRequest request) {
-        PlayerGameweekStatsEntity statsEntity = statsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
-                .orElseThrow(() -> new RuntimeException("Stats not found"));
-
-        Player domainPlayer = PlayerMapper.toDomain(statsEntity.getPlayer(), null);
-        ScoreEvent assistEvent = new ScoreEvent(domainPlayer, 0, ScoreType.ASSIST);
-        int pointDelta = ScoreCalculator.calculatePoints(assistEvent);
-        boolean isAdd = "ADD".equalsIgnoreCase(request.getAction());
-
-        if (isAdd) {
-            statsEntity.setAssists(statsEntity.getAssists() + 1);
-            statsEntity.setTotalPoints(statsEntity.getTotalPoints() + pointDelta);
-        } else {
-            statsEntity.setAssists(statsEntity.getAssists() - 1);
-            statsEntity.setTotalPoints(statsEntity.getTotalPoints() - pointDelta);
-        }
-        statsRepo.save(statsEntity);
-
-        pointsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
-                .ifPresent(pp -> {
-                    pp.setPoints(statsEntity.getTotalPoints());
-                    pointsRepo.save(pp);
-                });
-
-        Player registryPlayer = playerRegistry.findById(statsEntity.getPlayer().getId());
-        if (registryPlayer != null) registryPlayer.getPointsByGameweek().put(request.getGameweek(), statsEntity.getTotalPoints());
-
-        eventPublisher.publishEvent(new PlayerPointsUpdateEvent(this, request.getPlayerId(), request.getGameweek()));
-
-        return new PlayerAssistedDto(statsEntity.getPlayer().getId(), statsEntity.getPlayer().getViewName(), statsEntity.getAssists(), statsEntity.getPlayer().getTeamId());
-    }
-
-    @Transactional
-    public PlayerPenaltyDto updatePlayerPenalty(UpdatePenaltyRequest request) {
-        PlayerGameweekStatsEntity statsEntity = statsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
-                .orElseThrow(() -> new RuntimeException("Stats not found"));
-
-        Player domainPlayer = PlayerMapper.toDomain(statsEntity.getPlayer(), null);
-        ScoreEvent penaltyEvent = new ScoreEvent(domainPlayer, 0, ScoreType.PENALTY_CONCEDED);
-        int pointDelta = ScoreCalculator.calculatePoints(penaltyEvent);
-        boolean isAdd = "ADD".equalsIgnoreCase(request.getAction());
-
-        if (isAdd) {
-            statsEntity.setPenaltiesConceded(statsEntity.getPenaltiesConceded() + 1);
-            statsEntity.setTotalPoints(statsEntity.getTotalPoints() + pointDelta);
-        } else {
-            statsEntity.setPenaltiesConceded(statsEntity.getPenaltiesConceded() - 1);
-            statsEntity.setTotalPoints(statsEntity.getTotalPoints() - pointDelta);
-        }
-        statsRepo.save(statsEntity);
-
-        pointsRepo.findByPlayer_IdAndGameweek(request.getPlayerId(), request.getGameweek())
-                .ifPresent(pp -> {
-                    pp.setPoints(statsEntity.getTotalPoints());
-                    pointsRepo.save(pp);
-                });
-
-        Player registryPlayer = playerRegistry.findById(statsEntity.getPlayer().getId());
-        if (registryPlayer != null) registryPlayer.getPointsByGameweek().put(request.getGameweek(), statsEntity.getTotalPoints());
-
-        eventPublisher.publishEvent(new PlayerPointsUpdateEvent(this, request.getPlayerId(), request.getGameweek()));
-
-        return new PlayerPenaltyDto(statsEntity.getPlayer().getId(), statsEntity.getPlayer().getViewName(), statsEntity.getPenaltiesConceded(), statsEntity.getPlayer().getTeamId());
-    }
-
-    @Transactional
-    public PlayerDto togglePlayerLock(int playerId, boolean shouldLock) {
-        PlayerEntity player = playerRepo.findById(playerId).orElseThrow(() -> new RuntimeException("Player not found"));
-        Player p = playerRegistry.findById(playerId);
-
-        if (shouldLock && player.getState() != PlayerState.NONE) throw new RuntimeException("Can only lock NONE state players");
-        if (!shouldLock && player.getState() != PlayerState.LOCKED) throw new RuntimeException("Can only unlock LOCKED state players");
-
-        PlayerState newState = shouldLock ? PlayerState.LOCKED : PlayerState.NONE;
-        player.setState(newState);
-        if (p != null) p.setState(newState);
-
-        playerRepo.save(player);
-        return PlayerMapper.toDto(player, null, null);
+        refreshBasicPlayerData();
+        updateGameweekPoints(gwId);
+        log.info("Completed player and points sync for GW {}", gwId);
     }
 
 
@@ -409,8 +272,6 @@ public class PlayerSyncService {
         PlayerEntity entity = new PlayerEntity();
         entity.setId(node.get("id").asInt());
         updateEntityBasicData(entity, node);
-        entity.setOwnerId(-1);
-        entity.setState(PlayerState.NONE);
         entity.setTotalPoints(0);
         return entity;
     }
@@ -453,18 +314,4 @@ public class PlayerSyncService {
     }
 
 
-    @Transactional
-    public void updatePlayerPosition(UpdatePositionRequest request) {
-        PlayerEntity entity = playerRepo.findById(request.getPlayerId())
-                .orElseThrow(() -> new RuntimeException("Player not found"));
-
-        PlayerPosition newPos = PlayerPosition.fromId(request.getPositionId());
-        entity.setPosition(newPos);
-        playerRepo.save(entity);
-
-        Player registryPlayer = playerRegistry.findById(request.getPlayerId());
-        if (registryPlayer != null) {
-            registryPlayer.setPosition(newPos);
-        }
-    }
 }

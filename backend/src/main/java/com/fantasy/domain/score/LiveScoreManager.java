@@ -24,26 +24,23 @@ public class LiveScoreManager {
 
     private final PlayerGameweekStatsRepository statsRepository;
     private final PlayerPointsRepository pointsRepository;
-    private final PlayerRegistry playerRegistry;
     private final PlayerRepository playerRepository;
-    private final ScoringLogicService scoringLogic;
+    private final PlayerStatsUpdater statsUpdater;
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
     private final FixtureRepository fixtureRepository;
 
     public LiveScoreManager(PlayerGameweekStatsRepository statsRepository,
                             PlayerPointsRepository pointsRepository,
-                            PlayerRegistry playerRegistry,
                             PlayerRepository playerRepository,
-                            ScoringLogicService scoringLogic,
+                            PlayerStatsUpdater statsUpdater,
                             RestTemplate restTemplate,
                             ObjectMapper mapper,
                             FixtureRepository fixtureRepository) {
         this.statsRepository = statsRepository;
         this.pointsRepository = pointsRepository;
-        this.playerRegistry = playerRegistry;
         this.playerRepository = playerRepository;
-        this.scoringLogic = scoringLogic;
+        this.statsUpdater = statsUpdater;
         this.restTemplate = restTemplate;
         this.mapper = mapper;
         this.fixtureRepository = fixtureRepository;
@@ -52,8 +49,6 @@ public class LiveScoreManager {
     @Transactional
     public void updateLiveScores(int gameweekId) {
         log.debug("Starting live score update for GW {}", gameweekId);
-
-        try {
             List<FixtureEntity> fixtures = fixtureRepository.findByGameweekId(gameweekId);
             Map<Integer, Integer> teamToOpponentMap = new HashMap<>();
             Map<Integer, Boolean> teamToWasHomeMap = new HashMap<>();
@@ -67,12 +62,19 @@ public class LiveScoreManager {
             }
 
             String url = LIVE_API_URL.replace("{event_id}", String.valueOf(gameweekId));
-            JsonNode root = mapper.readTree(restTemplate.getForObject(url, String.class));
+            JsonNode root;
+            try {
+                root = mapper.readTree(restTemplate.getForObject(url, String.class));
+            } catch (Exception exception) {
+                throw new IllegalStateException("Invalid live-score response for GW " + gameweekId, exception);
+            }
             JsonNode elements = root.get("elements");
 
             List<PlayerGameweekStatsEntity> allDbStats = statsRepository.findByGameweek(gameweekId);
             Map<Integer, PlayerGameweekStatsEntity> statsMap =
                     allDbStats.stream().collect(Collectors.toMap(s -> s.getPlayer().getId(), Function.identity()));
+            Map<Integer, PlayerEntity> playersById = playerRepository.findAll().stream()
+                    .collect(Collectors.toMap(PlayerEntity::getId, Function.identity()));
 
             List<PlayerGameweekStatsEntity> statsToUpdate = new ArrayList<>();
             List<PlayerPointsEntity> pointsToUpdate = new ArrayList<>();
@@ -82,8 +84,9 @@ public class LiveScoreManager {
                 int playerId = apiPlayer.get("id").asInt();
                 JsonNode apiStats = apiPlayer.get("stats");
 
-                Player domainPlayer = playerRegistry.findById(playerId);
-                if (domainPlayer == null) continue;
+                PlayerEntity playerEntity = playersById.get(playerId);
+                if (playerEntity == null) continue;
+                Player domainPlayer = PlayerMapper.toDomain(playerEntity, null);
 
                 RawGameStats rawStats = parseRawStats(apiStats);
 
@@ -109,7 +112,7 @@ public class LiveScoreManager {
                 }
 
                 if (isNewRecord || hasStatsChanged(dbStats, rawStats)) {
-                    scoringLogic.updateStatsEntity(dbStats, domainPlayer, rawStats);
+                    statsUpdater.update(dbStats, rawStats);
 
                     // אופציונלי: לוודא שגם בעדכון קיים היריבה מעודכנת (למקרה שהיה 0 קודם)
                     if (dbStats.getOpponentTeamId() == 0 && teamToOpponentMap.containsKey(domainPlayer.getTeamId())) {
@@ -143,9 +146,6 @@ public class LiveScoreManager {
                 log.info("Live update: Updated {} players.", statsToUpdate.size());
             }
 
-        } catch (Exception e) {
-            log.error("Error updating live scores: {}", e.getMessage(), e);
-        }
     }
 
     private RawGameStats parseRawStats(JsonNode api) {
