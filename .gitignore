@@ -14,7 +14,4 @@ Thumbs.db
 
 *.db
 
-# Local environment files may contain credentials.
-.env
-.env.*
-!.env.example
+frontend/.next/
