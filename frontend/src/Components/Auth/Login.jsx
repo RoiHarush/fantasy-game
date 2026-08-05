@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import styles from "../../Styles/Login.module.css";
 import API_URL from "../../config";
 import { useAuth } from "../../Context/AuthContext";
@@ -7,22 +9,28 @@ import { useAuth } from "../../Context/AuthContext";
 export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [name, setName] = useState("");
+    const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     const { login, user } = useAuth();
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const disallowed = /[\sא-ת]/;
 
     useEffect(() => {
         if (user) {
             if (user.role === 'ROLE_SUPER_ADMIN') {
-                navigate('/admin', { replace: true });
+                router.replace('/admin');
+            } else if (!user.leagueId) {
+                router.replace('/onboarding');
             } else {
-                navigate('/status', { replace: true });
+                router.replace('/status');
             }
         }
-    }, [user, navigate]);
+    }, [user, router]);
 
     const logos = useMemo(() => {
         return Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);
@@ -49,28 +57,39 @@ export default function Login() {
         e.preventDefault();
         setError("");
 
-        if (!username || !password) {
+        if (!username || !password || (isRegistering && !name)) {
             setError("Please fill in all fields");
             return;
         }
 
+        if (isRegistering && password !== confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
         try {
-            const res = await fetch(`${API_URL}/api/auth/login`, {
+            setSubmitting(true);
+            const endpoint = isRegistering ? "register" : "login";
+            const payload = isRegistering ? { name, username, password } : { username, password };
+            const res = await fetch(`${API_URL}/api/auth/${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) {
-                setError("Wrong Username or Password");
+                const message = await res.text();
+                setError(message || (isRegistering ? "Registration failed" : "Wrong Username or Password"));
                 return;
             }
 
             const data = await res.json();
             login(data.user, data.token);
 
-        } catch (err) {
-            setError("Error while sign-in");
+        } catch {
+            setError(isRegistering ? "Error while registering" : "Error while sign-in");
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -111,11 +130,27 @@ export default function Login() {
                 <h1 className={styles.title}>Fantasy Draft</h1>
 
                 <form className={styles.card} onSubmit={handleSubmit}>
+                    {isRegistering && (
+                        <input
+                            className={styles.input}
+                            placeholder="Display name"
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            autoComplete="name"
+                            minLength={2}
+                            maxLength={50}
+                            required
+                        />
+                    )}
                     <input
                         className={styles.input}
                         placeholder="Username"
                         value={username}
                         onChange={handleUsernameChange}
+                        autoComplete="username"
+                        minLength={3}
+                        maxLength={30}
+                        required
                     />
                     <input
                         className={styles.input}
@@ -123,12 +158,41 @@ export default function Login() {
                         placeholder="Password"
                         value={password}
                         onChange={handlePasswordChange}
+                        autoComplete={isRegistering ? "new-password" : "current-password"}
+                        minLength={isRegistering ? 8 : undefined}
+                        maxLength={72}
+                        required
                     />
 
-                    {error && <div className={styles.error}>{error}</div>}
+                    {isRegistering && (
+                        <input
+                            className={styles.input}
+                            type="password"
+                            placeholder="Confirm password"
+                            value={confirmPassword}
+                            onChange={(event) => setConfirmPassword(event.target.value)}
+                            autoComplete="new-password"
+                            minLength={8}
+                            maxLength={72}
+                            required
+                        />
+                    )}
 
-                    <button type="submit" className={styles.button}>
-                        Sign In
+                    {error && <div className={styles.error} role="alert" aria-live="polite">{error}</div>}
+
+                    <button type="submit" className={styles.button} disabled={submitting}>
+                        {submitting ? "Please wait..." : isRegistering ? "Create Account" : "Sign In"}
+                    </button>
+                    <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        disabled={submitting}
+                        onClick={() => {
+                            setIsRegistering((current) => !current);
+                            setError("");
+                        }}
+                    >
+                        {isRegistering ? "Already have an account? Sign in" : "New here? Create an account"}
                     </button>
                 </form>
             </div>

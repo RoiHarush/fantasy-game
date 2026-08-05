@@ -1,4 +1,6 @@
-import { useNavigate } from "react-router-dom";
+"use client";
+
+import { useRouter } from "next/navigation";
 import FixturesTable from "../FixturesTab/FixturesTable";
 import Style from "../../../Styles/Points.module.css";
 import PointsBlock from "../../Blocks/PointsBlock";
@@ -18,7 +20,7 @@ function Points({
     currentGameweek
 }) {
     const { players } = usePlayers();
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const handlePrev = () => {
         const idx = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
@@ -29,7 +31,7 @@ function Points({
         const idx = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
         const nextGw = gameweeks[idx + 1];
         if (!nextGw || nextGw.id > currentGameweek.id) {
-            navigate("/pick-team");
+            router.push("/pick-team");
         } else {
             setSelectedGameweek(nextGw);
         }

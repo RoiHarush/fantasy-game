@@ -1,12 +1,13 @@
-import { useLocation } from "react-router-dom";
+"use client";
+
+import { usePathname } from "next/navigation";
 import styles from "./Styles/Header.module.css";
 import headerLogo from "/UI/draft-logo.svg";
 import NavButtons from "./NavButtons";
 
 function Header() {
-    const location = useLocation();
-
-    const isPointsActive = location.pathname === "/points";
+    const pathname = usePathname();
+    const isPointsActive = pathname === "/points";
 
     return (
         <header className={styles.header}>

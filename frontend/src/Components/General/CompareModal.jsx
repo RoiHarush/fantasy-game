@@ -19,25 +19,39 @@ function CompareModal({ players, onClose }) {
     const [left, right] = players;
 
     useEffect(() => {
-        if (left?.teamId) getFixturesForTeam(left.teamId).then(setLeftFixtures);
-        if (right?.teamId) getFixturesForTeam(right.teamId).then(setRightFixtures);
+        let cancelled = false;
+
+        if (left?.teamId) getFixturesForTeam(left.teamId).then(data => {
+            if (!cancelled) setLeftFixtures(data);
+        });
+        if (right?.teamId) getFixturesForTeam(right.teamId).then(data => {
+            if (!cancelled) setRightFixtures(data);
+        });
 
         if (left)
             fetch(`${API_URL}/api/players/${left.id}/all-stats`)
                 .then(res => res.ok ? res.json() : [])
-                .then(setLeftStats);
+                .then(data => {
+                    if (!cancelled) setLeftStats(data);
+                });
         if (right)
             fetch(`${API_URL}/api/players/${right.id}/all-stats`)
                 .then(res => res.ok ? res.json() : [])
-                .then(setRightStats);
-    }, [left, right]);
+                .then(data => {
+                    if (!cancelled) setRightStats(data);
+                });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [left, right, getFixturesForTeam]);
 
     if (!left || !right) return null;
 
     return (
         <div className={Style.overlay}>
-            <div className={Style.compareModal}>
-                <button className={Style.closeBtn} onClick={onClose}>✕</button>
+            <div className={Style.compareModal} role="dialog" aria-modal="true" aria-label="Player comparison">
+                <button type="button" className={Style.closeBtn} onClick={onClose} aria-label="Close comparison">✕</button>
 
                 <div className={Style.compareHeader}>
                     <div className={`${Style.playerSection} ${Style.left}`}>

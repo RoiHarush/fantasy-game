@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
@@ -17,7 +17,7 @@ const normalize = (str) =>
         .replace(/[łŁ]/g, "l")
         .toLowerCase();
 
-const PenaltyManager = () => {
+const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
     const [gameweek, setGameweek] = useState();
@@ -37,10 +37,6 @@ const PenaltyManager = () => {
     }, [currentGameweek]);
 
     useEffect(() => {
-        loadPunishedPlayers();
-    }, [gameweek]);
-
-    useEffect(() => {
         if (searchTerm.length < 2 || !players) {
             setSearchResults([]);
         } else {
@@ -55,18 +51,22 @@ const PenaltyManager = () => {
         }
     }, [searchTerm, players]);
 
-    const loadPunishedPlayers = async () => {
+    const loadPunishedPlayers = useCallback(async () => {
         if (!gameweek) return;
         setLoading(true);
         try {
-            const data = await AdminService.getPenaltiesConceded(gameweek);
+            const data = await AdminService.getPenaltiesConceded(gameweek, maintenanceLeagueId);
             setPunishedPlayers(data);
         } catch (error) {
             console.error("Error loading penalties", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [gameweek, maintenanceLeagueId]);
+
+    useEffect(() => {
+        loadPunishedPlayers();
+    }, [loadPunishedPlayers]);
 
     const handlePunish = async (playerId, action) => {
         if (!canEdit) {
@@ -74,7 +74,12 @@ const PenaltyManager = () => {
             return;
         }
         try {
-            const updatedPlayer = await AdminService.updatePenaltyConceded(playerId, gameweek, action);
+            const updatedPlayer = await AdminService.updatePenaltyConceded(
+                playerId,
+                gameweek,
+                action,
+                maintenanceLeagueId
+            );
             setPunishedPlayers(prev => {
                 if (updatedPlayer.penaltiesConceded === 0) {
                     return prev.filter(p => p.playerId !== updatedPlayer.playerId);
@@ -84,7 +89,7 @@ const PenaltyManager = () => {
             });
             setSearchTerm("");
             setSearchResults([]);
-        } catch (error) {
+        } catch {
             alert("Failed to update penalty");
         }
     };
@@ -122,7 +127,7 @@ const PenaltyManager = () => {
     };
 
     return (
-        <div>
+        <div aria-busy={loading}>
             <div style={styles.headerCard}>
                 {!canEdit && <div style={styles.lockedBadge}>🔒 LOCKED</div>}
 

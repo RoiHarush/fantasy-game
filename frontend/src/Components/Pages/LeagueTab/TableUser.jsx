@@ -1,14 +1,16 @@
-import { useNavigate } from "react-router-dom";
+"use client";
+
+import { useRouter } from "next/navigation";
 import Style from "../../../Styles/LeagueTable.module.css";
 
 function TableUser({ user, currentUser }) {
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const handleClick = () => {
         if (user.userId === currentUser.id) {
-            navigate("/points");
+            router.push("/points");
         } else {
-            navigate(`/points/${user.id}`);
+            router.push(`/points/${user.id}`);
         }
     };
 

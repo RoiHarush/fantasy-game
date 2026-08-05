@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API_URL from '../../../config';
-import { useAuth } from '../../../Context/AuthContext';
 import AdminUserEditModal from './AdminUserEditModal';
 import { getAuthHeaders } from '../../../services/authHelper';
 
@@ -39,8 +38,6 @@ export default function AdminUsersPage() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { user } = useAuth();
-
     const [editingUser, setEditingUser] = useState(null);
 
     const fetchUsers = useCallback(async () => {

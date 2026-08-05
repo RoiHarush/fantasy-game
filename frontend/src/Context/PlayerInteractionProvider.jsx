@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import PlayerMatchModal from "../Components/General/PlayerMatchModal";
 import PlayerActionModal from "../Components/General/PlayerActionModal";
 import PlayerInfoModal from "../Components/General/PlayerInfoModal";

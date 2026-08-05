@@ -1,84 +1,164 @@
-import React, { useState } from 'react';
-import AssistManager from './AssistManager';
-import LockedPlayersManager from './LockedPlayersManager';
-import PenaltyManager from './PenaltyManager';
-import PositionManager from './PositionManager';
+import { lazy, Suspense, useEffect, useState } from "react";
+import {
+    fetchMaintenanceLeague,
+    fetchMyLeague,
+    updateLeagueSettings,
+    updateMaintenanceLeagueSettings
+} from "../../../services/leagueService";
+import styles from "../../../Styles/LeagueControl.module.css";
 
-const LeagueControlPage = () => {
-    const [activeTab, setActiveTab] = useState('assists');
+const AssistManager = lazy(() => import("./AssistManager"));
+const PenaltyManager = lazy(() => import("./PenaltyManager"));
+const LockedPlayersManager = lazy(() => import("./LockedPlayersManager"));
+const PositionManager = lazy(() => import("./PositionManager"));
 
-    const styles = {
-        pageContainer: {
-            minHeight: '100vh',
-            backgroundColor: '#f3f4f6',
-            paddingTop: '1rem',
-            paddingBottom: '2rem',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        },
-        navWrapper: {
-            maxWidth: '100%',
-            padding: '0 1rem',
-            marginBottom: '1.5rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-        },
-        tabsContainer: {
-            display: 'flex',
-            backgroundColor: 'white',
-            padding: '5px',
-            borderRadius: '12px',
-            gap: '5px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            border: '1px solid #e5e7eb'
-        },
-        tab: (isActive) => ({
-            flex: 1,
-            padding: '10px 12px',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: isActive ? '700' : '500',
-            transition: 'all 0.2s ease',
-            backgroundColor: isActive ? '#3b82f6' : 'transparent',
-            color: isActive ? 'white' : '#6b7280',
-            whiteSpace: 'nowrap',
-            textAlign: 'center'
-        }),
-        contentWrapper: {
-            maxWidth: '600px',
-            margin: '0 auto',
-            padding: '0 1rem'
+function LeagueControlPage({ maintenanceLeagueId = null }) {
+    const [activeTab, setActiveTab] = useState("settings");
+    const [league, setLeague] = useState(null);
+    const [name, setName] = useState("");
+    const [maxParticipants, setMaxParticipants] = useState(8);
+    const [scoringRules, setScoringRules] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        const loadLeague = maintenanceLeagueId
+            ? fetchMaintenanceLeague(maintenanceLeagueId)
+            : fetchMyLeague();
+        loadLeague
+            .then(data => {
+                setLeague(data);
+                setName(data.name);
+                setMaxParticipants(data.maxParticipants);
+                setScoringRules(data.scoringRules || {});
+            })
+            .catch(loadError => setError(loadError.message))
+            .finally(() => setLoading(false));
+    }, [maintenanceLeagueId]);
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+            const saveSettings = maintenanceLeagueId
+                ? updateMaintenanceLeagueSettings
+                : updateLeagueSettings;
+            const updated = await saveSettings(league.id, {
+                name,
+                maxParticipants: Number(maxParticipants),
+                scoringRules
+            });
+            setLeague(updated);
+            setMessage("League settings saved.");
+        } catch (saveError) {
+            setError(saveError.message);
+        } finally {
+            setSaving(false);
         }
-    };
+    }
+
+    if (loading) return <section className={styles.page}><p>Loading league settings…</p></section>;
+    if (!league) return <section className={styles.page}><p className={styles.error}>{error}</p></section>;
 
     return (
-        <div style={styles.pageContainer}>
-            <div style={styles.navWrapper}>
-                <div style={styles.tabsContainer}>
-                    <button onClick={() => setActiveTab('assists')} style={styles.tab(activeTab === 'assists')}>
-                        Assists
-                    </button>
-                    <button onClick={() => setActiveTab('penalties')} style={styles.tab(activeTab === 'penalties')}>
-                        Penalties
-                    </button>
-                    <button onClick={() => setActiveTab('locks')} style={styles.tab(activeTab === 'locks')}>
-                        Locks
-                    </button>
-                    <button onClick={() => setActiveTab('positions')} style={styles.tab(activeTab === 'positions')}>
-                        Positions
-                    </button>
-                </div>
-            </div>
+        <section className={styles.page} aria-labelledby="league-control-title">
+            <header>
+                <p className={styles.eyebrow}>
+                    {maintenanceLeagueId ? "Super admin maintenance" : "League admin"}
+                </p>
+                <h1 id="league-control-title">League settings</h1>
+                <p>
+                    Invite code: <strong>{league.leagueCode}</strong> · {league.participantCount} current managers
+                </p>
+            </header>
 
-            <div style={styles.contentWrapper}>
-                {activeTab === 'assists' && <AssistManager />}
-                {activeTab === 'penalties' && <PenaltyManager />}
-                {activeTab === 'locks' && <LockedPlayersManager />}
-                {activeTab === 'positions' && <PositionManager />}
+            <nav className={styles.tabs} aria-label="League administration sections">
+                {[
+                    ["settings", "Settings"],
+                    ["assists", "Assists"],
+                    ["penalties", "Penalties"],
+                    ["locks", "Locks"],
+                    ["positions", "Positions"]
+                ].map(([tab, label]) => (
+                    <button
+                        key={tab}
+                        type="button"
+                        className={activeTab === tab ? styles.activeTab : ""}
+                        aria-current={activeTab === tab ? "page" : undefined}
+                        onClick={() => setActiveTab(tab)}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </nav>
+
+            {activeTab === "settings" && <form className={styles.form} onSubmit={handleSubmit}>
+                <div className={styles.generalGrid}>
+                    <label>
+                        League name
+                        <input value={name} onChange={event => setName(event.target.value)} required />
+                    </label>
+                    <label>
+                        Maximum participants
+                        <input
+                            type="number"
+                            min={league.participantCount}
+                            max="20"
+                            value={maxParticipants}
+                            onChange={event => setMaxParticipants(event.target.value)}
+                            required
+                        />
+                    </label>
+                </div>
+
+                <details className={styles.rules} open>
+                    <summary>Scoring rules</summary>
+                    <p>Changes affect the next points calculation and are isolated to this league.</p>
+                    <div className={styles.ruleGrid}>
+                        {Object.entries(scoringRules)
+                            .sort(([leftRule], [rightRule]) => leftRule.localeCompare(rightRule))
+                            .map(([rule, points]) => (
+                            <label key={rule}>
+                                {rule.replaceAll("_", " ").replace(".", " · ")}
+                                <input
+                                    type="number"
+                                    min="-100"
+                                    max="100"
+                                    value={points}
+                                    onChange={event => setScoringRules(current => ({
+                                        ...current,
+                                        [rule]: Number(event.target.value)
+                                    }))}
+                                />
+                            </label>
+                            ))}
+                    </div>
+                </details>
+
+                <div className={styles.feedback} aria-live="polite">
+                    {error && <p className={styles.error}>{error}</p>}
+                    {message && <p className={styles.success}>{message}</p>}
+                </div>
+
+                <button className={styles.save} disabled={saving}>
+                    {saving ? "Saving…" : "Save league settings"}
+                </button>
+            </form>}
+
+            <div className={styles.playerControls} hidden={activeTab === "settings"}>
+                <Suspense fallback={<p role="status">Loading league controls…</p>}>
+                    {activeTab === "assists" && <AssistManager maintenanceLeagueId={maintenanceLeagueId} />}
+                    {activeTab === "penalties" && <PenaltyManager maintenanceLeagueId={maintenanceLeagueId} />}
+                    {activeTab === "locks" && <LockedPlayersManager maintenanceLeagueId={maintenanceLeagueId} />}
+                    {activeTab === "positions" && <PositionManager maintenanceLeagueId={maintenanceLeagueId} />}
+                </Suspense>
             </div>
-        </div>
+        </section>
     );
-};
+}
 
 export default LeagueControlPage;

@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { usePlayers } from "../../Context/PlayersContext";
 import { useGameweek } from "../../Context/GameweeksContext";
 import styles from "../../Styles/TeamOfTheWeekBlock.module.css";
 import API_URL from "../../config";
 import PlayerKit from "../General/PlayerKit";
 
 function TeamOfTheWeekBlock() {
-    const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
     const [dreamTeam, setDreamTeam] = useState([]);
 

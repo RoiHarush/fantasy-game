@@ -8,7 +8,7 @@ import { BrowserRouter } from "react-router-dom";
 import { PlayersProvider } from "./Context/PlayersContext.jsx";
 import { GameweekProvider } from "./Context/GameweeksContext.jsx";
 import { TeamsProvider } from "./Context/TeamsContext.jsx";
-import { WebSocketProvider } from "./Context/WebSocketContext.jsx";
+import { WebSocketProvider } from "./Context/WebSocketProvider.jsx";
 import { AuthProvider } from "./Context/AuthContext.jsx";
 import { WatchlistProvider } from "./Context/WatchlistContext.jsx";
 import { SystemStatusProvider } from "./Context/SystemStatusContext.jsx";

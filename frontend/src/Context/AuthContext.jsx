@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+"use client";
+
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
+    const router = useRouter();
 
     useEffect(() => {
         const storedUser = localStorage.getItem('loggedUser');
@@ -43,9 +45,9 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
 
         if (userData.role === 'ROLE_SUPER_ADMIN') {
-            navigate('/admin');
+            router.replace('/admin');
         } else {
-            navigate('/status');
+            router.replace('/status');
         }
     };
 
@@ -53,11 +55,20 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('loggedUser');
         setUser(null);
-        navigate('/login');
+        router.replace('/login');
     };
 
+    const updateUser = useCallback((updates) => {
+        setUser((currentUser) => {
+            if (!currentUser) return currentUser;
+            const updatedUser = { ...currentUser, ...updates };
+            localStorage.setItem('loggedUser', JSON.stringify(updatedUser));
+            return updatedUser;
+        });
+    }, []);
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
             {!loading && children}
         </AuthContext.Provider>
     );

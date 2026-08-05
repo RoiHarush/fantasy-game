@@ -59,7 +59,7 @@ function PointsPage({ displayedUser }) {
         load();
 
         return () => (cancelled = true);
-    }, [targetUser, selectedGameweek]);
+    }, [targetUser, selectedGameweek, currentGameweek]);
 
     if (loading || !selectedGameweek) {
         return <LoadingPage />;

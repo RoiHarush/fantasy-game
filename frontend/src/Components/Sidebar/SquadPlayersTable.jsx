@@ -1,6 +1,6 @@
 import { usePlayers } from "../../Context/PlayersContext";
 import { useFixtures } from "../../Context/FixturesContext";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
 import { useGameweek } from "../../Context/GameweeksContext";
@@ -11,7 +11,7 @@ function SquadPlayersTable({ squad }) {
     const { nextGameweek } = useGameweek();
     const [fixtures, setFixtures] = useState({});
 
-    const getPlayer = (id) => players.find((p) => p.id === id);
+    const getPlayer = useCallback((id) => players.find((p) => p.id === id), [players]);
 
     const sections = [
         { key: "GK", label: "Goalkeepers" },
@@ -37,7 +37,7 @@ function SquadPlayersTable({ squad }) {
             setFixtures(data);
         }
         fetchAll();
-    }, [squad, players]);
+    }, [squad, getPlayer, getFixturesForTeam]);
 
     const getNextFixtureText = (player) => {
         if (!nextGameweek) return "-";

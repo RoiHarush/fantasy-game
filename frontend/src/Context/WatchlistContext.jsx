@@ -11,7 +11,7 @@ export function WatchlistProvider({ children }) {
     const { user } = useAuth();
 
     useEffect(() => {
-        if (!user?.id) {
+        if (!user?.id || !user?.leagueId) {
             setWatchlist([]);
             return;
         }
@@ -25,6 +25,11 @@ export function WatchlistProvider({ children }) {
     }, [user]);
 
     const toggleWatch = async (playerId, isWatched) => {
+        if (!user?.leagueId) {
+            alert("Join a league before creating a watchlist");
+            return;
+        }
+
         setWatchlist((prev) => {
             if (isWatched) {
                 return prev.filter((id) => id !== playerId);

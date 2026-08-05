@@ -16,8 +16,6 @@ export function FixtureCard({ fixture }) {
                 minute: "2-digit",
             });
 
-    let fixState = fixture.started && !fixture.finished ? fixture.minutes : "";
-
     return (
         <div className={Style["fixture-card"]}>
             <span className={Style["home-team"]}>
@@ -34,7 +32,6 @@ export function FixtureCard({ fixture }) {
                 {awayTeam?.name || "TBD"}
             </span>
 
-            {/* <span>{fixState}</span> */}
         </div>
     );
 }

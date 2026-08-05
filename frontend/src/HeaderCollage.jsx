@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import Style from "./Styles/HeaderCollage.module.css";
 
-function HeaderCollage() {
-    const allImages = Array.from({ length: 13 }, (_, i) => `p${i + 1}.jpeg`);
+const ALL_IMAGES = Array.from({ length: 13 }, (_, i) => `p${i + 1}.jpeg`);
 
+function HeaderCollage() {
     const randomImages = useMemo(() => {
-        const shuffled = [...allImages].sort(() => Math.random() - 0.5);
+        const shuffled = [...ALL_IMAGES].sort(() => Math.random() - 0.5);
         return shuffled.slice(0, 7);
     }, []);
 

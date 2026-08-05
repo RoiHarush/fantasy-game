@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import API_URL from '../../../config';
-import { useAuth } from '../../../Context/AuthContext';
 import { getAuthHeaders } from '../../../services/authHelper';
 
 const styles = {
@@ -148,8 +147,6 @@ export default function AdminActionsPage() {
 
     const [allUsersList, setAllUsersList] = useState([]);
 
-    const { user } = useAuth();
-
     useEffect(() => {
 
         const fetchPlayers = async () => {
@@ -269,7 +266,7 @@ export default function AdminActionsPage() {
         let dto;
         try {
             dto = JSON.parse(squadDto);
-        } catch (e) {
+        } catch {
             return alert('Invalid JSON in Squad DTO field');
         }
         if (!window.confirm(`Are you sure you want to MANUALLY OVERWRITE squad for user ${squadUserId} in GW ${squadGw}?`)) return;

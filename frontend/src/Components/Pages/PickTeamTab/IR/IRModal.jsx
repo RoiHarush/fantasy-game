@@ -8,11 +8,11 @@ import PlayerKit from "../../../General/PlayerKit";
 function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
     const { players } = usePlayers();
 
-    const injuredPlayers = Object.values(squad.startingLineup)
+    const eligiblePlayers = Object.values(squad.startingLineup)
         .flat()
         .concat(Object.values(squad.bench))
         .map((id) => players.find((p) => p.id === id))
-        .filter((p) => p && p.injured);
+        .filter(Boolean);
 
     useEffect(() => {
         lockScroll();
@@ -38,14 +38,14 @@ function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
 
                 <img src="/Icons/ir-chip.svg" alt="IR Chip" style={{ width: 70, marginBottom: 16 }} />
 
-                <h2 className={Style.title}>Select Injured Player</h2>
+                <h2 className={Style.title}>Select Player for IR</h2>
 
-                {injuredPlayers.length === 0 ? (
-                    <p className={Style.notice}>No injured players available for IR.</p>
+                {eligiblePlayers.length === 0 ? (
+                    <p className={Style.notice}>No players available for IR.</p>
                 ) : (
                     <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "10px" }}>
                         <div className={Style.playerList}>
-                            {injuredPlayers.map((p) => (
+                            {eligiblePlayers.map((p) => (
                                 <button
                                     key={p.id}
                                     onClick={() => setConfirmIRPlayer(p)}

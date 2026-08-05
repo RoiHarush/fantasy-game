@@ -5,7 +5,7 @@ import { usePlayers } from '../../../Context/PlayersContext';
 
 const normalize = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-const PositionManager = () => {
+const PositionManager = ({ maintenanceLeagueId = null }) => {
     const { players, setPlayers } = usePlayers();
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState([]);
@@ -37,7 +37,7 @@ const PositionManager = () => {
     const handleChangePosition = async (player, posId) => {
         setUpdatingId(player.id);
         try {
-            await AdminService.updatePlayerPosition(player.id, posId);
+            await AdminService.updatePlayerPosition(player.id, posId, maintenanceLeagueId);
 
             const newPosCode = positions.find(p => p.id === posId).code;
             setPlayers(prev => prev.map(p =>
@@ -47,7 +47,7 @@ const PositionManager = () => {
             setSearchResults(prev => prev.map(p =>
                 p.id === player.id ? { ...p, position: newPosCode } : p
             ));
-        } catch (error) {
+        } catch {
             alert("Update failed");
         } finally {
             setUpdatingId(null);

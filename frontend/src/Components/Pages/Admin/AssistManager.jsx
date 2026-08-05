@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
@@ -17,7 +17,7 @@ const normalize = (str) =>
         .replace(/[łŁ]/g, "l")
         .toLowerCase();
 
-const AssistManager = () => {
+const AssistManager = ({ maintenanceLeagueId = null }) => {
     const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
 
@@ -39,10 +39,6 @@ const AssistManager = () => {
     }, [currentGameweek]);
 
     useEffect(() => {
-        loadAssisters();
-    }, [gameweek]);
-
-    useEffect(() => {
         if (searchTerm.length < 2 || !players) {
             setSearchResults([]);
         } else {
@@ -57,18 +53,22 @@ const AssistManager = () => {
         }
     }, [searchTerm, players]);
 
-    const loadAssisters = async () => {
+    const loadAssisters = useCallback(async () => {
         if (!gameweek) return;
         setLoading(true);
         try {
-            const data = await AdminService.getAssisters(gameweek);
+            const data = await AdminService.getAssisters(gameweek, maintenanceLeagueId);
             setAssisters(data);
         } catch (error) {
             console.error("Error loading data", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [gameweek, maintenanceLeagueId]);
+
+    useEffect(() => {
+        loadAssisters();
+    }, [loadAssisters]);
 
     const handleUpdate = async (playerId, action) => {
         if (!canEdit) {
@@ -76,7 +76,12 @@ const AssistManager = () => {
             return;
         }
         try {
-            const updatedPlayer = await AdminService.updateAssist(playerId, gameweek, action);
+            const updatedPlayer = await AdminService.updateAssist(
+                playerId,
+                gameweek,
+                action,
+                maintenanceLeagueId
+            );
             setAssisters(prev => {
                 const exists = prev.find(p => p.playerId === updatedPlayer.playerId);
                 if (exists) {
@@ -90,7 +95,7 @@ const AssistManager = () => {
             });
             setSearchTerm("");
             setSearchResults([]);
-        } catch (error) {
+        } catch {
             alert("Failed to update assist");
         }
     };

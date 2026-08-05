@@ -15,6 +15,7 @@ import LoadingPage from "./Components/General/LoadingPage";
 import AdminDashboard from "./Components/Pages/superAdmin/AdminDashboard";
 import AdminUsersPage from "./Components/Pages/superAdmin/AdminUserPage";
 import AdminActionsPage from "./Components/Pages/superAdmin/AdminActionsPage";
+import LeagueMaintenancePage from "./Components/Pages/superAdmin/LeagueMaintenancePage";
 import LeagueControlPage from "./Components/Pages/Admin/LeagueControlPage";
 import SettingsPage from "./Components/Pages/SettingsTab/SettingsPage";
 import GameweekUpdatingGuard from "./GameweekUpdatingGuard";
@@ -22,6 +23,8 @@ import { fetchUserById } from "./services/usersService";
 import NotFoundPage from "./Components/Pages/NotFoundPage";
 import Footer from "./Footer";
 import DraftRoomPage from "./Components/Pages/DraftRoomTab/DraftRoomPage";
+import LeagueOnboardingPage from "./Components/Pages/LeagueOnboarding/LeagueOnboardingPage";
+import WaiverPlannerPage from "./Components/Pages/WaiversTab/WaiverPlannerPage";
 
 
 function MainAppLayout() {
@@ -67,10 +70,13 @@ function AdminAppLayout() {
             <Link to="/admin" style={{ color: 'white', textDecoration: 'none' }}>Dashboard</Link>
           </li>
           <li style={{ marginBottom: '0.5rem' }}>
-            <Link to="/admin/users" style={{ color: 'white', textDecoration: 'none' }}>User Managment</Link>
+            <Link to="/admin/users" style={{ color: 'white', textDecoration: 'none' }}>User Management</Link>
           </li>
           <li style={{ marginBottom: '0.5rem' }}>
             <Link to="/admin/actions" style={{ color: 'white', textDecoration: 'none' }}>System Actions</Link>
+          </li>
+          <li style={{ marginBottom: '0.5rem' }}>
+            <Link to="/admin/leagues" style={{ color: 'white', textDecoration: 'none' }}>League Maintenance</Link>
           </li>
           <li style={{ marginTop: '2rem' }}>
             <Link to="/" style={{ color: '#9ca3af', textDecoration: 'none' }}>Back To Game</Link>
@@ -89,11 +95,32 @@ function AdminAppLayout() {
 
 const LeagueAdminRoute = ({ children }) => {
   const { user } = useAuth();
-  if (user?.role !== 'ROLE_ADMIN' && user?.role !== 'ROLE_SUPER_ADMIN') {
+  if (!user?.leagueAdmin) {
     return <Navigate to="/status" replace />;
   }
   return children;
 };
+
+function LeagueRequiredLayout() {
+  const { user } = useAuth();
+  if (!user?.leagueId) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  return <Outlet />;
+}
+
+function ActiveLeagueRoute({ children }) {
+  const { user } = useAuth();
+  if (user?.leagueStatus !== "ACTIVE") {
+    return <Navigate to="/status" replace />;
+  }
+  return children;
+}
+
+function HomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={user?.leagueId ? "/status" : "/onboarding"} replace />;
+}
 
 function App() {
   const { loading } = useAuth();
@@ -115,51 +142,70 @@ function App() {
       <Route path="/login" element={<Login />} />
 
       <Route element={<MainAppLayout />}>
-        <Route path="/" element={<Navigate to="/status" replace />} />
-        <Route path="status" element={
-          <GameweekUpdatingGuard>
-            <StatusPage />
-          </GameweekUpdatingGuard>
-        } />
-        <Route path="points" element={
-          <GameweekUpdatingGuard>
-            <PointsPage />
-          </GameweekUpdatingGuard>
-        } />
-        <Route path="points/:userId" element={
-          <GameweekUpdatingGuard>
-            <OtherUserPointsWrapper />
-          </GameweekUpdatingGuard>
-        } />
-        <Route path="pick-team" element={
-          <GameweekUpdatingGuard>
-            <PickTeamPage />
-          </GameweekUpdatingGuard>
-        } />
-        <Route path="league" element={<LeaguePage />} />
-        <Route path="fixtures" element={<FixturesPage />} />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="onboarding" element={<LeagueOnboardingPage />} />
         <Route path="scout" element={<ScoutPage />} />
-        <Route path="transfer-window" element={
-          <GameweekUpdatingGuard>
-            <TransferWindowPage />
-          </GameweekUpdatingGuard>
-        } />
-        <Route path="draft-room" element={
-          <GameweekUpdatingGuard>
-            <DraftRoomPage />
-          </GameweekUpdatingGuard>
-        } />
 
-        <Route path="settings" element={<SettingsPage />} />
+        <Route element={<LeagueRequiredLayout />}>
+          <Route path="status" element={
+            <GameweekUpdatingGuard>
+              <StatusPage />
+            </GameweekUpdatingGuard>
+          } />
+          <Route path="points" element={
+            <ActiveLeagueRoute>
+              <GameweekUpdatingGuard>
+                <PointsPage />
+              </GameweekUpdatingGuard>
+            </ActiveLeagueRoute>
+          } />
+          <Route path="points/:userId" element={
+            <ActiveLeagueRoute>
+              <GameweekUpdatingGuard>
+                <OtherUserPointsWrapper />
+              </GameweekUpdatingGuard>
+            </ActiveLeagueRoute>
+          } />
+          <Route path="pick-team" element={
+            <ActiveLeagueRoute>
+              <GameweekUpdatingGuard>
+                <PickTeamPage />
+              </GameweekUpdatingGuard>
+            </ActiveLeagueRoute>
+          } />
+          <Route path="league" element={<LeaguePage />} />
+          <Route path="fixtures" element={<FixturesPage />} />
+          <Route path="transfer-window" element={
+            <ActiveLeagueRoute>
+              <GameweekUpdatingGuard>
+                <TransferWindowPage />
+              </GameweekUpdatingGuard>
+            </ActiveLeagueRoute>
+          } />
+          <Route path="draft-room" element={
+            <GameweekUpdatingGuard>
+              <DraftRoomPage />
+            </GameweekUpdatingGuard>
+          } />
+          <Route path="waivers" element={
+            <ActiveLeagueRoute>
+              <GameweekUpdatingGuard>
+                <WaiverPlannerPage />
+              </GameweekUpdatingGuard>
+            </ActiveLeagueRoute>
+          } />
 
-        <Route
-          path="league-control"
-          element={
-            <LeagueAdminRoute>
-              <LeagueControlPage />
-            </LeagueAdminRoute>
-          }
-        />
+          <Route path="settings" element={<SettingsPage />} />
+
+          <Route
+            path="league-control"
+            element={
+              <LeagueAdminRoute>
+                <LeagueControlPage />
+              </LeagueAdminRoute>
+            }
+          />
+        </Route>
 
       </Route>
 
@@ -167,6 +213,7 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="actions" element={<AdminActionsPage />} />
+        <Route path="leagues" element={<LeagueMaintenancePage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

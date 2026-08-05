@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
@@ -16,23 +16,23 @@ const normalize = (str) =>
         .replace(/[łŁ]/g, "l")
         .toLowerCase();
 
-const LockedPlayersManager = () => {
+const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
     const { players, setPlayers } = usePlayers();
     const [serverLockedPlayers, setServerLockedPlayers] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => { loadLockedPlayers(); }, []);
-
-    const loadLockedPlayers = async () => {
+    const loadLockedPlayers = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await AdminService.getLockedPlayers();
+            const data = await AdminService.getLockedPlayers(maintenanceLeagueId);
             setServerLockedPlayers(data);
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
-    };
+    }, [maintenanceLeagueId]);
+
+    useEffect(() => { loadLockedPlayers(); }, [loadLockedPlayers]);
 
     const handleSearch = (term) => {
         setSearchTerm(term);
@@ -55,11 +55,15 @@ const LockedPlayersManager = () => {
 
     const handleToggleLock = async (player, shouldLock) => {
         try {
-            const updatedPlayer = await AdminService.togglePlayerLock(player.id, shouldLock);
+            const updatedPlayer = await AdminService.togglePlayerLock(
+                player.id,
+                shouldLock,
+                maintenanceLeagueId
+            );
             await loadLockedPlayers();
             setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
             if (shouldLock) { setSearchTerm(""); setSearchResults([]); }
-        } catch (error) { alert("Failed"); }
+        } catch { alert("Failed"); }
     };
 
     const styles = {

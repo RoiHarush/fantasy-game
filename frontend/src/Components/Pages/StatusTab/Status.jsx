@@ -53,7 +53,7 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
 
     return (
         <div className={Style.statusPage}>
-            <h3>Current Team - {user.fantasyTeamName}</h3>
+            <h1>Current Team - {user.fantasyTeamName}</h1>
 
             <ColumnsBlock title={currentGameweek?.name || "Gameweek"} columns={2}>
                 <div>

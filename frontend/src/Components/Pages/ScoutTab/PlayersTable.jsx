@@ -71,7 +71,7 @@ function PlayerTable({
                         </th>
 
                         {mode === "scout" && <th style={{ width: '100px' }}>Owner</th>}
-                        {mode === "transfer" && <th style={{ width: '80px' }}>Sign</th>}
+                        {(mode === "transfer" || mode === "draft") && <th style={{ width: '80px' }}>{mode === "draft" ? "Draft" : "Sign"}</th>}
                     </tr>
                 )}
 

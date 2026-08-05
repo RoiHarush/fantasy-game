@@ -20,3 +20,14 @@ export async function passTurn(userId) {
         throw new Error(msg || "Failed to pass turn");
     }
 }
+
+export async function makeDraftPick(playerId) {
+    const res = await fetch(`${API_URL}/api/market/draft-pick/${playerId}`, {
+        method: "POST",
+        headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || "Failed to complete draft pick");
+    }
+}

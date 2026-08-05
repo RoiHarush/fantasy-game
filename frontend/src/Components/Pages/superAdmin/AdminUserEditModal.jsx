@@ -123,7 +123,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
             const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
-                body: JSON.stringify(userData),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) throw new Error('Failed to save user details');
             onSave();
@@ -182,7 +182,6 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
                             <label style={modalStyles.label}>Role</label>
                             <select style={modalStyles.select} name="role" value={userData.role} onChange={handleChange}>
                                 <option value="ROLE_USER">USER</option>
-                                <option value="ROLE_ADMIN">ADMIN</option>
                                 <option value="ROLE_SUPER_ADMIN">SUPER ADMIN</option>
                             </select>
                         </div>

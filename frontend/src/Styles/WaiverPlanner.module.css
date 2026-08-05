@@ -1,0 +1,160 @@
+.page {
+    width: min(1040px, calc(100% - 2rem));
+    margin: 2rem auto;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.header h1 {
+    margin: 0;
+}
+
+.eyebrow {
+    margin: 0 0 0.35rem;
+    color: #5eead4;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.explanation {
+    max-width: 78ch;
+    color: #cbd5e1;
+    line-height: 1.6;
+}
+
+.builder {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr) auto;
+    align-items: end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border-radius: 14px;
+    background: rgba(30, 41, 59, 0.86);
+}
+
+.builder label {
+    display: grid;
+    gap: 0.5rem;
+    color: #cbd5e1;
+    font-weight: 650;
+}
+
+.builder select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #f8fafc;
+}
+
+.swapArrow {
+    padding-bottom: 0.75rem;
+    color: #94a3b8;
+}
+
+.saveButton,
+.addButton {
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    border: 0;
+    border-radius: 9px;
+    background: #14b8a6;
+    color: #042f2e;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.saveButton:disabled,
+.builder button:disabled,
+.actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.feedback {
+    min-height: 2.5rem;
+}
+
+.error { color: #fca5a5; }
+.success { color: #86efac; }
+
+.priorityList {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.priorityCard {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    background: #111c31;
+}
+
+.priorityNumber {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 999px;
+    background: #0f766e;
+    font-weight: 800;
+}
+
+.swapText span { color: #94a3b8; }
+
+.actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.actions button {
+    min-width: 36px;
+    min-height: 36px;
+    border: 1px solid #475569;
+    border-radius: 7px;
+    background: #1e293b;
+    color: #f8fafc;
+    cursor: pointer;
+}
+
+.actions .removeButton {
+    color: #fecaca;
+}
+
+.emptyState {
+    padding: 2rem;
+    border: 1px dashed #475569;
+    border-radius: 12px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+@media (max-width: 760px) {
+    .page { padding: 1.25rem; }
+    .header { align-items: stretch; flex-direction: column; }
+    .builder { grid-template-columns: 1fr; }
+    .swapArrow { padding: 0; }
+    .priorityCard { grid-template-columns: auto 1fr; }
+    .actions { grid-column: 1 / -1; justify-content: flex-end; }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { usePlayers } from "../../../Context/PlayersContext";
 import { useWebSocket } from "../../../Context/WebSocketContext";
-import { passTurn } from "../../../services/transferWindowService";
+import { makeDraftPick, passTurn } from "../../../services/transferWindowService";
 import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
 import Style from "../../../Styles/TransferWindow.module.css";
 import ReplacementModal from "./ReplacementModal";
@@ -27,6 +27,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
     const [isIrRound, setIsIrRound] = useState(initialWindowState?.currentRound === 'IR');
     const [irPosition, setIrPosition] = useState(null);
+    const isDraftMode = Boolean(initialWindowState?.isDraftMode);
 
     const allTeamFixtures = useAllTeamFixtures();
 
@@ -108,7 +109,9 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 const playerOut = currentPlayers.find(p => p.id === playerOutId);
                 const outName = playerOut ? playerOut.viewName : "Player Out";
 
-                setLastTransferMessage(`${userName || "User"} signed ${inName} | over ${outName}`);
+                setLastTransferMessage(isDraftMode
+                    ? `${userName || "User"} drafted ${inName}`
+                    : `${userName || "User"} signed ${inName} | over ${outName}`);
             }
 
             if (event.event === "turn_passed") {
@@ -116,10 +119,12 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
             }
         };
 
-        subscribe("/topic/transfers", handleTransferEvent);
-        return () => unsubscribe("/topic/transfers");
+        if (!user.leagueId) return;
+        const topic = `/topic/leagues/${user.leagueId}/transfers`;
+        subscribe(topic, handleTransferEvent);
+        return () => unsubscribe(topic);
 
-    }, [connected, subscribe, unsubscribe, user.id]);
+    }, [connected, isDraftMode, subscribe, unsubscribe, user.id, user.leagueId, setPlayers]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
@@ -136,12 +141,12 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
     return (
         <div className={Style.transferPage}>
-            <h2 className={Style.title}>Transfer Window</h2>
+            <h2 className={Style.title}>{isDraftMode ? "Initial Draft" : "Transfer Window"}</h2>
 
             <div className={Style.roundHeader}>
                 <div className={Style.roundInfo}>
                     <span className={`${Style.roundBadge} ${isIrRound ? Style.irBadge : Style.regularBadge}`}>
-                        {isIrRound ? "IR Round" : "Regular Round"}
+                        {isIrRound ? "IR Round" : isDraftMode ? "Initial Draft" : "Regular Round"}
                     </span>
                     <span className={Style.roundSubtitle}>
                         {isDataReady ?
@@ -195,10 +200,10 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                             <span className={Style.myTurn}>
                                 {isIrRound
                                     ? `Pick replacement for ${irPosition} (IR)`
-                                    : "Your turn to make a transfer"}
+                                    : isDraftMode ? "Your turn to draft a player" : "Your turn to make a transfer"}
                             </span>
 
-                            {!isIrRound && (
+                            {!isIrRound && !isDraftMode && (
                                 <button
                                     className={Style.passButton}
                                     onClick={async () => {
@@ -234,7 +239,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
             <PlayersWrapper
                 user={user}
-                mode="transfer"
+                mode={isDraftMode ? "draft" : "transfer"}
                 onPlayerSelect={setSelectedPlayerIn}
                 currentTurnUserId={currentTurnUserId}
                 irPosition={isIrRound ? irPosition : null}
@@ -248,6 +253,19 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                         user={user}
                         onClose={() => setSelectedPlayerIn(null)}
                     />
+                ) : isDraftMode ? (
+                    <div role="dialog" aria-modal="true" className={Style.transferMessage}>
+                        <p>Draft <strong>{selectedPlayerIn.viewName}</strong>?</p>
+                        <button onClick={async () => {
+                            try {
+                                await makeDraftPick(selectedPlayerIn.id);
+                                setSelectedPlayerIn(null);
+                            } catch (error) {
+                                alert(error.message);
+                            }
+                        }}>Confirm pick</button>
+                        <button onClick={() => setSelectedPlayerIn(null)}>Cancel</button>
+                    </div>
                 ) : (
                     <ReplacementModal
                         playerIn={selectedPlayerIn}

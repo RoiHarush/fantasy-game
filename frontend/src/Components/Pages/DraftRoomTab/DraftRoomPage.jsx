@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchAllUsers } from "../../../services/usersService";
@@ -12,9 +12,10 @@ import TransferWindow from "../TransferWindowTab/TransferWindow";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import { fetchSquadForGameweek } from "../../../services/squadService";
 import DraftLobby from "./DraftLobby";
+import { fetchMyLeague } from "../../../services/leagueService";
 
 function DraftRoomPage() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const { nextGameweek } = useGameweek();
     const { subscribe, unsubscribe, connected } = useWebSocket();
 
@@ -24,30 +25,40 @@ function DraftRoomPage() {
     const [loading, setLoading] = useState(true);
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
     const [selectedUserSquad, setSelectedUserSquad] = useState(null);
+    const [league, setLeague] = useState(null);
 
-    const isAdmin = user?.role?.includes('ADMIN') || user?.roles?.some(r => r.includes('ADMIN'));
+    const isAdmin = Boolean(user?.leagueAdmin);
 
-    const loadData = async () => {
-        if (!user) return;
+    const loadData = useCallback(async () => {
+        if (!user?.id) return;
         try {
-            const [usersData, stateData, configData] = await Promise.all([
+            const [usersData, stateData, configData, leagueData] = await Promise.all([
                 fetchAllUsers(),
                 fetchTransferWindowState(),
-                AdminService.getDraftConfig().catch(() => null)
+                AdminService.getDraftConfig().catch(() => null),
+                fetchMyLeague()
             ]);
             setUsers(usersData || []);
             setWindowState(stateData || { isOpen: false });
             setDraftConfig(configData);
+            setLeague(leagueData);
+            updateUser({ leagueStatus: leagueData.status });
         } catch (err) {
             console.error("Critical error loading draft room:", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.id, updateUser]);
 
     useEffect(() => {
-        if (user) loadData();
-    }, [user]);
+        if (user?.id) loadData();
+    }, [user?.id, loadData]);
+
+    useEffect(() => {
+        if (windowState?.isOpen || league?.status === "ACTIVE") return undefined;
+        const timer = window.setInterval(loadData, 5000);
+        return () => window.clearInterval(timer);
+    }, [league?.status, loadData, windowState?.isOpen]);
 
     useEffect(() => {
         if (!connected) return;
@@ -66,11 +77,17 @@ function DraftRoomPage() {
                     totalTurns: event.totalTurns
                 }));
             }
+            if (event.event === "window_closed" && windowState?.isDraftMode) {
+                setWindowState({ isOpen: false, isDraftMode: false });
+                updateUser({ leagueStatus: "ACTIVE" });
+            }
         };
 
-        subscribe("/topic/transfers", handleDraftEvent);
-        return () => unsubscribe("/topic/transfers");
-    }, [connected, subscribe, unsubscribe]);
+        if (!user?.leagueId) return;
+        const topic = `/topic/leagues/${user.leagueId}/transfers`;
+        subscribe(topic, handleDraftEvent);
+        return () => unsubscribe(topic);
+    }, [connected, subscribe, unsubscribe, updateUser, user?.leagueId, windowState?.isDraftMode]);
 
     useEffect(() => {
         if (!nextGameweek || !selectedUserId) return;
@@ -110,9 +127,9 @@ function DraftRoomPage() {
             />
         ) : (
             <DraftLobby
-                user={user}
                 isAdmin={isAdmin}
                 config={draftConfig}
+                league={league}
                 onRefresh={loadData}
             />
         )

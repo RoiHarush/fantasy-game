@@ -53,7 +53,7 @@ function HistoryModal({ userId, onClose }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {history.map((gw, index) => (
+                                {history.map((gw) => (
                                     <tr key={gw.gameweek}>
                                         <td>Gameweek {gw.gameweek}</td>
                                         <td className={styles.points}>{gw.points}</td>

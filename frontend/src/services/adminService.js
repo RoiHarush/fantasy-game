@@ -2,9 +2,12 @@ import API_URL from '../config';
 import { getAuthHeaders } from './authHelper';
 
 export const AdminService = {
-    getAssisters: async (gameweek) => {
+    getAssisters: async (gameweek, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/player-assisted/${gameweek}`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/assists/${gameweek}`
+                : `/api/league-admin/players/assists/${gameweek}`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'GET',
                 headers: getAuthHeaders()
             });
@@ -16,9 +19,12 @@ export const AdminService = {
         }
     },
 
-    updateAssist: async (playerId, gameweek, action) => {
+    updateAssist: async (playerId, gameweek, action, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/admin/update-assist`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/assists`
+                : `/api/league-admin/players/assists`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ playerId, gameweek, action })
@@ -31,9 +37,12 @@ export const AdminService = {
         }
     },
 
-    getPenaltiesConceded: async (gameweek) => {
+    getPenaltiesConceded: async (gameweek, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/player-penalties/${gameweek}`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/penalties/${gameweek}`
+                : `/api/league-admin/players/penalties/${gameweek}`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'GET',
                 headers: getAuthHeaders()
             });
@@ -45,9 +54,12 @@ export const AdminService = {
         }
     },
 
-    updatePenaltyConceded: async (playerId, gameweek, action) => {
+    updatePenaltyConceded: async (playerId, gameweek, action, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/admin/update-penalty`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/penalties`
+                : `/api/league-admin/players/penalties`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ playerId, gameweek, action })
@@ -60,9 +72,12 @@ export const AdminService = {
         }
     },
 
-    togglePlayerLock: async (playerId, shouldLock) => {
+    togglePlayerLock: async (playerId, shouldLock, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/toggle-lock?playerId=${playerId}&lock=${shouldLock}`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/${playerId}/lock?locked=${shouldLock}`
+                : `/api/league-admin/players/${playerId}/lock?locked=${shouldLock}`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: getAuthHeaders()
             });
@@ -74,9 +89,12 @@ export const AdminService = {
         }
     },
 
-    getLockedPlayers: async () => {
+    getLockedPlayers: async (leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/locked-players`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/locked`
+                : `/api/league-admin/players/locked`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'GET',
                 headers: getAuthHeaders()
             });
@@ -88,9 +106,12 @@ export const AdminService = {
         }
     },
 
-    updatePlayerPosition: async (playerId, positionId) => {
+    updatePlayerPosition: async (playerId, positionId, leagueId = null) => {
         try {
-            const response = await fetch(`${API_URL}/api/players/admin/update-position`, {
+            const endpoint = leagueId
+                ? `/api/admin/leagues/${leagueId}/players/position`
+                : `/api/league-admin/players/position`;
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ playerId, positionId })
@@ -103,17 +124,24 @@ export const AdminService = {
         }
     },
 
-    getDraftConfig: async () => {
-        const response = await fetch(`${API_URL}/api/admin/draft/config`, {
+    getDraftConfig: async (leagueId = null) => {
+        const endpoint = leagueId
+            ? `/api/admin/leagues/${leagueId}/draft`
+            : `/api/league-admin/draft/config`;
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
         if (!response.ok) return null;
-        return await response.json();
+        const body = await response.text();
+        return body ? JSON.parse(body) : null;
     },
 
-    deleteDraft: async () => {
-        const response = await fetch(`${API_URL}/api/admin/draft/config`, {
+    deleteDraft: async (leagueId = null) => {
+        const endpoint = leagueId
+            ? `/api/admin/leagues/${leagueId}/draft`
+            : `/api/league-admin/draft/config`;
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -121,19 +149,34 @@ export const AdminService = {
         return true;
     },
 
-    scheduleDraft: async (time) => {
-        const response = await fetch(`${API_URL}/api/admin/draft/schedule`, {
+    scheduleDraft: async (time, leagueId = null) => {
+        const endpoint = leagueId
+            ? `/api/admin/leagues/${leagueId}/draft/schedule`
+            : `/api/league-admin/draft/schedule`;
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ scheduledTime: time })
         });
-        return response.ok;
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            throw new Error(body?.error || 'Failed to schedule draft');
+        }
+        return true;
     },
 
-    openDraftNow: async () => {
-        return await fetch(`${API_URL}/api/admin/draft/open-now`, {
+    openDraftNow: async (leagueId = null) => {
+        const endpoint = leagueId
+            ? `/api/admin/leagues/${leagueId}/draft/open-now`
+            : `/api/league-admin/draft/open-now`;
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            throw new Error(body?.error || 'Failed to open draft');
+        }
+        return true;
     }
 };

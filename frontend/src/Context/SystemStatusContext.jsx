@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { useWebSocket } from "./WebSocketContext";
 import { fetchSystemStatus } from "../services/systemService";
+import { useAuth } from "./AuthContext";
 
 const SystemStatusContext = createContext();
 
@@ -11,6 +12,7 @@ export function SystemStatusProvider({ children }) {
     const [isSystemLocked, setIsSystemLocked] = useState(false);
     const lockStartTimeRef = useRef(null);
     const { subscribe, unsubscribe, connected } = useWebSocket();
+    const { user } = useAuth();
 
     const wipeStorage = useCallback(() => {
         localStorage.removeItem(STORAGE_KEY);
@@ -66,6 +68,11 @@ export function SystemStatusProvider({ children }) {
     }, [clearLock]);
 
     useEffect(() => {
+        if (!user?.id) {
+            setIsSystemLocked(false);
+            return;
+        }
+
         const initializeStatus = async () => {
             const storedTime = localStorage.getItem(STORAGE_KEY);
 
@@ -97,7 +104,7 @@ export function SystemStatusProvider({ children }) {
         };
 
         initializeStatus();
-    }, [handleLock, handleUnlock, wipeStorage]);
+    }, [handleLock, handleUnlock, wipeStorage, user?.id]);
 
     useEffect(() => {
         if (!connected) return;

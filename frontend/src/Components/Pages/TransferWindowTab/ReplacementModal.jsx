@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { useFixtures } from "../../../Context/FixturesContext";
 import Style from "../../../Styles/TransferModal.module.css";
@@ -13,6 +13,8 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
 
     const [squad, setSquad] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
 
     const [allFixtures, setAllFixtures] = useState({});
 
@@ -38,13 +40,15 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
         }
     }, [user, nextGameweek]);
 
-    const lineupArrays = Object.values(squad?.startingLineup || {});
-    const benchIds = Object.values(squad?.bench || {});
-    const allPlayerIds = lineupArrays.flat().concat(benchIds);
-
-    const samePositionPlayers = players.filter(
-        (p) => allPlayerIds.includes(p.id) && p.position === playerIn.position
-    );
+    const samePositionPlayers = useMemo(() => {
+        if (!playerIn) return [];
+        const lineupArrays = Object.values(squad?.startingLineup || {});
+        const benchIds = Object.values(squad?.bench || {});
+        const allPlayerIds = lineupArrays.flat().concat(benchIds);
+        return players.filter(
+            (p) => allPlayerIds.includes(p.id) && p.position === playerIn.position
+        );
+    }, [playerIn, players, squad]);
 
     useEffect(() => {
         const fetchAllFixtures = async () => {
@@ -56,26 +60,16 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
                 if (p.teamId) teamsToFetch.add(p.teamId);
             });
 
-            const newFixturesMap = { ...allFixtures };
-            let hasNewData = false;
-
-            for (const teamId of teamsToFetch) {
-                if (!newFixturesMap[teamId]) {
-                    const data = await getFixturesForTeam(teamId);
-                    newFixturesMap[teamId] = data;
-                    hasNewData = true;
-                }
-            }
-
-            if (hasNewData) {
-                setAllFixtures(newFixturesMap);
-            }
+            const entries = await Promise.all(
+                [...teamsToFetch].map(async teamId => [teamId, await getFixturesForTeam(teamId)])
+            );
+            setAllFixtures(Object.fromEntries(entries));
         };
 
         if (playerIn || samePositionPlayers.length > 0) {
             fetchAllFixtures();
         }
-    }, [playerIn, samePositionPlayers.length, getFixturesForTeam]);
+    }, [playerIn, samePositionPlayers, getFixturesForTeam]);
 
 
     const renderFixtureCell = (teamId, offsetGW) => {
@@ -99,48 +93,49 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
         );
     };
 
-    const handleReplace = (playerOut) => {
-        setUser((prev) => ({
-            ...prev,
-            squad: {
-                ...squad,
-                startingLineup: {
-                    ...squad.startingLineup,
-                    [playerOut.position]: (squad.startingLineup[playerOut.position] || []).map((id) =>
-                        id === playerOut.id ? playerIn.id : id
+    const handleReplace = async (playerOut) => {
+        setSaving(true);
+        setError("");
+        try {
+            const response = await fetch(`${API_URL}/api/market/transfer`, {
+                method: "POST",
+                headers: {
+                    ...getAuthHeaders(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    playerOutId: playerOut.id,
+                    playerInId: playerIn.id
+                })
+            });
+            if (!response.ok) {
+                const message = await response.text();
+                throw new Error(message || "Transfer failed");
+            }
+
+            setUser((prev) => ({
+                ...prev,
+                squad: {
+                    ...squad,
+                    startingLineup: {
+                        ...squad.startingLineup,
+                        [playerOut.position]: (squad.startingLineup[playerOut.position] || []).map((id) =>
+                            id === playerOut.id ? playerIn.id : id
+                        ),
+                    },
+                    bench: Object.fromEntries(
+                        Object.entries(squad.bench || {}).map(([slot, id]) =>
+                            [slot, id === playerOut.id ? playerIn.id : id]
+                        )
                     ),
                 },
-                bench: Object.fromEntries(
-                    Object.entries(squad.bench || {}).map(([slot, id]) =>
-                        [slot, id === playerOut.id ? playerIn.id : id]
-                    )
-                ),
-            },
-        }));
-
-        fetch(`${API_URL}/api/market/transfer`, {
-            method: "POST",
-            headers: {
-                ...getAuthHeaders(),
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                userId: user.id,
-                playerOutId: playerOut.id,
-                playerInId: playerIn.id
-            })
-        })
-            .then(res => {
-                if (!res.ok) throw new Error("Transfer failed");
-                return res.text();
-            })
-            .then(msg => console.log("Transfer completed:", msg))
-            .catch(err => {
-                console.error("Transfer error:", err);
-                alert("Transfer failed on server!");
-            });
-
-        onClose();
+            }));
+            onClose();
+        } catch (requestError) {
+            setError(requestError.message || "Transfer failed on server");
+        } finally {
+            setSaving(false);
+        }
     };
 
 
@@ -167,7 +162,7 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
 
     return (
         <div className={Style.overlay}>
-            <div className={Style.modal}>
+            <div className={Style.modal} role="dialog" aria-modal="true" aria-label="Select player to replace">
                 <h3>
                     You have requested to sign{" "}
                     <span className={Style.green}>{playerIn.viewName}</span>.
@@ -218,6 +213,8 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
                     <span className={Style.green}>{playerIn.viewName}</span> to replace?
                 </h4>
 
+                {error && <p role="alert">{error}</p>}
+
                 <div className={Style.section}>
                     <div className={Style.tableWrapper}>
                         <table className={Style.table}>
@@ -253,8 +250,9 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
                                                 <button
                                                     className={Style.replaceBtn}
                                                     onClick={() => handleReplace(p)}
+                                                    disabled={saving}
                                                 >
-                                                    Replace
+                                                    {saving ? "Saving..." : "Replace"}
                                                 </button>
                                             </td>
                                         </tr>

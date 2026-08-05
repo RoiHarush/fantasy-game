@@ -115,7 +115,7 @@ const PlayerRow = memo(function PlayerRow({
             )}
 
             {
-                mode === "transfer" && (
+                (mode === "transfer" || mode === "draft") && (
                     <td>
                         {player.available ? (
                             <button
@@ -126,7 +126,7 @@ const PlayerRow = memo(function PlayerRow({
                                     isMyTurn && onPlayerSelect?.(player);
                                 }}
                             >
-                                {isMyTurn ? "Sign" : "Wait"}
+                                {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
                             </button>
                         ) : (
                             <img src="/Icons/lock.svg" alt="Locked" className={Style.lockIcon} />

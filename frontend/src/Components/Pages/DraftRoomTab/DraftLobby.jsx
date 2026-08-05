@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { AdminService } from "../../../services/adminService";
 import Style from "../../../Styles/DraftLobby.module.css";
+import DraftCountdown from "./DraftCountdown";
 
-function DraftLobby({ user, isAdmin, config, onRefresh }) {
+function DraftLobby({ isAdmin, config, league, onRefresh }) {
     const [scheduledTime, setScheduledTime] = useState("");
+    const [copied, setCopied] = useState(false);
+    const [error, setError] = useState("");
 
     const formatDate = (dateValue) => {
         if (!dateValue) return "No date scheduled";
@@ -25,8 +28,13 @@ function DraftLobby({ user, isAdmin, config, onRefresh }) {
 
     const handleSchedule = async () => {
         if (!scheduledTime) return;
-        await AdminService.scheduleDraft(scheduledTime);
-        onRefresh();
+        try {
+            setError("");
+            await AdminService.scheduleDraft(scheduledTime);
+            await onRefresh();
+        } catch (scheduleError) {
+            setError(scheduleError.message);
+        }
     };
 
     const handleDelete = async () => {
@@ -38,8 +46,13 @@ function DraftLobby({ user, isAdmin, config, onRefresh }) {
 
     const handleOpenNow = async () => {
         if (window.confirm("Start Snake Draft right now?")) {
-            await AdminService.openDraftNow();
-            onRefresh();
+            try {
+                setError("");
+                await AdminService.openDraftNow();
+                await onRefresh();
+            } catch (openError) {
+                setError(openError.message);
+            }
         }
     };
 
@@ -50,12 +63,32 @@ function DraftLobby({ user, isAdmin, config, onRefresh }) {
             <div className={Style.card}>
                 <h1 className={Style.title}>Draft Room</h1>
 
+                {error && <p role="alert" style={{ color: "#b42318" }}>{error}</p>}
+
+                {league?.leagueCode && (
+                    <div className={Style.scheduledBox}>
+                        <p>Share this league code with your friends</p>
+                        <h2 className={Style.time}>{league.leagueCode}</h2>
+                        <button onClick={async () => {
+                            await navigator.clipboard.writeText(league.leagueCode);
+                            setCopied(true);
+                        }}>
+                            {copied ? "Copied!" : "Copy code"}
+                        </button>
+                        <p>{league.participantCount} / {league.maxParticipants} managers joined</p>
+                        {league.participantCount < league.maxParticipants && (
+                            <p>The draft will start only after every configured manager has joined.</p>
+                        )}
+                    </div>
+                )}
+
                 {rawDate && !config.processed ? (
                     <div className={Style.scheduledBox}>
                         <p>The draft is scheduled for:</p>
                         <h2 className={Style.time}>
                             {formatDate(rawDate)}
                         </h2>
+                        <strong><DraftCountdown value={rawDate} /></strong>
                     </div>
                 ) : (
                     <div className={Style.noDraft}>
@@ -94,7 +127,7 @@ function DraftLobby({ user, isAdmin, config, onRefresh }) {
                 {!isAdmin && (
                     <div className={Style.userNote}>
                         <p>Please be ready 10 minutes before the draft starts.</p>
-                        <p>Order: Reverse standings (Snake format)</p>
+                        <p>The first-round order will be drawn randomly when the draft starts, followed by snake rounds.</p>
                     </div>
                 )}
             </div>

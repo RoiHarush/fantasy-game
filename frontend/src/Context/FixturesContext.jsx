@@ -1,16 +1,16 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useRef, useCallback } from "react";
 import API_URL from "../config";
 import { getAuthHeaders } from "../services/authHelper";
 
 const FixturesContext = createContext();
 
 export function FixturesProvider({ children }) {
-    const [cache, setCache] = useState({});
+    const cache = useRef({});
 
     const getFixturesForTeam = useCallback(async (teamId) => {
         if (!teamId) return {};
 
-        if (cache[teamId]) return cache[teamId];
+        if (cache.current[teamId]) return cache.current[teamId];
 
         try {
             const res = await fetch(`${API_URL}/api/fixtures/team/${teamId}`, {
@@ -20,13 +20,13 @@ export function FixturesProvider({ children }) {
             if (!res.ok) throw new Error(`Failed to fetch fixtures for team ${teamId}`);
             const data = await res.json();
 
-            setCache(prev => ({ ...prev, [teamId]: data }));
+            cache.current[teamId] = data;
             return data;
         } catch (err) {
             console.error("Error fetching fixtures:", err);
             return {};
         }
-    }, [cache]);
+    }, []);
 
     return (
         <FixturesContext.Provider value={{ getFixturesForTeam }}>

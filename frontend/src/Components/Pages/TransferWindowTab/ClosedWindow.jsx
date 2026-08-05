@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import Style from "../../../Styles/ClosedWindow.module.css";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { useAuth } from "../../../Context/AuthContext";
@@ -10,7 +12,7 @@ import { getAuthHeaders } from "../../../services/authHelper";
 function ClosedWindow() {
     const { nextGameweek } = useGameweek();
     const { user } = useAuth();
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -27,7 +29,7 @@ function ClosedWindow() {
         ? parseDateArray(nextGameweek.transferOpenTime)
         : new Date();
 
-    const isAdmin = user && (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
+    const isAdmin = Boolean(user?.leagueAdmin);
 
     const onClickOpenWindow = () => {
         setShowConfirmModal(true);
@@ -38,7 +40,7 @@ function ClosedWindow() {
 
         setOpening(true);
         try {
-            const res = await fetch(`${API_URL}/api/admin/open-transfer-window/${nextGameweek.id}`, {
+            const res = await fetch(`${API_URL}/api/market/open/${nextGameweek.id}`, {
                 method: "POST",
                 headers: getAuthHeaders()
             });
@@ -148,7 +150,7 @@ function ClosedWindow() {
 
             <button
                 className={Style.scoutButton}
-                onClick={() => navigate("/scout")}
+                onClick={() => router.push("/scout")}
             >
                 Go to Scout and build your Watchlist
             </button>

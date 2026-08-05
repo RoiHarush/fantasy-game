@@ -13,7 +13,7 @@ export default function AdminDashboard() {
                 This is the control panel of the game.
             </p>
             <p style={{ marginTop: '0.5rem' }}>
-                Please selecet one to the option to manage the system.
+                Select one of the options to manage the system.
             </p>
         </div>
     );

@@ -30,7 +30,7 @@ export function filterPlayers({
     const normalizedSearch = normalize(searchQuery);
     if (normalizedSearch) {
         result = result.filter((p) => {
-            const words = normalize(p.viewName).split(/[.\s_\']+/);
+            const words = normalize(p.viewName).split(/[.\s_']+/);
             return words.some((w) => w.startsWith(normalizedSearch));
         });
     }
