@@ -13,3 +13,5 @@ Thumbs.db
 *.mv.db
 
 *.db
+
+frontend/.next/
