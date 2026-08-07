@@ -1,90 +1,63 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Style from "../../../Styles/ClosedWindow.module.css";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useState } from "react";
+
 import { useAuth } from "../../../Context/AuthContext";
-import TurnOrderModal from "./TurnOrderModal";
+import { useGameweek } from "../../../Context/GameweeksContext";
+import { queryKeys } from "../../../lib/query/keys";
 import { apiRequest } from "../../../services/apiClient";
+import { fetchAllUsers } from "../../../services/usersService";
+import { Button } from "../../../shared/ui/Button";
+import Style from "../../../Styles/ClosedWindow.module.css";
+import TurnOrderModal from "./TurnOrderModal";
+
+function parseDateArray(dateArray) {
+    if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
+    return new Date(dateArray[0], dateArray[1] - 1, dateArray[2], dateArray[3], dateArray[4]);
+}
 
 function ClosedWindow() {
     const { nextGameweek } = useGameweek();
     const { user } = useAuth();
     const router = useRouter();
+    const queryClient = useQueryClient();
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const usersQuery = useQuery({
+        queryKey: queryKeys.leagueUsers(user?.leagueId),
+        queryFn: fetchAllUsers,
+        enabled: Boolean(user?.leagueId),
+        staleTime: 60_000,
+    });
+    const orderKey = queryKeys.transferOrder(user?.leagueId, nextGameweek?.id);
+    const orderQuery = useQuery({
+        queryKey: orderKey,
+        queryFn: () => apiRequest(`/api/market/turn-order/${nextGameweek.id}`),
+        enabled: Boolean(user?.leagueId && nextGameweek?.id),
+    });
+    const openWindow = useMutation({
+        mutationFn: () => apiRequest(`/api/market/open/${nextGameweek.id}`, { method: "POST" }),
+        onSuccess: async () => {
+            setIsConfirmOpen(false);
+            await queryClient.invalidateQueries({ queryKey: queryKeys.transferWindow(user.leagueId) });
+            router.refresh();
+        },
+    });
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [usersList, setUsersList] = useState([]);
-    const [currentOrder, setCurrentOrder] = useState([]);
-    const [opening, setOpening] = useState(false);
-
-    const parseDateArray = (dateArray) => {
-        if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
-        return new Date(dateArray[0], dateArray[1] - 1, dateArray[2], dateArray[3], dateArray[4]);
-    };
-
-    const transferWindowOpens = nextGameweek?.transferOpenTime
-        ? parseDateArray(nextGameweek.transferOpenTime)
-        : new Date();
-
-    const isAdmin = Boolean(user?.leagueAdmin);
+    const users = usersQuery.data ?? [];
+    const usersById = new Map(users.map(item => [item.id, item]));
+    const currentOrder = (orderQuery.data ?? []).map(id => usersById.get(id)?.name ?? `User ${id}`);
     const useTwoOrderColumns = currentOrder.length > 7;
-    const orderSplitIndex = useTwoOrderColumns
-        ? Math.ceil(currentOrder.length / 2)
-        : currentOrder.length;
+    const orderSplitIndex = useTwoOrderColumns ? Math.ceil(currentOrder.length / 2) : currentOrder.length;
     const orderColumns = useTwoOrderColumns
         ? [currentOrder.slice(0, orderSplitIndex), currentOrder.slice(orderSplitIndex)]
         : [currentOrder];
-
-    const onClickOpenWindow = () => {
-        setShowConfirmModal(true);
-    };
-
-    const performOpenWindow = async () => {
-        if (!nextGameweek) return;
-
-        setOpening(true);
-        try {
-            await apiRequest(`/api/market/open/${nextGameweek.id}`, {
-                method: "POST",
-            });
-            setShowConfirmModal(false);
-            router.refresh();
-        } catch (err) {
-            console.error(err);
-            alert(err.message || "Error opening window");
-            setShowConfirmModal(false);
-        } finally {
-            setOpening(false);
-        }
-    };
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!nextGameweek) return;
-
-            try {
-                const usersData = await apiRequest("/api/users");
-                setUsersList(usersData);
-
-                const orderIds = await apiRequest(`/api/market/turn-order/${nextGameweek.id}`);
-                if (orderIds && orderIds.length > 0) {
-                    const mappedOrder = orderIds.map(id => {
-                        const userObj = usersData.find(u => u.id === id);
-                        return userObj ? userObj.name : `User ${id}`;
-                    });
-                    setCurrentOrder(mappedOrder);
-                } else {
-                    setCurrentOrder([]);
-                }
-            } catch (err) {
-                console.error("Failed to fetch draft info", err);
-            }
-        };
-
-        fetchData();
-    }, [nextGameweek, isModalOpen]);
+    const transferWindowOpens = nextGameweek?.transferOpenTime
+        ? parseDateArray(nextGameweek.transferOpenTime)
+        : new Date();
 
     return (
         <div className={Style.closedWindow}>
@@ -98,197 +71,80 @@ function ClosedWindow() {
                 </>
             )}
 
-            <div
-                style={{
-                    backgroundColor: '#1b1035',
-                    padding: '25px',
-                    borderRadius: '12px',
-                    width: '100%',
-                    maxWidth: useTwoOrderColumns ? '550px' : '360px',
-                    margin: '20px auto',
-                }}
-            >
-                <div style={{ color: '#00e5ff', fontWeight: 'bold', marginBottom: '15px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: '8px', fontSize: '1.1rem' }}>
+            <section className={`mx-auto my-5 w-full rounded-xl bg-[#1b1035] p-6 ${useTwoOrderColumns ? "max-w-xl" : "max-w-sm"}`}>
+                <h3 className="mb-4 border-b border-white/10 pb-2 text-center text-lg font-bold text-brand-cyan">
                     Upcoming Transfer Order (GW {nextGameweek?.id})
-                </div>
-                {currentOrder.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${orderColumns.length}, minmax(0, 1fr))`, gap: '12px', marginTop: '10px' }}>
+                </h3>
+                {orderQuery.isPending || usersQuery.isPending ? (
+                    <p className="p-3 text-center text-sm text-slate-400" role="status">Loading transfer order…</p>
+                ) : currentOrder.length > 0 ? (
+                    <div className={`mt-3 grid gap-3 ${useTwoOrderColumns ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                         {orderColumns.map((column, columnIndex) => {
                             const offset = columnIndex === 0 ? 0 : orderSplitIndex;
                             return (
-                                <div key={columnIndex} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <ol key={columnIndex} start={offset + 1} className="space-y-2">
                                     {column.map((name, index) => (
-                                        <div key={offset + index} style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', minWidth: '220px', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: `3px solid ${columnIndex === 0 ? '#10b981' : '#3b82f6'}`, color: 'white', fontSize: '0.95rem' }}>
-                                            <span style={{ color: '#9ca3af', width: '24px' }}>{offset + index + 1}.</span>
-                                            <span style={{ fontWeight: '500' }}>{name}</span>
-                                        </div>
+                                        <li key={`${offset + index}-${name}`} className="flex min-w-56 justify-between gap-5 rounded-md border-l-3 border-emerald-500 bg-white/5 px-3 py-2 text-sm text-white">
+                                            <span className="w-6 text-slate-400">{offset + index + 1}.</span>
+                                            <span className="font-medium">{name}</span>
+                                        </li>
                                     ))}
-                                </div>
+                                </ol>
                             );
                         })}
                     </div>
                 ) : (
-                    <div style={{ color: '#9ca3af', textAlign: 'center', fontStyle: 'italic', fontSize: '0.9rem', padding: '12px' }}>
-                        Transfer order hasn&apos;t been set yet.
-                    </div>
+                    <p className="p-3 text-center text-sm italic text-slate-400">Transfer order hasn&apos;t been set yet.</p>
                 )}
-            </div>
+            </section>
 
-            <button
-                className={Style.scoutButton}
-                onClick={() => router.push("/scout")}
-            >
-                Go to Scout and build your Watchlist
-            </button>
+            <Button className={Style.scoutButton} onClick={() => router.push("/scout")}>Go to Scout and build your Watchlist</Button>
 
-            {isAdmin && (
-                <div style={{ marginTop: '30px', width: '100%', display: 'flex', justifyContent: 'center', gap: '15px' }}>
-                    <button
-                        style={{
-                            backgroundColor: 'transparent',
-                            color: '#00e5ff',
-                            padding: '10px 20px',
-                            borderRadius: '6px',
-                            border: '1px solid #00e5ff',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            fontSize: '0.9rem',
-                        }}
-                        onClick={() => setIsModalOpen(true)}
-                    >
-                        Manage Transfer Order
-                    </button>
-
-                    <button
-                        style={{
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            padding: '10px 20px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: opening ? 'not-allowed' : 'pointer',
-                            fontWeight: '600',
-                            fontSize: '0.9rem',
-                            opacity: opening ? 0.7 : 1,
-                            boxShadow: '0 2px 5px rgba(239, 68, 68, 0.3)'
-                        }}
-                        onClick={onClickOpenWindow}
-                        disabled={opening}
-                    >
-                        {opening ? "Opening..." : "Open Window NOW"}
-                    </button>
+            {user?.leagueAdmin && (
+                <div className="mt-8 flex w-full justify-center gap-4">
+                    <Button variant="secondary" onClick={() => setIsOrderModalOpen(true)}>Manage Transfer Order</Button>
+                    <Button variant="danger" onClick={() => setIsConfirmOpen(true)}>Open Window NOW</Button>
                 </div>
             )}
 
-            {isModalOpen && (
-                <TurnOrderModal
-                    onClose={() => setIsModalOpen(false)}
-                    usersList={usersList}
-                />
-            )}
+            {isOrderModalOpen && <TurnOrderModal onClose={() => setIsOrderModalOpen(false)} usersList={users} />}
 
-            {showConfirmModal && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    backgroundColor: 'rgba(0,0,0,0.85)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 9999
-                }}>
-                    <div style={{
-                        backgroundColor: '#1f2937',
-                        padding: '25px',
-                        borderRadius: '12px',
-                        maxWidth: '400px',
-                        width: '90%',
-                        textAlign: 'center',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                        border: '1px solid #374151'
-                    }}>
-                        <div style={{
-                            fontSize: '3rem',
-                            marginBottom: '10px'
-                        }}>
+            <Dialog.Root open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
+                    <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(90vw,25rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-700 bg-slate-800 p-7 text-center text-white shadow-2xl focus:outline-none">
+                        <Dialog.Title className="text-2xl font-bold">Are you sure?</Dialog.Title>
+                        <Dialog.Description className="mt-3 leading-6 text-slate-300">
+                            You are about to open the transfer window immediately. All managers will be able to start making transfers.
+                        </Dialog.Description>
+                        {openWindow.error && <p className="mt-4 text-sm text-red-300" role="alert">{openWindow.error.message}</p>}
+                        <div className="mt-7 flex justify-center gap-3">
+                            <Dialog.Close asChild><Button variant="ghost" className="text-slate-200 hover:bg-slate-700">Cancel</Button></Dialog.Close>
+                            <Button variant="danger" onClick={() => openWindow.mutate()} disabled={openWindow.isPending}>
+                                {openWindow.isPending ? "Opening…" : "Yes, open it"}
+                            </Button>
                         </div>
-                        <h3 style={{
-                            color: '#fff',
-                            fontSize: '1.5rem',
-                            marginBottom: '10px',
-                            fontWeight: '700'
-                        }}>
-                            Are you sure?
-                        </h3>
-                        <p style={{
-                            color: '#9ca3af',
-                            marginBottom: '25px',
-                            lineHeight: '1.5'
-                        }}>
-                            You are about to open the <strong>Transfer Window</strong> immediately.
-                            This action will allow all users to start making transfers.
-                        </p>
-
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                            <button
-                                onClick={() => setShowConfirmModal(false)}
-                                style={{
-                                    padding: '10px 20px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #4b5563',
-                                    backgroundColor: 'transparent',
-                                    color: '#d1d5db',
-                                    cursor: 'pointer',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={performOpenWindow}
-                                disabled={opening}
-                                style={{
-                                    padding: '10px 20px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    cursor: opening ? 'wait' : 'pointer',
-                                    fontWeight: '600',
-                                    boxShadow: '0 4px 6px rgba(239, 68, 68, 0.2)'
-                                }}
-                            >
-                                {opening ? "Opening..." : "Yes, Open it"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
         </div>
     );
 }
 
 function formatDateTime(date) {
     if (!date) return "";
-
     const dateStr = date.toLocaleDateString("en-GB", {
         weekday: "short",
         day: "numeric",
         month: "short",
-    }).replace(/,/g, '');
-
+    }).replace(/,/g, "");
     const timeStr = date.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
         timeZone: "Asia/Jerusalem",
     });
-
-    return (
-        <p>
-            {dateStr} {timeStr}
-        </p>
-    );
+    return <p>{dateStr} {timeStr}</p>;
 }
 
 export default ClosedWindow;

@@ -1,88 +1,39 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { useGameweek } from "../../../Context/GameweeksContext";
-import { fetchSquadForGameweek } from "../../../services/squadService";
 import { useAuth } from "../../../Context/AuthContext";
+import { useSquad } from "../../../features/squad/useSquad";
+import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
 import PageLayout from "../../PageLayout";
 import UserSquadSidebar from "../../Sidebar/UserSquadSidebar";
 import Scout from "./Scout";
 import LoadingPage from "../../General/LoadingPage";
-import { fetchWaiverPlan, saveWaiverPlan } from "../../../services/waiverService";
 
 function ScoutPage() {
     const { user } = useAuth();
     const { nextGameweek, loading: gameweeksLoading, error: gameweeksError } = useGameweek();
 
-    const [squad, setSquad] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [waiverEntries, setWaiverEntries] = useState([]);
-    const [waiverSaving, setWaiverSaving] = useState(false);
     const [waiverMessage, setWaiverMessage] = useState("");
-
-    useEffect(() => {
-        if (!user) return;
-
-        if (!user.leagueId) {
-            setSquad(null);
-            setError(null);
-            setLoading(false);
-            return;
-        }
-
-        if (gameweeksLoading) {
-            setLoading(true);
-            return;
-        }
-
-        if (!nextGameweek) {
-            setSquad(null);
-            setError(null);
-            setLoading(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        async function load() {
-            setLoading(true);
-            try {
-                const [data, plan] = await Promise.all([
-                    fetchSquadForGameweek(user.id, nextGameweek.id),
-                    fetchWaiverPlan(nextGameweek.id)
-                ]);
-                if (!cancelled) {
-                    setSquad(data);
-                    setWaiverEntries(plan || []);
-                }
-            } catch (err) {
-                if (!cancelled) setError(err.message);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        load();
-        return () => { cancelled = true };
-    }, [gameweeksLoading, nextGameweek, user]);
+    const hasUpcomingSquad = Boolean(user?.leagueId && nextGameweek?.id);
+    const squadQuery = useSquad(user?.id, nextGameweek?.id, { enabled: hasUpcomingSquad });
+    const waiverPlan = useWaiverPlan(hasUpcomingSquad ? nextGameweek?.id : null);
 
     async function updateWaiverEntries(nextEntries) {
         if (!nextGameweek?.id) return;
-        const previous = waiverEntries;
-        setWaiverEntries(nextEntries);
-        setWaiverSaving(true);
         setWaiverMessage("");
         try {
-            const saved = await saveWaiverPlan(nextGameweek.id, nextEntries);
-            setWaiverEntries(saved || []);
+            await waiverPlan.saveEntries(nextEntries);
             setWaiverMessage(`Waiver priorities saved for Gameweek ${nextGameweek.id}.`);
         } catch (saveError) {
-            setWaiverEntries(previous);
             setWaiverMessage(saveError.message);
-        } finally {
-            setWaiverSaving(false);
         }
     }
+
+    const loading = gameweeksLoading
+        || (hasUpcomingSquad && (squadQuery.isPending || waiverPlan.loading));
+    const error = gameweeksError || squadQuery.error?.message || waiverPlan.error?.message;
 
     if (loading) return <LoadingPage />;
 
@@ -95,7 +46,7 @@ function ScoutPage() {
             <Link href="/onboarding">Create or join a league</Link>
         </aside>
     ) : nextGameweek ? (
-        <UserSquadSidebar user={user} squad={squad} />
+        <UserSquadSidebar user={user} squad={squadQuery.data} />
     ) : (
         <aside>
             <h2>No upcoming gameweek</h2>
@@ -108,10 +59,10 @@ function ScoutPage() {
             left={
                 <Scout
                     user={user}
-                    squad={squad}
-                    waiverEntries={waiverEntries}
+                    squad={squadQuery.data ?? null}
+                    waiverEntries={waiverPlan.entries}
                     onWaiverEntriesChange={updateWaiverEntries}
-                    waiverSaving={waiverSaving}
+                    waiverSaving={waiverPlan.saving}
                     waiverMessage={waiverMessage}
                     waiverGameweekId={nextGameweek?.id}
                 />

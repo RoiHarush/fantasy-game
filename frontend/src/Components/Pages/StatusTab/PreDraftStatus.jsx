@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useAuth } from "../../../Context/AuthContext";
+import { queryKeys } from "../../../lib/query/keys";
 import { AdminService } from "../../../services/adminService";
 import DraftCountdown from "../DraftRoomTab/DraftCountdown";
 
 export default function PreDraftStatus({ league }) {
-    const [config, setConfig] = useState(null);
-
-    useEffect(() => {
-        AdminService.getDraftConfig().then(setConfig).catch(() => setConfig(null));
-    }, [league.status]);
+    const { user } = useAuth();
+    const configQuery = useQuery({
+        queryKey: queryKeys.draftConfig(user?.leagueId),
+        queryFn: () => AdminService.getDraftConfig().catch(() => null),
+        enabled: Boolean(user?.leagueId),
+    });
+    const config = configQuery.data;
 
     const scheduledTime = config?.scheduledTime || config?.scheduled_time;
 

@@ -8,7 +8,7 @@ import { useAuth } from "./AuthContext";
 import { WebSocketContext } from "./WebSocketContext";
 
 export function WebSocketProvider({ children }) {
-    const { user, token } = useAuth();
+    const { user } = useAuth();
     const userId = user?.id;
 
     const [connected, setConnected] = useState(false);
@@ -166,7 +166,7 @@ export function WebSocketProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        if (!userId || !token) {
+        if (!userId) {
             setConnected(false);
             return undefined;
         }
@@ -184,10 +184,6 @@ export function WebSocketProvider({ children }) {
              * Next.js should rewrite `/ws` to the Spring Boot backend.
              */
             webSocketFactory: () => new SockJS("/ws"),
-
-            connectHeaders: {
-                Authorization: `Bearer ${token}`,
-            },
 
             reconnectDelay: 5000,
             heartbeatIncoming: 10000,
@@ -275,7 +271,7 @@ export function WebSocketProvider({ children }) {
                 }
             });
         };
-    }, [userId, token, activateSubscription]);
+    }, [userId, activateSubscription]);
 
     return (
         <WebSocketContext.Provider

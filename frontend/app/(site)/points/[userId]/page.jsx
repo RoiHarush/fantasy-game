@@ -1,61 +1,27 @@
-"use client";
+import { notFound } from "next/navigation";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { RequireLeague, RequireActiveLeague } from "../../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../../src/GameweekUpdatingGuard";
 import PointsPage from "../../../../src/Components/Pages/PointsTab/PointsPage";
-import { fetchUserById } from "../../../../src/services/usersService";
+import GameweekUpdatingGuard from "../../../../src/GameweekUpdatingGuard";
+import { requireActiveLeagueUser } from "../../../../src/server/auth";
+import { ServerApiError, serverApiRequest } from "../../../../src/server/api";
 
-function OtherUserPointsWrapper() {
-    const params = useParams();
-    const userId = params?.userId;
-    const [otherUser, setOtherUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+export default async function PointsUserRoute({ params }) {
+    await requireActiveLeagueUser();
+    const { userId } = await params;
 
-    useEffect(() => {
-        let cancelled = false;
+    if (!/^\d+$/.test(userId)) notFound();
 
-        async function loadUser() {
-            setLoading(true);
-            setError(null);
+    let displayedUser;
+    try {
+        displayedUser = await serverApiRequest(`/api/users/${userId}`);
+    } catch (error) {
+        if (error instanceof ServerApiError && error.status === 404) notFound();
+        throw error;
+    }
 
-            try {
-                const data = await fetchUserById(userId);
-
-                if (!cancelled) {
-                    setOtherUser(data);
-                }
-            } catch (err) {
-                console.error("Fetch error:", err.message);
-                if (!cancelled) setError(err.message);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        loadUser();
-        return () => {
-            cancelled = true;
-        };
-    }, [userId]);
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div style={{ color: "red" }}>{error}</div>;
-    if (!otherUser) return <div>User not found</div>;
-
-    return <PointsPage displayedUser={otherUser} />;
-}
-
-export default function PointsUserRoute() {
     return (
-        <RequireLeague>
-            <RequireActiveLeague>
-                <GameweekUpdatingGuard>
-                    <OtherUserPointsWrapper />
-                </GameweekUpdatingGuard>
-            </RequireActiveLeague>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <PointsPage displayedUser={displayedUser} />
+        </GameweekUpdatingGuard>
     );
 }

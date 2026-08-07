@@ -1,32 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Style from "../../Styles/PlayerModal.module.css";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import { useTeams } from "../../Context/TeamsContext";
 import { apiRequest } from "../../services/apiClient";
+import { queryKeys } from "../../lib/query/keys";
 
 function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
-    const [matchData, setMatchData] = useState(null);
-    const matchCache = useRef({});
     const { teams } = useTeams();
-
-    useEffect(() => {
-        if (player && gameweek && user) {
-            const cacheKey = `${player.id}_${gameweek.id}`;
-            if (matchCache.current[cacheKey]) {
-                setMatchData(matchCache.current[cacheKey]);
-                return;
-            }
-
-            apiRequest(`/api/players/${player.id}/match-stats?gw=${gameweek.id}&userId=${user.id}`, { auth: false })
-                .then(data => {
-                    if (data) {
-                        matchCache.current[cacheKey] = data;
-                        setMatchData(data);
-                    }
-                })
-                .catch(err => console.error("Failed to fetch player match data:", err));
-        }
-    }, [player, gameweek, user]);
+    const matchQuery = useQuery({
+        queryKey: queryKeys.playerMatch(player?.id, gameweek?.id, user?.id),
+        queryFn: () => apiRequest(`/api/players/${player.id}/match-stats?gw=${gameweek.id}&userId=${user.id}`, { auth: false }),
+        enabled: Boolean(player?.id && gameweek?.id && user?.id),
+        staleTime: 60_000,
+    });
+    const matchData = matchQuery.data;
 
     if (!matchData || !teams.length) return null;
 

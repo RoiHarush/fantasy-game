@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { usePlayers } from "../../../Context/PlayersContext";
 import { useWebSocket } from "../../../Context/WebSocketContext";
 import { fetchTransferHistory, makeDraftPick, passTurn } from "../../../services/transferWindowService";
@@ -8,10 +9,12 @@ import ReplacementModal from "./ReplacementModal";
 import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
-import { fetchSquadForGameweek } from "../../../services/squadService";
 import { useGameweek } from "../../../Context/GameweeksContext";
+import { useSquad } from "../../../features/squad/useSquad";
+import { queryKeys } from "../../../lib/query/keys";
 
 function TransferWindow({ user, allUsers, initialWindowState }) {
+    const queryClient = useQueryClient();
     const { players, setPlayers } = usePlayers();
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
 
@@ -31,9 +34,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
     const [irPosition, setIrPosition] = useState(null);
     const isDraftMode = Boolean(initialWindowState?.isDraftMode);
     const { nextGameweek } = useGameweek();
-    const [draftSquad, setDraftSquad] = useState(null);
     const [draftView, setDraftView] = useState("players");
-    const [draftActions, setDraftActions] = useState([]);
 
     const allTeamFixtures = useAllTeamFixtures();
 
@@ -45,30 +46,17 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
     const draftGameweekId = initialWindowState?.gameWeekId > 0
         ? initialWindowState.gameWeekId
         : nextGameweek?.id;
-
-    const refreshDraftSquad = useCallback(async () => {
-        if (!isDraftMode || !draftGameweekId || !user?.id) return;
-        try {
-            setDraftSquad(await fetchSquadForGameweek(user.id, draftGameweekId));
-        } catch (error) {
-            console.error("Failed to refresh draft squad:", error);
-        }
-    }, [draftGameweekId, isDraftMode, user?.id]);
-
-    const refreshDraftHistory = useCallback(async () => {
-        if (!isDraftMode || !draftGameweekId) return;
-        try {
-            const actions = await fetchTransferHistory(draftGameweekId);
-            setDraftActions((actions || []).filter(action => action.windowType === "DRAFT"));
-        } catch (error) {
-            console.error("Failed to refresh draft history:", error);
-        }
-    }, [draftGameweekId, isDraftMode]);
-
-    useEffect(() => {
-        void refreshDraftSquad();
-        void refreshDraftHistory();
-    }, [refreshDraftHistory, refreshDraftSquad]);
+    const draftSquadQuery = useSquad(user?.id, draftGameweekId, { enabled: isDraftMode });
+    const draftHistoryQuery = useQuery({
+        queryKey: queryKeys.transferHistory(user?.leagueId, draftGameweekId),
+        queryFn: () => fetchTransferHistory(draftGameweekId),
+        enabled: Boolean(isDraftMode && draftGameweekId),
+    });
+    const draftSquad = draftSquadQuery.data;
+    const draftActions = useMemo(
+        () => (draftHistoryQuery.data ?? []).filter(action => action.windowType === "DRAFT"),
+        [draftHistoryQuery.data],
+    );
 
     const draftRuleLockedIds = useMemo(() => {
         if (!isDraftMode) return new Set();
@@ -174,9 +162,15 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                     : `${userName || "User"} signed ${inName} | over ${outName}`);
 
                 if (isDraftMode && userId === user.id) {
-                    void refreshDraftSquad();
+                    queryClient.invalidateQueries({
+                        queryKey: queryKeys.squad(user.id, draftGameweekId),
+                    });
                 }
-                if (isDraftMode) void refreshDraftHistory();
+                if (isDraftMode) {
+                    queryClient.invalidateQueries({
+                        queryKey: queryKeys.transferHistory(user.leagueId, draftGameweekId),
+                    });
+                }
             }
 
             if (event.event === "turn_passed") {
@@ -188,7 +182,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
         const topic = `/topic/leagues/${user.leagueId}/transfers`;
         return subscribe(topic, handleTransferEvent);
 
-    }, [connected, isDraftMode, refreshDraftHistory, refreshDraftSquad, subscribe, user.id, user.leagueId, setPlayers]);
+    }, [connected, draftGameweekId, isDraftMode, queryClient, subscribe, user.id, user.leagueId, setPlayers]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
@@ -352,7 +346,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                         <button onClick={async () => {
                             try {
                                 await makeDraftPick(selectedPlayerIn.id);
-                                await refreshDraftSquad();
+                                await draftSquadQuery.refetch();
                                 setSelectedPlayerIn(null);
                             } catch (error) {
                                 alert(error.message);

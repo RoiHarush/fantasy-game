@@ -1,27 +1,16 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import styles from "../../Styles/HistoryModal.module.css";
 import { apiRequest } from "../../services/apiClient";
+import { queryKeys } from "../../lib/query/keys";
 
 function HistoryModal({ userId, onClose }) {
-    const [history, setHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!userId) return;
-
-        async function fetchHistory() {
-            try {
-                const data = await apiRequest(`/api/points/${userId}/history`);
-                setHistory(data || []);
-            } catch (error) {
-                console.error("Error:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchHistory();
-    }, [userId]);
+    const historyQuery = useQuery({
+        queryKey: queryKeys.pointsHistory(userId),
+        queryFn: () => apiRequest(`/api/points/${userId}/history`),
+        enabled: Boolean(userId),
+        staleTime: 60_000,
+    });
+    const history = historyQuery.data ?? [];
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -32,8 +21,10 @@ function HistoryModal({ userId, onClose }) {
                 </div>
 
                 <div className={styles.content}>
-                    {loading ? (
+                    {historyQuery.isPending ? (
                         <p>Loading history...</p>
+                    ) : historyQuery.error ? (
+                        <p role="alert">{historyQuery.error.message}</p>
                     ) : (
                         <table className={styles.table}>
                             <thead>

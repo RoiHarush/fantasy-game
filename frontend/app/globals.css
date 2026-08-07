@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@import "../src/Styles/Reset.css";
+
+@theme {
+    --font-sans: "Segoe UI", Arial, sans-serif;
+
+    --color-brand-purple: #8f2fff;
+    --color-brand-cyan: #00cfe8;
+    --color-brand-green: #00e59b;
+    --color-brand-ink: #1b1035;
+
+    --radius-control: 0.625rem;
+    --shadow-panel: 0 12px 32px rgb(27 16 53 / 0.14);
+}
+
+:root {
+    color-scheme: light;
+    --app-background: #ffffff;
+    --app-foreground: #171717;
+    --app-muted: #667085;
+    --app-border: #e4e7ec;
+}
+
+body {
+    min-height: 100vh;
+    background: var(--app-background);
+    color: var(--app-foreground);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}

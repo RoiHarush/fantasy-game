@@ -46,6 +46,28 @@ class WebSocketAuthChannelInterceptorTest {
     }
 
     @Test
+    void keepsThePrincipalEstablishedByTheCookieAuthenticatedHandshake() {
+        WebSocketAuthChannelInterceptor interceptor = new WebSocketAuthChannelInterceptor(
+                mock(JwtService.class),
+                mock(LeagueAccessService.class)
+        );
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setLeaveMutable(true);
+        accessor.setUser(new UsernamePasswordAuthenticationToken(
+                "12",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        ));
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        Message<?> result = interceptor.preSend(message, mock(org.springframework.messaging.MessageChannel.class));
+        StompHeaderAccessor resultAccessor = MessageHeaderAccessor.getAccessor(result, StompHeaderAccessor.class);
+
+        assertNotNull(resultAccessor);
+        assertEquals("12", resultAccessor.getUser().getName());
+    }
+
+    @Test
     void blocksSubscriptionToAnotherLeague() {
         LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
         when(leagueAccess.requireLeagueIdForUser(12)).thenReturn(4L);

@@ -1,17 +1,12 @@
-"use client";
-
-import { RequireLeague, RequireActiveLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import PointsPage from "../../../src/Components/Pages/PointsTab/PointsPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireActiveLeagueUser } from "../../../src/server/auth";
 
-export default function PointsRoute() {
+export default async function PointsRoute() {
+    await requireActiveLeagueUser();
     return (
-        <RequireLeague>
-            <RequireActiveLeague>
-                <GameweekUpdatingGuard>
-                    <PointsPage />
-                </GameweekUpdatingGuard>
-            </RequireActiveLeague>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <PointsPage />
+        </GameweekUpdatingGuard>
     );
 }

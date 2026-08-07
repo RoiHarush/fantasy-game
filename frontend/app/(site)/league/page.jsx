@@ -1,12 +1,7 @@
-"use client";
-
-import { RequireLeague } from "../../../src/RouteGuards";
 import LeaguePage from "../../../src/Components/Pages/LeagueTab/LeaguePage";
+import { requireLeagueUser } from "../../../src/server/auth";
 
-export default function LeagueRoute() {
-    return (
-        <RequireLeague>
-            <LeaguePage />
-        </RequireLeague>
-    );
+export default async function LeagueRoute() {
+    await requireLeagueUser();
+    return <LeaguePage />;
 }

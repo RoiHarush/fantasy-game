@@ -1,5 +1,6 @@
-import "../src/Styles/Reset.css";
+import "./globals.css";
 import Providers from "./providers";
+import { getCurrentUser } from "../src/server/auth";
 
 export const metadata = {
     title: {
@@ -13,11 +14,13 @@ export const metadata = {
     manifest: "/manifest.json",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+    const initialUser = await getCurrentUser();
+
     return (
         <html lang="en">
             <body>
-                <Providers>{children}</Providers>
+                <Providers initialUser={initialUser}>{children}</Providers>
             </body>
         </html>
     );

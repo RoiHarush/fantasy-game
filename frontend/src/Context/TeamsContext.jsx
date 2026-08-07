@@ -1,26 +1,19 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { apiRequest } from "../services/apiClient";
+import { queryKeys } from "../lib/query/keys";
 
 const TeamsContext = createContext();
 
 export function TeamsProvider({ children }) {
-    const [teams, setTeams] = useState([]);
     const { user } = useAuth();
-
-    useEffect(() => {
-        if (!user?.id) {
-            setTeams([]);
-            return;
-        }
-
-        apiRequest("/api/teams")
-            .then(data => {
-                console.log("Teams loaded:", data.length);
-                setTeams(data);
-            })
-            .catch(err => console.error("Failed to fetch teams:", err));
-    }, [user?.id]);
+    const { data: teams = [] } = useQuery({
+        queryKey: queryKeys.teams,
+        queryFn: () => apiRequest("/api/teams"),
+        enabled: Boolean(user?.id),
+        staleTime: 5 * 60_000,
+    });
 
     return (
         <TeamsContext.Provider value={{ teams }}>

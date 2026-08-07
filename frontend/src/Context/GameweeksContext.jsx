@@ -1,78 +1,62 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { useSystemStatus } from "./SystemStatusContext";
-import { useAuth } from "./AuthContext";
-import { apiRequest } from "../services/apiClient";
+"use client";
 
-const GameweekContext = createContext();
+import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext } from "react";
+
+import { apiRequest } from "../services/apiClient";
+import { queryKeys } from "../lib/query/keys";
+import { useAuth } from "./AuthContext";
+import { useSystemStatus } from "./SystemStatusContext";
+
+const GameweekContext = createContext(null);
+
+async function fetchGameweekState(signal) {
+    const [all, current, next, last] = await Promise.allSettled([
+        apiRequest("/api/gameweeks", { signal }),
+        apiRequest("/api/gameweeks/current", { signal }),
+        apiRequest("/api/gameweeks/next", { signal }),
+        apiRequest("/api/gameweeks/last", { signal }),
+    ]);
+
+    if (all.status === "rejected") {
+        throw all.reason;
+    }
+
+    return {
+        gameweeks: [...all.value].sort((left, right) => left.id - right.id),
+        currentGameweek: current.status === "fulfilled" ? current.value : null,
+        nextGameweek: next.status === "fulfilled" ? next.value : null,
+        lastGameweek: last.status === "fulfilled" ? last.value : null,
+    };
+}
+
+const EMPTY_GAMEWEEK_STATE = {
+    gameweeks: [],
+    currentGameweek: null,
+    nextGameweek: null,
+    lastGameweek: null,
+};
 
 export function GameweekProvider({ children }) {
-    const [gameweeks, setGameweeks] = useState([]);
-    const [currentGameweek, setCurrentGameweek] = useState(null);
-    const [nextGameweek, setNextGameweek] = useState(null);
-    const [lastGameweek, setLastGameweek] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
     const { isSystemLocked } = useSystemStatus();
     const { user } = useAuth();
+    const enabled = Boolean(user?.id && !isSystemLocked);
 
-    const fetchAllData = useCallback(async (signal) => {
-        console.log("Fetching fresh Gameweek data...");
-        setLoading(true);
-        setError(null);
+    const query = useQuery({
+        queryKey: queryKeys.gameweeks,
+        queryFn: ({ signal }) => fetchGameweekState(signal),
+        enabled,
+        staleTime: 30_000,
+    });
 
-        const results = await Promise.allSettled([
-            apiRequest("/api/gameweeks", { signal }),
-            apiRequest("/api/gameweeks/current", { signal }),
-            apiRequest("/api/gameweeks/next", { signal }),
-            apiRequest("/api/gameweeks/last", { signal }),
-        ]);
-
-        if (signal.aborted) return;
-
-        const [all, current, next, last] = results;
-        if (all.status === "fulfilled") {
-            setGameweeks([...all.value].sort((a, b) => a.id - b.id));
-        } else {
-            setGameweeks([]);
-            setError(all.reason?.message || "Failed to load gameweeks.");
-        }
-
-        setCurrentGameweek(current.status === "fulfilled" ? current.value : null);
-        setNextGameweek(next.status === "fulfilled" ? next.value : null);
-        setLastGameweek(last.status === "fulfilled" ? last.value : null);
-        setLoading(false);
-    }, []);
-
-    useEffect(() => {
-        if (!user?.id) {
-            setGameweeks([]);
-            setCurrentGameweek(null);
-            setNextGameweek(null);
-            setLastGameweek(null);
-            setError(null);
-            setLoading(false);
-            return;
-        }
-
-        if (isSystemLocked) {
-            setLoading(false);
-            return;
-        }
-
-        const controller = new AbortController();
-        void fetchAllData(controller.signal);
-        return () => controller.abort();
-    }, [isSystemLocked, fetchAllData, user?.id]);
+    const state = user?.id ? (query.data ?? EMPTY_GAMEWEEK_STATE) : EMPTY_GAMEWEEK_STATE;
 
     return (
         <GameweekContext.Provider value={{
-            gameweeks,
-            currentGameweek,
-            nextGameweek,
-            lastGameweek,
-            loading,
-            error,
+            ...state,
+            loading: enabled && query.isPending,
+            error: query.error?.message ?? null,
+            refreshGameweeks: query.refetch,
         }}>
             {children}
         </GameweekContext.Provider>
@@ -80,5 +64,9 @@ export function GameweekProvider({ children }) {
 }
 
 export function useGameweek() {
-    return useContext(GameweekContext);
+    const context = useContext(GameweekContext);
+    if (!context) {
+        throw new Error("useGameweek must be used inside GameweekProvider");
+    }
+    return context;
 }

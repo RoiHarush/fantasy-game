@@ -1,31 +1,28 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import Style from "../../Styles/PlayerInfoModal.module.css";
 import Switcher from "./Switcher";
-import { useFixtures } from "../../Context/FixturesContext";
 import PlayerInfoContent from "./PlayerInfoContent";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
 import { apiRequest } from "../../services/apiClient";
+import { queryKeys } from "../../lib/query/keys";
 
 function PlayerInfoModal({ player, onClose }) {
     useLockBodyScroll();
 
-    const { getFixturesForTeam } = useFixtures();
     const [tab, setTab] = useState("fixtures");
-    const [matchStats, setMatchStats] = useState([]);
-    const [teamFixtures, setTeamFixtures] = useState({});
-
-    useEffect(() => {
-        if (player?.teamId) getFixturesForTeam(player.teamId).then(setTeamFixtures);
-    }, [player, getFixturesForTeam]);
-
-    useEffect(() => {
-        if (player) {
-            apiRequest(`/api/players/${player.id}/all-stats`, { auth: false })
-                .then(data => data || [])
-                .then(setMatchStats)
-                .catch(err => console.error("Failed to fetch all-stats:", err));
-        }
-    }, [player]);
+    const fixturesQuery = useQuery({
+        queryKey: queryKeys.teamFixtures(player?.teamId),
+        queryFn: () => apiRequest(`/api/fixtures/team/${player.teamId}`),
+        enabled: Boolean(player?.teamId),
+        staleTime: 5 * 60_000,
+    });
+    const statsQuery = useQuery({
+        queryKey: queryKeys.playerStats(player?.id),
+        queryFn: () => apiRequest(`/api/players/${player.id}/all-stats`, { auth: false }),
+        enabled: Boolean(player?.id),
+        staleTime: 5 * 60_000,
+    });
 
     if (!player) return null;
 
@@ -81,8 +78,8 @@ function PlayerInfoModal({ player, onClose }) {
                         <PlayerInfoContent
                             player={player}
                             tab={tab}
-                            teamFixtures={teamFixtures}
-                            matchStats={matchStats}
+                            teamFixtures={fixturesQuery.data ?? {}}
+                            matchStats={statsQuery.data ?? []}
                         />
                     </div>
                 </div>

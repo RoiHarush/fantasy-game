@@ -1,73 +1,151 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+
 import { useAuth } from "../../../Context/AuthContext";
+import { createLeagueSchema, joinLeagueSchema } from "../../../features/league-onboarding/schemas";
+import { queryKeys } from "../../../lib/query/keys";
 import { apiRequest } from "../../../services/apiClient";
-import { getPostLoginRoute } from "../../../Utils/routing";
+import { Button } from "../../../shared/ui/Button";
 import styles from "../../../Styles/LeagueOnboarding.module.css";
+import { getPostLoginRoute } from "../../../Utils/routing";
+
+function FormError({ error }) {
+    if (!error) return null;
+    return <p className={styles.error} role="alert">{error.message}</p>;
+}
+
+function CreateLeagueForm({ scoringRules, onCreated }) {
+    const form = useForm({
+        resolver: zodResolver(createLeagueSchema),
+        defaultValues: {
+            leagueName: "",
+            teamName: "",
+            maxParticipants: 8,
+            scoringRules,
+        },
+    });
+    const mutation = useMutation({
+        mutationFn: (values) => apiRequest("/api/leagues", {
+            method: "POST",
+            body: {
+                name: values.leagueName,
+                maxParticipants: values.maxParticipants,
+                fantasyTeamName: values.teamName,
+                scoringRules: values.scoringRules,
+            },
+        }),
+        onSuccess: onCreated,
+    });
+
+    return (
+        <form onSubmit={form.handleSubmit(values => mutation.mutate(values))} className={styles.form} noValidate>
+            <label>
+                League name
+                <input aria-invalid={Boolean(form.formState.errors.leagueName)} {...form.register("leagueName")} />
+                <FormError error={form.formState.errors.leagueName} />
+            </label>
+            <label>
+                Maximum participants
+                <input type="number" min="2" max="20" aria-invalid={Boolean(form.formState.errors.maxParticipants)} {...form.register("maxParticipants", { valueAsNumber: true })} />
+                <FormError error={form.formState.errors.maxParticipants} />
+            </label>
+            <details className={styles.scoringSettings}>
+                <summary>Customize scoring rules</summary>
+                <p>These values are stored per league and can be changed later by the league admin.</p>
+                <div className={styles.scoringGrid}>
+                    {Object.entries(scoringRules).map(([rule]) => (
+                        <label key={rule}>
+                            {rule.replaceAll("_", " ").replace(".", " · ")}
+                            <input
+                                type="number"
+                                min="-100"
+                                max="100"
+                                {...form.register(`scoringRules.${rule}`, { valueAsNumber: true })}
+                            />
+                        </label>
+                    ))}
+                </div>
+            </details>
+            <label>
+                Fantasy team name
+                <input aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
+                <FormError error={form.formState.errors.teamName} />
+            </label>
+            <FormError error={mutation.error} />
+            <Button type="submit" className={styles.submit} disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving…" : "Create league"}
+            </Button>
+        </form>
+    );
+}
+
+function JoinLeagueForm({ onJoined }) {
+    const form = useForm({
+        resolver: zodResolver(joinLeagueSchema),
+        defaultValues: { leagueCode: "", teamName: "" },
+    });
+    const mutation = useMutation({
+        mutationFn: (values) => apiRequest("/api/leagues/join", {
+            method: "POST",
+            body: {
+                leagueCode: values.leagueCode.trim().toUpperCase(),
+                fantasyTeamName: values.teamName,
+            },
+        }),
+        onSuccess: onJoined,
+    });
+
+    return (
+        <form onSubmit={form.handleSubmit(values => mutation.mutate(values))} className={styles.form} noValidate>
+            <label>
+                League code
+                <input
+                    minLength="6"
+                    maxLength="12"
+                    aria-invalid={Boolean(form.formState.errors.leagueCode)}
+                    {...form.register("leagueCode", { setValueAs: value => value.toUpperCase() })}
+                />
+                <FormError error={form.formState.errors.leagueCode} />
+            </label>
+            <label>
+                Fantasy team name
+                <input aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
+                <FormError error={form.formState.errors.teamName} />
+            </label>
+            <FormError error={mutation.error} />
+            <Button type="submit" className={styles.submit} disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving…" : "Join league"}
+            </Button>
+        </form>
+    );
+}
 
 export default function LeagueOnboardingPage() {
     const [mode, setMode] = useState("create");
-    const [leagueName, setLeagueName] = useState("");
-    const [teamName, setTeamName] = useState("");
-    const [maxParticipants, setMaxParticipants] = useState(8);
-    const [leagueCode, setLeagueCode] = useState("");
-    const [error, setError] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [scoringRules, setScoringRules] = useState({});
     const [createdLeague, setCreatedLeague] = useState(null);
     const [copied, setCopied] = useState(false);
-    const { user, refreshCurrentUser } = useAuth();
+    const { refreshCurrentUser } = useAuth();
     const router = useRouter();
+    const scoringQuery = useQuery({
+        queryKey: queryKeys.scoringDefaults,
+        queryFn: () => apiRequest("/api/leagues/scoring-rules/defaults"),
+        staleTime: Infinity,
+    });
 
-    useEffect(() => {
-        if (mode !== "create" || Object.keys(scoringRules).length > 0) return;
-        apiRequest("/api/leagues/scoring-rules/defaults")
-            .then(setScoringRules)
-            .catch(requestError => setError(requestError.message));
-    }, [mode, scoringRules]);
+    async function handleCreated(league) {
+        setCreatedLeague(league);
+        await refreshCurrentUser();
+    }
 
-    useEffect(() => {
-        if (user?.leagueId && !createdLeague) {
-            router.replace(getPostLoginRoute(user));
-        }
-    }, [createdLeague, router, user]);
-
-    async function handleSubmit(event) {
-        event.preventDefault();
-        setError("");
-        setSubmitting(true);
-
-        const creating = mode === "create";
-        const endpoint = creating ? "/api/leagues" : "/api/leagues/join";
-        const payload = creating
-            ? {
-                name: leagueName,
-                maxParticipants: Number(maxParticipants),
-                fantasyTeamName: teamName,
-                scoringRules
-            }
-            : { leagueCode: leagueCode.trim().toUpperCase(), fantasyTeamName: teamName };
-
-        try {
-            const league = await apiRequest(endpoint, {
-                method: "POST",
-                body: payload,
-            });
-
-            if (creating) {
-                setCreatedLeague(league);
-                await refreshCurrentUser();
-            } else {
-                const currentUser = await refreshCurrentUser();
-                router.replace(getPostLoginRoute(currentUser));
-            }
-        } catch (requestError) {
-            setError(requestError.message);
-        } finally {
-            setSubmitting(false);
-        }
+    async function handleJoined() {
+        const currentUser = await refreshCurrentUser();
+        router.replace(getPostLoginRoute(currentUser));
+        router.refresh();
     }
 
     if (createdLeague) {
@@ -77,18 +155,14 @@ export default function LeagueOnboardingPage() {
                     <p className={styles.eyebrow}>League created</p>
                     <h1 id="league-created-title">Invite your managers</h1>
                     <p>Share this code before the initial draft begins:</p>
-                    <div style={{ fontSize: "2.4rem", fontWeight: 800, letterSpacing: ".16em", margin: "1.5rem 0" }}>
-                        {createdLeague.leagueCode}
-                    </div>
-                    <button type="button" onClick={async () => {
+                    <div className="my-6 text-4xl font-extrabold tracking-[.16em]">{createdLeague.leagueCode}</div>
+                    <Button type="button" variant="secondary" onClick={async () => {
                         await navigator.clipboard.writeText(createdLeague.leagueCode);
                         setCopied(true);
                     }}>
                         {copied ? "Code copied!" : "Copy league code"}
-                    </button>
-                    <button type="button" className={styles.submit} onClick={() => router.replace("/draft-room")}>
-                        Set up initial draft
-                    </button>
+                    </Button>
+                    <Button type="button" className={styles.submit} onClick={() => router.replace("/draft-room")}>Set up initial draft</Button>
                 </div>
             </section>
         );
@@ -99,94 +173,20 @@ export default function LeagueOnboardingPage() {
             <div className={styles.card}>
                 <p className={styles.eyebrow}>Welcome to Fantasy Draft</p>
                 <h1 id="league-onboarding-title">Choose your league</h1>
-                <p className={styles.intro}>
-                    Create a league for your group or join one using a code from a friend.
-                </p>
+                <p className={styles.intro}>Create a league for your group or join one using a code from a friend.</p>
 
                 <div className={styles.tabs} role="tablist" aria-label="League setup options">
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={mode === "create"}
-                        className={mode === "create" ? styles.activeTab : ""}
-                        onClick={() => setMode("create")}
-                    >
-                        Create league
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={mode === "join"}
-                        className={mode === "join" ? styles.activeTab : ""}
-                        onClick={() => setMode("join")}
-                    >
-                        Join league
-                    </button>
+                    <button type="button" role="tab" aria-selected={mode === "create"} className={mode === "create" ? styles.activeTab : ""} onClick={() => setMode("create")}>Create league</button>
+                    <button type="button" role="tab" aria-selected={mode === "join"} className={mode === "join" ? styles.activeTab : ""} onClick={() => setMode("join")}>Join league</button>
                 </div>
 
-                <form onSubmit={handleSubmit} className={styles.form}>
-                    {mode === "create" ? (
-                        <>
-                            <label>
-                                League name
-                                <input value={leagueName} onChange={(event) => setLeagueName(event.target.value)} required />
-                            </label>
-                            <label>
-                                Maximum participants
-                                <input
-                                    type="number"
-                                    min="2"
-                                    max="20"
-                                    value={maxParticipants}
-                                    onChange={(event) => setMaxParticipants(event.target.value)}
-                                    required
-                                />
-                            </label>
-                            <details className={styles.scoringSettings}>
-                                <summary>Customize scoring rules</summary>
-                                <p>These values are stored per league and can be changed later by the league admin.</p>
-                                <div className={styles.scoringGrid}>
-                                    {Object.entries(scoringRules).map(([rule, points]) => (
-                                        <label key={rule}>
-                                            {rule.replaceAll("_", " ").replace(".", " · ")}
-                                            <input
-                                                type="number"
-                                                min="-100"
-                                                max="100"
-                                                value={points}
-                                                onChange={event => setScoringRules(current => ({
-                                                    ...current,
-                                                    [rule]: Number(event.target.value)
-                                                }))}
-                                            />
-                                        </label>
-                                    ))}
-                                </div>
-                            </details>
-                        </>
-                    ) : (
-                        <label>
-                            League code
-                            <input
-                                value={leagueCode}
-                                onChange={(event) => setLeagueCode(event.target.value.toUpperCase())}
-                                minLength="6"
-                                maxLength="12"
-                                required
-                            />
-                        </label>
-                    )}
-
-                    <label>
-                        Fantasy team name
-                        <input value={teamName} onChange={(event) => setTeamName(event.target.value)} required />
-                    </label>
-
-                    {error && <p className={styles.error} role="alert">{error}</p>}
-                    <button className={styles.submit} disabled={submitting}>
-                        {submitting ? "Saving…" : mode === "create" ? "Create league" : "Join league"}
-                    </button>
-                </form>
+                {mode === "create" ? (
+                    scoringQuery.isPending
+                        ? <p role="status">Loading league defaults…</p>
+                        : scoringQuery.error
+                            ? <FormError error={scoringQuery.error} />
+                            : <CreateLeagueForm scoringRules={scoringQuery.data ?? {}} onCreated={handleCreated} />
+                ) : <JoinLeagueForm onJoined={handleJoined} />}
             </div>
         </section>
     );

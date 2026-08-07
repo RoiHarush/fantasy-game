@@ -43,6 +43,10 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private void authenticate(StompHeaderAccessor accessor) {
+        if (accessor.getUser() != null) {
+            return;
+        }
+
         String authorization = accessor.getFirstNativeHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new AccessDeniedException("WebSocket authentication is required");

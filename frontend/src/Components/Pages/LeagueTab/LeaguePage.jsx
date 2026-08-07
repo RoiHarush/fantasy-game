@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { fetchLeague } from "../../../services/leagueService";
+import { queryKeys } from "../../../lib/query/keys";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
 import SidebarContainer from "../../Sidebar/SidebarContainer";
@@ -9,40 +12,20 @@ import { useAuth } from "../../../Context/AuthContext";
 
 function LeaguePage() {
     const { user } = useAuth();
-    const [league, setLeague] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const leagueQuery = useQuery({
+        queryKey: queryKeys.leagueStandings(user?.leagueId),
+        queryFn: fetchLeague,
+        enabled: Boolean(user?.leagueId),
+        staleTime: 30_000,
+    });
+    const league = leagueQuery.data;
 
-    useEffect(() => {
-        let cancelled = false;
-
-        async function loadLeague() {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await fetchLeague();
-                if (!cancelled) setLeague(data);
-            } catch (err) {
-                console.error("Failed to load league:", err);
-                if (!cancelled) setError(err.message);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        loadLeague();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user?.leagueId]);
-
-    if (loading) {
+    if (leagueQuery.isPending) {
         return <LoadingPage />
     }
 
-    if (error) {
-        return <div role="alert">Failed to load league: {error}</div>;
+    if (leagueQuery.error) {
+        return <div role="alert">Failed to load league: {leagueQuery.error.message}</div>;
     }
 
     if (!league) {

@@ -1,50 +1,42 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import Style from "../../Styles/CompareModal.module.css";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
-import { useFixtures } from "../../Context/FixturesContext";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
 import { apiRequest } from "../../services/apiClient";
+import { queryKeys } from "../../lib/query/keys";
 
 function CompareModal({ players, onClose }) {
     useLockBodyScroll();
 
-    const { getFixturesForTeam } = useFixtures();
     const [tab, setTab] = useState("fixtures");
-    const [leftStats, setLeftStats] = useState([]);
-    const [rightStats, setRightStats] = useState([]);
-    const [leftFixtures, setLeftFixtures] = useState({});
-    const [rightFixtures, setRightFixtures] = useState({});
     const [left, right] = players;
-
-    useEffect(() => {
-        let cancelled = false;
-
-        if (left?.teamId) getFixturesForTeam(left.teamId).then(data => {
-            if (!cancelled) setLeftFixtures(data);
-        });
-        if (right?.teamId) getFixturesForTeam(right.teamId).then(data => {
-            if (!cancelled) setRightFixtures(data);
-        });
-
-        if (left) {
-            apiRequest(`/api/players/${left.id}/all-stats`, { auth: false })
-                .then(data => {
-                    if (!cancelled) setLeftStats(data || []);
-                });
-        }
-        if (right) {
-            apiRequest(`/api/players/${right.id}/all-stats`, { auth: false })
-                .then(data => {
-                    if (!cancelled) setRightStats(data || []);
-                });
-        }
-
-        return () => {
-            cancelled = true;
-        };
-    }, [left, right, getFixturesForTeam]);
+    const leftFixturesQuery = useQuery({
+        queryKey: queryKeys.teamFixtures(left?.teamId),
+        queryFn: () => apiRequest(`/api/fixtures/team/${left.teamId}`),
+        enabled: Boolean(left?.teamId),
+        staleTime: 5 * 60_000,
+    });
+    const rightFixturesQuery = useQuery({
+        queryKey: queryKeys.teamFixtures(right?.teamId),
+        queryFn: () => apiRequest(`/api/fixtures/team/${right.teamId}`),
+        enabled: Boolean(right?.teamId),
+        staleTime: 5 * 60_000,
+    });
+    const leftStatsQuery = useQuery({
+        queryKey: queryKeys.playerStats(left?.id),
+        queryFn: () => apiRequest(`/api/players/${left.id}/all-stats`, { auth: false }),
+        enabled: Boolean(left?.id),
+        staleTime: 5 * 60_000,
+    });
+    const rightStatsQuery = useQuery({
+        queryKey: queryKeys.playerStats(right?.id),
+        queryFn: () => apiRequest(`/api/players/${right.id}/all-stats`, { auth: false }),
+        enabled: Boolean(right?.id),
+        staleTime: 5 * 60_000,
+    });
 
     if (!left || !right) return null;
 
@@ -97,10 +89,10 @@ function CompareModal({ players, onClose }) {
 
                 <div className={Style.compareContent}>
                     <div className={Style.side}>
-                        <PlayerInfoContent player={left} tab={tab} teamFixtures={leftFixtures} matchStats={leftStats} />
+                        <PlayerInfoContent player={left} tab={tab} teamFixtures={leftFixturesQuery.data ?? {}} matchStats={leftStatsQuery.data ?? []} />
                     </div>
                     <div className={Style.side}>
-                        <PlayerInfoContent player={right} tab={tab} teamFixtures={rightFixtures} matchStats={rightStats} />
+                        <PlayerInfoContent player={right} tab={tab} teamFixtures={rightFixturesQuery.data ?? {}} matchStats={rightStatsQuery.data ?? []} />
                     </div>
                 </div>
             </div>

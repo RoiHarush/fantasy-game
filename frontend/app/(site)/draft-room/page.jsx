@@ -1,15 +1,12 @@
-"use client";
-
-import { RequireLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import DraftRoomPage from "../../../src/Components/Pages/DraftRoomTab/DraftRoomPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireLeagueUser } from "../../../src/server/auth";
 
-export default function DraftRoomRoute() {
+export default async function DraftRoomRoute() {
+    await requireLeagueUser();
     return (
-        <RequireLeague>
-            <GameweekUpdatingGuard>
-                <DraftRoomPage />
-            </GameweekUpdatingGuard>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <DraftRoomPage />
+        </GameweekUpdatingGuard>
     );
 }

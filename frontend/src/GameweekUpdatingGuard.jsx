@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import Style from './Styles/GameweekUpdating.module.css';
 import { useSystemStatus } from './Context/SystemStatusContext';

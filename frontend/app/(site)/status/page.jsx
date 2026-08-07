@@ -1,15 +1,12 @@
-"use client";
-
-import { RequireLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import StatusPage from "../../../src/Components/Pages/StatusTab/StatusPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireLeagueUser } from "../../../src/server/auth";
 
-export default function StatusRoute() {
+export default async function StatusRoute() {
+    await requireLeagueUser();
     return (
-        <RequireLeague>
-            <GameweekUpdatingGuard>
-                <StatusPage />
-            </GameweekUpdatingGuard>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <StatusPage />
+        </GameweekUpdatingGuard>
     );
 }

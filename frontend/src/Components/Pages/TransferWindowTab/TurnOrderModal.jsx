@@ -1,197 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { useGameweek } from '../../../Context/GameweeksContext';
-import { apiRequest } from '../../../services/apiClient';
+"use client";
 
-const styles = {
-    overlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-    },
-    modal: {
-        backgroundColor: '#1f2937',
-        color: '#f3f4f6',
-        padding: '2rem',
-        borderRadius: '12px',
-        width: '95%',
-        maxWidth: '600px',
-        maxHeight: '85vh',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
-        border: '1px solid #374151',
-    },
-    header: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        marginBottom: '1rem',
-        borderBottom: '1px solid #4b5563',
-        paddingBottom: '1rem',
-        textAlign: 'center',
-        color: 'white',
-    },
-    scrollArea: {
-        flex: 1,
-        overflowY: 'auto',
-        paddingRight: '10px',
-        marginBottom: '1.5rem',
-    },
-    row: {
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '10px',
-        backgroundColor: '#374151',
-        padding: '10px',
-        borderRadius: '8px',
-        border: '1px solid #4b5563',
-    },
-    label: {
-        width: '80px',
-        fontWeight: 'bold',
-        color: '#9ca3af',
-    },
-    select: {
-        flex: 1,
-        padding: '8px 12px',
-        borderRadius: '6px',
-        border: '1px solid #6b7280',
-        backgroundColor: '#111827',
-        color: 'white',
-        fontSize: '1rem',
-        outline: 'none',
-    },
-    actions: {
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '1rem',
-        borderTop: '1px solid #4b5563',
-        paddingTop: '1rem',
-    },
-    button: {
-        padding: '10px 24px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        fontWeight: '600',
-        transition: 'background 0.2s',
-    },
-    saveBtn: {
-        backgroundColor: '#10b981',
-        color: 'white',
-    },
-    cancelBtn: {
-        backgroundColor: '#ef4444',
-        color: 'white',
-    }
-};
+import * as Dialog from "@radix-ui/react-dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
+import { useState } from "react";
+
+import { useAuth } from "../../../Context/AuthContext";
+import { useGameweek } from "../../../Context/GameweeksContext";
+import { queryKeys } from "../../../lib/query/keys";
+import { apiRequest } from "../../../services/apiClient";
+import { Button } from "../../../shared/ui/Button";
 
 export default function TurnOrderModal({ onClose, usersList }) {
     const { nextGameweek } = useGameweek();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
     const pickCount = usersList.length * 2;
-
-    const [picks, setPicks] = useState(() => Array(pickCount).fill(""));
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchCurrentOrder = async () => {
-            if (!nextGameweek) return;
-
-            try {
-                const existingOrder = await apiRequest(`/api/market/turn-order/${nextGameweek.id}`);
-                const newPicks = Array(pickCount).fill("").map((_, i) =>
-                    i < (existingOrder?.length || 0) ? String(existingOrder[i]) : ""
-                );
-                setPicks(newPicks);
-            } catch (err) {
-                console.error("Failed to fetch existing order", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCurrentOrder();
-    }, [nextGameweek, pickCount]);
+    const [editedPicks, setEditedPicks] = useState(null);
+    const queryKey = queryKeys.transferOrder(user?.leagueId, nextGameweek?.id);
+    const orderQuery = useQuery({
+        queryKey,
+        queryFn: () => apiRequest(`/api/market/turn-order/${nextGameweek.id}`),
+        enabled: Boolean(user?.leagueId && nextGameweek?.id),
+    });
+    const initialPicks = Array.from({ length: pickCount }, (_, index) => (
+        index < (orderQuery.data?.length ?? 0) ? String(orderQuery.data[index]) : ""
+    ));
+    const picks = editedPicks ?? initialPicks;
+    const saveOrder = useMutation({
+        mutationFn: (order) => apiRequest(`/api/market/set-order/${nextGameweek.id}`, {
+            method: "POST",
+            body: { order },
+        }),
+        onSuccess: (_response, order) => {
+            queryClient.setQueryData(queryKey, order);
+            onClose();
+        },
+    });
 
     const handleUserSelect = (index, userId) => {
-        const newPicks = [...picks];
-        newPicks[index] = userId;
-        setPicks(newPicks);
+        setEditedPicks(picks.map((pick, pickIndex) => (
+            pickIndex === index ? userId : pick
+        )));
     };
 
     const handleSave = async () => {
-        const cleanOrder = picks.filter(id => id !== "").map(Number);
+        const cleanOrder = picks.filter(Boolean).map(Number);
 
-        if (cleanOrder.length === 0) {
-            if (!window.confirm("You are saving an empty list. This will clear the transfer order. Continue?")) return;
+        if (cleanOrder.length === 0
+            && !window.confirm("You are saving an empty list. This will clear the transfer order. Continue?")) {
+            return;
         }
 
-        const dto = { order: cleanOrder };
-
-        setLoading(true);
-        try {
-            await apiRequest(`/api/market/set-order/${nextGameweek.id}`, {
-                method: 'POST',
-                body: dto,
-            });
-
-            alert("Transfer order updated successfully!");
-            onClose();
-        } catch (err) {
-            alert("Error: " + err.message);
-        } finally {
-            setLoading(false);
-        }
+        saveOrder.mutate(cleanOrder);
     };
 
     return (
-        <div style={styles.overlay}>
-            <div style={styles.modal}>
-                <div style={styles.header}>
-                    Set Transfer Order (GW {nextGameweek?.id})
-                </div>
+        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[min(95vw,38rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-slate-700 bg-slate-800 p-8 text-slate-100 shadow-2xl focus:outline-none">
+                    <div className="border-b border-slate-600 pb-4 text-center">
+                        <Dialog.Title className="text-2xl font-bold">
+                            Set Transfer Order (GW {nextGameweek?.id})
+                        </Dialog.Title>
+                        <Dialog.Description className="mt-2 text-sm text-slate-400">
+                            Two transfer rounds are generated from the current league membership.
+                        </Dialog.Description>
+                    </div>
 
-                <div style={styles.scrollArea}>
-                    {picks.map((selectedUserId, index) => (
-                        <div key={index} style={styles.row}>
-                            <div style={styles.label}>Pick #{index + 1}</div>
-                            <select
-                                style={styles.select}
-                                value={selectedUserId}
-                                onChange={(e) => handleUserSelect(index, e.target.value)}
-                            >
-                                <option value="">-- Select User --</option>
-                                {usersList.map(u => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.name} {u.fantasyTeam ? `(${u.fantasyTeam})` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ))}
-                </div>
+                    <Dialog.Close asChild>
+                        <Button variant="ghost" size="icon" className="absolute right-4 top-4 text-slate-300 hover:bg-slate-700 hover:text-white" aria-label="Close">
+                            <X aria-hidden="true" />
+                        </Button>
+                    </Dialog.Close>
 
-                <div style={styles.actions}>
-                    <button
-                        style={{ ...styles.button, ...styles.cancelBtn }}
-                        onClick={onClose}
-                        disabled={loading}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        style={{ ...styles.button, ...styles.saveBtn }}
-                        onClick={handleSave}
-                        disabled={loading}
-                    >
-                        {loading ? "Saving..." : "Save Order"}
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <div className="my-6 min-h-20 flex-1 space-y-2 overflow-y-auto pr-2">
+                        {orderQuery.isPending ? (
+                            <p className="py-8 text-center text-slate-400" role="status">Loading transfer order…</p>
+                        ) : picks.length === 0 ? (
+                            <p className="py-8 text-center text-slate-400">No league members are available.</p>
+                        ) : picks.map((selectedUserId, index) => (
+                            <label key={index} className="flex items-center gap-4 rounded-lg border border-slate-600 bg-slate-700 p-3">
+                                <span className="w-20 shrink-0 font-semibold text-slate-300">Pick #{index + 1}</span>
+                                <select
+                                    className="min-w-0 flex-1 rounded-lg border border-slate-500 bg-slate-900 px-3 py-2 text-white outline-none focus:border-brand-cyan focus:ring-3 focus:ring-brand-cyan/30"
+                                    value={selectedUserId}
+                                    onChange={(event) => handleUserSelect(index, event.target.value)}
+                                >
+                                    <option value="">Select user</option>
+                                    {usersList.map((user) => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.name}{user.fantasyTeam ? ` (${user.fantasyTeam})` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-end gap-3 border-t border-slate-600 pt-4">
+                        <Dialog.Close asChild>
+                            <Button variant="danger" disabled={saveOrder.isPending}>Cancel</Button>
+                        </Dialog.Close>
+                        <Button onClick={handleSave} disabled={orderQuery.isPending || saveOrder.isPending || picks.length === 0}>
+                            {saveOrder.isPending ? "Saving…" : "Save Order"}
+                        </Button>
+                    </div>
+                    {saveOrder.error && <p className="mt-3 text-right text-sm text-red-300" role="alert">{saveOrder.error.message}</p>}
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

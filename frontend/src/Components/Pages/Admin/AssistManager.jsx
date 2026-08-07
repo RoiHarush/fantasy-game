@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
 import { useGameweek } from '../../../Context/GameweeksContext';
+import { queryKeys } from "../../../lib/query/keys";
 
 const normalize = (str) =>
     (str || "")
@@ -21,54 +23,46 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
     const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
 
-    const [gameweek, setGameweek] = useState();
-    const [assisters, setAssisters] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
+    const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const gameweek = selectedGameweek ?? currentGameweek?.id;
+    const queryKey = queryKeys.adminAssists(maintenanceLeagueId, gameweek);
+    const assistersQuery = useQuery({
+        queryKey,
+        queryFn: () => AdminService.getAssisters(gameweek, maintenanceLeagueId),
+        enabled: Boolean(gameweek),
+    });
+    const assisters = assistersQuery.data ?? [];
 
     const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
     const isPastGW = currentGameweek && gameweek < currentGameweek.id;
 
     const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
 
-    useEffect(() => {
-        if (currentGameweek && currentGameweek.id) {
-            setGameweek(currentGameweek.id);
-        }
-    }, [currentGameweek]);
-
-    useEffect(() => {
-        if (searchTerm.length < 2 || !players) {
-            setSearchResults([]);
-        } else {
-            const term = normalize(searchTerm);
-            const results = players.filter(p => {
+    const searchResults = useMemo(() => {
+        if (searchTerm.length < 2) return [];
+        const term = normalize(searchTerm);
+        return players.filter(p => {
                 const pName = normalize(p.viewName);
                 const pFirst = normalize(p.firstName);
                 const pLast = normalize(p.lastName);
                 return pName.includes(term) || pFirst.includes(term) || pLast.includes(term);
             }).slice(0, 5);
-            setSearchResults(results);
-        }
-    }, [searchTerm, players]);
-
-    const loadAssisters = useCallback(async () => {
-        if (!gameweek) return;
-        setLoading(true);
-        try {
-            const data = await AdminService.getAssisters(gameweek, maintenanceLeagueId);
-            setAssisters(data);
-        } catch (error) {
-            console.error("Error loading data", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [gameweek, maintenanceLeagueId]);
-
-    useEffect(() => {
-        loadAssisters();
-    }, [loadAssisters]);
+    }, [players, searchTerm]);
+    const updateAssist = useMutation({
+        mutationFn: ({ playerId, action }) => AdminService.updateAssist(playerId, gameweek, action, maintenanceLeagueId),
+        onSuccess: (updatedPlayer) => {
+            queryClient.setQueryData(queryKey, (current = []) => {
+                const exists = current.some(player => player.playerId === updatedPlayer.playerId);
+                if (updatedPlayer.numOfAssist === 0) return current.filter(player => player.playerId !== updatedPlayer.playerId);
+                return exists
+                    ? current.map(player => player.playerId === updatedPlayer.playerId ? updatedPlayer : player)
+                    : [...current, updatedPlayer];
+            });
+            setSearchTerm("");
+        },
+    });
 
     const handleUpdate = async (playerId, action) => {
         if (!canEdit) {
@@ -76,25 +70,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
             return;
         }
         try {
-            const updatedPlayer = await AdminService.updateAssist(
-                playerId,
-                gameweek,
-                action,
-                maintenanceLeagueId
-            );
-            setAssisters(prev => {
-                const exists = prev.find(p => p.playerId === updatedPlayer.playerId);
-                if (exists) {
-                    if (updatedPlayer.numOfAssist === 0) {
-                        return prev.filter(p => p.playerId !== updatedPlayer.playerId);
-                    }
-                    return prev.map(p => p.playerId === updatedPlayer.playerId ? updatedPlayer : p);
-                } else {
-                    return [...prev, updatedPlayer];
-                }
-            });
-            setSearchTerm("");
-            setSearchResults([]);
+            await updateAssist.mutateAsync({ playerId, action });
         } catch {
             alert("Failed to update assist");
         }
@@ -156,7 +132,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                 <select
                     style={styles.select}
                     value={gameweek || ''}
-                    onChange={(e) => setGameweek(Number(e.target.value))}
+                    onChange={(e) => setSelectedGameweek(Number(e.target.value))}
                 >
                     {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, i) => (
                         <option key={i + 1} value={i + 1}>Gameweek {i + 1}</option>
@@ -198,7 +174,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
             </div>
 
             <div>
-                {loading ? <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div> : (
+                {assistersQuery.isPending ? <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div> : (
                     <>
                         {assisters.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', backgroundColor: 'white', borderRadius: '16px' }}>

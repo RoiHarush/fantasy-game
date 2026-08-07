@@ -1,104 +1,96 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import styles from "../../Styles/Login.module.css";
-import { useAuth } from "../../Context/AuthContext";
-import { apiRequest, ApiError } from "../../services/apiClient";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
-const LOGIN_LOGOS = Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);
+import { useAuth } from "../../Context/AuthContext";
+import { loginSchema, registrationSchema } from "../../features/auth/schemas";
+import { apiRequest, ApiError } from "../../services/apiClient";
+import styles from "../../Styles/Login.module.css";
+
+const LOGIN_LOGOS = Array.from({ length: 20 }, (_, index) => `${index + 1}_logo.svg`);
+const LOGO_ROWS = Array.from({ length: 8 }, (_, rowIndex) => (
+    LOGIN_LOGOS.map((_, logoIndex) => LOGIN_LOGOS[(logoIndex + rowIndex * 3) % LOGIN_LOGOS.length])
+));
+
+function FieldError({ id, error }) {
+    if (!error) return null;
+    return <p id={id} className={styles.fieldError}>{error.message}</p>;
+}
 
 export default function Login() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [name, setName] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
-    const [error, setError] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
     const { login, sessionMessage, clearSessionMessage } = useAuth();
+    const schema = isRegistering ? registrationSchema : loginSchema;
 
-    const disallowed = /[\sא-ת]/;
+    const {
+        register,
+        handleSubmit,
+        reset,
+        getValues,
+        setError,
+        clearErrors,
+        formState: { errors, isSubmitting },
+    } = useForm({
+        resolver: zodResolver(schema),
+        defaultValues: {
+            name: "",
+            username: "",
+            password: "",
+            confirmPassword: "",
+        },
+        mode: "onBlur",
+    });
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    const [logoRows, setLogoRows] = useState(() => Array.from({ length: 8 }, () => LOGIN_LOGOS));
-
-    useEffect(() => {
-        const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-        setLogoRows(Array.from({ length: 8 }, () => shuffle(LOGIN_LOGOS)));
-    }, []);
-
-    function handleUsernameChange(e) {
-        const value = e.target.value;
-        if (!disallowed.test(value)) setUsername(value);
-    }
-
-    function handlePasswordChange(e) {
-        const value = e.target.value;
-        if (!disallowed.test(value)) setPassword(value);
-    }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        setError("");
+    const onSubmit = async (values) => {
         clearSessionMessage();
 
-        if (!username || !password || (isRegistering && !name)) {
-            setError("Please fill in all fields");
-            return;
-        }
-
-        if (isRegistering && password !== confirmPassword) {
-            setError("Passwords do not match");
-            return;
-        }
-
         try {
-            setSubmitting(true);
             const endpoint = isRegistering ? "register" : "login";
-            const payload = isRegistering ? { name, username, password } : { username, password };
+            const payload = isRegistering
+                ? { name: values.name, username: values.username, password: values.password }
+                : { username: values.username, password: values.password };
             const data = await apiRequest(`/api/auth/${endpoint}`, {
                 method: "POST",
                 body: payload,
                 auth: false,
             });
 
-            login({ user: data.user, token: data.token });
+            login(data.user);
         } catch (requestError) {
-            if (requestError instanceof ApiError) {
-                setError(requestError.message || (isRegistering ? "Registration failed" : "Wrong Username or Password"));
-                return;
-            }
-
-            setError(isRegistering ? "Error while registering" : "Error while sign-in");
-        } finally {
-            setSubmitting(false);
+            const fallback = isRegistering ? "Registration failed" : "Wrong username or password";
+            setError("root.server", {
+                type: "server",
+                message: requestError instanceof ApiError ? requestError.message || fallback : fallback,
+            });
         }
-    }
+    };
+
+    const toggleMode = () => {
+        const username = getValues("username");
+        setIsRegistering((current) => !current);
+        clearErrors();
+        clearSessionMessage();
+        reset({ name: "", username, password: "", confirmPassword: "" });
+    };
 
     return (
         <div className={styles.container}>
-            <div className={styles.logosBackground}>
-                {mounted && logoRows.map((row, i) => (
+            <div className={styles.logosBackground} aria-hidden="true">
+                {LOGO_ROWS.map((row, rowIndex) => (
                     <div
-                        key={i}
+                        key={rowIndex}
                         className={styles.marqueeRow}
                         style={{
-                            top: `${i * 12}%`,
-                            '--direction': i % 2 === 0 ? 'normal' : 'reverse',
-                            '--duration': '120s'
+                            top: `${rowIndex * 12}%`,
+                            "--direction": rowIndex % 2 === 0 ? "normal" : "reverse",
+                            "--duration": "120s",
                         }}
                     >
                         <div className={styles.marqueeTrack}>
-                            {row.map((logo, index) => (
-                                <img key={`a-${index}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
-                            ))}
-                            {row.map((logo, index) => (
-                                <img key={`b-${index}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
+                            {[...row, ...row].map((logo, logoIndex) => (
+                                <img key={`${logo}-${logoIndex}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
                             ))}
                         </div>
                     </div>
@@ -107,86 +99,80 @@ export default function Login() {
 
             <div className={styles.contentWrapper}>
                 <div className={styles.logoWrapper}>
-                    <img
-                        src="/UI/premier-league-logo.svg"
-                        alt="Premier League Logo"
-                        className={styles.premierLogo}
-                    />
+                    <img src="/UI/premier-league-logo.svg" alt="Premier League Logo" className={styles.premierLogo} />
                 </div>
 
                 <h1 className={styles.title}>Fantasy Draft</h1>
 
-                <form className={styles.card} onSubmit={handleSubmit}>
+                <form className={styles.card} onSubmit={handleSubmit(onSubmit)} noValidate>
                     {isRegistering && (
-                        <input
-                            className={styles.input}
-                            placeholder="Display name"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            autoComplete="name"
-                            minLength={2}
-                            maxLength={50}
-                            required
-                        />
+                        <>
+                            <input
+                                {...register("name")}
+                                className={styles.input}
+                                placeholder="Display name"
+                                autoComplete="name"
+                                aria-invalid={Boolean(errors.name)}
+                                aria-describedby={errors.name ? "name-error" : undefined}
+                            />
+                            <FieldError id="name-error" error={errors.name} />
+                        </>
                     )}
+
                     <input
+                        {...register("username")}
                         className={styles.input}
                         placeholder="Username"
-                        value={username}
-                        onChange={handleUsernameChange}
                         autoComplete="username"
-                        minLength={3}
-                        maxLength={30}
-                        required
+                        autoCapitalize="none"
+                        spellCheck="false"
+                        aria-invalid={Boolean(errors.username)}
+                        aria-describedby={errors.username ? "username-error" : undefined}
                     />
+                    <FieldError id="username-error" error={errors.username} />
+
                     <input
+                        {...register("password")}
                         className={styles.input}
                         type="password"
                         placeholder="Password"
-                        value={password}
-                        onChange={handlePasswordChange}
                         autoComplete={isRegistering ? "new-password" : "current-password"}
-                        minLength={isRegistering ? 8 : undefined}
-                        maxLength={72}
-                        required
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={errors.password ? "password-error" : undefined}
                     />
+                    <FieldError id="password-error" error={errors.password} />
 
                     {isRegistering && (
-                        <input
-                            className={styles.input}
-                            type="password"
-                            placeholder="Confirm password"
-                            value={confirmPassword}
-                            onChange={(event) => setConfirmPassword(event.target.value)}
-                            autoComplete="new-password"
-                            minLength={8}
-                            maxLength={72}
-                            required
-                        />
+                        <>
+                            <input
+                                {...register("confirmPassword")}
+                                className={styles.input}
+                                type="password"
+                                placeholder="Confirm password"
+                                autoComplete="new-password"
+                                aria-invalid={Boolean(errors.confirmPassword)}
+                                aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
+                            />
+                            <FieldError id="confirm-password-error" error={errors.confirmPassword} />
+                        </>
                     )}
 
-                    {error && <div className={styles.error} role="alert" aria-live="polite">{error}</div>}
+                    {errors.root?.server && (
+                        <div className={styles.error} role="alert" aria-live="polite">
+                            {errors.root.server.message}
+                        </div>
+                    )}
 
-                    <button type="submit" className={styles.button} disabled={submitting}>
-                        {submitting ? "Please wait..." : isRegistering ? "Create Account" : "Sign In"}
+                    <button type="submit" className={styles.button} disabled={isSubmitting}>
+                        {isSubmitting ? "Please wait…" : isRegistering ? "Create Account" : "Sign In"}
                     </button>
-                    <button
-                        type="button"
-                        className={styles.secondaryButton}
-                        disabled={submitting}
-                        onClick={() => {
-                            setIsRegistering((current) => !current);
-                            setError("");
-                        }}
-                    >
+                    <button type="button" className={styles.secondaryButton} disabled={isSubmitting} onClick={toggleMode}>
                         {isRegistering ? "Already have an account? Sign in" : "New here? Create an account"}
                     </button>
                 </form>
             </div>
 
-            <div className={styles.disclaimer}>
-                Educational Project | Not affiliated with the Premier League
-            </div>
+            <div className={styles.disclaimer}>Educational Project | Not affiliated with the Premier League</div>
 
             {sessionMessage && <div className={styles.error} role="status" aria-live="polite">{sessionMessage}</div>}
         </div>

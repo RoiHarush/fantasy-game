@@ -1,17 +1,12 @@
-"use client";
-
-import { RequireLeague, RequireActiveLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import TransferWindowPage from "../../../src/Components/Pages/TransferWindowTab/TransferWindowPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireActiveLeagueUser } from "../../../src/server/auth";
 
-export default function TransferWindowRoute() {
+export default async function TransferWindowRoute() {
+    await requireActiveLeagueUser();
     return (
-        <RequireLeague>
-            <RequireActiveLeague>
-                <GameweekUpdatingGuard>
-                    <TransferWindowPage />
-                </GameweekUpdatingGuard>
-            </RequireActiveLeague>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <TransferWindowPage />
+        </GameweekUpdatingGuard>
     );
 }

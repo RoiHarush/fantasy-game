@@ -8,23 +8,26 @@ import { GameweekProvider } from "../src/Context/GameweeksContext";
 import { PlayersProvider } from "../src/Context/PlayersContext";
 import { TeamsProvider } from "../src/Context/TeamsContext";
 import { FixturesProvider } from "../src/Context/FixturesContext";
+import QueryProvider from "../src/lib/query/QueryProvider";
 
-export default function Providers({ children }) {
+export default function Providers({ children, initialUser }) {
     return (
-        <AuthProvider>
-            <WatchlistProvider>
-                <WebSocketProvider>
-                    <SystemStatusProvider>
-                        <GameweekProvider>
-                            <PlayersProvider>
-                                <TeamsProvider>
-                                    <FixturesProvider>{children}</FixturesProvider>
-                                </TeamsProvider>
-                            </PlayersProvider>
-                        </GameweekProvider>
-                    </SystemStatusProvider>
-                </WebSocketProvider>
-            </WatchlistProvider>
-        </AuthProvider>
+        <QueryProvider>
+            <AuthProvider initialUser={initialUser}>
+                <WatchlistProvider>
+                    <WebSocketProvider>
+                        <SystemStatusProvider>
+                            <GameweekProvider>
+                                <PlayersProvider>
+                                    <TeamsProvider>
+                                        <FixturesProvider>{children}</FixturesProvider>
+                                    </TeamsProvider>
+                                </PlayersProvider>
+                            </GameweekProvider>
+                        </SystemStatusProvider>
+                    </WebSocketProvider>
+                </WatchlistProvider>
+            </AuthProvider>
+        </QueryProvider>
     );
 }

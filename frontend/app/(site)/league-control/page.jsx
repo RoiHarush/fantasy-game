@@ -1,14 +1,7 @@
-"use client";
-
-import { RequireLeague, RequireLeagueAdmin } from "../../../src/RouteGuards";
 import LeagueControlPage from "../../../src/Components/Pages/Admin/LeagueControlPage";
+import { requireLeagueAdmin } from "../../../src/server/auth";
 
-export default function LeagueControlRoute() {
-    return (
-        <RequireLeague>
-            <RequireLeagueAdmin>
-                <LeagueControlPage />
-            </RequireLeagueAdmin>
-        </RequireLeague>
-    );
+export default async function LeagueControlRoute() {
+    await requireLeagueAdmin();
+    return <LeagueControlPage />;
 }

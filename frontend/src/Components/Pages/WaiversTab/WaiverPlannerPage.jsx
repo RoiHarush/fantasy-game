@@ -1,23 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+"use client";
+
+import { useMemo, useState } from "react";
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { usePlayers } from "../../../Context/PlayersContext";
-import { fetchSquadForGameweek } from "../../../services/squadService";
-import { fetchWaiverPlan, saveWaiverPlan } from "../../../services/waiverService";
+import { useSquad } from "../../../features/squad/useSquad";
+import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
 import styles from "../../../Styles/WaiverPlanner.module.css";
 
 function WaiverPlannerPage() {
     const { user } = useAuth();
     const { nextGameweek } = useGameweek();
     const { players } = usePlayers();
-    const [squadPlayerIds, setSquadPlayerIds] = useState([]);
-    const [entries, setEntries] = useState([]);
     const [selectedPlayerInId, setSelectedPlayerInId] = useState("");
     const [selectedPlayerOutId, setSelectedPlayerOutId] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+    const squadQuery = useSquad(user?.id, nextGameweek?.id);
+    const waiverPlan = useWaiverPlan(nextGameweek?.id);
+    const { entries, setEntries, saving } = waiverPlan;
+
+    const squadPlayerIds = useMemo(() => {
+        const lineupIds = Object.values(squadQuery.data?.startingLineup || {}).flat();
+        const benchIds = Object.values(squadQuery.data?.bench || {}).filter(id => id != null);
+        return [...new Set([...lineupIds, ...benchIds])];
+    }, [squadQuery.data]);
 
     const playersById = useMemo(
         () => new Map(players.map(player => [player.id, player])),
@@ -30,40 +37,13 @@ function WaiverPlannerPage() {
     );
     const availablePlayers = useMemo(
         () => players
-            .filter(player => player.available !== false && !squadPlayerIds.includes(player.id))
+            .filter(player => !squadPlayerIds.includes(player.id))
             .sort((first, second) => first.viewName.localeCompare(second.viewName)),
         [players, squadPlayerIds]
     );
     const eligibleOutgoingPlayers = selectedIncoming
         ? squadPlayers.filter(player => player.position === selectedIncoming.position)
         : squadPlayers;
-
-    useEffect(() => {
-        if (!user?.id || !nextGameweek?.id) return;
-        let cancelled = false;
-        setLoading(true);
-        setError("");
-
-        Promise.all([
-            fetchSquadForGameweek(user.id, nextGameweek.id),
-            fetchWaiverPlan(nextGameweek.id)
-        ])
-            .then(([squad, savedEntries]) => {
-                if (cancelled) return;
-                const lineupIds = Object.values(squad.startingLineup || {}).flat();
-                const benchIds = Object.values(squad.bench || {}).filter(id => id != null);
-                setSquadPlayerIds([...new Set([...lineupIds, ...benchIds])]);
-                setEntries(savedEntries || []);
-            })
-            .catch(loadError => {
-                if (!cancelled) setError(loadError.message);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => { cancelled = true; };
-    }, [user?.id, nextGameweek?.id]);
 
     function addEntry() {
         const playerInId = Number(selectedPlayerInId);
@@ -96,17 +76,13 @@ function WaiverPlannerPage() {
 
     async function handleSave() {
         if (!nextGameweek?.id) return;
-        setSaving(true);
         setError("");
         setMessage("");
         try {
-            const saved = await saveWaiverPlan(nextGameweek.id, entries);
-            setEntries(saved);
+            await waiverPlan.saveEntries(entries);
             setMessage("Priority list saved. It will run only if you are offline on your turn.");
         } catch (saveError) {
             setError(saveError.message);
-        } finally {
-            setSaving(false);
         }
     }
 
@@ -117,9 +93,11 @@ function WaiverPlannerPage() {
     if (!nextGameweek) {
         return <section className={styles.page}><p>No upcoming gameweek is available.</p></section>;
     }
-    if (loading) {
+    if (squadQuery.isPending || waiverPlan.loading) {
         return <section className={styles.page}><p>Loading waiver plan…</p></section>;
     }
+
+    const loadError = squadQuery.error?.message || waiverPlan.error?.message;
 
     return (
         <section className={styles.page} aria-labelledby="waiver-title">
@@ -182,7 +160,7 @@ function WaiverPlannerPage() {
             </div>
 
             <div className={styles.feedback} aria-live="polite">
-                {error && <p className={styles.error}>{error}</p>}
+                {(error || loadError) && <p className={styles.error}>{error || loadError}</p>}
                 {message && <p className={styles.success}>{message}</p>}
             </div>
 

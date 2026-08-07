@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 class AuthControllerCurrentUserTest {
 
     private final AuthService authService = mock(AuthService.class);
-    private final AuthController controller = new AuthController(authService);
+    private final AuthController controller = new AuthController(authService, mock(AuthCookieService.class));
 
     @Test
     void rejectsUnauthenticatedCurrentUserRequest() {

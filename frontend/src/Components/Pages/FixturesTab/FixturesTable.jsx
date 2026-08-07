@@ -1,34 +1,31 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { FixtureCard } from "./FixtureCard";
 import Style from "../../../Styles/FixturesTable.module.css";
 import { apiRequest } from "../../../services/apiClient";
+import { queryKeys } from "../../../lib/query/keys";
 
 function FixturesTable({ gameweeks, defaultGameweek }) {
-    const [currentGameweek, setCurrentGameweek] = useState(defaultGameweek?.id || 1);
-    const [fixtures, setFixtures] = useState([]);
-
-    useEffect(() => {
-        apiRequest("/api/fixtures", { auth: false })
-            .then(data => setFixtures(data))
-            .catch(err => console.error("Failed to fetch fixtures:", err));
-    }, []);
-
-    useEffect(() => {
-        if (defaultGameweek?.id) setCurrentGameweek(defaultGameweek.id);
-    }, [defaultGameweek?.id]);
+    const [selectedGameweek, setSelectedGameweek] = useState(null);
+    const { data: fixtures = [] } = useQuery({
+        queryKey: queryKeys.allFixtures,
+        queryFn: () => apiRequest("/api/fixtures", { auth: false }),
+        staleTime: 5 * 60_000,
+    });
 
     const orderedGameweeks = [...gameweeks].sort((a, b) => a.id - b.id);
+    const currentGameweek = selectedGameweek ?? defaultGameweek?.id ?? orderedGameweeks[0]?.id ?? 1;
     const currentIndex = orderedGameweeks.findIndex(gameweek => gameweek.id === currentGameweek);
 
     const gameweekFixtures = fixtures.filter(f => f.event === currentGameweek);
 
     const handlePrev = () => {
-        if (currentIndex > 0) setCurrentGameweek(orderedGameweeks[currentIndex - 1].id);
+        if (currentIndex > 0) setSelectedGameweek(orderedGameweeks[currentIndex - 1].id);
     };
 
     const handleNext = () => {
         if (currentIndex >= 0 && currentIndex < orderedGameweeks.length - 1) {
-            setCurrentGameweek(orderedGameweeks[currentIndex + 1].id);
+            setSelectedGameweek(orderedGameweeks[currentIndex + 1].id);
         }
     };
 

@@ -1,231 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../Context/AuthContext';
-import { updateUserSettings } from '../../../services/SettingsService';
+"use client";
 
-function SettingsPage() {
-    const { user, updateUser } = useAuth();
-    const [formData, setFormData] = useState({
-        name: '',
-        username: '',
-        teamName: '',
-        currentPassword: '',
-        newPassword: ''
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+
+import { useAuth } from "../../../Context/AuthContext";
+import { settingsSchema } from "../../../features/settings/schemas";
+import { updateUserSettings } from "../../../services/SettingsService";
+import { Button } from "../../../shared/ui/Button";
+
+const inputClassName = "mt-2 h-11 w-full rounded-control border border-slate-300 bg-white px-3 text-brand-ink outline-none transition focus:border-brand-cyan focus:ring-3 focus:ring-brand-cyan/20 aria-invalid:border-red-500";
+
+function FieldError({ error }) {
+    if (!error) return null;
+    return <p className="mt-1 text-sm text-red-700" role="alert">{error.message}</p>;
+}
+
+function SettingsForm({ user, updateUser }) {
+    const [message, setMessage] = useState(null);
+    const form = useForm({
+        resolver: zodResolver(settingsSchema),
+        defaultValues: {
+            teamName: user.fantasyTeamName || "",
+            name: user.name || "",
+            username: user.username || "",
+            currentPassword: "",
+            newPassword: "",
+        },
     });
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
+    const mutation = useMutation({
+        mutationFn: updateUserSettings,
+        onSuccess: (updatedUser) => {
+            updateUser(updatedUser);
+            form.reset({
+                teamName: updatedUser.fantasyTeamName || "",
+                name: updatedUser.name || "",
+                username: updatedUser.username || "",
+                currentPassword: "",
+                newPassword: "",
+            });
+            setMessage({ type: "success", text: "Profile updated successfully." });
+        },
+        onError: (error) => setMessage({ type: "error", text: error.message }),
+    });
 
-    useEffect(() => {
-        if (user) {
-            setFormData(prev => ({
-                ...prev,
-                name: user.name || '',
-                username: user.username || '',
-                teamName: user.fantasyTeamName || ''
-            }));
-        }
-    }, [user]);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage({ type: '', text: '' });
-
+    const submit = form.handleSubmit((values) => {
+        setMessage(null);
         const payload = {};
-        if (formData.name !== user.name) payload.name = formData.name;
-        if (formData.username !== user.username) payload.username = formData.username;
-        if (formData.teamName !== user.fantasyTeamName) payload.teamName = formData.teamName;
-
-        if (formData.newPassword) {
-            payload.currentPassword = formData.currentPassword;
-            payload.newPassword = formData.newPassword;
+        if (values.name !== user.name) payload.name = values.name;
+        if (values.username !== user.username) payload.username = values.username;
+        if (values.teamName !== user.fantasyTeamName) payload.teamName = values.teamName;
+        if (values.newPassword) {
+            payload.currentPassword = values.currentPassword;
+            payload.newPassword = values.newPassword;
         }
 
         if (Object.keys(payload).length === 0) {
-            setLoading(false);
-            setMessage({ type: 'info', text: 'No changes detected.' });
+            setMessage({ type: "info", text: "No changes detected." });
             return;
         }
-
-        try {
-            const updatedUser = await updateUserSettings(payload);
-
-            updateUser(updatedUser);
-
-            setMessage({ type: 'success', text: 'Profile updated successfully!' });
-            setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
-        } catch (error) {
-            setMessage({ type: 'error', text: error.message });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const styles = {
-        container: {
-            padding: '40px',
-            maxWidth: '800px',
-            margin: '0 auto',
-            fontFamily: "'Inter', sans-serif",
-            color: '#333',
-            backgroundColor: '#fff',
-            minHeight: '100vh'
-        },
-        header: {
-            fontSize: '2rem',
-            fontWeight: '700',
-            marginBottom: '30px',
-            color: '#1a1a1a',
-            borderBottom: '1px solid #eee',
-            paddingBottom: '20px'
-        },
-        section: {
-            marginBottom: '40px'
-        },
-        sectionTitle: {
-            fontSize: '1.2rem',
-            fontWeight: '700',
-            marginBottom: '15px',
-            color: '#1f2937'
-        },
-        formGroup: {
-            marginBottom: '20px'
-        },
-        label: {
-            display: 'block',
-            fontWeight: '600',
-            marginBottom: '8px',
-            fontSize: '0.9rem',
-            color: '#374151'
-        },
-        input: {
-            width: '100%',
-            padding: '12px',
-            fontSize: '1rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            outline: 'none',
-            backgroundColor: '#fff',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-            boxSizing: 'border-box'
-        },
-        button: {
-            backgroundColor: '#8b5cf6',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '6px',
-            border: 'none',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            marginTop: '10px',
-            opacity: loading ? 0.7 : 1,
-            transition: 'opacity 0.2s'
-        },
-        message: {
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontWeight: '500',
-            textAlign: 'center'
-        },
-        success: { backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' },
-        error: { backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' },
-        info: { backgroundColor: '#e0f2fe', color: '#075985', border: '1px solid #bae6fd' }
-    };
+        mutation.mutate(payload);
+    });
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.header}>Edit Your Profile</h1>
+        <main className="mx-auto min-h-screen w-full max-w-3xl px-5 py-10 text-brand-ink sm:px-8">
+            <header className="mb-8 border-b border-slate-200 pb-5">
+                <p className="text-sm font-semibold uppercase tracking-widest text-brand-purple">Account</p>
+                <h1 className="mt-2 text-3xl font-bold">Edit your profile</h1>
+            </header>
 
-            {message.text && (
-                <div style={{ ...styles.message, ...styles[message.type] }}>
+            {message && (
+                <div
+                    className={`mb-6 rounded-control border p-4 text-sm font-medium ${
+                        message.type === "success"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : message.type === "error"
+                                ? "border-red-200 bg-red-50 text-red-800"
+                                : "border-sky-200 bg-sky-50 text-sky-800"
+                    }`}
+                    role={message.type === "error" ? "alert" : "status"}
+                >
                     {message.text}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-                <div style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Team Details</h2>
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Team Name</label>
-                        <input
-                            type="text"
-                            name="teamName"
-                            value={formData.teamName}
-                            onChange={handleChange}
-                            style={styles.input}
-                            placeholder="Enter your team name"
-                        />
+            <form onSubmit={submit} className="space-y-9" noValidate>
+                <section>
+                    <h2 className="mb-4 text-lg font-bold">Team details</h2>
+                    <label className="block text-sm font-semibold" htmlFor="teamName">Team name</label>
+                    <input id="teamName" className={inputClassName} aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
+                    <FieldError error={form.formState.errors.teamName} />
+                </section>
+
+                <section className="grid gap-5 sm:grid-cols-2">
+                    <h2 className="sm:col-span-2 text-lg font-bold">Personal information</h2>
+                    <div>
+                        <label className="block text-sm font-semibold" htmlFor="name">Display name</label>
+                        <input id="name" className={inputClassName} aria-invalid={Boolean(form.formState.errors.name)} {...form.register("name")} />
+                        <FieldError error={form.formState.errors.name} />
                     </div>
-                </div>
-
-                <div style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Personal Info</h2>
-
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Full Name (Display Name)</label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            style={styles.input}
-                            placeholder="e.g. John Doe"
-                        />
+                    <div>
+                        <label className="block text-sm font-semibold" htmlFor="username">Username</label>
+                        <input id="username" autoComplete="username" className={inputClassName} aria-invalid={Boolean(form.formState.errors.username)} {...form.register("username")} />
+                        <FieldError error={form.formState.errors.username} />
                     </div>
+                </section>
 
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Username (Login)</label>
-                        <input
-                            type="text"
-                            name="username"
-                            value={formData.username}
-                            onChange={handleChange}
-                            style={styles.input}
-                            placeholder="e.g. john123"
-                        />
+                <section className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                        <h2 className="text-lg font-bold">Change password</h2>
+                        <p className="mt-1 text-sm text-slate-600">Leave both fields empty to keep your current password.</p>
                     </div>
-                </div>
-
-                <div style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Change Password</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>New Password</label>
-                            <input
-                                type="password"
-                                name="newPassword"
-                                value={formData.newPassword}
-                                onChange={handleChange}
-                                style={styles.input}
-                                placeholder="New password"
-                            />
-                        </div>
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>Current Password</label>
-                            <input
-                                type="password"
-                                name="currentPassword"
-                                value={formData.currentPassword}
-                                onChange={handleChange}
-                                style={styles.input}
-                                placeholder="Required to save changes"
-                                disabled={!formData.newPassword && formData.name === user?.name && formData.username === user?.username && formData.teamName === user?.fantasyTeamName}
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-sm font-semibold" htmlFor="newPassword">New password</label>
+                        <input id="newPassword" type="password" autoComplete="new-password" className={inputClassName} aria-invalid={Boolean(form.formState.errors.newPassword)} {...form.register("newPassword")} />
+                        <FieldError error={form.formState.errors.newPassword} />
                     </div>
-                </div>
+                    <div>
+                        <label className="block text-sm font-semibold" htmlFor="currentPassword">Current password</label>
+                        <input id="currentPassword" type="password" autoComplete="current-password" className={inputClassName} aria-invalid={Boolean(form.formState.errors.currentPassword)} {...form.register("currentPassword")} />
+                        <FieldError error={form.formState.errors.currentPassword} />
+                    </div>
+                </section>
 
-                <button type="submit" style={styles.button} disabled={loading}>
-                    {loading ? 'Updating...' : 'Save Changes'}
-                </button>
+                <Button type="submit" size="lg" disabled={mutation.isPending}>
+                    {mutation.isPending ? "Updating…" : "Save changes"}
+                </Button>
             </form>
-        </div>
+        </main>
     );
+}
+
+function SettingsPage() {
+    const { user, updateUser } = useAuth();
+    return <SettingsForm key={user.id} user={user} updateUser={updateUser} />;
 }
 
 export default SettingsPage;

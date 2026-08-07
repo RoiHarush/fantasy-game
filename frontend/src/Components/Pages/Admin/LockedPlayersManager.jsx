@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
+import { queryKeys } from "../../../lib/query/keys";
 
 const normalize = (str) =>
     (str || "")
@@ -18,51 +20,36 @@ const normalize = (str) =>
 
 const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
     const { players, setPlayers } = usePlayers();
-    const [serverLockedPlayers, setServerLockedPlayers] = useState([]);
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    const loadLockedPlayers = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await AdminService.getLockedPlayers(maintenanceLeagueId);
-            setServerLockedPlayers(data);
-        } catch (error) { console.error(error); }
-        finally { setLoading(false); }
-    }, [maintenanceLeagueId]);
-
-    useEffect(() => { loadLockedPlayers(); }, [loadLockedPlayers]);
+    const queryKey = queryKeys.lockedPlayers(maintenanceLeagueId);
+    const lockedQuery = useQuery({
+        queryKey,
+        queryFn: () => AdminService.getLockedPlayers(maintenanceLeagueId),
+    });
+    const serverLockedPlayers = lockedQuery.data ?? [];
+    const searchResults = useMemo(() => {
+        if (searchTerm.length < 2) return [];
+        const normTerm = normalize(searchTerm);
+        return players.filter(player => player.available && [player.viewName, player.firstName, player.lastName]
+            .some(name => normalize(name).includes(normTerm))).slice(0, 5);
+    }, [players, searchTerm]);
+    const toggleLock = useMutation({
+        mutationFn: ({ player, shouldLock }) => AdminService.togglePlayerLock(player.id, shouldLock, maintenanceLeagueId),
+        onSuccess: (updatedPlayer, { shouldLock }) => {
+            queryClient.invalidateQueries({ queryKey });
+            setPlayers(current => current.map(player => player.id === updatedPlayer.id ? updatedPlayer : player));
+            if (shouldLock) setSearchTerm("");
+        },
+    });
 
     const handleSearch = (term) => {
         setSearchTerm(term);
-        if (term.length < 2) { setSearchResults([]); return; }
-
-        const normTerm = normalize(term);
-
-        const results = players.filter(p => {
-            if (!p.available) return false;
-
-            const pName = normalize(p.viewName);
-            const pFirst = normalize(p.firstName);
-            const pLast = normalize(p.lastName);
-
-            return pName.includes(normTerm) || pFirst.includes(normTerm) || pLast.includes(normTerm);
-        }).slice(0, 5);
-
-        setSearchResults(results);
     };
 
     const handleToggleLock = async (player, shouldLock) => {
         try {
-            const updatedPlayer = await AdminService.togglePlayerLock(
-                player.id,
-                shouldLock,
-                maintenanceLeagueId
-            );
-            await loadLockedPlayers();
-            setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
-            if (shouldLock) { setSearchTerm(""); setSearchResults([]); }
+            await toggleLock.mutateAsync({ player, shouldLock });
         } catch { alert("Failed"); }
     };
 
@@ -135,7 +122,7 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
                 </div>
 
                 <div style={styles.listWrapper}>
-                    {loading ? <div>Loading...</div> : serverLockedPlayers.length === 0 ? (
+                    {lockedQuery.isPending ? <div>Loading...</div> : serverLockedPlayers.length === 0 ? (
                         <div style={{ color: '#991b1b', opacity: 0.7, fontStyle: 'italic', textAlign: 'center' }}>No locked players</div>
                     ) : (
                         serverLockedPlayers.map(p => {

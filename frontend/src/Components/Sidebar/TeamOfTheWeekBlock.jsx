@@ -1,30 +1,20 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
 import { useGameweek } from "../../Context/GameweeksContext";
+import { queryKeys } from "../../lib/query/keys";
+import { apiRequest } from "../../services/apiClient";
 import styles from "../../Styles/TeamOfTheWeekBlock.module.css";
 import PlayerKit from "../General/PlayerKit";
-import { apiRequest } from "../../services/apiClient";
 
 function TeamOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
-    const [dreamTeam, setDreamTeam] = useState([]);
-
-    useEffect(() => {
-        async function fetchDreamTeam() {
-            if (!currentGameweek) return;
-
-            try {
-                const data = await apiRequest(`/api/fpl/dream-team/${currentGameweek.id}`, { auth: false });
-
-                if (!data?.team?.length) return;
-
-                setDreamTeam(data.team);
-            } catch (err) {
-                console.error("Failed to fetch Dream Team:", err);
-            }
-        }
-
-        fetchDreamTeam();
-    }, [currentGameweek]);
+    const dreamTeamQuery = useQuery({
+        queryKey: queryKeys.dreamTeam(currentGameweek?.id),
+        queryFn: () => apiRequest(`/api/fpl/dream-team/${currentGameweek.id}`, { auth: false }),
+        enabled: Boolean(currentGameweek?.id),
+        staleTime: 5 * 60_000,
+    });
+    const dreamTeam = dreamTeamQuery.data?.team ?? [];
 
     return (
         <div className={styles.block}>
@@ -33,32 +23,28 @@ function TeamOfTheWeekBlock() {
                 Team of the Week
             </div>
 
-            {dreamTeam.length === 0 ? (
+            {dreamTeamQuery.isPending ? (
                 <p className={styles.loading}>Loading dream team...</p>
+            ) : dreamTeam.length === 0 ? (
+                <p className={styles.loading}>No dream team is available yet.</p>
             ) : (
                 <div className={styles.tableWrapper}>
                     <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>Pos</th>
-                                <th>Player</th>
-                                <th>Club</th>
-                                <th>Pts</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Pos</th><th>Player</th><th>Club</th><th>Pts</th></tr></thead>
                         <tbody>
-                            {dreamTeam.map((p, index) => (
-                                <tr key={p.id ?? `row-${index}`}>
-                                    <td>{p.position}</td>
+                            {dreamTeam.map((player, index) => (
+                                <tr key={player.id ?? `row-${index}`}>
+                                    <td>{player.position}</td>
                                     <td className={styles.playerCell}>
                                         <PlayerKit
-                                            teamId={p.teamId}
-                                            type={p.position === "GK" ? "gk" : "field"}
-                                            className={styles["player-shirt"]} />
-                                        <span>{p.name}</span>
+                                            teamId={player.teamId}
+                                            type={player.position === "GK" ? "gk" : "field"}
+                                            className={styles["player-shirt"]}
+                                        />
+                                        <span>{player.name}</span>
                                     </td>
-                                    <td>{p.team}</td>
-                                    <td className={styles.points}>{p.points}</td>
+                                    <td>{player.team}</td>
+                                    <td className={styles.points}>{player.points}</td>
                                 </tr>
                             ))}
                         </tbody>

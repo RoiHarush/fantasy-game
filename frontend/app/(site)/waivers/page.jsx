@@ -1,17 +1,12 @@
-"use client";
-
-import { RequireLeague, RequireActiveLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import WaiverPlannerPage from "../../../src/Components/Pages/WaiversTab/WaiverPlannerPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireActiveLeagueUser } from "../../../src/server/auth";
 
-export default function WaiversRoute() {
+export default async function WaiversRoute() {
+    await requireActiveLeagueUser();
     return (
-        <RequireLeague>
-            <RequireActiveLeague>
-                <GameweekUpdatingGuard>
-                    <WaiverPlannerPage />
-                </GameweekUpdatingGuard>
-            </RequireActiveLeague>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <WaiverPlannerPage />
+        </GameweekUpdatingGuard>
     );
 }

@@ -1,12 +1,7 @@
-"use client";
-
-import { RequireLeague } from "../../../src/RouteGuards";
 import FixturesPage from "../../../src/Components/Pages/FixturesTab/FixturePage";
+import { requireLeagueUser } from "../../../src/server/auth";
 
-export default function FixturesRoute() {
-    return (
-        <RequireLeague>
-            <FixturesPage />
-        </RequireLeague>
-    );
+export default async function FixturesRoute() {
+    await requireLeagueUser();
+    return <FixturesPage />;
 }

@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
 import { usePlayers } from '../../../Context/PlayersContext';
 import { useGameweek } from '../../../Context/GameweeksContext';
+import { queryKeys } from "../../../lib/query/keys";
 
 const normalize = (str) =>
     (str || "")
@@ -20,53 +22,45 @@ const normalize = (str) =>
 const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
-    const [gameweek, setGameweek] = useState();
-    const [punishedPlayers, setPunishedPlayers] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
+    const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const gameweek = selectedGameweek ?? currentGameweek?.id;
+    const queryKey = queryKeys.adminPenalties(maintenanceLeagueId, gameweek);
+    const penaltiesQuery = useQuery({
+        queryKey,
+        queryFn: () => AdminService.getPenaltiesConceded(gameweek, maintenanceLeagueId),
+        enabled: Boolean(gameweek),
+    });
+    const punishedPlayers = penaltiesQuery.data ?? [];
 
     const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
     const isPastGW = currentGameweek && gameweek < currentGameweek.id;
     const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
 
-    useEffect(() => {
-        if (currentGameweek && currentGameweek.id) {
-            setGameweek(currentGameweek.id);
-        }
-    }, [currentGameweek]);
-
-    useEffect(() => {
-        if (searchTerm.length < 2 || !players) {
-            setSearchResults([]);
-        } else {
-            const term = normalize(searchTerm);
-            const results = players.filter(p => {
+    const searchResults = useMemo(() => {
+        if (searchTerm.length < 2) return [];
+        const term = normalize(searchTerm);
+        return players.filter(p => {
                 const pName = normalize(p.viewName);
                 const pFirst = normalize(p.firstName);
                 const pLast = normalize(p.lastName);
                 return pName.includes(term) || pFirst.includes(term) || pLast.includes(term);
             }).slice(0, 5);
-            setSearchResults(results);
-        }
-    }, [searchTerm, players]);
-
-    const loadPunishedPlayers = useCallback(async () => {
-        if (!gameweek) return;
-        setLoading(true);
-        try {
-            const data = await AdminService.getPenaltiesConceded(gameweek, maintenanceLeagueId);
-            setPunishedPlayers(data);
-        } catch (error) {
-            console.error("Error loading penalties", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [gameweek, maintenanceLeagueId]);
-
-    useEffect(() => {
-        loadPunishedPlayers();
-    }, [loadPunishedPlayers]);
+    }, [players, searchTerm]);
+    const updatePenalty = useMutation({
+        mutationFn: ({ playerId, action }) => AdminService.updatePenaltyConceded(playerId, gameweek, action, maintenanceLeagueId),
+        onSuccess: (updatedPlayer) => {
+            queryClient.setQueryData(queryKey, (current = []) => {
+                if (updatedPlayer.penaltiesConceded === 0) return current.filter(player => player.playerId !== updatedPlayer.playerId);
+                const exists = current.some(player => player.playerId === updatedPlayer.playerId);
+                return exists
+                    ? current.map(player => player.playerId === updatedPlayer.playerId ? updatedPlayer : player)
+                    : [...current, updatedPlayer];
+            });
+            setSearchTerm("");
+        },
+    });
 
     const handlePunish = async (playerId, action) => {
         if (!canEdit) {
@@ -74,21 +68,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
             return;
         }
         try {
-            const updatedPlayer = await AdminService.updatePenaltyConceded(
-                playerId,
-                gameweek,
-                action,
-                maintenanceLeagueId
-            );
-            setPunishedPlayers(prev => {
-                if (updatedPlayer.penaltiesConceded === 0) {
-                    return prev.filter(p => p.playerId !== updatedPlayer.playerId);
-                }
-                const exists = prev.find(p => p.playerId === updatedPlayer.playerId);
-                return exists ? prev.map(p => p.playerId === updatedPlayer.playerId ? updatedPlayer : p) : [...prev, updatedPlayer];
-            });
-            setSearchTerm("");
-            setSearchResults([]);
+            await updatePenalty.mutateAsync({ playerId, action });
         } catch {
             alert("Failed to update penalty");
         }
@@ -127,7 +107,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     };
 
     return (
-        <div aria-busy={loading}>
+        <div aria-busy={penaltiesQuery.isPending || updatePenalty.isPending}>
             <div style={styles.headerCard}>
                 {!canEdit && <div style={styles.lockedBadge}>🔒 LOCKED</div>}
 
@@ -135,7 +115,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
                 <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginTop: '4px' }}>
                     Record penalties for Gameweek {gameweek}
                 </div>
-                <select style={styles.select} value={gameweek || ''} onChange={(e) => setGameweek(Number(e.target.value))}>
+                <select style={styles.select} value={gameweek || ''} onChange={(e) => setSelectedGameweek(Number(e.target.value))}>
                     {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, i) => (
                         <option key={i + 1} value={i + 1}>Gameweek {i + 1}</option>
                     ))}

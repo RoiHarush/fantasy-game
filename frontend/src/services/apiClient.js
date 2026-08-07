@@ -1,4 +1,8 @@
 const SESSION_EXPIRED_EVENT = "fantasy-auth-session-expired";
+const CSRF_COOKIE_NAME = "XSRF-TOKEN";
+const CSRF_HEADER_NAME = "X-XSRF-TOKEN";
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+let csrfRequest = null;
 
 export class ApiError extends Error {
     constructor({ status, message, body = null, contentType = "", url = "" }) {
@@ -15,44 +19,39 @@ function isBrowser() {
     return typeof window !== "undefined";
 }
 
-function getStorage() {
+function readCookie(name) {
     if (!isBrowser()) return null;
-    return window.localStorage;
+
+    const prefix = `${name}=`;
+    const value = document.cookie
+        .split(";")
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(prefix))
+        ?.slice(prefix.length);
+
+    return value ? decodeURIComponent(value) : null;
 }
 
-export function getStoredToken() {
-    return getStorage()?.getItem("token") ?? null;
-}
+async function getCsrfToken() {
+    const existingToken = readCookie(CSRF_COOKIE_NAME);
+    if (existingToken) return existingToken;
 
-export function getStoredUser() {
-    const rawUser = getStorage()?.getItem("loggedUser");
-    if (!rawUser) return null;
-
-    try {
-        return JSON.parse(rawUser);
-    } catch {
-        return null;
+    if (!csrfRequest) {
+        csrfRequest = fetch("/api/auth/csrf", {
+            credentials: "same-origin",
+            cache: "no-store",
+        }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`Unable to initialize CSRF protection (HTTP ${response.status})`);
+            }
+            return response.json();
+        }).then((body) => readCookie(CSRF_COOKIE_NAME) ?? body?.token)
+            .finally(() => {
+                csrfRequest = null;
+            });
     }
-}
 
-export function saveSession(token, user) {
-    const storage = getStorage();
-    if (!storage) return;
-
-    if (token) {
-        storage.setItem("token", token);
-    }
-    if (user) {
-        storage.setItem("loggedUser", JSON.stringify(user));
-    }
-}
-
-export function clearSession() {
-    const storage = getStorage();
-    if (!storage) return;
-
-    storage.removeItem("token");
-    storage.removeItem("loggedUser");
+    return csrfRequest;
 }
 
 export function emitSessionExpired(message = "Your session expired. Please sign in again.") {
@@ -139,11 +138,9 @@ export async function apiRequest(path, options = {}) {
     const requestHeaders = new Headers(headers || {});
     let requestBody = body;
 
-    if (auth) {
-        const token = getStoredToken();
-        if (token) {
-            requestHeaders.set("Authorization", `Bearer ${token}`);
-        }
+    if (!SAFE_METHODS.has(method.toUpperCase()) && isBrowser()) {
+        const csrfToken = await getCsrfToken();
+        if (csrfToken) requestHeaders.set(CSRF_HEADER_NAME, csrfToken);
     }
 
     const isFormData = typeof FormData !== "undefined" && body instanceof FormData;

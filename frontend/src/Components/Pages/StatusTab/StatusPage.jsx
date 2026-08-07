@@ -1,65 +1,49 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../Context/GameweeksContext";
+import { queryKeys } from "../../../lib/query/keys";
 import { fetchLeague, fetchMyLeague } from "../../../services/leagueService";
+import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
-import Status from "./Status";
-import LoadingPage from "../../General/LoadingPage";
-import { useAuth } from "../../../Context/AuthContext";
 import PreDraftStatus from "./PreDraftStatus";
+import Status from "./Status";
 
 function StatusPage() {
-    const { user, updateUser } = useAuth();
+    const { user } = useAuth();
     const { currentGameweek, nextGameweek, lastGameweek } = useGameweek();
-
-    const [league, setLeague] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const leagueDetailsQuery = useQuery({
+        queryKey: queryKeys.currentLeague(user?.leagueId),
+        queryFn: fetchMyLeague,
+        enabled: Boolean(user?.leagueId),
+        refetchInterval: (query) => query.state.data?.status === "ACTIVE" ? false : 5_000,
+    });
+    const leagueIsActive = leagueDetailsQuery.data?.status === "ACTIVE";
+    const standingsQuery = useQuery({
+        queryKey: queryKeys.leagueStandings(user?.leagueId),
+        queryFn: fetchLeague,
+        enabled: Boolean(user?.leagueId && leagueIsActive),
+        staleTime: 30_000,
+    });
     const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
 
-    useEffect(() => {
-        let cancelled = false;
-        let retryTimer;
+    const error = leagueDetailsQuery.error ?? standingsQuery.error;
+    if (error) return <div>Error loading status: {error.message}</div>;
 
-        async function load() {
-            try {
-                const leagueDetails = await fetchMyLeague();
-                if (!cancelled) {
-                    setLeague(leagueDetails);
-                    updateUser({ leagueStatus: leagueDetails.status });
-                }
-                if (leagueDetails.status === "ACTIVE") {
-                    const leagueData = await fetchLeague();
-                    if (!cancelled) setLeague(leagueData);
-                } else if (leagueDetails.status !== "ACTIVE" && !cancelled) {
-                    retryTimer = window.setTimeout(load, 5000);
-                }
-            } catch (err) {
-                if (!cancelled) setError(err.message);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        load();
-        return () => {
-            cancelled = true;
-            window.clearTimeout(retryTimer);
-        };
-    }, [currentGameweek, updateUser]);
-
-    if (!loading && league?.status && league.status !== "ACTIVE") {
-        return <PreDraftStatus league={league} />;
+    if (!leagueDetailsQuery.isPending && leagueDetailsQuery.data?.status !== "ACTIVE") {
+        return <PreDraftStatus league={leagueDetailsQuery.data} />;
     }
 
-    if (loading || !nextGameweek || (!currentGameweek && !isPreSeason)) {
-        return <LoadingPage />;
-    }
+    const loading = leagueDetailsQuery.isPending
+        || (leagueIsActive && standingsQuery.isPending)
+        || !nextGameweek
+        || (!currentGameweek && !isPreSeason);
+    if (loading) return <LoadingPage />;
 
-    if (error) {
-        return <div>Error loading status: {error}</div>;
-    }
-
+    const league = standingsQuery.data ?? leagueDetailsQuery.data;
     const displayedGameweek = currentGameweek ?? nextGameweek;
 
     return (

@@ -1,17 +1,16 @@
 import { usePlayers } from "../../Context/PlayersContext";
-import { useFixtures } from "../../Context/FixturesContext";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
 import { useGameweek } from "../../Context/GameweeksContext";
+import { useAllTeamFixtures } from "../../hooks/useAllTeamFixtures";
 
 const EMPTY_SQUAD = { startingLineup: {}, bench: {} };
 
 function SquadPlayersTable({ squad }) {
     const { players } = usePlayers();
-    const { getFixturesForTeam } = useFixtures();
     const { nextGameweek } = useGameweek();
-    const [fixtures, setFixtures] = useState({});
+    const fixtures = useAllTeamFixtures() ?? {};
     const safeSquad = squad || EMPTY_SQUAD;
 
     const getPlayer = useCallback((id) => players.find((p) => p.id === id), [players]);
@@ -22,25 +21,6 @@ function SquadPlayersTable({ squad }) {
         { key: "MID", label: "Midfielders", size: 5 },
         { key: "FWD", label: "Forwards", size: 3 },
     ];
-
-    useEffect(() => {
-        async function fetchAll() {
-            const allIds = [
-                ...Object.values(safeSquad.startingLineup || {}).flat(),
-                ...Object.values(safeSquad.bench || {}),
-            ].filter(Boolean);
-            const allTeams = new Set(
-                allIds.map((id) => getPlayer(id)?.teamId).filter(Boolean)
-            );
-
-            const data = {};
-            for (const teamId of allTeams) {
-                data[teamId] = await getFixturesForTeam(teamId);
-            }
-            setFixtures(data);
-        }
-        fetchAll();
-    }, [safeSquad, getPlayer, getFixturesForTeam]);
 
     const getNextFixtureText = (player) => {
         if (!nextGameweek) return "-";

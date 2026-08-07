@@ -1,24 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useAuth } from "../../../Context/AuthContext";
 import { usePlayers } from "../../../Context/PlayersContext";
 import { fetchTransferHistory } from "../../../services/transferWindowService";
 import styles from "../../../Styles/TransferActivityList.module.css";
+import { queryKeys } from "../../../lib/query/keys";
 
 function TransferActivityList({ gameWeekId }) {
     const { players } = usePlayers();
-    const [actions, setActions] = useState([]);
-
-    useEffect(() => {
-        if (!gameWeekId) return;
-        let cancelled = false;
-        fetchTransferHistory(gameWeekId)
-            .then(data => {
-                if (!cancelled) {
-                    setActions((data || []).filter(action => action.windowType === "TRANSFER"));
-                }
-            })
-            .catch(error => console.error("Failed to load transfer activity:", error));
-        return () => { cancelled = true; };
-    }, [gameWeekId]);
+    const { user } = useAuth();
+    const historyQuery = useQuery({
+        queryKey: queryKeys.transferHistory(user?.leagueId, gameWeekId),
+        queryFn: () => fetchTransferHistory(gameWeekId),
+        enabled: Boolean(user?.leagueId && gameWeekId),
+        staleTime: 30_000,
+    });
+    const actions = useMemo(
+        () => (historyQuery.data ?? []).filter(action => action.windowType === "TRANSFER"),
+        [historyQuery.data],
+    );
 
     const playersById = useMemo(
         () => new Map(players.map(player => [player.id, player])),

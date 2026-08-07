@@ -1,102 +1,59 @@
-import { useCallback, useEffect, useState } from "react";
+"use client";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+
+import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../Context/GameweeksContext";
-import { fetchUserChips, saveTeamRequest } from "../../../services/pickTeamService";
-import { fetchPlayerDataForGameweek, fetchSquadForGameweek } from "../../../services/squadService";
+import { usePickTeamData } from "../../../features/pick-team/usePickTeamData";
+import { queryKeys } from "../../../lib/query/keys";
+import { saveTeamRequest } from "../../../services/pickTeamService";
+import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import PickTeam from "./PickTeam";
-import LoadingPage from "../../General/LoadingPage";
-import { useAuth } from "../../../Context/AuthContext";
 
-function PickTeamPage() {
-    const { user } = useAuth();
-    const { nextGameweek, gameweeks } = useGameweek();
+function buildSaveTeamDto(squad) {
+    return {
+        startingLineup: squad.startingLineup,
+        bench: squad.bench,
+        formation: {
+            GK: squad.startingLineup.GK?.length || 0,
+            DEF: squad.startingLineup.DEF?.length || 0,
+            MID: squad.startingLineup.MID?.length || 0,
+            FWD: squad.startingLineup.FWD?.length || 0,
+        },
+        captainId: squad.captainId || null,
+        viceCaptainId: squad.viceCaptainId || null,
+        irId: squad.irId || null,
+        firstPickId: squad.firstPickId || null,
+    };
+}
 
-    const [squad, setSquad] = useState(null);
-    const [chips, setChips] = useState({ remaining: {}, active: {} });
-    const [playerData, setPlayerData] = useState([]);
+function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialChips, playerData, refreshPlayerData }) {
+    const queryClient = useQueryClient();
+    const [squad, setSquad] = useState(initialSquad);
+    const [chips, setChips] = useState(initialChips);
     const [isDirty, setIsDirty] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const refreshPlayerData = useCallback(async () => {
-        if (!user || !nextGameweek) return;
-        try {
-            const data = await fetchPlayerDataForGameweek(user.id, nextGameweek.id);
-            setPlayerData(data);
-        } catch (err) {
-            console.error("Failed to refresh player data", err);
-        }
-    }, [user, nextGameweek]);
-
-    useEffect(() => {
-        if (!user || !nextGameweek) return;
-
-        let cancelled = false;
-
-        async function load() {
-            setLoading(true);
-            try {
-                const [squadRes, chipsRes, playerDataRes] = await Promise.all([
-                    fetchSquadForGameweek(user.id, nextGameweek.id),
-                    fetchUserChips(user.id),
-                    fetchPlayerDataForGameweek(user.id, nextGameweek.id)
-                ]);
-
-                if (!cancelled) {
-                    setSquad(squadRes);
-                    setChips(chipsRes);
-                    setPlayerData(playerDataRes);
-                }
-            } catch (err) {
-                if (!cancelled) {
-                    setError(err.message);
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        load();
-        return () => (cancelled = true);
-    }, [user, nextGameweek]);
-
-    async function saveTeam() {
-        if (!squad) return false;
-
-        const dto = {
-            startingLineup: squad.startingLineup,
-            bench: squad.bench,
-            formation: {
-                GK: squad.startingLineup.GK?.length || 0,
-                DEF: squad.startingLineup.DEF?.length || 0,
-                MID: squad.startingLineup.MID?.length || 0,
-                FWD: squad.startingLineup.FWD?.length || 0
-            },
-            captainId: squad.captainId || null,
-            viceCaptainId: squad.viceCaptainId || null,
-            irId: squad.irId || null,
-            firstPickId: squad.firstPickId || null
-        };
-
-        try {
-            const updatedSquad = await saveTeamRequest(user.id, dto);
+    const saveMutation = useMutation({
+        mutationFn: (dto) => saveTeamRequest(user.id, dto),
+        onSuccess: (updatedSquad) => {
             setSquad(updatedSquad);
             setIsDirty(false);
+            queryClient.setQueryData(queryKeys.squad(user.id, nextGameweek.id), updatedSquad);
+        },
+    });
+
+    const saveTeam = useCallback(async () => {
+        if (!squad) return false;
+        try {
+            await saveMutation.mutateAsync(buildSaveTeamDto(squad));
             return true;
-        } catch (err) {
-            console.error("Failed to save team:", err);
+        } catch (error) {
+            console.error("Failed to save team:", error);
             return false;
         }
-    }
-
-    if (loading || !nextGameweek) {
-        return <LoadingPage />;
-    }
-
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
+    }, [saveMutation, squad]);
 
     return (
         <PageLayout
@@ -117,6 +74,28 @@ function PickTeamPage() {
                 />
             }
             right={<UserSidebar user={user} />}
+        />
+    );
+}
+
+function PickTeamPage() {
+    const { user } = useAuth();
+    const { nextGameweek, gameweeks } = useGameweek();
+    const data = usePickTeamData(user?.id, nextGameweek?.id);
+
+    if (!nextGameweek || data.isPending) return <LoadingPage />;
+    if (data.error) return <div>Error: {data.error.message}</div>;
+
+    return (
+        <PickTeamEditor
+            key={`${user.id}-${nextGameweek.id}`}
+            user={user}
+            nextGameweek={nextGameweek}
+            gameweeks={gameweeks}
+            initialSquad={data.squad.data}
+            initialChips={data.chips.data ?? { remaining: {}, active: {} }}
+            playerData={data.playerData.data ?? []}
+            refreshPlayerData={data.playerData.refetch}
         />
     );
 }

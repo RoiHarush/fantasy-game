@@ -1,25 +1,8 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import LoadingPage from "../src/Components/General/LoadingPage";
-import { useAuth } from "../src/Context/AuthContext";
+import { redirect } from "next/navigation";
 import { getRootRedirectRoute } from "../src/Utils/routing";
+import { getCurrentUser } from "../src/server/auth";
 
-export default function HomePage() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (loading) return;
-
-        if (!user) {
-            router.replace("/login");
-            return;
-        }
-
-        router.replace(getRootRedirectRoute(user));
-    }, [loading, router, user]);
-
-    return <LoadingPage />;
+export default async function HomePage() {
+    const user = await getCurrentUser();
+    redirect(getRootRedirectRoute(user));
 }

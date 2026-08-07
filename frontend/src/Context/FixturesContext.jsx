@@ -1,26 +1,27 @@
-import { createContext, useContext, useRef, useCallback } from "react";
+import { createContext, useContext, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../services/apiClient";
+import { queryKeys } from "../lib/query/keys";
 
 const FixturesContext = createContext();
 
 export function FixturesProvider({ children }) {
-    const cache = useRef({});
+    const queryClient = useQueryClient();
 
     const getFixturesForTeam = useCallback(async (teamId) => {
         if (!teamId) return {};
 
-        if (cache.current[teamId]) return cache.current[teamId];
-
         try {
-            const data = await apiRequest(`/api/fixtures/team/${teamId}`);
-
-            cache.current[teamId] = data;
-            return data;
+            return await queryClient.fetchQuery({
+                queryKey: queryKeys.teamFixtures(teamId),
+                queryFn: () => apiRequest(`/api/fixtures/team/${teamId}`),
+                staleTime: 5 * 60_000,
+            });
         } catch (err) {
             console.error("Error fetching fixtures:", err);
             return {};
         }
-    }, []);
+    }, [queryClient]);
 
     return (
         <FixturesContext.Provider value={{ getFixturesForTeam }}>

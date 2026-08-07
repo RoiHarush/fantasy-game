@@ -2,165 +2,90 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from "@tanstack/react-query";
 import {
     apiRequest,
-    ApiError,
-    clearSession,
-    getStoredToken,
-    saveSession,
 } from "../services/apiClient";
 import { getPostLoginRoute } from "../Utils/routing";
 
 const AuthContext = createContext(null);
 const SESSION_EXPIRED_MESSAGE = "Your session expired. Please sign in again.";
 
-export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
-    const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children, initialUser = null }) => {
+    const [user, setUser] = useState(initialUser);
     const [sessionMessage, setSessionMessage] = useState("");
     const router = useRouter();
-
-    const applyUser = useCallback((nextUser, nextToken = null) => {
-        const sessionToken = nextToken || getStoredToken();
-        if (sessionToken) {
-            saveSession(sessionToken, nextUser);
-        }
-        setToken(sessionToken);
-        setUser(nextUser);
-    }, []);
+    const queryClient = useQueryClient();
 
     const refreshCurrentUser = useCallback(async () => {
         const currentUser = await apiRequest("/api/auth/me");
-        const storedToken = getStoredToken();
-        saveSession(storedToken, currentUser);
-        setToken(storedToken);
         setUser(currentUser);
         return currentUser;
     }, []);
 
     const resetSession = useCallback(() => {
-        clearSession();
-        setToken(null);
         setUser(null);
+        queryClient.clear();
+    }, [queryClient]);
+
+    useEffect(() => {
+        // One-time cleanup from the pre-cookie authentication implementation.
+        window.localStorage.removeItem("token");
+        window.localStorage.removeItem("loggedUser");
     }, []);
 
     useEffect(() => {
-        let cancelled = false;
-
-        const bootstrapSession = async () => {
-            const token = getStoredToken();
-
-            if (!token) {
-                if (!cancelled) {
-                    resetSession();
-                    setLoading(false);
-                }
-                return;
-            }
-
-            try {
-                const currentUser = await apiRequest("/api/auth/me");
-                if (cancelled) return;
-
-                applyUser(currentUser, token);
-                setSessionMessage("");
-            } catch (error) {
-                if (cancelled) return;
-
-                if (error instanceof ApiError && error.status === 401) {
-                    resetSession();
-                } else {
-                    setToken(token);
-                    setUser(null);
-                }
-                setSessionMessage(error?.message || SESSION_EXPIRED_MESSAGE);
-                router.replace("/login");
-            } finally {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        bootstrapSession();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [applyUser, resetSession, router]);
-
-    useEffect(() => {
         if (typeof window === "undefined") return undefined;
-
-        const handleStorageChange = (event) => {
-            if (event.key !== "token" && event.key !== "loggedUser" && event.key !== null) {
-                return;
-            }
-
-            const token = getStoredToken();
-            if (!token) {
-                resetSession();
-                setSessionMessage(SESSION_EXPIRED_MESSAGE);
-                router.replace("/login");
-                return;
-            }
-
-            setToken(token);
-        };
 
         const handleSessionExpired = (event) => {
             resetSession();
             setSessionMessage(event.detail?.message || SESSION_EXPIRED_MESSAGE);
             router.replace("/login");
+            router.refresh();
         };
 
-        window.addEventListener("storage", handleStorageChange);
         window.addEventListener("fantasy-auth-session-expired", handleSessionExpired);
 
         return () => {
-            window.removeEventListener("storage", handleStorageChange);
             window.removeEventListener("fantasy-auth-session-expired", handleSessionExpired);
         };
     }, [resetSession, router]);
 
-    const login = useCallback((userOrPayload, maybeToken) => {
+    const login = useCallback((userOrPayload) => {
         const resolvedUser = userOrPayload?.user ?? userOrPayload;
-        const resolvedToken = userOrPayload?.token ?? maybeToken;
-
-        if (resolvedToken && resolvedUser) {
-            saveSession(resolvedToken, resolvedUser);
-        }
-
-        setToken(resolvedToken || null);
         setUser(resolvedUser || null);
         setSessionMessage("");
         router.replace(getPostLoginRoute(resolvedUser));
+        router.refresh();
     }, [router]);
 
-    const logout = useCallback((options = {}) => {
+    const logout = useCallback(async (options = {}) => {
         const { redirect = true, message = "" } = options;
-        resetSession();
-        setSessionMessage(message);
-        if (redirect) {
-            router.replace('/login');
+        try {
+            await apiRequest("/api/auth/logout", { method: "POST", auth: false });
+        } catch (error) {
+            console.warn("The server logout request failed; clearing the local UI session.", error);
+        } finally {
+            resetSession();
+            setSessionMessage(message);
+            if (redirect) {
+                router.replace('/login');
+                router.refresh();
+            }
         }
     }, [resetSession, router]);
 
     const updateUser = useCallback((updates) => {
         setUser((currentUser) => {
             if (!currentUser) return currentUser;
-            const updatedUser = { ...currentUser, ...updates };
-            saveSession(getStoredToken(), updatedUser);
-            return updatedUser;
+            return { ...currentUser, ...updates };
         });
     }, []);
 
     return (
         <AuthContext.Provider value={{
             user,
-            token,
-            loading,
+            loading: false,
             login,
             logout,
             updateUser,
@@ -168,7 +93,7 @@ export const AuthProvider = ({ children }) => {
             sessionMessage,
             clearSessionMessage: () => setSessionMessage(""),
         }}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

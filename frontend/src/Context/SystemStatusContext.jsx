@@ -1,11 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWebSocket } from "./WebSocketContext";
 import { fetchSystemStatus } from "../services/systemService";
 import { useAuth } from "./AuthContext";
+import { queryKeys } from "../lib/query/keys";
 
-const SystemStatusContext = createContext();
+const SystemStatusContext = createContext(null);
 
 const MIN_DISPLAY_TIME = 2 * 60 * 1000;
 const STORAGE_KEY = 'gw_update_start_time';
@@ -16,6 +18,14 @@ export function SystemStatusProvider({ children }) {
     const unlockTimerRef = useRef(null);
     const { subscribe, connected } = useWebSocket();
     const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const statusQuery = useQuery({
+        queryKey: queryKeys.systemStatus,
+        queryFn: fetchSystemStatus,
+        enabled: Boolean(user?.id),
+        staleTime: 5_000,
+        refetchInterval: connected ? false : 15_000,
+    });
 
     const wipeStorage = useCallback(() => {
         localStorage.removeItem(STORAGE_KEY);
@@ -85,12 +95,9 @@ export function SystemStatusProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        if (!user?.id) {
-            setIsSystemLocked(false);
-            return;
-        }
+        if (!user?.id || statusQuery.data === undefined) return;
 
-        const initializeStatus = async () => {
+        const reconcileStatus = () => {
             const storedTime = localStorage.getItem(STORAGE_KEY);
 
             if (storedTime) {
@@ -106,41 +113,43 @@ export function SystemStatusProvider({ children }) {
                 }
             }
 
-            try {
-                const isBackendLocked = await fetchSystemStatus();
-                if (isBackendLocked) {
-                    handleLock();
-                } else {
-                    if (localStorage.getItem(STORAGE_KEY)) {
-                        handleUnlock();
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to check system status:", e);
+            if (statusQuery.data) {
+                handleLock();
+            } else if (localStorage.getItem(STORAGE_KEY)) {
+                handleUnlock();
             }
         };
 
-        initializeStatus();
-    }, [handleLock, handleUnlock, wipeStorage, user?.id]);
+        reconcileStatus();
+    }, [handleLock, handleUnlock, statusQuery.data, user?.id, wipeStorage]);
 
     useEffect(() => {
         if (!connected) return;
 
         return subscribe('/topic/system-status', (data) => {
             console.log("📡 WS Event in Context:", data);
-            if (data?.status === 'LOCKED') handleLock();
-            else if (data?.status === 'UNLOCKED') handleUnlock();
+            if (data?.status === 'LOCKED') {
+                queryClient.setQueryData(queryKeys.systemStatus, true);
+                handleLock();
+            } else if (data?.status === 'UNLOCKED') {
+                queryClient.setQueryData(queryKeys.systemStatus, false);
+                handleUnlock();
+            }
         });
 
-    }, [connected, subscribe, handleLock, handleUnlock]);
+    }, [connected, subscribe, handleLock, handleUnlock, queryClient]);
 
     return (
-        <SystemStatusContext.Provider value={{ isSystemLocked }}>
+        <SystemStatusContext.Provider value={{ isSystemLocked: Boolean(user?.id && isSystemLocked) }}>
             {children}
         </SystemStatusContext.Provider>
     );
 }
 
 export function useSystemStatus() {
-    return useContext(SystemStatusContext);
+    const context = useContext(SystemStatusContext);
+    if (!context) {
+        throw new Error("useSystemStatus must be used inside SystemStatusProvider");
+    }
+    return context;
 }

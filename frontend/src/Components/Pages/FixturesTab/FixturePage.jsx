@@ -1,3 +1,5 @@
+"use client";
+
 import { useAuth } from "../../../Context/AuthContext";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";

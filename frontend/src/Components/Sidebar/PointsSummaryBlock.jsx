@@ -1,34 +1,26 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+
 import { useGameweek } from "../../Context/GameweeksContext";
-import styles from "../../Styles/PointsSummaryBlock.module.css";
+import { queryKeys } from "../../lib/query/keys";
 import { fetchUserPoints, fetchUserTotalPoints } from "../../services/pointsService";
+import styles from "../../Styles/PointsSummaryBlock.module.css";
 import HistoryModal from "../General/HistoryModal";
 
 function PointsSummaryBlock({ user }) {
     const [showHistory, setShowHistory] = useState(false);
     const { currentGameweek } = useGameweek();
-    const [points, setPoints] = useState(null);
-    const [totalPoints, setTotalPoints] = useState(null);
-
-    useEffect(() => {
-        if (!user || !currentGameweek) return;
-
-        async function load() {
-            try {
-                const [pointsRes, totalPointsRes] = await Promise.all([
-                    fetchUserPoints(user.id, currentGameweek.id),
-                    fetchUserTotalPoints(user.id)
-                ]);
-                setPoints(pointsRes);
-                setTotalPoints(totalPointsRes);
-            } catch (error) {
-                console.error("Error loading points:", error);
-            }
-        }
-
-        load();
-
-    }, [user, currentGameweek]);
+    const pointsQuery = useQuery({
+        queryKey: queryKeys.userGameweekPoints(user?.id, currentGameweek?.id),
+        queryFn: () => fetchUserPoints(user.id, currentGameweek.id),
+        enabled: Boolean(user?.id && currentGameweek?.id),
+    });
+    const totalQuery = useQuery({
+        queryKey: queryKeys.userTotalPoints(user?.id),
+        queryFn: () => fetchUserTotalPoints(user.id),
+        enabled: Boolean(user?.id),
+        staleTime: 30_000,
+    });
 
     if (!user) return null;
 
@@ -46,28 +38,19 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.stats}>
                 <div className={styles.row}>
                     <span>Gameweek Points</span>
-                    <span className={styles.value}>{points !== null ? points : "-"}</span>
+                    <span className={styles.value}>{pointsQuery.data ?? "-"}</span>
                 </div>
                 <div className={styles.row}>
                     <span>Overall Points</span>
-                    <span className={styles.value}>{totalPoints !== null ? totalPoints : "-"}</span>
+                    <span className={styles.value}>{totalQuery.data ?? "-"}</span>
                 </div>
             </div>
 
-            <div
-                className={styles.history}
-                onClick={() => setShowHistory(true)}
-                style={{ cursor: "pointer" }}
-            >
+            <button className={styles.history} onClick={() => setShowHistory(true)}>
                 View History →
-            </div>
+            </button>
 
-            {showHistory && (
-                <HistoryModal
-                    userId={user.id}
-                    onClose={() => setShowHistory(false)}
-                />
-            )}
+            {showHistory && <HistoryModal userId={user.id} onClose={() => setShowHistory(false)} />}
         </div>
     );
 }

@@ -1,25 +1,33 @@
 package com.fantasy.domain.auth;
 
 import com.fantasy.domain.user.UserDto;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthCookieService authCookieService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AuthCookieService authCookieService) {
         this.authService = authService;
+        this.authCookieService = authCookieService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
         try {
             LoginResponse response = authService.login(req);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, authCookieService.createSessionCookie(response.token).toString())
+                    .body(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         }
@@ -28,7 +36,10 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            return ResponseEntity.status(201).body(authService.register(request));
+            LoginResponse response = authService.register(request);
+            return ResponseEntity.status(201)
+                    .header(HttpHeaders.SET_COOKIE, authCookieService.createSessionCookie(response.token).toString())
+                    .body(response);
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(exception.getMessage());
         }
@@ -36,7 +47,14 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        return ResponseEntity.ok("Logged out successfully");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, authCookieService.clearSessionCookie().toString())
+                .body("Logged out successfully");
+    }
+
+    @GetMapping("/csrf")
+    public Map<String, String> csrf(CsrfToken csrfToken) {
+        return Map.of("token", csrfToken.getToken());
     }
 
     @GetMapping("/me")

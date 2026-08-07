@@ -78,6 +78,10 @@
 }
 
 .history {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
     text-align: right;
     padding: 10px 18px 14px;
     color: #38003c;

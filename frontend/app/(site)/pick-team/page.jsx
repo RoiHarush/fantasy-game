@@ -1,17 +1,12 @@
-"use client";
-
-import { RequireLeague, RequireActiveLeague } from "../../../src/RouteGuards";
-import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
 import PickTeamPage from "../../../src/Components/Pages/PickTeamTab/PickTeamPage";
+import GameweekUpdatingGuard from "../../../src/GameweekUpdatingGuard";
+import { requireActiveLeagueUser } from "../../../src/server/auth";
 
-export default function PickTeamRoute() {
+export default async function PickTeamRoute() {
+    await requireActiveLeagueUser();
     return (
-        <RequireLeague>
-            <RequireActiveLeague>
-                <GameweekUpdatingGuard>
-                    <PickTeamPage />
-                </GameweekUpdatingGuard>
-            </RequireActiveLeague>
-        </RequireLeague>
+        <GameweekUpdatingGuard>
+            <PickTeamPage />
+        </GameweekUpdatingGuard>
     );
 }

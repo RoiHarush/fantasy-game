@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useQuery } from "@tanstack/react-query";
 import ColumnsBlock from "../../Blocks/ColumnsBlock";
 import SplitBlock from "../../Blocks/SplitBlock";
 import Style from "../../../Styles/Status.module.css";
@@ -8,38 +8,22 @@ import { fetchUserPoints } from "../../../services/pointsService";
 import { fetchDailyStatus } from "../../../services/gameweekService";
 import DailyStatusTable from "./DailyStatusTable";
 import TransferActivityList from "./TransferActivityList";
+import { queryKeys } from "../../../lib/query/keys";
 
 function Status({ user, league, currentGameweek, nextGameweek, preSeason = false }) {
 
-    const [gwPoints, setGwPoints] = useState("-");
-    const [dailyStatus, setDailyStatus] = useState([]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!preSeason && user?.id && currentGameweek?.id) {
-                try {
-                    const [points, statusData] = await Promise.all([
-                        fetchUserPoints(user.id, currentGameweek.id).catch(err => {
-                            console.error("Failed to fetch live points:", err);
-                            return "-";
-                        }),
-                        fetchDailyStatus(currentGameweek.id).catch(err => {
-                            console.error("Failed to fetch daily status:", err);
-                            return [];
-                        })
-                    ]);
-
-                    setGwPoints(points);
-                    setDailyStatus(statusData);
-
-                } catch (err) {
-                    console.error("General error loading status page data:", err);
-                }
-            }
-        };
-
-        loadData();
-    }, [preSeason, user?.id, currentGameweek?.id]);
+    const pointsQuery = useQuery({
+        queryKey: queryKeys.userGameweekPoints(user?.id, currentGameweek?.id),
+        queryFn: () => fetchUserPoints(user.id, currentGameweek.id),
+        enabled: Boolean(!preSeason && user?.id && currentGameweek?.id),
+    });
+    const dailyStatusQuery = useQuery({
+        queryKey: queryKeys.dailyStatus(currentGameweek?.id),
+        queryFn: () => fetchDailyStatus(currentGameweek.id),
+        enabled: Boolean(!preSeason && currentGameweek?.id),
+    });
+    const gwPoints = pointsQuery.data ?? "-";
+    const dailyStatus = dailyStatusQuery.data ?? [];
 
     const parseDateArray = (dateArray) => {
         if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
