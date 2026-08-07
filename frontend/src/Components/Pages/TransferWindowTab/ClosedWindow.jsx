@@ -29,6 +29,13 @@ function ClosedWindow() {
         : new Date();
 
     const isAdmin = Boolean(user?.leagueAdmin);
+    const useTwoOrderColumns = currentOrder.length > 7;
+    const orderSplitIndex = useTwoOrderColumns
+        ? Math.ceil(currentOrder.length / 2)
+        : currentOrder.length;
+    const orderColumns = useTwoOrderColumns
+        ? [currentOrder.slice(0, orderSplitIndex), currentOrder.slice(orderSplitIndex)]
+        : [currentOrder];
 
     const onClickOpenWindow = () => {
         setShowConfirmModal(true);
@@ -97,35 +104,32 @@ function ClosedWindow() {
                     padding: '25px',
                     borderRadius: '12px',
                     width: '100%',
-                    maxWidth: '550px',
+                    maxWidth: useTwoOrderColumns ? '550px' : '360px',
                     margin: '20px auto',
                 }}
             >
                 <div style={{ color: '#00e5ff', fontWeight: 'bold', marginBottom: '15px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: '8px', fontSize: '1.1rem' }}>
-                    Upcoming Draft Order (GW {nextGameweek?.id})
+                    Upcoming Transfer Order (GW {nextGameweek?.id})
                 </div>
                 {currentOrder.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {currentOrder.slice(0, 7).map((name, index) => (
-                                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: '3px solid #10b981', color: 'white', fontSize: '0.95rem' }}>
-                                    <span style={{ color: '#9ca3af', width: '24px' }}>{index + 1}.</span>
-                                    <span style={{ fontWeight: '500' }}>{name}</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${orderColumns.length}, minmax(0, 1fr))`, gap: '12px', marginTop: '10px' }}>
+                        {orderColumns.map((column, columnIndex) => {
+                            const offset = columnIndex === 0 ? 0 : orderSplitIndex;
+                            return (
+                                <div key={columnIndex} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {column.map((name, index) => (
+                                        <div key={offset + index} style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', minWidth: '220px', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: `3px solid ${columnIndex === 0 ? '#10b981' : '#3b82f6'}`, color: 'white', fontSize: '0.95rem' }}>
+                                            <span style={{ color: '#9ca3af', width: '24px' }}>{offset + index + 1}.</span>
+                                            <span style={{ fontWeight: '500' }}>{name}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {currentOrder.slice(7, 14).map((name, index) => (
-                                <div key={index + 7} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', borderLeft: '3px solid #3b82f6', color: 'white', fontSize: '0.95rem' }}>
-                                    <span style={{ color: '#9ca3af', width: '24px' }}>{index + 8}.</span>
-                                    <span style={{ fontWeight: '500' }}>{name}</span>
-                                </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div style={{ color: '#9ca3af', textAlign: 'center', fontStyle: 'italic', fontSize: '0.9rem', padding: '12px' }}>
-                        Draft order hasn&apos;t been set yet.
+                        Transfer order hasn&apos;t been set yet.
                     </div>
                 )}
             </div>
@@ -152,7 +156,7 @@ function ClosedWindow() {
                         }}
                         onClick={() => setIsModalOpen(true)}
                     >
-                        Manage Draft Order
+                        Manage Transfer Order
                     </button>
 
                     <button

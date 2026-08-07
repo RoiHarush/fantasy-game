@@ -84,10 +84,6 @@ function NavButtons() {
                 Draft Room
             </Link>
 
-            <Link href="/waivers" className={getClassName("/waivers", true)}>
-                Waivers
-            </Link>
-
             {isAdmin && (
                 <Link
                     href="/league-control"

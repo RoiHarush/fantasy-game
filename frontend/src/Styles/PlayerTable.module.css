@@ -1,6 +1,7 @@
 .mainTable {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-family: Arial, sans-serif;
     font-size: 0.95rem;
 }
@@ -56,7 +57,9 @@
 }
 
 .mainTable button {
-    min-width: 70px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 6px 12px;
     border: none;
     border-radius: 6px;
@@ -127,4 +130,8 @@
         text-align: center !important;
         padding-right: 4px;
     }
+}
+
+.actionHeader {
+    text-align: center !important;
 }

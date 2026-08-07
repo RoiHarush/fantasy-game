@@ -28,7 +28,7 @@ function StatusPage() {
                     setLeague(leagueDetails);
                     updateUser({ leagueStatus: leagueDetails.status });
                 }
-                if (leagueDetails.status === "ACTIVE" && currentGameweek) {
+                if (leagueDetails.status === "ACTIVE") {
                     const leagueData = await fetchLeague();
                     if (!cancelled) setLeague(leagueData);
                 } else if (leagueDetails.status !== "ACTIVE" && !cancelled) {

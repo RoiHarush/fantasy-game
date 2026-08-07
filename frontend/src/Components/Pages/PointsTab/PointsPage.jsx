@@ -8,6 +8,8 @@ import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "./Points";
 import LoadingPage from "../../General/LoadingPage";
 import { useAuth } from "../../../Context/AuthContext";
+import Style from "../../../Styles/Points.module.css";
+import ButtonStyle from "../../../Styles/Button.module.css";
 
 
 function PointsPage({ displayedUser }) {
@@ -72,10 +74,15 @@ function PointsPage({ displayedUser }) {
 
     if (isPreSeason) {
         return (
-            <section style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
+            <section className={Style.preSeasonState}>
                 <h1>The season has not started yet</h1>
                 <p>There are no gameweek points to display.</p>
-                <Link href="/pick-team">Prepare your Gameweek 1 squad</Link>
+                <Link
+                    href="/pick-team"
+                    className={`${ButtonStyle.btn} ${Style.preSeasonCta}`}
+                >
+                    Prepare your Gameweek 1 squad
+                </Link>
             </section>
         );
     }

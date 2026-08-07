@@ -24,6 +24,33 @@
     width: 100%;
 }
 
+.preSeasonState {
+    min-height: 310px;
+    padding: 4rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+}
+
+.preSeasonState h1,
+.preSeasonState p {
+    margin: 0;
+}
+
+.preSeasonCta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14px;
+    text-decoration: none;
+    background: linear-gradient(90deg, #8f2fff, #00cfe8);
+    border-radius: 10px;
+    padding: 12px 24px;
+}
+
 @media (max-width: 768px) {
     .contentWrapper {
         width: 100%;

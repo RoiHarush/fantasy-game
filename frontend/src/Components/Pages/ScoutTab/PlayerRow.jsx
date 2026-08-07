@@ -80,7 +80,7 @@ const PlayerRow = memo(function PlayerRow({
                 );
             })}
 
-            <td>
+            <td className={Style.actionCell}>
                 <button
                     className={`${Style.compareBtn} ${isSelectedForCompare ? Style.selectedCompare : ""}`}
                     onClick={(e) => {
@@ -103,7 +103,7 @@ const PlayerRow = memo(function PlayerRow({
             </td>
 
             {mode === "scout" && (
-                <td>
+                <td className={Style.actionCell}>
                     <span
                         className={`${Style.ownerBadge} ${player.available
                             ? Style.ownerFree
@@ -118,7 +118,7 @@ const PlayerRow = memo(function PlayerRow({
             )}
 
             {mode === "scout" && onWaiverSelect && (
-                <td>
+                <td className={Style.actionCell}>
                     {player.available || (player.ownerId != null && player.ownerId !== user?.id) ? (
                         <button
                             type="button"
@@ -143,7 +143,7 @@ const PlayerRow = memo(function PlayerRow({
 
             {
                 (mode === "transfer" || mode === "draft") && (
-                    <td>
+                    <td className={Style.actionCell}>
                         {player.available && !ruleLocked ? (
                             <button
                                 className={Style.signBtn}

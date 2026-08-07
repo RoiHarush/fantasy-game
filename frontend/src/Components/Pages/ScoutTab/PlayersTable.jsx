@@ -56,28 +56,28 @@ function PlayerTable({
 
                 fixedHeaderContent={() => (
                     <tr className={Style.headerRow}>
-                        <th style={{ width: '200px' }}>Player</th>
-                        <th style={{ width: '50px' }}>Pts</th>
+                        <th style={{ width: '190px' }}>Player</th>
+                        <th style={{ width: '46px' }}>Pts</th>
 
                         {upcomingGws.map((gw) => (
-                            <th key={gw} style={{ width: '80px' }} className={Style.hiddenOnMobile}>
+                            <th key={gw} style={{ width: '64px' }} className={Style.hiddenOnMobile}>
                                 GW{gw}
                             </th>
                         ))}
 
-                        <th style={{ width: '100px' }}>
+                        <th style={{ width: '110px' }} className={Style.actionHeader}>
                             <span className={Style.desktopText}>Compare</span>
                             <span className={Style.mobileText}>CMP</span>
                         </th>
 
-                        <th style={{ width: '60px' }}>
+                        <th style={{ width: '92px' }} className={Style.actionHeader}>
                             <span className={Style.desktopText}>Watchlist</span>
                             <span className={Style.mobileText}>Watch</span>
                         </th>
 
-                        {mode === "scout" && <th style={{ width: '100px' }}>Owner</th>}
-                        {mode === "scout" && onWaiverSelect && <th style={{ width: '90px' }}>Waiver</th>}
-                        {(mode === "transfer" || mode === "draft") && <th style={{ width: '80px' }}>{mode === "draft" ? "Draft" : "Sign"}</th>}
+                        {mode === "scout" && <th style={{ width: '86px' }} className={Style.actionHeader}>Owner</th>}
+                        {mode === "scout" && onWaiverSelect && <th style={{ width: '82px' }} className={Style.actionHeader}>Waiver</th>}
+                        {(mode === "transfer" || mode === "draft") && <th style={{ width: '80px' }} className={Style.actionHeader}>{mode === "draft" ? "Draft" : "Sign"}</th>}
                     </tr>
                 )}
 

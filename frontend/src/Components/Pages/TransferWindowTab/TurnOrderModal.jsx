@@ -92,8 +92,9 @@ const styles = {
 
 export default function TurnOrderModal({ onClose, usersList }) {
     const { nextGameweek } = useGameweek();
+    const pickCount = usersList.length * 2;
 
-    const [picks, setPicks] = useState(Array(14).fill(""));
+    const [picks, setPicks] = useState(() => Array(pickCount).fill(""));
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -102,12 +103,10 @@ export default function TurnOrderModal({ onClose, usersList }) {
 
             try {
                 const existingOrder = await apiRequest(`/api/market/turn-order/${nextGameweek.id}`);
-                if (existingOrder && existingOrder.length > 0) {
-                    const newPicks = Array(14).fill("").map((_, i) =>
-                        i < existingOrder.length ? String(existingOrder[i]) : ""
-                    );
-                    setPicks(newPicks);
-                }
+                const newPicks = Array(pickCount).fill("").map((_, i) =>
+                    i < (existingOrder?.length || 0) ? String(existingOrder[i]) : ""
+                );
+                setPicks(newPicks);
             } catch (err) {
                 console.error("Failed to fetch existing order", err);
             } finally {
@@ -116,7 +115,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
         };
 
         fetchCurrentOrder();
-    }, [nextGameweek]);
+    }, [nextGameweek, pickCount]);
 
     const handleUserSelect = (index, userId) => {
         const newPicks = [...picks];
@@ -128,7 +127,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
         const cleanOrder = picks.filter(id => id !== "").map(Number);
 
         if (cleanOrder.length === 0) {
-            if (!window.confirm("You are saving an empty list. This will clear the draft order. Continue?")) return;
+            if (!window.confirm("You are saving an empty list. This will clear the transfer order. Continue?")) return;
         }
 
         const dto = { order: cleanOrder };
@@ -140,7 +139,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
                 body: dto,
             });
 
-            alert("Draft order updated successfully!");
+            alert("Transfer order updated successfully!");
             onClose();
         } catch (err) {
             alert("Error: " + err.message);
@@ -153,7 +152,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
         <div style={styles.overlay}>
             <div style={styles.modal}>
                 <div style={styles.header}>
-                    Set Draft Order (GW {nextGameweek?.id})
+                    Set Transfer Order (GW {nextGameweek?.id})
                 </div>
 
                 <div style={styles.scrollArea}>
