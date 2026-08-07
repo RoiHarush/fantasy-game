@@ -14,7 +14,7 @@ public class TeamController {
     }
 
     @GetMapping
-    public List<TeamEntity> getTeams() {
+    public List<TeamDto> getTeams() {
         return teamService.getAllTeams();
     }
 }

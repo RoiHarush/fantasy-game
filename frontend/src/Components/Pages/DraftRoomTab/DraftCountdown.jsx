@@ -12,15 +12,17 @@ function toDate(value) {
 
 export default function DraftCountdown({ value }) {
     const target = useMemo(() => toDate(value), [value]);
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(null);
 
     useEffect(() => {
         if (!target) return undefined;
+        setNow(Date.now());
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
         return () => window.clearInterval(timer);
     }, [target]);
 
     if (!target) return <span>Waiting for the league admin to schedule the draft</span>;
+    if (now === null) return <span>Loading draft countdown...</span>;
     const remaining = Math.max(0, target.getTime() - now);
     if (remaining === 0) return <span>Draft is starting…</span>;
 

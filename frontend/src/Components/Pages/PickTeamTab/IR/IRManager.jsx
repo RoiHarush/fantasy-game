@@ -3,9 +3,8 @@ import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
 import Style from "../../../../Styles/PickTeam.module.css";
-import API_URL from "../../../../config";
 import { usePlayers } from "../../../../Context/PlayersContext";
-import { getAuthHeaders } from "../../../../services/authHelper";
+import { apiRequest } from "../../../../services/apiClient";
 
 function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData }) {
     const [showIRModal, setShowIRModal] = useState(false);
@@ -58,31 +57,14 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
 
     const handleConfirmAssign = async (player) => {
         try {
-            const res = await fetch(
-                `${API_URL}/api/teams/${userId}/chips/ir?playerId=${player.id}`,
-                {
-                    method: "POST",
-                    headers: getAuthHeaders()
-                }
-            );
-
-            if (!res.ok) {
-                const msg = await res.text();
-                alert(`Failed to assign IR: ${msg}`);
-                return;
-            }
-
-            const updatedSquad = await res.json();
+            const updatedSquad = await apiRequest(`/api/teams/${userId}/chips/ir?playerId=${player.id}`, {
+                method: "POST",
+            });
             setSquad(updatedSquad);
             alert(`IR assigned successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
-                headers: getAuthHeaders()
-            });
-            if (chipRes.ok) {
-                const updatedChips = await chipRes.json();
-                setChips(updatedChips);
-            }
+            const updatedChips = await apiRequest(`/api/teams/${userId}/chips`);
+            setChips(updatedChips);
 
             if (refreshPlayerData) await refreshPlayerData();
 
@@ -97,31 +79,14 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
 
     const handleConfirmRelease = async (playerOut) => {
         try {
-            const res = await fetch(
-                `${API_URL}/api/teams/${userId}/chips/ir/release?playerOutId=${playerOut.id}`,
-                {
-                    method: "POST",
-                    headers: getAuthHeaders()
-                }
-            );
-
-            if (!res.ok) {
-                const msg = await res.text();
-                alert(`Failed to release IR: ${msg}`);
-                return;
-            }
-
-            const updatedSquad = await res.json();
+            const updatedSquad = await apiRequest(`/api/teams/${userId}/chips/ir/release?playerOutId=${playerOut.id}`, {
+                method: "POST",
+            });
             setSquad(updatedSquad);
             alert(`IR released successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
-                headers: getAuthHeaders()
-            });
-            if (chipRes.ok) {
-                const updatedChips = await chipRes.json();
-                setChips(updatedChips);
-            }
+            const updatedChips = await apiRequest(`/api/teams/${userId}/chips`);
+            setChips(updatedChips);
 
             if (refreshPlayerData) await refreshPlayerData();
 

@@ -1,0 +1,22 @@
+.panel { min-height: 420px; padding: 1.25rem; border-radius: 12px; background: white; color: #24102d; }
+.panel header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.panel header p, .panel header h3 { margin: 0; }
+.panel header p { color: #667085; font-size: 0.85rem; }
+.panel header span { color: #087f5b; font-weight: 700; }
+.help { color: #667085; }
+.message { padding: 0.6rem; border-radius: 8px; background: #eefbf5; }
+.list { display: grid; gap: 0.65rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.list li { display: grid; grid-template-columns: 64px 1fr auto; gap: 0.8rem; align-items: center; padding: 0.8rem; border: 1px solid #e4d9ec; border-left: 4px solid #00ff87; border-radius: 10px; cursor: grab; }
+.list input { width: 54px; padding: 0.45rem; }
+.list li div { display: grid; gap: 0.25rem; }
+.list li div strong { color: #087f5b; }
+.list li div span { color: #c92a2a; font-weight: 700; }
+.list button { border: 0; background: transparent; color: #c92a2a; cursor: pointer; }
+.empty { padding: 2rem; text-align: center; color: #667085; }
+.modalBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1rem; background: rgba(18, 5, 24, 0.72); }
+.modal { width: min(460px, 100%); padding: 1.25rem; border-radius: 14px; background: white; color: #24102d; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.modal select { width: 100%; margin: 0.75rem 0 1rem; padding: 0.7rem; }
+.modalActions { display: flex; justify-content: flex-end; gap: 0.6rem; }
+.modalActions button { padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #37003c; cursor: pointer; }
+.modalActions button:last-child { background: #37003c; color: white; }
+@media (max-width: 640px) { .list li { grid-template-columns: 54px 1fr; } .list li button { grid-column: 2; justify-self: start; } }

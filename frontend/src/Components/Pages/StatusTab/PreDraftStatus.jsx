@@ -26,7 +26,7 @@ export default function PreDraftStatus({ league }) {
             <p>
                 The game screens will unlock automatically after every manager has drafted a complete 15-player squad.
             </p>
-            <Link to="/draft-room">Open draft lobby</Link>
+            <Link href="/draft-room">Open draft lobby</Link>
         </section>
     );
 }

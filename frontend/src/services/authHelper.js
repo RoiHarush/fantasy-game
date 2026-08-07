@@ -1,7 +1,13 @@
+import { getStoredToken } from "./apiClient";
+
 export function getAuthHeaders() {
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
+
+    if (!token) {
+        return {};
+    }
+
     return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
     };
 }

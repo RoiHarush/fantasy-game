@@ -1,33 +1,21 @@
-import API_URL from "../config";
-import { getAuthHeaders } from "./authHelper";
+import { apiRequest } from "./apiClient";
 
 export async function fetchTransferWindowState() {
-    const res = await fetch(`${API_URL}/api/market/state`, {
-        headers: getAuthHeaders()
-    });
-    if (!res.ok) throw new Error("Failed to fetch transfer window state");
-    return res.json();
+    return apiRequest("/api/market/state");
+}
+
+export async function fetchTransferHistory(gameWeekId) {
+    return apiRequest(`/api/market/history/${gameWeekId}`);
 }
 
 export async function passTurn(userId) {
-    const res = await fetch(`${API_URL}/api/market/pass?userId=${userId}`, {
+    await apiRequest(`/api/market/pass?userId=${userId}`, {
         method: "POST",
-        headers: getAuthHeaders()
     });
-
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Failed to pass turn");
-    }
 }
 
 export async function makeDraftPick(playerId) {
-    const res = await fetch(`${API_URL}/api/market/draft-pick/${playerId}`, {
+    await apiRequest(`/api/market/draft-pick/${playerId}`, {
         method: "POST",
-        headers: getAuthHeaders()
     });
-    if (!res.ok) {
-        const message = await res.text();
-        throw new Error(message || "Failed to complete draft pick");
-    }
 }

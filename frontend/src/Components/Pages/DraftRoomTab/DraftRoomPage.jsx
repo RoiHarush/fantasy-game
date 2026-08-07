@@ -17,7 +17,7 @@ import { fetchMyLeague } from "../../../services/leagueService";
 function DraftRoomPage() {
     const { user, updateUser } = useAuth();
     const { nextGameweek } = useGameweek();
-    const { subscribe, unsubscribe, connected } = useWebSocket();
+    const { subscribe, connected } = useWebSocket();
 
     const [users, setUsers] = useState([]);
     const [windowState, setWindowState] = useState(null);
@@ -26,6 +26,7 @@ function DraftRoomPage() {
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
     const [selectedUserSquad, setSelectedUserSquad] = useState(null);
     const [league, setLeague] = useState(null);
+    const [squadRevision, setSquadRevision] = useState(0);
 
     const isAdmin = Boolean(user?.leagueAdmin);
 
@@ -79,18 +80,25 @@ function DraftRoomPage() {
             }
             if (event.event === "window_closed" && windowState?.isDraftMode) {
                 setWindowState({ isOpen: false, isDraftMode: false });
+                setLeague(current => current ? { ...current, status: "ACTIVE", leagueCode: null } : current);
+                setDraftConfig(current => current ? { ...current, processed: true } : current);
                 updateUser({ leagueStatus: "ACTIVE" });
+            }
+            if (event.event === "transfer_done" && windowState?.isDraftMode) {
+                setSquadRevision(current => current + 1);
             }
         };
 
         if (!user?.leagueId) return;
         const topic = `/topic/leagues/${user.leagueId}/transfers`;
-        subscribe(topic, handleDraftEvent);
-        return () => unsubscribe(topic);
-    }, [connected, subscribe, unsubscribe, updateUser, user?.leagueId, windowState?.isDraftMode]);
+        return subscribe(topic, handleDraftEvent);
+    }, [connected, subscribe, updateUser, user?.leagueId, windowState?.isDraftMode]);
 
     useEffect(() => {
-        if (!nextGameweek || !selectedUserId) return;
+        if (!windowState?.isOpen || !windowState?.isDraftMode || !nextGameweek || !selectedUserId) {
+            setSelectedUserSquad(null);
+            return;
+        }
         let cancelled = false;
         async function loadSquad() {
             try {
@@ -102,7 +110,7 @@ function DraftRoomPage() {
         }
         loadSquad();
         return () => { cancelled = true; };
-    }, [selectedUserId, nextGameweek]);
+    }, [selectedUserId, nextGameweek, squadRevision, windowState?.isDraftMode, windowState?.isOpen]);
 
     if (loading || !windowState) return <LoadingPage />;
 

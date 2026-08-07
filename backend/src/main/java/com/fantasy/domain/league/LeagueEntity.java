@@ -95,6 +95,7 @@ public class LeagueEntity {
     public Map<String, Integer> getPlayerPenaltyAdjustments() { return playerPenaltyAdjustments; }
     public LeagueStatus getStatus() { return status; }
     public void addUser(UserEntity user) { users.add(user); }
+    public void removeUser(UserEntity user) { users.remove(user); }
 
     public void setName(String name) { this.name = name; }
     public void setLeagueCode(String leagueCode) { this.leagueCode = leagueCode; }

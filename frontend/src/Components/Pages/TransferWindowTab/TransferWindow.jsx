@@ -1,13 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { usePlayers } from "../../../Context/PlayersContext";
 import { useWebSocket } from "../../../Context/WebSocketContext";
-import { makeDraftPick, passTurn } from "../../../services/transferWindowService";
+import { fetchTransferHistory, makeDraftPick, passTurn } from "../../../services/transferWindowService";
 import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
 import Style from "../../../Styles/TransferWindow.module.css";
 import ReplacementModal from "./ReplacementModal";
 import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
+import { fetchSquadForGameweek } from "../../../services/squadService";
+import { useGameweek } from "../../../Context/GameweeksContext";
 
 function TransferWindow({ user, allUsers, initialWindowState }) {
     const { players, setPlayers } = usePlayers();
@@ -23,11 +25,15 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
     const [turnsUsed, setTurnsUsed] = useState(initialWindowState?.turnsUsed || {});
     const [totalTurnsMap, setTotalTurnsMap] = useState(initialWindowState?.totalTurns || {});
 
-    const { subscribe, unsubscribe, connected } = useWebSocket();
+    const { subscribe, connected } = useWebSocket();
 
     const [isIrRound, setIsIrRound] = useState(initialWindowState?.currentRound === 'IR');
     const [irPosition, setIrPosition] = useState(null);
     const isDraftMode = Boolean(initialWindowState?.isDraftMode);
+    const { nextGameweek } = useGameweek();
+    const [draftSquad, setDraftSquad] = useState(null);
+    const [draftView, setDraftView] = useState("players");
+    const [draftActions, setDraftActions] = useState([]);
 
     const allTeamFixtures = useAllTeamFixtures();
 
@@ -35,6 +41,60 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
     useEffect(() => {
         playersRef.current = players;
     }, [players]);
+
+    const draftGameweekId = initialWindowState?.gameWeekId > 0
+        ? initialWindowState.gameWeekId
+        : nextGameweek?.id;
+
+    const refreshDraftSquad = useCallback(async () => {
+        if (!isDraftMode || !draftGameweekId || !user?.id) return;
+        try {
+            setDraftSquad(await fetchSquadForGameweek(user.id, draftGameweekId));
+        } catch (error) {
+            console.error("Failed to refresh draft squad:", error);
+        }
+    }, [draftGameweekId, isDraftMode, user?.id]);
+
+    const refreshDraftHistory = useCallback(async () => {
+        if (!isDraftMode || !draftGameweekId) return;
+        try {
+            const actions = await fetchTransferHistory(draftGameweekId);
+            setDraftActions((actions || []).filter(action => action.windowType === "DRAFT"));
+        } catch (error) {
+            console.error("Failed to refresh draft history:", error);
+        }
+    }, [draftGameweekId, isDraftMode]);
+
+    useEffect(() => {
+        void refreshDraftSquad();
+        void refreshDraftHistory();
+    }, [refreshDraftHistory, refreshDraftSquad]);
+
+    const draftRuleLockedIds = useMemo(() => {
+        if (!isDraftMode) return new Set();
+        const rosterIds = [
+            ...Object.values(draftSquad?.startingLineup || {}).flat(),
+            ...Object.values(draftSquad?.bench || {}),
+        ].filter(Boolean);
+        const rosterPlayers = rosterIds
+            .map(id => players.find(player => player.id === id))
+            .filter(Boolean);
+        const positionLimits = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
+        const positionCounts = {};
+        const clubCounts = {};
+        rosterPlayers.forEach(player => {
+            positionCounts[player.position] = (positionCounts[player.position] || 0) + 1;
+            clubCounts[player.teamId] = (clubCounts[player.teamId] || 0) + 1;
+        });
+
+        return new Set(players
+            .filter(player => player.available)
+            .filter(player => (
+                (positionCounts[player.position] || 0) >= (positionLimits[player.position] || 0)
+                || (clubCounts[player.teamId] || 0) >= 3
+            ))
+            .map(player => player.id));
+    }, [draftSquad, isDraftMode, players]);
 
     const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
@@ -112,6 +172,11 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 setLastTransferMessage(isDraftMode
                     ? `${userName || "User"} drafted ${inName}`
                     : `${userName || "User"} signed ${inName} | over ${outName}`);
+
+                if (isDraftMode && userId === user.id) {
+                    void refreshDraftSquad();
+                }
+                if (isDraftMode) void refreshDraftHistory();
             }
 
             if (event.event === "turn_passed") {
@@ -121,10 +186,9 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
         if (!user.leagueId) return;
         const topic = `/topic/leagues/${user.leagueId}/transfers`;
-        subscribe(topic, handleTransferEvent);
-        return () => unsubscribe(topic);
+        return subscribe(topic, handleTransferEvent);
 
-    }, [connected, isDraftMode, subscribe, unsubscribe, user.id, user.leagueId, setPlayers]);
+    }, [connected, isDraftMode, refreshDraftHistory, refreshDraftSquad, subscribe, user.id, user.leagueId, setPlayers]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
@@ -237,14 +301,43 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 <div className={Style.transferMessage}>{lastTransferMessage}</div>
             )}
 
-            <PlayersWrapper
-                user={user}
-                mode={isDraftMode ? "draft" : "transfer"}
-                onPlayerSelect={setSelectedPlayerIn}
-                currentTurnUserId={currentTurnUserId}
-                irPosition={isIrRound ? irPosition : null}
-                allTeamFixtures={allTeamFixtures}
-            />
+            {isDraftMode && (
+                <div className={Style.draftTabs} role="tablist" aria-label="Draft views">
+                    <button
+                        type="button"
+                        className={draftView === "players" ? Style.activeDraftTab : ""}
+                        onClick={() => setDraftView("players")}
+                    >Players</button>
+                    <button
+                        type="button"
+                        className={draftView === "drafted" ? Style.activeDraftTab : ""}
+                        onClick={() => setDraftView("drafted")}
+                    >Drafted ({draftActions.length})</button>
+                </div>
+            )}
+
+            {isDraftMode && draftView === "drafted" ? (
+                <ol className={Style.draftedList}>
+                    {draftActions.map((action, index) => (
+                        <li key={action.id}>
+                            <span>#{index + 1}</span>
+                            <strong>{action.userName}</strong>
+                            <span>{players.find(player => player.id === action.playerInId)?.viewName || `Player #${action.playerInId}`}</span>
+                        </li>
+                    ))}
+                    {draftActions.length === 0 && <li>No players have been drafted yet.</li>}
+                </ol>
+            ) : (
+                <PlayersWrapper
+                    user={user}
+                    mode={isDraftMode ? "draft" : "transfer"}
+                    onPlayerSelect={setSelectedPlayerIn}
+                    currentTurnUserId={currentTurnUserId}
+                    irPosition={isIrRound ? irPosition : null}
+                    allTeamFixtures={allTeamFixtures}
+                    disabledPlayerIds={draftRuleLockedIds}
+                />
+            )}
 
             {selectedPlayerIn && (
                 isIrRound ? (
@@ -259,6 +352,7 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                         <button onClick={async () => {
                             try {
                                 await makeDraftPick(selectedPlayerIn.id);
+                                await refreshDraftSquad();
                                 setSelectedPlayerIn(null);
                             } catch (error) {
                                 alert(error.message);

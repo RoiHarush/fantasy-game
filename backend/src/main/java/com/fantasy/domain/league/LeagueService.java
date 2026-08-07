@@ -45,14 +45,15 @@ public class LeagueService {
         Map<Integer, UserGameDataEntity> gameDataMap = gameDataRepo.findByLeague_Id(league.getId()).stream()
                 .collect(Collectors.toMap(gd -> gd.getUser().getId(), gd -> gd));
 
-        int currentGwId = gameWeekService.getCurrentGameweek().getId();
-
-        Map<Integer, Integer> gwPointsMap = userPointsRepo
-                .findByGameweekAndUser_League_Id(currentGwId, league.getId()).stream()
-                .collect(Collectors.toMap(
-                        upe -> upe.getUser().getId(),
-                        UserPointsEntity::getPoints
-                ));
+        var currentGameweek = gameWeekService.getCurrentGameweek();
+        Map<Integer, Integer> gwPointsMap = currentGameweek == null
+                ? Map.of()
+                : userPointsRepo
+                        .findByGameweekAndUser_League_Id(currentGameweek.getId(), league.getId()).stream()
+                        .collect(Collectors.toMap(
+                                upe -> upe.getUser().getId(),
+                                UserPointsEntity::getPoints
+                        ));
 
         List<UserEntity> sortedUsers = usersInLeague.stream()
                 .sorted(Comparator.comparingInt((UserEntity user) -> {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import API_URL from '../../../config';
-import { getAuthHeaders } from '../../../services/authHelper';
+import { apiRequest } from '../../../services/apiClient';
 
 const styles = {
     section: {
@@ -151,15 +150,8 @@ export default function AdminActionsPage() {
 
         const fetchPlayers = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/players`, {
-                    headers: getAuthHeaders()
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setAllPlayers(data.map(p => ({ id: p.id, viewName: p.viewName })));
-                } else {
-                    console.error("Failed to fetch players list");
-                }
+                const data = await apiRequest('/api/players');
+                setAllPlayers(data.map(p => ({ id: p.id, viewName: p.viewName })));
             } catch (err) {
                 console.error("Error fetching players list:", err);
             }
@@ -167,15 +159,8 @@ export default function AdminActionsPage() {
 
         const fetchUsers = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/admin/users-summary`, {
-                    headers: getAuthHeaders()
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setAllUsersList(data.map(u => ({ userId: u.userId, username: u.username })));
-                } else {
-                    console.error("Failed to fetch users list");
-                }
+                const data = await apiRequest('/api/admin/users-summary');
+                setAllUsersList(data.map(u => ({ userId: u.userId, username: u.username })));
             } catch (err) {
                 console.error("Error fetching users list:", err);
             }
@@ -199,19 +184,16 @@ export default function AdminActionsPage() {
         setMessage({ text: '', type: '' });
 
         try {
-            const res = await fetch(`${API_URL}${endpoint}`, {
+            const responseBody = await apiRequest(endpoint, {
                 method: method,
-                headers: getAuthHeaders(),
-                body: body ? JSON.stringify(body) : null,
+                body,
             });
-
-            const responseText = await res.text();
-
-            if (!res.ok) {
-                throw new Error(responseText || 'Failed to perform action');
-            }
-
-            setMessage({ text: responseText || 'Success!', type: 'success' });
+            const responseText = typeof responseBody === 'string'
+                ? responseBody
+                : responseBody == null
+                    ? 'Success!'
+                    : JSON.stringify(responseBody);
+            setMessage({ text: responseText, type: 'success' });
 
         } catch (err) {
             setMessage({ text: err.message, type: 'error' });

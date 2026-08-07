@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import API_URL from "../../../config";
 import { useAuth } from "../../../Context/AuthContext";
-import { getAuthHeaders } from "../../../services/authHelper";
+import { apiRequest } from "../../../services/apiClient";
+import { getPostLoginRoute } from "../../../Utils/routing";
 import styles from "../../../Styles/LeagueOnboarding.module.css";
 
 export default function LeagueOnboardingPage() {
@@ -18,19 +18,21 @@ export default function LeagueOnboardingPage() {
     const [scoringRules, setScoringRules] = useState({});
     const [createdLeague, setCreatedLeague] = useState(null);
     const [copied, setCopied] = useState(false);
-    const { updateUser } = useAuth();
+    const { user, refreshCurrentUser } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
         if (mode !== "create" || Object.keys(scoringRules).length > 0) return;
-        fetch(`${API_URL}/api/leagues/scoring-rules/defaults`, { headers: getAuthHeaders() })
-            .then(response => {
-                if (!response.ok) throw new Error("Could not load scoring rules");
-                return response.json();
-            })
+        apiRequest("/api/leagues/scoring-rules/defaults")
             .then(setScoringRules)
             .catch(requestError => setError(requestError.message));
     }, [mode, scoringRules]);
+
+    useEffect(() => {
+        if (user?.leagueId && !createdLeague) {
+            router.replace(getPostLoginRoute(user));
+        }
+    }, [createdLeague, router, user]);
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -38,7 +40,7 @@ export default function LeagueOnboardingPage() {
         setSubmitting(true);
 
         const creating = mode === "create";
-        const endpoint = creating ? `${API_URL}/api/leagues` : `${API_URL}/api/leagues/join`;
+        const endpoint = creating ? "/api/leagues" : "/api/leagues/join";
         const payload = creating
             ? {
                 name: leagueName,
@@ -49,30 +51,17 @@ export default function LeagueOnboardingPage() {
             : { leagueCode: leagueCode.trim().toUpperCase(), fantasyTeamName: teamName };
 
         try {
-            const response = await fetch(endpoint, {
+            const league = await apiRequest(endpoint, {
                 method: "POST",
-                headers: {
-                    ...getAuthHeaders(),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
+                body: payload,
             });
-            if (!response.ok) {
-                const body = await response.json().catch(() => null);
-                throw new Error(body?.error || "Could not complete league setup");
-            }
 
-            const league = await response.json();
-            updateUser({
-                leagueId: league.id,
-                leagueAdmin: league.currentUserAdmin,
-                leagueStatus: league.status,
-                fantasyTeamName: teamName || undefined
-            });
             if (creating) {
                 setCreatedLeague(league);
+                await refreshCurrentUser();
             } else {
-                router.replace("/status");
+                const currentUser = await refreshCurrentUser();
+                router.replace(getPostLoginRoute(currentUser));
             }
         } catch (requestError) {
             setError(requestError.message);

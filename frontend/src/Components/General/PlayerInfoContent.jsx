@@ -2,7 +2,8 @@ import { useGameweek } from "../../Context/GameweeksContext";
 import Style from "../../Styles/PlayerInfoContent.module.css";
 
 function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
-    const { currentGameweek } = useGameweek();
+    const { currentGameweek, nextGameweek } = useGameweek();
+    const fixtureBoundary = currentGameweek?.id ?? Math.max(0, (nextGameweek?.id ?? 1) - 1);
 
     const getFdrColor = (difficulty) => {
         switch (difficulty) {
@@ -32,7 +33,7 @@ function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
                     <tbody>
                         {Object.entries(teamFixtures || {})
                             .sort(([gwA], [gwB]) => Number(gwA) - Number(gwB))
-                            .filter(([gw]) => Number(gw) > currentGameweek.id)
+                            .filter(([gw]) => Number(gw) > fixtureBoundary)
                             .map(([gw, fixture]) => {
                                 const opponent = fixture.opponent || "Unknown";
                                 const difficulty = fixture.difficulty || 3;

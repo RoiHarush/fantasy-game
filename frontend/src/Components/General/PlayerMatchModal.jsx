@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import Style from "../../Styles/PlayerModal.module.css";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
-import API_URL from "../../config";
 import { useTeams } from "../../Context/TeamsContext";
+import { apiRequest } from "../../services/apiClient";
 
 function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
     const [matchData, setMatchData] = useState(null);
@@ -17,8 +17,7 @@ function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
                 return;
             }
 
-            fetch(`${API_URL}/api/players/${player.id}/match-stats?gw=${gameweek.id}&userId=${user.id}`)
-                .then(res => res.ok ? res.json() : null)
+            apiRequest(`/api/players/${player.id}/match-stats?gw=${gameweek.id}&userId=${user.id}`, { auth: false })
                 .then(data => {
                     if (data) {
                         matchCache.current[cacheKey] = data;

@@ -99,6 +99,30 @@ public class LeagueManagementService {
         return applySettings(league, request, actingUser);
     }
 
+    @Transactional
+    public LeagueDetailsDto removeMember(int actingUserId, long leagueId, int memberId) {
+        UserEntity actingUser = requireUser(actingUserId);
+        LeagueEntity league = leagueRepository.findByIdWithLock(leagueId)
+                .orElseThrow(() -> new IllegalArgumentException("League was not found"));
+        requireLeagueAdmin(actingUser, league);
+
+        if (league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE) {
+            throw new IllegalStateException("Managers cannot be removed after the initial draft starts");
+        }
+        if (league.getAdmin().getId().equals(memberId)) {
+            throw new IllegalArgumentException("The league admin cannot remove themselves");
+        }
+
+        UserEntity member = league.getUsers().stream()
+                .filter(user -> user.getId().equals(memberId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Manager is not in this league"));
+
+        gameDataRepository.findByUserId(memberId).ifPresent(gameDataRepository::delete);
+        league.removeUser(member);
+        return toDto(leagueRepository.save(league), actingUser);
+    }
+
     @Transactional(readOnly = true)
     public List<LeagueDetailsDto> getLeaguesForMaintenance() {
         return leagueRepository.findAll().stream()
@@ -239,7 +263,9 @@ public class LeagueManagementService {
         return new LeagueDetailsDto(
                 league.getId(),
                 league.getName(),
-                league.getLeagueCode(),
+                league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE
+                        ? null
+                        : league.getLeagueCode(),
                 league.getMaxParticipants(),
                 league.getUsers().size(),
                 league.getAdmin().getId(),

@@ -212,3 +212,9 @@
         width: auto
     }
 }
+
+.draftTabs { display: flex; justify-content: center; gap: 0.5rem; margin: 0 0 1rem; }
+.draftTabs button { border: 1px solid #d0c4dd; border-radius: 999px; padding: 0.55rem 1rem; background: white; color: #37003c; font-weight: 700; cursor: pointer; }
+.draftTabs .activeDraftTab { background: #37003c; color: white; border-color: #37003c; }
+.draftedList { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.draftedList li { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 0.8rem; align-items: center; padding: 0.8rem 1rem; border-radius: 10px; background: #f7f3fb; border-left: 4px solid #00ff87; color: #24102d; }

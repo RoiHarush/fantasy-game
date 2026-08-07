@@ -1,8 +1,7 @@
 import { useState } from "react";
 import ConfirmFirstPickCaptainModal from "./ConfirmFirstPickCaptainModal";
 import style from "../../../../Styles/PickTeam.module.css";
-import API_URL from "../../../../config";
-import { getAuthHeaders } from "../../../../services/authHelper";
+import { apiRequest } from "../../../../services/apiClient";
 
 function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -19,33 +18,19 @@ function FirstPickManager({ userId, squad, setSquad, chips, setChips }) {
     const handleConfirm = async () => {
         try {
             const endpoint = isActive
-                ? `${API_URL}/api/teams/${userId}/chips/first-pick-captain/release`
-                : `${API_URL}/api/teams/${userId}/chips/first-pick-captain`;
+                ? `/api/teams/${userId}/chips/first-pick-captain/release`
+                : `/api/teams/${userId}/chips/first-pick-captain`;
 
-            const res = await fetch(endpoint, {
+            const updatedSquad = await apiRequest(endpoint, {
                 method: "POST",
-                headers: getAuthHeaders()
             });
 
-            if (!res.ok) {
-                const msg = await res.text();
-                alert(`❌ Failed to ${isActive ? "cancel" : "activate"} chip: ${msg}`);
-                return;
-            }
-
-            const updatedSquad = await res.json();
             setSquad(updatedSquad);
 
             alert(`Captain Chip ${isActive ? "cancelled" : "activated"} successfully!`);
 
-            const chipRes = await fetch(`${API_URL}/api/teams/${userId}/chips`, {
-                headers: getAuthHeaders()
-            });
-
-            if (chipRes.ok) {
-                const updatedChips = await chipRes.json();
-                setChips(updatedChips);
-            }
+            const updatedChips = await apiRequest(`/api/teams/${userId}/chips`);
+            setChips(updatedChips);
 
             setShowConfirmModal(false);
         } catch (err) {

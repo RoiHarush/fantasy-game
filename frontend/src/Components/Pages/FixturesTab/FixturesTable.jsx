@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
 import { FixtureCard } from "./FixtureCard";
 import Style from "../../../Styles/FixturesTable.module.css";
-import API_URL from "../../../config";
+import { apiRequest } from "../../../services/apiClient";
 
 function FixturesTable({ gameweeks, defaultGameweek }) {
     const [currentGameweek, setCurrentGameweek] = useState(defaultGameweek?.id || 1);
     const [fixtures, setFixtures] = useState([]);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/fixtures`)
-            .then(res => res.json())
+        apiRequest("/api/fixtures", { auth: false })
             .then(data => setFixtures(data))
             .catch(err => console.error("Failed to fetch fixtures:", err));
     }, []);
 
+    useEffect(() => {
+        if (defaultGameweek?.id) setCurrentGameweek(defaultGameweek.id);
+    }, [defaultGameweek?.id]);
+
+    const orderedGameweeks = [...gameweeks].sort((a, b) => a.id - b.id);
+    const currentIndex = orderedGameweeks.findIndex(gameweek => gameweek.id === currentGameweek);
+
     const gameweekFixtures = fixtures.filter(f => f.event === currentGameweek);
 
     const handlePrev = () => {
-        if (currentGameweek > 1) {
-            setCurrentGameweek(currentGameweek - 1);
-        }
+        if (currentIndex > 0) setCurrentGameweek(orderedGameweeks[currentIndex - 1].id);
     };
 
     const handleNext = () => {
-        if (currentGameweek < gameweeks.length) {
-            setCurrentGameweek(currentGameweek + 1);
+        if (currentIndex >= 0 && currentIndex < orderedGameweeks.length - 1) {
+            setCurrentGameweek(orderedGameweeks[currentIndex + 1].id);
         }
     };
 
@@ -61,13 +65,21 @@ function FixturesTable({ gameweeks, defaultGameweek }) {
                 </div>
 
                 <div className={Style.fixturesControls}>
-                    <button onClick={handlePrev} className={Style.controlButton}>
+                    <button
+                        onClick={handlePrev}
+                        className={Style.controlButton}
+                        style={{ visibility: currentIndex <= 0 ? "hidden" : "visible" }}
+                    >
                         ← Previous
                     </button>
                     <div className={Style.gameweekInfo}>
                         Gameweek {currentGameweek}
                     </div>
-                    <button onClick={handleNext} className={Style.controlButton}>
+                    <button
+                        onClick={handleNext}
+                        className={Style.controlButton}
+                        style={{ visibility: currentIndex < 0 || currentIndex >= orderedGameweeks.length - 1 ? "hidden" : "visible" }}
+                    >
                         Next →
                     </button>
                 </div>

@@ -5,27 +5,30 @@ import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
 import { useGameweek } from "../../Context/GameweeksContext";
 
+const EMPTY_SQUAD = { startingLineup: {}, bench: {} };
+
 function SquadPlayersTable({ squad }) {
     const { players } = usePlayers();
     const { getFixturesForTeam } = useFixtures();
     const { nextGameweek } = useGameweek();
     const [fixtures, setFixtures] = useState({});
+    const safeSquad = squad || EMPTY_SQUAD;
 
     const getPlayer = useCallback((id) => players.find((p) => p.id === id), [players]);
 
     const sections = [
-        { key: "GK", label: "Goalkeepers" },
-        { key: "DEF", label: "Defenders" },
-        { key: "MID", label: "Midfielders" },
-        { key: "FWD", label: "Forwards" },
+        { key: "GK", label: "Goalkeepers", size: 2 },
+        { key: "DEF", label: "Defenders", size: 5 },
+        { key: "MID", label: "Midfielders", size: 5 },
+        { key: "FWD", label: "Forwards", size: 3 },
     ];
 
     useEffect(() => {
         async function fetchAll() {
             const allIds = [
-                ...Object.values(squad.startingLineup).flat(),
-                ...Object.values(squad.bench),
-            ];
+                ...Object.values(safeSquad.startingLineup || {}).flat(),
+                ...Object.values(safeSquad.bench || {}),
+            ].filter(Boolean);
             const allTeams = new Set(
                 allIds.map((id) => getPlayer(id)?.teamId).filter(Boolean)
             );
@@ -37,7 +40,7 @@ function SquadPlayersTable({ squad }) {
             setFixtures(data);
         }
         fetchAll();
-    }, [squad, getPlayer, getFixturesForTeam]);
+    }, [safeSquad, getPlayer, getFixturesForTeam]);
 
     const getNextFixtureText = (player) => {
         if (!nextGameweek) return "-";
@@ -59,8 +62,8 @@ function SquadPlayersTable({ squad }) {
 
 
     const getPlayersByPosition = (posKey) => {
-        const starting = squad.startingLineup[posKey] || [];
-        const benchIds = Object.values(squad.bench) || [];
+        const starting = safeSquad.startingLineup?.[posKey] || [];
+        const benchIds = Object.values(safeSquad.bench || {});
         const benchOfPos = benchIds.filter((id) => {
             const p = getPlayer(id);
             return p && p.position === posKey;
@@ -72,7 +75,7 @@ function SquadPlayersTable({ squad }) {
         <div className={styles.tableWrapper}>
             {sections.map((section) => {
                 const ids = getPlayersByPosition(section.key);
-                if (ids.length === 0) return null;
+                const slots = Array.from({ length: section.size }, (_, index) => ids[index] ?? null);
                 return (
                     <div key={section.key} className={styles.section}>
                         <div className={styles.positionHeader}>
@@ -87,14 +90,13 @@ function SquadPlayersTable({ squad }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {ids.map((id) => {
+                                {slots.map((id, index) => {
                                     const player = getPlayer(id);
-                                    if (!player) return null;
                                     return (
                                         <SquadPlayerRow
-                                            key={id}
+                                            key={id || `${section.key}-empty-${index}`}
                                             player={player}
-                                            fixture={getNextFixtureText(player)}
+                                            fixture={player ? getNextFixtureText(player) : "-"}
                                         />
                                     );
                                 })}

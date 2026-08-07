@@ -3,7 +3,7 @@ import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
 import Style from "../../../Styles/Scout.module.css";
 import PlayersWrapper from "../../General/PlayersWrapper";
 
-function Scout({ user }) {
+function Scout({ user, squad, waiverEntries, onWaiverEntriesChange, waiverSaving, waiverMessage, waiverGameweekId }) {
     const { players } = usePlayers();
 
     const allTeamFixtures = useAllTeamFixtures();
@@ -18,6 +18,12 @@ function Scout({ user }) {
             <PlayersWrapper
                 user={user}
                 allTeamFixtures={allTeamFixtures}
+                squad={squad}
+                waiverEntries={waiverEntries}
+                onWaiverEntriesChange={onWaiverEntriesChange}
+                waiverSaving={waiverSaving}
+                waiverMessage={waiverMessage}
+                waiverGameweekId={waiverGameweekId}
             />
         </div>
     );

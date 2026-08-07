@@ -1,6 +1,4 @@
 "use client";
-
-import { useRouter } from "next/navigation";
 import FixturesTable from "../FixturesTab/FixturesTable";
 import Style from "../../../Styles/Points.module.css";
 import PointsBlock from "../../Blocks/PointsBlock";
@@ -20,21 +18,16 @@ function Points({
     currentGameweek
 }) {
     const { players } = usePlayers();
-    const router = useRouter();
+    const selectedIndex = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
+    const latestVisibleIndex = gameweeks.findIndex(gw => gw.id === currentGameweek?.id);
 
     const handlePrev = () => {
-        const idx = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
-        if (idx > 0) setSelectedGameweek(gameweeks[idx - 1]);
+        if (selectedIndex > 0) setSelectedGameweek(gameweeks[selectedIndex - 1]);
     };
 
     const handleNext = () => {
-        const idx = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
-        const nextGw = gameweeks[idx + 1];
-        if (!nextGw || nextGw.id > currentGameweek.id) {
-            router.push("/pick-team");
-        } else {
-            setSelectedGameweek(nextGw);
-        }
+        const nextGw = gameweeks[selectedIndex + 1];
+        if (nextGw && selectedIndex < latestVisibleIndex) setSelectedGameweek(nextGw);
     };
 
     return (
@@ -61,7 +54,8 @@ function Points({
                                 <GameweekController
                                     onPrev={handlePrev}
                                     onNext={handleNext}
-                                    hidePrev={selectedGameweek.id === 6}
+                                    hidePrev={selectedIndex <= 0}
+                                    hideNext={selectedIndex < 0 || selectedIndex >= latestVisibleIndex}
                                     gw={selectedGameweek.id}
                                 />
                             }

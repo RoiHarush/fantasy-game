@@ -1,4 +1,4 @@
-import API_URL from "../config";
+import { apiRequest } from "../services/apiClient";
 
 const userCache = new Map();
 
@@ -10,28 +10,16 @@ export async function getUserFromId(id) {
     }
 
     try {
-        const res = await fetch(`${API_URL}/api/users/${id}`);
-
-        if (!res.ok) {
-            if (res.status === 404) {
-                console.warn(`User ${id} not found`);
-                return null;
-            }
-            throw new Error(`HTTP ${res.status}`);
-        }
-
-        let user;
-        try {
-            user = await res.json();
-        } catch {
-            console.error("Bad JSON response from server");
-            return null;
-        }
+        const user = await apiRequest(`/api/users/${id}`);
 
         userCache.set(id, user);
         return user;
 
     } catch (err) {
+        if (err?.status === 404) {
+            console.warn(`User ${id} not found`);
+            return null;
+        }
         console.error("Network or fetch error:", err.message);
         return null;
     }

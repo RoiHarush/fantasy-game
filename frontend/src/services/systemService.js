@@ -1,20 +1,13 @@
-import API_URL from "../config";
-import { getAuthHeaders } from "./authHelper";
+import { apiRequest, ApiError } from "./apiClient";
 
 export const fetchSystemStatus = async () => {
     try {
-        const response = await fetch(`${API_URL}/api/system/status`, {
-            method: 'GET',
-            headers: getAuthHeaders()
-        });
-
-        if (!response.ok) {
-            return false;
-        }
-
-        const data = await response.json();
+        const data = await apiRequest("/api/system/status");
         return data.isRolloverInProgress;
     } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+            return false;
+        }
         console.error("Failed to fetch system status", error);
         return false;
     }

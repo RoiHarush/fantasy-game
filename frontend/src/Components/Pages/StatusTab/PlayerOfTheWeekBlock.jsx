@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
-import API_URL from "../../../config";
 import styles from "../../../Styles/PlayerOfTheWeekBlock.module.css";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import PlayerOfWeekCard from "../../General/PlayerOfTheWeekCard";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import { usePlayers } from "../../../Context/PlayersContext";
+import { apiRequest } from "../../../services/apiClient";
 
 function PlayerOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
     const { players } = usePlayers();
 
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
+        handleResize();
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
@@ -30,8 +31,7 @@ function PlayerOfTheWeekBlock() {
     useEffect(() => {
         async function fetchPlayers() {
             try {
-                const res = await fetch(`${API_URL}/api/fpl/players-of-the-week`);
-                const data = await res.json();
+                const data = await apiRequest("/api/fpl/players-of-the-week", { auth: false });
                 const arr = data.playersOfTheWeek || [];
 
                 const full = Array.from({ length: 38 }, (_, i) => {

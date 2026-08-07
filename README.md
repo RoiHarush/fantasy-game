@@ -44,11 +44,19 @@ render.yaml              Render backend definition
 
 Prerequisites: JDK 21 and Node.js 22.
 
-The development profile uses a persistent local H2 database. Automation is disabled locally by default so opening an old database cannot advance historical gameweeks.
+The development profile uses a persistent local H2 database. Automation and live FPL bootstrap are both disabled by default, so a normal restart never advances historical state or silently inserts data.
 
 ```powershell
 cd backend
 .\gradlew.bat bootRun
+```
+
+To populate an empty database explicitly from the live FPL API, run once with:
+
+```powershell
+$env:BOOTSTRAP_ENABLED = "true"
+.\gradlew.bat bootRun
+Remove-Item Env:BOOTSTRAP_ENABLED
 ```
 
 In another terminal:
@@ -59,7 +67,7 @@ npm ci
 npm run dev
 ```
 
-The client runs at `http://localhost:5173`; the API runs at `http://localhost:8080`. Development seed users are created only in the development profile.
+The API runs at `http://localhost:8080`. No development users or leagues are seeded.
 
 ## Verify changes
 
@@ -83,6 +91,21 @@ Copy the two `.env.example` files as a reference, but configure secrets in the h
 - a random `JWT_SECRET` containing at least 32 bytes
 - `CORS_ALLOWED_ORIGINS` and `WEBSOCKET_ALLOWED_ORIGIN_PATTERNS`
 - `SCHEDULING_ENABLED`, kept `false` until post-deploy state checks pass
+- `BOOTSTRAP_ENABLED`, normally `false`; set to `true` only for an explicit initial/season load
+
+## New-season reset
+
+A season reset deletes every application row, including users and leagues, while preserving the Flyway schema. It is deliberately available only during startup and refuses to run while scheduling is enabled or without the exact confirmation value.
+
+```powershell
+$env:SCHEDULING_ENABLED = "false"
+$env:SEASON_RESET_ENABLED = "true"
+$env:SEASON_RESET_CONFIRMATION = "RESET_ALL_SEASON_DATA"
+$env:BOOTSTRAP_ENABLED = "true"
+.\gradlew.bat bootRun
+```
+
+After the reset and FPL bootstrap complete, remove `SEASON_RESET_ENABLED` and `SEASON_RESET_CONFIRMATION` before the next restart. Leaving the reset flags configured would intentionally wipe the database again.
 
 The production rollout and database recovery process is documented in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 

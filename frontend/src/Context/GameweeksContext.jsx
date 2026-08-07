@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import API_URL from "../config";
 import { useSystemStatus } from "./SystemStatusContext";
 import { useAuth } from "./AuthContext";
+import { apiRequest } from "../services/apiClient";
 
 const GameweekContext = createContext();
 
@@ -10,35 +10,38 @@ export function GameweekProvider({ children }) {
     const [currentGameweek, setCurrentGameweek] = useState(null);
     const [nextGameweek, setNextGameweek] = useState(null);
     const [lastGameweek, setLastGameweek] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const { isSystemLocked } = useSystemStatus();
     const { user } = useAuth();
 
-    const fetchAllData = useCallback(() => {
+    const fetchAllData = useCallback(async (signal) => {
         console.log("Fetching fresh Gameweek data...");
+        setLoading(true);
+        setError(null);
 
-        fetch(`${API_URL}/api/gameweeks`)
-            .then(res => res.json())
-            .then(data => {
-                const sorted = data.sort((a, b) => a.id - b.id);
-                setGameweeks(sorted);
-            })
-            .catch(err => console.error("Failed to fetch gameweeks:", err));
+        const results = await Promise.allSettled([
+            apiRequest("/api/gameweeks", { signal }),
+            apiRequest("/api/gameweeks/current", { signal }),
+            apiRequest("/api/gameweeks/next", { signal }),
+            apiRequest("/api/gameweeks/last", { signal }),
+        ]);
 
-        fetch(`${API_URL}/api/gameweeks/current`)
-            .then(res => res.json())
-            .then(setCurrentGameweek)
-            .catch(err => console.error("Failed to fetch current gameweek:", err));
+        if (signal.aborted) return;
 
-        fetch(`${API_URL}/api/gameweeks/next`)
-            .then(res => res.json())
-            .then(setNextGameweek)
-            .catch(err => console.error("Failed to fetch next gameweek:", err));
+        const [all, current, next, last] = results;
+        if (all.status === "fulfilled") {
+            setGameweeks([...all.value].sort((a, b) => a.id - b.id));
+        } else {
+            setGameweeks([]);
+            setError(all.reason?.message || "Failed to load gameweeks.");
+        }
 
-        fetch(`${API_URL}/api/gameweeks/last`)
-            .then(res => res.json())
-            .then(setLastGameweek)
-            .catch(err => console.error("Failed to fetch last gameweek:", err));
+        setCurrentGameweek(current.status === "fulfilled" ? current.value : null);
+        setNextGameweek(next.status === "fulfilled" ? next.value : null);
+        setLastGameweek(last.status === "fulfilled" ? last.value : null);
+        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -47,12 +50,19 @@ export function GameweekProvider({ children }) {
             setCurrentGameweek(null);
             setNextGameweek(null);
             setLastGameweek(null);
+            setError(null);
+            setLoading(false);
             return;
         }
 
-        if (!isSystemLocked) {
-            fetchAllData();
+        if (isSystemLocked) {
+            setLoading(false);
+            return;
         }
+
+        const controller = new AbortController();
+        void fetchAllData(controller.signal);
+        return () => controller.abort();
     }, [isSystemLocked, fetchAllData, user?.id]);
 
     return (
@@ -60,7 +70,9 @@ export function GameweekProvider({ children }) {
             gameweeks,
             currentGameweek,
             nextGameweek,
-            lastGameweek
+            lastGameweek,
+            loading,
+            error,
         }}>
             {children}
         </GameweekContext.Provider>

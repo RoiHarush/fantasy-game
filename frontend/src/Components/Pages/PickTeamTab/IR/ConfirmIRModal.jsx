@@ -1,13 +1,14 @@
 import { useEffect } from "react";
-import ReactDOM from "react-dom";
+import Portal from "../../../../Portal";
 import { lockScroll, unlockScroll } from "../../../../Utils/scrollLock";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 
 function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlayer }) {
     useEffect(() => {
+        if (!confirmIRPlayer) return undefined;
         lockScroll();
         return () => unlockScroll();
-    }, []);
+    }, [confirmIRPlayer]);
 
     if (!confirmIRPlayer) return null;
 
@@ -67,7 +68,7 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
         </div>
     );
 
-    return ReactDOM.createPortal(modalContent, document.body);
+    return <Portal>{modalContent}</Portal>;
 }
 
 export default ConfirmIRModal;

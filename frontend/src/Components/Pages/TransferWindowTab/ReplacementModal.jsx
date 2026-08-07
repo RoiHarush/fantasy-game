@@ -3,8 +3,7 @@ import { useGameweek } from "../../../Context/GameweeksContext";
 import { useFixtures } from "../../../Context/FixturesContext";
 import Style from "../../../Styles/TransferModal.module.css";
 import PlayerKit from "../../General/PlayerKit";
-import API_URL from "../../../config";
-import { getAuthHeaders } from "../../../services/authHelper";
+import { apiRequest } from "../../../services/apiClient";
 import TeamShortNames from "../../../Utils/teamNameMap";
 
 function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
@@ -21,12 +20,7 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
     useEffect(() => {
         async function fetchSquad() {
             try {
-                const res = await fetch(`${API_URL}/api/teams/${user.id}/squad?gw=${nextGameweek.id}`, {
-                    headers: getAuthHeaders()
-                });
-
-                if (!res.ok) throw new Error("Failed to load squad");
-                const data = await res.json();
+                const data = await apiRequest(`/api/teams/${user.id}/squad?gw=${nextGameweek.id}`);
                 setSquad(data);
             } catch (err) {
                 console.error("Error fetching squad:", err);
@@ -97,21 +91,13 @@ function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
         setSaving(true);
         setError("");
         try {
-            const response = await fetch(`${API_URL}/api/market/transfer`, {
+            await apiRequest(`/api/market/transfer`, {
                 method: "POST",
-                headers: {
-                    ...getAuthHeaders(),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
+                body: {
                     playerOutId: playerOut.id,
                     playerInId: playerIn.id
-                })
+                },
             });
-            if (!response.ok) {
-                const message = await response.text();
-                throw new Error(message || "Transfer failed");
-            }
 
             setUser((prev) => ({
                 ...prev,

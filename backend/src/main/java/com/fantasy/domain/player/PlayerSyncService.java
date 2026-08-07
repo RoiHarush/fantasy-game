@@ -64,11 +64,21 @@ public class PlayerSyncService {
     ) {}
 
     public void loadPlayersFromApi() {
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
+            loadPlayersFromBootstrap(mapper.readTree(response.getBody()));
+        } catch (Exception e) {
+            log.error("Failed to load players: {}", e.getMessage());
+            throw new RuntimeException("Failed to load players", e);
+        }
+    }
+
+    public void loadPlayersFromBootstrap(JsonNode bootstrapRoot) {
         long startTime = System.currentTimeMillis();
         log.info("Starting optimized player load (Parallel Mode)...");
 
         try {
-            PlayerLoadResult result = fetchPlayersAndHistoryData();
+            PlayerLoadResult result = fetchPlayersAndHistoryData(bootstrapRoot);
             persistenceService.persistInitialLoad(
                     result.playersToSave(),
                     result.allStatsToSave(),
@@ -82,9 +92,10 @@ public class PlayerSyncService {
         }
     }
 
-    private PlayerLoadResult fetchPlayersAndHistoryData() throws Exception {
-        ResponseEntity<String> response = restTemplate.getForEntity(FPL_API_URL, String.class);
-        JsonNode root = mapper.readTree(response.getBody());
+    private PlayerLoadResult fetchPlayersAndHistoryData(JsonNode root) throws Exception {
+        if (root == null || !root.hasNonNull("elements") || !root.get("elements").isArray()) {
+            throw new IllegalArgumentException("FPL bootstrap response does not contain players");
+        }
         JsonNode elements = root.get("elements");
 
         List<PlayerEntity> playersToProcess = new ArrayList<>();

@@ -3,6 +3,7 @@ package com.fantasy.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SchedulingConfigTest {
@@ -14,7 +15,14 @@ class SchedulingConfigTest {
             .withUserConfiguration(SchedulingConfig.class);
 
     @Test
-    void schedulingInfrastructureIsAlwaysAvailableForInitialDrafts() {
-        contextRunner.run(context -> assertTrue(context.containsBean(SCHEDULED_PROCESSOR)));
+    void schedulingInfrastructureIsDisabledByDefault() {
+        contextRunner.run(context -> assertFalse(context.containsBean(SCHEDULED_PROCESSOR)));
+    }
+
+    @Test
+    void schedulingInfrastructureIsEnabledExplicitly() {
+        contextRunner
+                .withPropertyValues("app.scheduling.enabled=true")
+                .run(context -> assertTrue(context.containsBean(SCHEDULED_PROCESSOR)));
     }
 }

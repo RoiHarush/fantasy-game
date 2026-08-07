@@ -26,9 +26,9 @@ function NavButtons() {
             <nav className={styles.navbar}>
                 <Link href="/scout" className={styles.navLink}>Scout</Link>
                 <Link href="/onboarding" className={styles.navLink}>Create / Join League</Link>
-                <a href="/" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
+                <button type="button" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
                     Logout
-                </a>
+                </button>
             </nav>
         );
     }
@@ -38,13 +38,14 @@ function NavButtons() {
             <nav className={styles.navbar}>
                 <Link href="/status" className={getClassName("/status", true)}>Status</Link>
                 <Link href="/league" className={getClassName("/league", true)}>League</Link>
+                <Link href="/fixtures" className={getClassName("/fixtures", true)}>Fixtures</Link>
                 <Link href="/scout" className={getClassName("/scout", true)}>Scout</Link>
                 <Link href="/draft-room" className={getClassName("/draft-room", true)}>Draft Room</Link>
                 {isAdmin && <Link href="/league-control" className={getClassName("/league-control", true)}>League Control</Link>}
                 <Link href="/settings" className={getClassName("/settings", true)}>Settings</Link>
-                <a href="/" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
+                <button type="button" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
                     Logout
-                </a>
+                </button>
             </nav>
         );
     }
@@ -105,13 +106,13 @@ function NavButtons() {
             </Link>
 
 
-            <a
-                href="/"
+            <button
+                type="button"
                 onClick={handleLogout}
                 className={`${styles.navLink} ${styles.logoutLink}`}
             >
                 Logout
-            </a>
+            </button>
         </nav>
     );
 }

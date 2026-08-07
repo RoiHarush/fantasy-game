@@ -14,25 +14,25 @@ function SquadPlayerRow({ player, fixture }) {
         <>
             <tr className={styles.row}>
                 <td className={styles.infoCell}>
-                    <button
+                    {player && <button
                         className={styles.infoBtn}
                         onClick={() => setSelectedPlayer(player)}
                         title="Player info"
                     >
                         <Info size={16} />
-                    </button>
+                    </button>}
                 </td>
 
                 <td className={styles.playerCell}>
                     <PlayerKit
-                        teamId={player.teamId}
-                        type={player.position === "GK" ? "gk" : "field"}
+                        teamId={player?.teamId || 0}
+                        type={player?.position === "GK" ? "gk" : "field"}
                         className={styles.kit}
                     />
                     <div className={styles.details}>
-                        <span className={styles.name}>{player.viewName}</span>
+                        <span className={styles.name}>{player?.viewName || "Empty slot"}</span>
                         <span className={styles.sub}>
-                            {player.teamShort} &nbsp; {player.position}
+                            {player ? <>{player.teamShort} &nbsp; {player.position}</> : "Waiting for draft pick"}
                         </span>
                     </div>
                 </td>
@@ -40,7 +40,7 @@ function SquadPlayerRow({ player, fixture }) {
                 <td className={styles.fixtureCell}>{fixture}</td>
             </tr>
 
-            {selectedPlayer && (
+            {selectedPlayer && player && (
                 <PlayerInfoModal
                     player={getPlayerById(players, selectedPlayer.id)}
                     onClose={() => setSelectedPlayer(null)}

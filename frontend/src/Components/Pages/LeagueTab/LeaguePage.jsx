@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchLeague } from "../../../services/leagueService";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
@@ -10,22 +9,22 @@ import { useAuth } from "../../../Context/AuthContext";
 
 function LeaguePage() {
     const { user } = useAuth();
-    const { currentGameweek } = useGameweek();
     const [league, setLeague] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!currentGameweek) return;
-
         let cancelled = false;
 
         async function loadLeague() {
             setLoading(true);
+            setError(null);
             try {
-                const data = await fetchLeague(currentGameweek.id);
+                const data = await fetchLeague();
                 if (!cancelled) setLeague(data);
             } catch (err) {
                 console.error("Failed to load league:", err);
+                if (!cancelled) setError(err.message);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -36,10 +35,18 @@ function LeaguePage() {
         return () => {
             cancelled = true;
         };
-    }, [currentGameweek]);
+    }, [user?.leagueId]);
 
-    if (loading || !league) {
+    if (loading) {
         return <LoadingPage />
+    }
+
+    if (error) {
+        return <div role="alert">Failed to load league: {error}</div>;
+    }
+
+    if (!league) {
+        return <div role="status">League data is not available.</div>;
     }
 
     return (

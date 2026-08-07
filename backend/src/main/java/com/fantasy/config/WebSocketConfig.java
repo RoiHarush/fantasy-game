@@ -17,7 +17,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     public WebSocketConfig(
             WebSocketAuthChannelInterceptor authChannelInterceptor,
-            @Value("${app.websocket.allowed-origin-patterns:http://localhost:5173,http://127.0.0.1:5173}") String allowedOriginPatterns) {
+            @Value("${app.websocket.allowed-origin-patterns:http://localhost:3000,http://127.0.0.1:3000}") String allowedOriginPatterns) {
         this.authChannelInterceptor = authChannelInterceptor;
         this.allowedOriginPatterns = java.util.Arrays.stream(allowedOriginPatterns.split(","))
                 .map(String::trim)

@@ -72,6 +72,12 @@ public class WaiverPlanService {
         ensureLeagueMember(league, userId);
         GameWeekEntity gameWeek = gameWeekRepository.findById(gameWeekId)
                 .orElseThrow(() -> new IllegalArgumentException("GameWeek was not found"));
+        int nextGameWeekId = gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING")
+                .map(GameWeekEntity::getId)
+                .orElseThrow(() -> new IllegalStateException("No upcoming gameweek is available"));
+        if (gameWeek.getId() != nextGameWeekId) {
+            throw new IllegalStateException("Waiver plans can only be prepared for the next gameweek");
+        }
 
         List<WaiverEntryRequest> entries = request == null || request.entries() == null
                 ? List.of()

@@ -15,6 +15,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LeagueServiceIsolationTest {
@@ -58,5 +60,36 @@ class LeagueServiceIsolationTest {
         assertEquals(7, result.getUsers().getFirst().getId());
         assertEquals(123, result.getUsers().getFirst().getPoints());
         assertEquals(17, result.getUsers().getFirst().getGwPoints());
+    }
+
+    @Test
+    void buildsZeroPointTableBeforeFirstGameweekWithoutACurrentGameweek() {
+        LeagueRepository leagues = mock(LeagueRepository.class);
+        UserGameDataRepository gameData = mock(UserGameDataRepository.class);
+        UserPointsRepository points = mock(UserPointsRepository.class);
+        GameWeekService gameweeks = mock(GameWeekService.class);
+        UserEntity user = new UserEntity();
+        user.setId(7);
+        user.setName("League Member");
+        LeagueEntity league = new LeagueEntity();
+        league.setId(10L);
+        league.setName("Private League");
+        league.setUsers(new ArrayList<>(List.of(user)));
+
+        UserGameDataEntity data = new UserGameDataEntity();
+        data.setId(70);
+        data.setUser(user);
+        data.setFantasyTeamName("Member FC");
+
+        when(leagues.findFirstByUsers_Id(7)).thenReturn(Optional.of(league));
+        when(gameData.findByLeague_Id(10L)).thenReturn(List.of(data));
+        when(gameweeks.getCurrentGameweek()).thenReturn(null);
+
+        LeagueDto result = new LeagueService(leagues, gameData, points, gameweeks)
+                .getLiveLeagueDto(7);
+
+        assertEquals(1, result.getUsers().size());
+        assertEquals(0, result.getUsers().getFirst().getGwPoints());
+        verify(points, never()).findByGameweekAndUser_League_Id(1, 10L);
     }
 }

@@ -192,7 +192,7 @@ public class GameWeekService {
         GameWeekDto lastFinished = getLastFinishedGameweek();
         if (lastFinished != null) return lastFinished;
 
-        return getNextGameweek();
+        return null;
     }
 
     public GameWeekDto getNextGameweek() {

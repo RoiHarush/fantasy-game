@@ -3,6 +3,7 @@ import { useGameweek } from "../../../Context/GameweeksContext";
 import { fetchUserLivePoints, fetchUserPoints } from "../../../services/pointsService";
 import { fetchPlayerDataForGameweek, fetchSquadForGameweek } from "../../../services/squadService";
 import PageLayout from "../../PageLayout";
+import Link from "next/link";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "./Points";
 import LoadingPage from "../../General/LoadingPage";
@@ -11,7 +12,7 @@ import { useAuth } from "../../../Context/AuthContext";
 
 function PointsPage({ displayedUser }) {
     const { user: loggedUser } = useAuth();
-    const { currentGameweek, gameweeks } = useGameweek();
+    const { currentGameweek, nextGameweek, gameweeks, lastGameweek } = useGameweek();
 
     const targetUser = displayedUser || loggedUser;
 
@@ -21,6 +22,7 @@ function PointsPage({ displayedUser }) {
     const [playerData, setPlayerData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
 
     useEffect(() => {
         if (currentGameweek) setSelectedGameweek(currentGameweek);
@@ -28,6 +30,13 @@ function PointsPage({ displayedUser }) {
 
     useEffect(() => {
         if (!targetUser || !selectedGameweek) return;
+        if (isPreSeason) {
+            setLoading(false);
+            setSquad(null);
+            setPoints(null);
+            setPlayerData([]);
+            return;
+        }
 
         let cancelled = false;
         async function load() {
@@ -59,7 +68,17 @@ function PointsPage({ displayedUser }) {
         load();
 
         return () => (cancelled = true);
-    }, [targetUser, selectedGameweek, currentGameweek]);
+    }, [targetUser, selectedGameweek, currentGameweek, isPreSeason]);
+
+    if (isPreSeason) {
+        return (
+            <section style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
+                <h1>The season has not started yet</h1>
+                <p>There are no gameweek points to display.</p>
+                <Link href="/pick-team">Prepare your Gameweek 1 squad</Link>
+            </section>
+        );
+    }
 
     if (loading || !selectedGameweek) {
         return <LoadingPage />;

@@ -3,7 +3,7 @@ import { useAuth } from '../../../Context/AuthContext';
 import { updateUserSettings } from '../../../services/SettingsService';
 
 function SettingsPage() {
-    const { user, login } = useAuth();
+    const { user, updateUser } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
         username: '',
@@ -34,8 +34,6 @@ function SettingsPage() {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        const token = localStorage.getItem('token');
-
         const payload = {};
         if (formData.name !== user.name) payload.name = formData.name;
         if (formData.username !== user.username) payload.username = formData.username;
@@ -55,7 +53,7 @@ function SettingsPage() {
         try {
             const updatedUser = await updateUserSettings(payload);
 
-            login(updatedUser, token);
+            updateUser(updatedUser);
 
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
             setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '' }));

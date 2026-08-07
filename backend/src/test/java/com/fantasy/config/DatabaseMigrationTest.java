@@ -19,14 +19,28 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(6, flyway.migrate().migrationsExecuted);
+        assertEquals(8, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
             assertTrue(hasColumn(metadata, "LEAGUES", "STATUS"));
             assertTrue(hasColumn(metadata, "USER_GAME_DATA", "LEAGUE_ID"));
+            assertTrue(hasColumn(metadata, "TEAMS", "CODE"));
+            assertTrue(hasColumn(metadata, "TEAMS", "ASSET_CODE"));
+            assertTrue(hasColumn(metadata, "LEAGUE_TRANSFER_ACTIONS", "PLAYER_IN_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "OWNER_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "STATE"));
+
+            try (var statement = connection.createStatement()) {
+                statement.executeUpdate("INSERT INTO teams (id, name, short_name, code, asset_code) "
+                        + "VALUES (1, 'Arsenal', 'ARS', 1, 3)");
+            }
+            try (var statement = connection.createStatement();
+                 var result = statement.executeQuery("SELECT id, code, asset_code FROM teams WHERE id = 1")) {
+                assertTrue(result.next());
+                assertEquals(result.getInt("id"), result.getInt("code"));
+                assertEquals(3, result.getInt("asset_code"));
+            }
         }
     }
 

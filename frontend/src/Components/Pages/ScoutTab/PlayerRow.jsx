@@ -17,7 +17,10 @@ const PlayerRow = memo(function PlayerRow({
     onCompare,
     isSelectedForCompare,
     onPlayerSelect,
-    teamFixtures
+    teamFixtures,
+    ruleLocked = false,
+    onWaiverSelect,
+    waiverPlanned = false
 }) {
     const { teams } = useTeams();
     const [showInfo, setShowInfo] = useState(false);
@@ -114,10 +117,34 @@ const PlayerRow = memo(function PlayerRow({
                 </td >
             )}
 
+            {mode === "scout" && onWaiverSelect && (
+                <td>
+                    {player.available || (player.ownerId != null && player.ownerId !== user?.id) ? (
+                        <button
+                            type="button"
+                            className={Style.waiverBtn}
+                            onClick={event => {
+                                event.stopPropagation();
+                                onWaiverSelect(player);
+                            }}
+                        >{waiverPlanned ? "Planned" : "Waiver"}</button>
+                    ) : (
+                        <img
+                            src="/Icons/lock.svg"
+                            alt="Unavailable"
+                            title={player.ownerId === user?.id
+                                ? "This player is already in your squad"
+                                : "This player is locked by the league manager"}
+                            className={Style.lockIcon}
+                        />
+                    )}
+                </td>
+            )}
+
             {
                 (mode === "transfer" || mode === "draft") && (
                     <td>
-                        {player.available ? (
+                        {player.available && !ruleLocked ? (
                             <button
                                 className={Style.signBtn}
                                 disabled={!isMyTurn}
@@ -129,7 +156,12 @@ const PlayerRow = memo(function PlayerRow({
                                 {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
                             </button>
                         ) : (
-                            <img src="/Icons/lock.svg" alt="Locked" className={Style.lockIcon} />
+                            <img
+                                src="/Icons/lock.svg"
+                                alt="Locked"
+                                title={ruleLocked ? "This pick would exceed a squad position or three-player club limit" : "Player is unavailable"}
+                                className={Style.lockIcon}
+                            />
                         )}
                     </td>
                 )

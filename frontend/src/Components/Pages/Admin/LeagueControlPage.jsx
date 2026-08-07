@@ -2,9 +2,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import {
     fetchMaintenanceLeague,
     fetchMyLeague,
+    removeLeagueMember,
     updateLeagueSettings,
     updateMaintenanceLeagueSettings
 } from "../../../services/leagueService";
+import { fetchAllUsers } from "../../../services/usersService";
 import styles from "../../../Styles/LeagueControl.module.css";
 
 const AssistManager = lazy(() => import("./AssistManager"));
@@ -22,6 +24,7 @@ function LeagueControlPage({ maintenanceLeagueId = null }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
+    const [managers, setManagers] = useState([]);
 
     useEffect(() => {
         const loadLeague = maintenanceLeagueId
@@ -36,7 +39,24 @@ function LeagueControlPage({ maintenanceLeagueId = null }) {
             })
             .catch(loadError => setError(loadError.message))
             .finally(() => setLoading(false));
+        if (!maintenanceLeagueId) {
+            fetchAllUsers().then(setManagers).catch(() => setManagers([]));
+        }
     }, [maintenanceLeagueId]);
+
+    async function handleRemoveManager(manager) {
+        if (!window.confirm(`Remove ${manager.name} from this league?`)) return;
+        setError("");
+        setMessage("");
+        try {
+            const updated = await removeLeagueMember(league.id, manager.id);
+            setLeague(updated);
+            setManagers(current => current.filter(item => item.id !== manager.id));
+            setMessage(`${manager.name} was removed from the league.`);
+        } catch (removeError) {
+            setError(removeError.message);
+        }
+    }
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -72,13 +92,17 @@ function LeagueControlPage({ maintenanceLeagueId = null }) {
                 </p>
                 <h1 id="league-control-title">League settings</h1>
                 <p>
-                    Invite code: <strong>{league.leagueCode}</strong> · {league.participantCount} current managers
+                    {league.leagueCode && <>Invite code: <strong>{league.leagueCode}</strong> · </>}
+                    {league.participantCount} current managers
                 </p>
             </header>
 
             <nav className={styles.tabs} aria-label="League administration sections">
                 {[
                     ["settings", "Settings"],
+                    ...(!maintenanceLeagueId && league.status !== "DRAFT_LIVE" && league.status !== "ACTIVE"
+                        ? [["managers", "Managers"]]
+                        : []),
                     ["assists", "Assists"],
                     ["penalties", "Penalties"],
                     ["locks", "Locks"],
@@ -149,7 +173,29 @@ function LeagueControlPage({ maintenanceLeagueId = null }) {
                 </button>
             </form>}
 
-            <div className={styles.playerControls} hidden={activeTab === "settings"}>
+            {activeTab === "managers" && (
+                <section className={styles.form} aria-label="League managers">
+                    <p>Managers can be removed until the initial draft starts.</p>
+                    {managers.map(manager => (
+                        <div key={manager.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", padding: ".75rem 0", borderBottom: "1px solid #ddd" }}>
+                            <span>{manager.name} · {manager.fantasyTeamName}</span>
+                            {manager.id === league.adminId ? (
+                                <strong>League admin</strong>
+                            ) : (
+                                <button type="button" onClick={() => handleRemoveManager(manager)}>
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    <div className={styles.feedback} aria-live="polite">
+                        {error && <p className={styles.error}>{error}</p>}
+                        {message && <p className={styles.success}>{message}</p>}
+                    </div>
+                </section>
+            )}
+
+            <div className={styles.playerControls} hidden={activeTab === "settings" || activeTab === "managers"}>
                 <Suspense fallback={<p role="status">Loading league controls…</p>}>
                     {activeTab === "assists" && <AssistManager maintenanceLeagueId={maintenanceLeagueId} />}
                     {activeTab === "penalties" && <PenaltyManager maintenanceLeagueId={maintenanceLeagueId} />}

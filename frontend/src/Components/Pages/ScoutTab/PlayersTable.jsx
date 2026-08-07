@@ -12,10 +12,17 @@ function PlayerTable({
     currentTurnUserId,
     onCompare,
     comparePlayers,
-    allTeamFixtures
+    allTeamFixtures,
+    disabledPlayerIds,
+    onWaiverSelect,
+    plannedIncomingIds
 }) {
-    const { currentGameweek } = useGameweek();
-    const currentGw = currentGameweek?.id ?? 1;
+    const { currentGameweek, nextGameweek } = useGameweek();
+    const currentGw = currentGameweek?.id ?? Math.max(0, (nextGameweek?.id ?? 1) - 1);
+    const TableHead = React.forwardRef((props, ref) => (
+        <thead {...props} ref={ref} style={{ background: '#fff', zIndex: 10 }} />
+    ));
+    TableHead.displayName = "TableHead";
 
     const upcomingGws = useMemo(() =>
         [currentGw + 1, currentGw + 2, currentGw + 3].filter((gw) => gw <= 38),
@@ -44,9 +51,7 @@ function PlayerTable({
                             />
                         );
                     },
-                    TableHead: React.forwardRef((props, ref) => (
-                        <thead {...props} ref={ref} style={{ background: '#fff', zIndex: 10 }} />
-                    ))
+                    TableHead
                 }}
 
                 fixedHeaderContent={() => (
@@ -71,6 +76,7 @@ function PlayerTable({
                         </th>
 
                         {mode === "scout" && <th style={{ width: '100px' }}>Owner</th>}
+                        {mode === "scout" && onWaiverSelect && <th style={{ width: '90px' }}>Waiver</th>}
                         {(mode === "transfer" || mode === "draft") && <th style={{ width: '80px' }}>{mode === "draft" ? "Draft" : "Sign"}</th>}
                     </tr>
                 )}
@@ -88,6 +94,9 @@ function PlayerTable({
                             isSelectedForCompare={comparePlayers?.some(p => p.id === player.id)}
                             onPlayerSelect={onPlayerSelect}
                             teamFixtures={teamFixtures}
+                            ruleLocked={disabledPlayerIds?.has(player.id)}
+                            onWaiverSelect={onWaiverSelect}
+                            waiverPlanned={plannedIncomingIds?.has(player.id)}
                         />
                     );
                 }}
@@ -95,5 +104,7 @@ function PlayerTable({
         </div>
     );
 }
+
+PlayerTable.displayName = "PlayerTable";
 
 export default PlayerTable;

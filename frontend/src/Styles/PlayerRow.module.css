@@ -228,3 +228,6 @@
     }
 
 }
+
+.waiverBtn { display: block; margin: 0 auto; padding: 5px 9px; border: 1px solid #6f2da8; border-radius: 6px; background: #f6effc; color: #5a2088; font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+.waiverBtn:hover { background: #5a2088; color: white; }

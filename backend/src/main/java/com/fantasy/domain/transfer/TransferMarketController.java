@@ -79,6 +79,12 @@ public class TransferMarketController {
         return ResponseEntity.ok(marketService.getCurrentWindowState(authenticatedUserId(authentication)));
     }
 
+    @GetMapping("/history/{gwId}")
+    public ResponseEntity<List<TransferActionDto>> getHistory(@PathVariable int gwId,
+                                                               Authentication authentication) {
+        return ResponseEntity.ok(marketService.getTransferHistory(authenticatedUserId(authentication), gwId));
+    }
+
     @PostMapping("/draft-pick/{playerId}")
     public ResponseEntity<String> makeDraftPick(@PathVariable int playerId,
                                                  Authentication authentication) {

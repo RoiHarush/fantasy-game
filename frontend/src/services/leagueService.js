@@ -1,60 +1,37 @@
-import API_URL from "../config";
-import { getAuthHeaders } from "./authHelper";
+import { apiRequest } from "./apiClient";
 
-export async function fetchLeague(userGameweekId) {
-    const res = await fetch(`${API_URL}/api/league?gw=${userGameweekId}`, {
-        headers: getAuthHeaders()
-    });
-
-    if (!res.ok) {
-        throw new Error(`Failed to load league data (HTTP ${res.status})`);
-    }
-
-    return res.json();
+export async function fetchLeague() {
+    return apiRequest("/api/league");
 }
 
 export async function fetchMyLeague() {
-    const response = await fetch(`${API_URL}/api/leagues/me`, { headers: getAuthHeaders() });
-    if (!response.ok) throw new Error("Failed to load league settings");
-    return response.json();
+    return apiRequest("/api/leagues/me");
 }
 
 export async function updateLeagueSettings(leagueId, settings) {
-    const response = await fetch(`${API_URL}/api/leagues/${leagueId}/settings`, {
+    return apiRequest(`/api/leagues/${leagueId}/settings`, {
         method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(settings)
+        body: settings,
     });
-    if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error || "Failed to update league settings");
-    }
-    return response.json();
+}
+
+export async function removeLeagueMember(leagueId, memberId) {
+    return apiRequest(`/api/leagues/${leagueId}/members/${memberId}`, {
+        method: "DELETE",
+    });
 }
 
 export async function fetchMaintenanceLeagues() {
-    const response = await fetch(`${API_URL}/api/admin/leagues`, { headers: getAuthHeaders() });
-    if (!response.ok) throw new Error("Failed to load leagues");
-    return response.json();
+    return apiRequest("/api/admin/leagues");
 }
 
 export async function fetchMaintenanceLeague(leagueId) {
-    const response = await fetch(`${API_URL}/api/admin/leagues/${leagueId}`, {
-        headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error("Failed to load the selected league");
-    return response.json();
+    return apiRequest(`/api/admin/leagues/${leagueId}`);
 }
 
 export async function updateMaintenanceLeagueSettings(leagueId, settings) {
-    const response = await fetch(`${API_URL}/api/admin/leagues/${leagueId}/settings`, {
+    return apiRequest(`/api/admin/leagues/${leagueId}/settings`, {
         method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(settings)
+        body: settings,
     });
-    if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error || "Failed to update league settings");
-    }
-    return response.json();
 }

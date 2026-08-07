@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import API_URL from '../../../config';
 import AdminUserEditModal from './AdminUserEditModal';
-import { getAuthHeaders } from '../../../services/authHelper';
+import { apiRequest } from '../../../services/apiClient';
 
 const styles = {
     table: {
@@ -45,15 +44,7 @@ export default function AdminUsersPage() {
         setError(null);
 
         try {
-            const res = await fetch(`${API_URL}/api/admin/users-summary`, {
-                headers: getAuthHeaders()
-            });
-
-            if (!res.ok) {
-                throw new Error('Failed to fetch users. Are you an admin?');
-            }
-
-            const data = await res.json();
+            const data = await apiRequest('/api/admin/users-summary');
             setUsers(data);
         } catch (err) {
             setError(err.message);

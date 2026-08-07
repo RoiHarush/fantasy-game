@@ -4,8 +4,8 @@ import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import { useFixtures } from "../../Context/FixturesContext";
-import API_URL from "../../config";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
+import { apiRequest } from "../../services/apiClient";
 
 function CompareModal({ players, onClose }) {
     useLockBodyScroll();
@@ -28,18 +28,18 @@ function CompareModal({ players, onClose }) {
             if (!cancelled) setRightFixtures(data);
         });
 
-        if (left)
-            fetch(`${API_URL}/api/players/${left.id}/all-stats`)
-                .then(res => res.ok ? res.json() : [])
+        if (left) {
+            apiRequest(`/api/players/${left.id}/all-stats`, { auth: false })
                 .then(data => {
-                    if (!cancelled) setLeftStats(data);
+                    if (!cancelled) setLeftStats(data || []);
                 });
-        if (right)
-            fetch(`${API_URL}/api/players/${right.id}/all-stats`)
-                .then(res => res.ok ? res.json() : [])
+        }
+        if (right) {
+            apiRequest(`/api/players/${right.id}/all-stats`, { auth: false })
                 .then(data => {
-                    if (!cancelled) setRightStats(data);
+                    if (!cancelled) setRightStats(data || []);
                 });
+        }
 
         return () => {
             cancelled = true;

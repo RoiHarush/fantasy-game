@@ -12,6 +12,8 @@ import com.fantasy.domain.team.UserSquadRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -20,6 +22,7 @@ import java.security.SecureRandom;
 
 @Service
 public class DraftService {
+    private static final Logger log = LoggerFactory.getLogger(DraftService.class);
     private static final ZoneId LEAGUE_TIME_ZONE = ZoneId.of("Asia/Jerusalem");
     private final UserGameDataRepository gameDataRepo;
     private final TransferMarketService marketService;
@@ -117,7 +120,8 @@ public class DraftService {
 
     @Transactional
     public void runSnakeDraft(long leagueId) {
-        LeagueEntity league = requireLeague(leagueId);
+        LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
+                .orElseThrow(() -> new IllegalArgumentException("League was not found"));
         if (league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE) {
             throw new IllegalStateException("The initial draft has already started");
         }
@@ -148,15 +152,22 @@ public class DraftService {
         });
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(fixedDelayString = "${app.draft.schedule-poll-millis:1000}")
+    @Transactional
     public void checkDraftSchedule() {
         for (DraftConfig config : draftConfigRepo.findAllByProcessedFalse()) {
             if (!config.isProcessed()
                     && config.getScheduledTime() != null
                     && !LocalDateTime.now(LEAGUE_TIME_ZONE).isBefore(config.getScheduledTime())) {
-                runSnakeDraft(config.getLeague().getId());
-                config.setProcessed(true);
-                draftConfigRepo.save(config);
+                try {
+                    runSnakeDraft(config.getLeague().getId());
+                } catch (IllegalStateException exception) {
+                    log.warn("Scheduled draft for league {} is due but cannot start yet: {}",
+                            config.getLeague().getId(), exception.getMessage());
+                } catch (RuntimeException exception) {
+                    log.error("Scheduled draft for league {} failed",
+                            config.getLeague().getId(), exception);
+                }
             }
         }
     }

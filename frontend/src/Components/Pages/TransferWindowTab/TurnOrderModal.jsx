@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import API_URL from '../../../config';
 import { useGameweek } from '../../../Context/GameweeksContext';
-import { getAuthHeaders } from '../../../services/authHelper';
+import { apiRequest } from '../../../services/apiClient';
 
 const styles = {
     overlay: {
@@ -102,18 +101,12 @@ export default function TurnOrderModal({ onClose, usersList }) {
             if (!nextGameweek) return;
 
             try {
-                const res = await fetch(`${API_URL}/api/market/turn-order/${nextGameweek.id}`, {
-                    headers: getAuthHeaders()
-                });
-
-                if (res.ok) {
-                    const existingOrder = await res.json();
-                    if (existingOrder && existingOrder.length > 0) {
-                        const newPicks = Array(14).fill("").map((_, i) =>
-                            i < existingOrder.length ? String(existingOrder[i]) : ""
-                        );
-                        setPicks(newPicks);
-                    }
+                const existingOrder = await apiRequest(`/api/market/turn-order/${nextGameweek.id}`);
+                if (existingOrder && existingOrder.length > 0) {
+                    const newPicks = Array(14).fill("").map((_, i) =>
+                        i < existingOrder.length ? String(existingOrder[i]) : ""
+                    );
+                    setPicks(newPicks);
                 }
             } catch (err) {
                 console.error("Failed to fetch existing order", err);
@@ -142,13 +135,10 @@ export default function TurnOrderModal({ onClose, usersList }) {
 
         setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/market/set-order/${nextGameweek.id}`, {
+            await apiRequest(`/api/market/set-order/${nextGameweek.id}`, {
                 method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(dto)
+                body: dto,
             });
-
-            if (!res.ok) throw new Error(await res.text());
 
             alert("Draft order updated successfully!");
             onClose();

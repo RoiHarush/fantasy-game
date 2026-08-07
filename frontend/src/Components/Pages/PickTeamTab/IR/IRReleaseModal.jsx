@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import ReactDOM from "react-dom";
+import Portal from "../../../../Portal";
 import Style from "../../../../Styles/IRReleaseModal.module.css";
 import PlayerKit from "../../../General/PlayerKit";
 
@@ -22,7 +22,8 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
         .map((id) => players.find(p => p.id === id))
         .filter(p => p && p.position === irPlayer.position && p.id !== irPlayer.id);
 
-    return ReactDOM.createPortal(
+    return (
+        <Portal>
         <div className={Style.modalBackdrop} onClick={onClose}>
             <div className={Style.modal} onClick={(e) => e.stopPropagation()}>
                 <button className={Style.closeBtn} onClick={onClose}>✕</button>
@@ -73,8 +74,8 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </div>
+        </Portal>
     );
 }
 

@@ -26,11 +26,9 @@ function TransferUserSidebar({ users, currentUserId, onUserChange, squad }) {
                     </select>
                 </div>
 
-                {squad && (
-                    <div className={styles.content}>
-                        <SquadPlayersTable squad={squad} />
-                    </div>
-                )}
+                <div className={styles.content}>
+                    <SquadPlayersTable squad={squad} />
+                </div>
             </div>
         </SidebarContainer>
     );

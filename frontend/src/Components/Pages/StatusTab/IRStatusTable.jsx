@@ -1,20 +1,13 @@
 import { useEffect, useState } from "react";
-import API_URL from "../../../config";
 import Style from "../../../Styles/IRStatusTable.module.css";
-import { getAuthHeaders } from "../../../services/authHelper";
+import { apiRequest } from "../../../services/apiClient";
 
 function IRStatusTable() {
     const [irStatuses, setIrStatuses] = useState([]);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/teams/ir-status`, {
-            headers: getAuthHeaders()
-        })
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to fetch");
-                return res.json();
-            })
-            .then(data => setIrStatuses(data))
+        apiRequest("/api/teams/ir-status")
+            .then(data => setIrStatuses(data || []))
             .catch(err => console.error("Failed to fetch IR statuses:", err));
     }, []);
 

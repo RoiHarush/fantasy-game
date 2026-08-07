@@ -40,33 +40,20 @@ public class FantasyTeamService {
         this.leaguePlayerCatalog = leaguePlayerCatalog;
     }
 
+    @Transactional(readOnly = true)
     public SquadDto getSquadForGameweek(int userId, Integer gw) {
-        int currentGw = gameWeekService.getCurrentGameweek().getId();
-        int nextGw = gameWeekService.getNextGameweek().getId();
-        int effectiveGw = gw != null ? gw : currentGw;
-
         UserGameDataEntity gameData = getGameDataEntity(userId);
-
-        if (effectiveGw < currentGw) {
-            return userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), effectiveGw)
-                    .map(entity -> {
-                        Squad squad = SquadMapper.toDomain(entity, catalogFor(gameData));
-                        return SquadMapper.toDto(squad);
-                    })
-                    .orElse(null);
+        Integer effectiveGw = gw;
+        if (effectiveGw == null) {
+            var current = gameWeekService.getCurrentGameweek();
+            var next = gameWeekService.getNextGameweek();
+            effectiveGw = current != null ? current.getId() : next != null ? next.getId() : null;
         }
+        if (effectiveGw == null) return null;
 
-        UserGameData user = UserMapper.toDomainGameData(gameData, catalogFor(gameData));
-        Squad squad;
-        if (effectiveGw == currentGw) {
-            squad = user.getCurrentFantasyTeam().getSquad();
-        } else if (effectiveGw == nextGw) {
-            squad = user.getNextFantasyTeam().getSquad();
-        } else {
-            return null;
-        }
-
-        return SquadMapper.toDto(squad);
+        return userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), effectiveGw)
+                .map(entity -> SquadMapper.toDto(SquadMapper.toDomain(entity, catalogFor(gameData))))
+                .orElse(null);
     }
 
 
@@ -102,7 +89,7 @@ public class FantasyTeamService {
 //            throw new RuntimeException("Can only update previous gameweeks");
 
         UserGameDataEntity gameDataEntity = getGameDataEntity(userId);
-        UserSquadEntity squad = userSquadRepo.findByUser_IdAndGameweek(userId, gw)
+        UserSquadEntity squad = userSquadRepo.findByUser_IdAndGameweek(gameDataEntity.getId(), gw)
                 .orElse(new UserSquadEntity());
 
         squad.setUser(gameDataEntity);
@@ -121,6 +108,7 @@ public class FantasyTeamService {
     }
 
 
+    @Transactional(readOnly = true)
     public UserChipsDto getUserChips(int userId) {
         UserGameDataEntity entity = getGameDataEntity(userId);
         UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
@@ -219,8 +207,9 @@ public class FantasyTeamService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<Integer> getWatchlist(int userId) {
-        return getGameDataEntity(userId).getWatchedPlayers();
+        return List.copyOf(getGameDataEntity(userId).getWatchedPlayers());
     }
 
     @Transactional(readOnly = true)

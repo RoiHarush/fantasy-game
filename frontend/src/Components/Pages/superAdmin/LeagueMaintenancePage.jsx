@@ -80,7 +80,7 @@ export default function LeagueMaintenancePage() {
                         <option value="">No league selected</option>
                         {leagues.map(league => (
                             <option key={league.id} value={league.id}>
-                                {league.name} ({league.leagueCode}) · {league.participantCount}/{league.maxParticipants}
+                                {league.name}{league.leagueCode ? ` (${league.leagueCode})` : ""} · {league.participantCount}/{league.maxParticipants}
                             </option>
                         ))}
                     </select>

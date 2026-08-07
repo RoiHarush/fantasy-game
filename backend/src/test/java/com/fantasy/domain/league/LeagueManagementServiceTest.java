@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,6 +84,37 @@ class LeagueManagementServiceTest {
         assertFalse(result.currentUserAdmin());
         assertTrue(league.getUsers().contains(member));
         assertEquals(UserRole.ROLE_USER, member.getRole());
+    }
+
+    @Test
+    void joiningAFullLeagueIsRejectedWithoutCreatingGameData() {
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        UserEntity admin = user(1, UserRole.ROLE_USER);
+        UserEntity existingMember = user(2, UserRole.ROLE_USER);
+        UserEntity joiningUser = user(3, UserRole.ROLE_USER);
+        LeagueEntity league = league(admin, 2);
+        league.addUser(existingMember);
+
+        when(userRepository.findById(3)).thenReturn(Optional.of(joiningUser));
+        when(leagueRepository.existsByUsers_Id(3)).thenReturn(false);
+        when(leagueRepository.findByLeagueCodeWithLock("ABC234")).thenReturn(Optional.of(league));
+
+        LeagueManagementService service = new LeagueManagementService(
+                leagueRepository,
+                userRepository,
+                gameDataRepository
+        );
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> service.joinLeague(3, new JoinLeagueRequest("ABC234", "Third Team"))
+        );
+
+        assertEquals("League is full", error.getMessage());
+        assertFalse(league.getUsers().contains(joiningUser));
+        verify(gameDataRepository, never()).save(any(UserGameDataEntity.class));
     }
 
     @Test
@@ -181,6 +213,54 @@ class LeagueManagementServiceTest {
         assertEquals(10, result.maxParticipants());
         assertFalse(result.currentUserAdmin());
         assertSame(owner, league.getAdmin());
+    }
+
+    @Test
+    void leagueAdminCanRemoveAManagerOnlyBeforeTheDraftStarts() {
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        UserEntity owner = user(1, UserRole.ROLE_USER);
+        UserEntity member = user(2, UserRole.ROLE_USER);
+        LeagueEntity league = league(owner, 4);
+        league.addUser(member);
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setUser(member);
+        gameData.setLeague(league);
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+        when(leagueRepository.findByIdWithLock(10L)).thenReturn(Optional.of(league));
+        when(leagueRepository.save(league)).thenReturn(league);
+        when(gameDataRepository.findByUserId(2)).thenReturn(Optional.of(gameData));
+
+        LeagueDetailsDto result = new LeagueManagementService(
+                leagueRepository,
+                userRepository,
+                gameDataRepository
+        ).removeMember(1, 10L, 2);
+
+        assertEquals(1, result.participantCount());
+        assertFalse(league.getUsers().contains(member));
+        verify(gameDataRepository).delete(gameData);
+    }
+
+    @Test
+    void activeLeagueDoesNotExposeItsInviteCode() {
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        UserEntity owner = user(1, UserRole.ROLE_USER);
+        LeagueEntity league = league(owner, 4);
+        league.setStatus(LeagueStatus.ACTIVE);
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+        when(leagueRepository.findFirstByUsers_Id(1)).thenReturn(Optional.of(league));
+
+        LeagueDetailsDto result = new LeagueManagementService(
+                leagueRepository,
+                userRepository,
+                mock(UserGameDataRepository.class)
+        ).getMyLeague(1);
+
+        assertEquals(null, result.leagueCode());
     }
 
     private static LeagueEntity league(UserEntity admin, int capacity) {

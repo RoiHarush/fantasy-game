@@ -54,6 +54,7 @@ public class TransferMarketService {
     private final LeagueAccessService leagueAccessService;
     private final LeagueTransferWindowRepository windowRepo;
     private final WaiverPreferenceRepository waiverPreferenceRepo;
+    private final LeagueTransferActionRepository transferActionRepo;
     private final WebSocketPresenceService presenceService;
     private final TransferWebSocketController webSocketController;
     private final long offlineGraceSeconds;
@@ -67,6 +68,7 @@ public class TransferMarketService {
                                  LeagueAccessService leagueAccessService,
                                  LeagueTransferWindowRepository windowRepo,
                                  WaiverPreferenceRepository waiverPreferenceRepo,
+                                 LeagueTransferActionRepository transferActionRepo,
                                  WebSocketPresenceService presenceService,
                                  TransferWebSocketController webSocketController,
                                  @Value("${app.waivers.offline-grace-seconds:30}") long offlineGraceSeconds) {
@@ -79,6 +81,7 @@ public class TransferMarketService {
         this.leagueAccessService = leagueAccessService;
         this.windowRepo = windowRepo;
         this.waiverPreferenceRepo = waiverPreferenceRepo;
+        this.transferActionRepo = transferActionRepo;
         this.presenceService = presenceService;
         this.webSocketController = webSocketController;
         this.offlineGraceSeconds = Math.max(0, offlineGraceSeconds);
@@ -211,6 +214,13 @@ public class TransferMarketService {
                 request.getPlayerOutId(),
                 request.getPlayerInId()
         );
+        recordAction(
+                window,
+                request.getUserId(),
+                TransferActionSource.MANUAL,
+                request.getPlayerInId(),
+                request.getPlayerOutId()
+        );
 
         long leagueId = window.getLeague().getId();
         String userName = getUserName(request.getUserId());
@@ -259,6 +269,7 @@ public class TransferMarketService {
         squad.setStartingLineup(roster);
         if (squad.getFirstPickId() == null) squad.setFirstPickId(playerId);
         squadRepo.save(squad);
+        recordAction(window, userId, TransferActionSource.DRAFT, playerId, null);
 
         String userName = getUserName(userId);
         publishAfterCommit(() -> webSocketController.sendTransferDoneEvent(
@@ -488,7 +499,7 @@ public class TransferMarketService {
                 arrangeCompletedInitialDraft(league.getId());
                 league.setStatus(LeagueStatus.ACTIVE);
                 leagueRepo.save(league);
-                prepareNextWeekOrder(window);
+                prepareFirstTransferOrder(window);
             } else if (type == TransferWindowType.TRANSFER) {
                 prepareNextWeekOrder(window);
             }
@@ -594,9 +605,27 @@ public class TransferMarketService {
                         gameWeekId,
                         TransferWindowType.TRANSFER
                 )
-                .map(LeagueTransferWindowEntity::getTurnOrder)
-                .map(ArrayList::new)
-                .orElseGet(ArrayList::new);
+                .<List<Integer>>map(window -> new ArrayList<>(window.getTurnOrder()))
+                .orElseGet(() -> firstTransferOrderFromDraft(leagueId, gameWeekId)
+                        .orElseGet(ArrayList::new));
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransferActionDto> getTransferHistory(int requestingUserId, int gameWeekId) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        return transferActionRepo.findByLeague_IdAndGameWeek_IdOrderByIdAsc(leagueId, gameWeekId).stream()
+                .map(action -> new TransferActionDto(
+                        action.getId(),
+                        action.getGameWeek().getId(),
+                        action.getUser().getId(),
+                        action.getUser().getName(),
+                        action.getWindowType(),
+                        action.getSource(),
+                        action.getPlayerInId(),
+                        action.getPlayerOutId(),
+                        action.getCreatedAt()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -696,6 +725,13 @@ public class TransferMarketService {
         } else {
             int playerOutId = completedPreference.getPlayerOutId();
             int playerInId = completedPreference.getPlayerInId();
+            recordAction(
+                    window,
+                    userId,
+                    TransferActionSource.WAIVER,
+                    playerInId,
+                    playerOutId
+            );
             publishAfterCommit(() -> webSocketController.sendTransferDoneEvent(
                     leagueId,
                     userId,
@@ -707,9 +743,36 @@ public class TransferMarketService {
         advanceTurn(window);
     }
 
+    private void recordAction(LeagueTransferWindowEntity window,
+                              int userId,
+                              TransferActionSource source,
+                              int playerInId,
+                              Integer playerOutId) {
+        LeagueTransferActionEntity action = new LeagueTransferActionEntity();
+        action.setLeague(window.getLeague());
+        action.setGameWeek(window.getGameWeek());
+        action.setUser(userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User was not found")));
+        action.setWindowType(window.getWindowType());
+        action.setSource(source);
+        action.setPlayerInId(playerInId);
+        action.setPlayerOutId(playerOutId);
+        transferActionRepo.save(action);
+    }
+
     private List<Integer> defaultOrderForLeague(LeagueEntity league,
                                                 GameWeekEntity gameWeek,
                                                 TransferWindowType type) {
+        if (type == TransferWindowType.TRANSFER) {
+            Optional<List<Integer>> draftBasedOrder = firstTransferOrderFromDraft(
+                    league.getId(),
+                    gameWeek.getId()
+            );
+            if (draftBasedOrder.isPresent()) {
+                return draftBasedOrder.get();
+            }
+        }
+
         if (type == TransferWindowType.TRANSFER && gameWeek.getTransferOrder() != null) {
             Set<Integer> leagueUsers = leagueUserIds(league);
             List<Integer> legacyOrder = gameWeek.getTransferOrder().stream()
@@ -732,6 +795,22 @@ public class TransferMarketService {
             firstRound = league.getUsers().stream().map(UserEntity::getId).sorted().toList();
         }
         return snakeOrder(firstRound);
+    }
+
+    private Optional<List<Integer>> firstTransferOrderFromDraft(long leagueId, int gameWeekId) {
+        return windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
+                        leagueId,
+                        gameWeekId,
+                        TransferWindowType.DRAFT
+                )
+                .filter(window -> window.getStatus() == TransferWindowStatus.CLOSED)
+                .map(LeagueTransferWindowEntity::initialOrder)
+                .filter(order -> !order.isEmpty())
+                .map(order -> {
+                    Integer firstDraftPicker = order.removeFirst();
+                    order.add(firstDraftPicker);
+                    return snakeOrder(order);
+                });
     }
 
     private List<Integer> snakeOrder(List<Integer> firstRound) {
@@ -768,6 +847,31 @@ public class TransferMarketService {
         nextWindow.setWindowType(TransferWindowType.TRANSFER);
         nextWindow.setTurnOrder(snakeOrder(baseOrder));
         windowRepo.save(nextWindow);
+    }
+
+    private void prepareFirstTransferOrder(LeagueTransferWindowEntity completedDraft) {
+        int firstGameWeekId = completedDraft.getGameWeek().getId();
+        long leagueId = completedDraft.getLeague().getId();
+        if (windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
+                leagueId,
+                firstGameWeekId,
+                TransferWindowType.TRANSFER
+        ).isPresent()) {
+            return;
+        }
+
+        List<Integer> baseOrder = completedDraft.initialOrder();
+        if (!baseOrder.isEmpty()) {
+            Integer firstDraftPicker = baseOrder.removeFirst();
+            baseOrder.add(firstDraftPicker);
+        }
+
+        LeagueTransferWindowEntity firstWindow = new LeagueTransferWindowEntity();
+        firstWindow.setLeague(completedDraft.getLeague());
+        firstWindow.setGameWeek(completedDraft.getGameWeek());
+        firstWindow.setWindowType(TransferWindowType.TRANSFER);
+        firstWindow.setTurnOrder(snakeOrder(baseOrder));
+        windowRepo.save(firstWindow);
     }
 
     private void arrangeCompletedInitialDraft(long leagueId) {

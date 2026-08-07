@@ -10,11 +10,12 @@ import PreDraftStatus from "./PreDraftStatus";
 
 function StatusPage() {
     const { user, updateUser } = useAuth();
-    const { currentGameweek, nextGameweek } = useGameweek();
+    const { currentGameweek, nextGameweek, lastGameweek } = useGameweek();
 
     const [league, setLeague] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
 
     useEffect(() => {
         let cancelled = false;
@@ -28,9 +29,9 @@ function StatusPage() {
                     updateUser({ leagueStatus: leagueDetails.status });
                 }
                 if (leagueDetails.status === "ACTIVE" && currentGameweek) {
-                    const leagueData = await fetchLeague(currentGameweek.id);
+                    const leagueData = await fetchLeague();
                     if (!cancelled) setLeague(leagueData);
-                } else if (!cancelled) {
+                } else if (leagueDetails.status !== "ACTIVE" && !cancelled) {
                     retryTimer = window.setTimeout(load, 5000);
                 }
             } catch (err) {
@@ -51,7 +52,7 @@ function StatusPage() {
         return <PreDraftStatus league={league} />;
     }
 
-    if (loading || !currentGameweek || !nextGameweek) {
+    if (loading || !nextGameweek || (!currentGameweek && !isPreSeason)) {
         return <LoadingPage />;
     }
 
@@ -59,17 +60,20 @@ function StatusPage() {
         return <div>Error loading status: {error}</div>;
     }
 
+    const displayedGameweek = currentGameweek ?? nextGameweek;
+
     return (
         <PageLayout
             left={
                 <Status
                     user={user}
                     league={league}
-                    currentGameweek={currentGameweek}
+                    currentGameweek={displayedGameweek}
                     nextGameweek={nextGameweek}
+                    preSeason={isPreSeason}
                 />
             }
-            right={<StatusSidebar league={league} user={user} />}
+            right={<StatusSidebar league={league} user={user} preSeason={isPreSeason} />}
         />
     );
 }

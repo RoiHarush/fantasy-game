@@ -1,26 +1,16 @@
 import Style from "../../../Styles/IRSignModal.module.css";
-import API_URL from "../../../config";
-import { getAuthHeaders } from "../../../services/authHelper";
+import { apiRequest } from "../../../services/apiClient";
 
 export default function IRSignModal({ player, user, onClose }) {
     const handleConfirm = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/market/ir-sign`, {
+            await apiRequest(`/api/market/ir-sign`, {
                 method: "POST",
-                headers: {
-                    ...getAuthHeaders(),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
+                body: {
                     userId: user.id,
                     playerId: player.id
-                }),
+                },
             });
-
-            if (!res.ok) {
-                const msg = await res.text();
-                throw new Error(msg);
-            }
 
             console.log("IR player signed successfully");
             onClose();

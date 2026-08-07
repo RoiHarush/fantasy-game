@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import styles from "../../Styles/Login.module.css";
-import API_URL from "../../config";
 import { useAuth } from "../../Context/AuthContext";
+import { apiRequest, ApiError } from "../../services/apiClient";
+
+const LOGIN_LOGOS = Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);
 
 export default function Login() {
     const [username, setUsername] = useState("");
@@ -14,34 +15,22 @@ export default function Login() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    const { login, user } = useAuth();
-    const router = useRouter();
+    const { login, sessionMessage, clearSessionMessage } = useAuth();
 
     const disallowed = /[\sא-ת]/;
 
     useEffect(() => {
-        if (user) {
-            if (user.role === 'ROLE_SUPER_ADMIN') {
-                router.replace('/admin');
-            } else if (!user.leagueId) {
-                router.replace('/onboarding');
-            } else {
-                router.replace('/status');
-            }
-        }
-    }, [user, router]);
-
-    const logos = useMemo(() => {
-        return Array.from({ length: 20 }, (_, i) => `${i + 1}_logo.svg`);
+        setMounted(true);
     }, []);
 
-    const logoRows = useMemo(() => {
-        function shuffle(arr) {
-            return [...arr].sort(() => Math.random() - 0.5);
-        }
-        return Array.from({ length: 8 }, () => shuffle(logos));
-    }, [logos]);
+    const [logoRows, setLogoRows] = useState(() => Array.from({ length: 8 }, () => LOGIN_LOGOS));
+
+    useEffect(() => {
+        const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+        setLogoRows(Array.from({ length: 8 }, () => shuffle(LOGIN_LOGOS)));
+    }, []);
 
     function handleUsernameChange(e) {
         const value = e.target.value;
@@ -56,6 +45,7 @@ export default function Login() {
     async function handleSubmit(e) {
         e.preventDefault();
         setError("");
+        clearSessionMessage();
 
         if (!username || !password || (isRegistering && !name)) {
             setError("Please fill in all fields");
@@ -71,22 +61,19 @@ export default function Login() {
             setSubmitting(true);
             const endpoint = isRegistering ? "register" : "login";
             const payload = isRegistering ? { name, username, password } : { username, password };
-            const res = await fetch(`${API_URL}/api/auth/${endpoint}`, {
+            const data = await apiRequest(`/api/auth/${endpoint}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: payload,
+                auth: false,
             });
 
-            if (!res.ok) {
-                const message = await res.text();
-                setError(message || (isRegistering ? "Registration failed" : "Wrong Username or Password"));
+            login({ user: data.user, token: data.token });
+        } catch (requestError) {
+            if (requestError instanceof ApiError) {
+                setError(requestError.message || (isRegistering ? "Registration failed" : "Wrong Username or Password"));
                 return;
             }
 
-            const data = await res.json();
-            login(data.user, data.token);
-
-        } catch {
             setError(isRegistering ? "Error while registering" : "Error while sign-in");
         } finally {
             setSubmitting(false);
@@ -96,7 +83,7 @@ export default function Login() {
     return (
         <div className={styles.container}>
             <div className={styles.logosBackground}>
-                {logoRows.map((row, i) => (
+                {mounted && logoRows.map((row, i) => (
                     <div
                         key={i}
                         className={styles.marqueeRow}
@@ -200,6 +187,8 @@ export default function Login() {
             <div className={styles.disclaimer}>
                 Educational Project | Not affiliated with the Premier League
             </div>
+
+            {sessionMessage && <div className={styles.error} role="status" aria-live="polite">{sessionMessage}</div>}
         </div>
     );
 }

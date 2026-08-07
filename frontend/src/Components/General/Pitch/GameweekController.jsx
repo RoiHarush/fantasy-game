@@ -1,6 +1,6 @@
 import style from "../../../Styles/GameweekController.module.css";
 
-function GameweekController({ onPrev, onNext, hidePrev, gw }) {
+function GameweekController({ onPrev, onNext, hidePrev, hideNext, gw }) {
     return (
         <div className={style.pointsControlsInside}>
             <button
@@ -16,6 +16,7 @@ function GameweekController({ onPrev, onNext, hidePrev, gw }) {
             <button
                 onClick={onNext}
                 className={style.pointsButtonInside}
+                style={{ visibility: hideNext ? "hidden" : "visible" }}
             >
                 Next →
             </button>

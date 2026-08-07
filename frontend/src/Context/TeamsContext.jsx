@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import API_URL from "../config";
-import { getAuthHeaders } from "../services/authHelper";
 import { useAuth } from "./AuthContext";
+import { apiRequest } from "../services/apiClient";
 
 const TeamsContext = createContext();
 
@@ -15,13 +14,7 @@ export function TeamsProvider({ children }) {
             return;
         }
 
-        fetch(`${API_URL}/api/teams`, {
-            headers: getAuthHeaders()
-        })
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to fetch teams");
-                return res.json();
-            })
+        apiRequest("/api/teams")
             .then(data => {
                 console.log("Teams loaded:", data.length);
                 setTeams(data);

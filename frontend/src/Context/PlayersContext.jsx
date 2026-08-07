@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import API_URL from "../config";
-import { getAuthHeaders } from "../services/authHelper";
 import { useAuth } from "./AuthContext";
+import { apiRequest } from "../services/apiClient";
 
 const PlayersContext = createContext();
 
@@ -15,8 +14,7 @@ export function PlayersProvider({ children }) {
             return;
         }
 
-        fetch(`${API_URL}/api/players`, { headers: getAuthHeaders() })
-            .then(res => res.json())
+        apiRequest("/api/players")
             .then(data => setPlayers(data))
             .catch(err => console.error("Failed to fetch players:", err));
     }, [user?.id, user?.leagueId]);

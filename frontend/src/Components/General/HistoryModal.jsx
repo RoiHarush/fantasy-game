@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "../../Styles/HistoryModal.module.css";
-import { getAuthHeaders } from "../../services/authHelper";
-import API_URL from "../../config";
+import { apiRequest } from "../../services/apiClient";
 
 function HistoryModal({ userId, onClose }) {
     const [history, setHistory] = useState([]);
@@ -12,16 +11,8 @@ function HistoryModal({ userId, onClose }) {
 
         async function fetchHistory() {
             try {
-                const res = await fetch(`${API_URL}/api/points/${userId}/history`, {
-                    headers: getAuthHeaders()
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setHistory(data);
-                } else {
-                    console.error("Failed to fetch history");
-                }
+                const data = await apiRequest(`/api/points/${userId}/history`);
+                setHistory(data || []);
             } catch (error) {
                 console.error("Error:", error);
             } finally {

@@ -1,72 +1,291 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
-import { over } from "stompjs/lib/stomp";
-import API_URL from "../config";
+import { Client } from "@stomp/stompjs";
+
 import { useAuth } from "./AuthContext";
 import { WebSocketContext } from "./WebSocketContext";
 
 export function WebSocketProvider({ children }) {
-    const { user } = useAuth();
-    const [connected, setConnected] = useState(false);
-    const stompClientRef = useRef(null);
-    const subscriptionsRef = useRef({});
+    const { user, token } = useAuth();
+    const userId = user?.id;
 
-    useEffect(() => {
-        if (!user) {
-            setConnected(false);
+    const [connected, setConnected] = useState(false);
+
+    const stompClientRef = useRef(null);
+
+    // Topics that components currently want to receive.
+    // topic -> Set<callback>
+    const desiredSubscriptionsRef = useRef(new Map());
+
+    // Subscriptions that are active on the current STOMP connection.
+    // topic -> StompSubscription
+    const activeSubscriptionsRef = useRef(new Map());
+
+    const activateSubscription = useCallback((topic) => {
+        const client = stompClientRef.current;
+        const callbacks = desiredSubscriptionsRef.current.get(topic);
+
+        if (!client?.connected || !callbacks?.size) {
             return;
         }
-        const socket = new SockJS(`${API_URL}/ws`);
-        const stomp = over(socket);
 
-        stomp.debug = () => { };
+        if (activeSubscriptionsRef.current.has(topic)) {
+            return;
+        }
 
-        const token = localStorage.getItem("token");
-        stomp.connect({ Authorization: `Bearer ${token}` }, () => {
-            stompClientRef.current = stomp;
-            setConnected(true);
+        const subscription = client.subscribe(topic, (message) => {
+            try {
+                const parsedBody = message.body
+                    ? JSON.parse(message.body)
+                    : null;
+
+                const latestCallbacks = desiredSubscriptionsRef.current.get(topic);
+                for (const latestCallback of latestCallbacks ?? []) {
+                    try {
+                        latestCallback(parsedBody);
+                    } catch (callbackError) {
+                        console.error(`WebSocket callback failed for ${topic}:`, callbackError);
+                    }
+                }
+            } catch (error) {
+                console.error(
+                    `Failed to parse WebSocket message from ${topic}:`,
+                    error,
+                    message.body
+                );
+            }
         });
 
-        return () => {
-            Object.values(subscriptionsRef.current).forEach(subscription => subscription.unsubscribe());
-            subscriptionsRef.current = {};
+        activeSubscriptionsRef.current.set(topic, subscription);
+    }, []);
+
+    const unsubscribe = useCallback((topicOrCleanup) => {
+        // Supports callers that pass the cleanup function returned by subscribe.
+        if (typeof topicOrCleanup === "function") {
+            topicOrCleanup();
+            return;
+        }
+
+        const topic = topicOrCleanup;
+
+        if (!topic) {
+            return;
+        }
+
+        desiredSubscriptionsRef.current.delete(topic);
+
+        const activeSubscription =
+            activeSubscriptionsRef.current.get(topic);
+
+        if (activeSubscription) {
+            try {
+                activeSubscription.unsubscribe();
+            } catch (error) {
+                console.error(
+                    `Failed to unsubscribe from ${topic}:`,
+                    error
+                );
+            }
+
+            activeSubscriptionsRef.current.delete(topic);
+        }
+    }, []);
+
+    const subscribe = useCallback(
+        (topic, callback) => {
+            if (!topic || typeof callback !== "function") {
+                console.error(
+                    "WebSocket subscribe requires a topic and callback"
+                );
+
+                return () => { };
+            }
+
+            let callbacks = desiredSubscriptionsRef.current.get(topic);
+            if (!callbacks) {
+                callbacks = new Set();
+                desiredSubscriptionsRef.current.set(topic, callbacks);
+            }
+            callbacks.add(callback);
+
+            // If already connected, subscribe immediately.
+            activateSubscription(topic);
+
+            return () => {
+                const currentCallbacks = desiredSubscriptionsRef.current.get(topic);
+                currentCallbacks?.delete(callback);
+
+                if (!currentCallbacks?.size) {
+                    desiredSubscriptionsRef.current.delete(topic);
+                    const activeSubscription = activeSubscriptionsRef.current.get(topic);
+                    if (activeSubscription) {
+                        try {
+                            activeSubscription.unsubscribe();
+                        } catch (error) {
+                            console.error(`Failed to unsubscribe from ${topic}:`, error);
+                        }
+                        activeSubscriptionsRef.current.delete(topic);
+                    }
+                }
+            };
+        },
+        [activateSubscription]
+    );
+
+    const sendMessage = useCallback((destination, body) => {
+        const client = stompClientRef.current;
+
+        if (!client?.connected) {
+            console.warn(
+                `Cannot send WebSocket message to ${destination}: not connected`
+            );
+
+            return false;
+        }
+
+        try {
+            client.publish({
+                destination,
+                body:
+                    typeof body === "string"
+                        ? body
+                        : JSON.stringify(body ?? {}),
+            });
+
+            return true;
+        } catch (error) {
+            console.error(
+                `Failed to send WebSocket message to ${destination}:`,
+                error
+            );
+
+            return false;
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!userId || !token) {
             setConnected(false);
-            stompClientRef.current = null;
-            if (stomp.connected) {
-                stomp.disconnect(() => { });
+            return undefined;
+        }
+
+        /*
+         * Keep a stable reference for this effect and its cleanup.
+         * This also satisfies the React Hooks lint rule.
+         */
+        const activeSubscriptions = activeSubscriptionsRef.current;
+
+        let disposed = false;
+
+        const client = new Client({
+            /*
+             * Next.js should rewrite `/ws` to the Spring Boot backend.
+             */
+            webSocketFactory: () => new SockJS("/ws"),
+
+            connectHeaders: {
+                Authorization: `Bearer ${token}`,
+            },
+
+            reconnectDelay: 5000,
+            heartbeatIncoming: 10000,
+            heartbeatOutgoing: 10000,
+            connectionTimeout: 10000,
+
+            // Disable verbose STOMP console output.
+            debug: () => { },
+        });
+
+        client.onConnect = () => {
+            if (disposed) {
+                return;
+            }
+
+            if (process.env.NODE_ENV === "development") {
+                console.info("WebSocket connected");
+            }
+            setConnected(true);
+
+            /*
+             * A reconnect creates a new STOMP session.
+             * Previous subscription objects are no longer valid.
+             */
+            activeSubscriptions.clear();
+
+            /*
+             * Recreate every subscription requested by the application.
+             */
+            for (const topic of desiredSubscriptionsRef.current.keys()) {
+                activateSubscription(topic);
             }
         };
-    }, [user]);
 
-    const subscribe = (topic, callback) => {
-        if (!stompClientRef.current || !connected) return;
-        if (subscriptionsRef.current[topic]) return;
+        client.onStompError = (frame) => {
+            console.error(
+                "STOMP broker error:",
+                frame.headers?.message ?? "Unknown STOMP error",
+                frame.body
+            );
 
-        const subscription = stompClientRef.current.subscribe(topic, (message) => {
-            const body = JSON.parse(message.body);
-            callback(body);
-        });
+            activeSubscriptions.clear();
 
-        subscriptionsRef.current[topic] = subscription;
-    };
+            if (!disposed) {
+                setConnected(false);
+            }
+        };
 
-    const unsubscribe = (topic) => {
-        const sub = subscriptionsRef.current[topic];
-        if (sub) {
-            sub.unsubscribe();
-            delete subscriptionsRef.current[topic];
-        }
-    };
+        client.onWebSocketError = (event) => {
+            console.error("WebSocket transport error:", event);
 
-    const sendMessage = (destination, body) => {
-        if (!stompClientRef.current || !connected) return;
-        stompClientRef.current.send(destination, {}, JSON.stringify(body));
-    };
+            if (!disposed) {
+                setConnected(false);
+            }
+        };
+
+        client.onWebSocketClose = () => {
+            /*
+             * The client will try reconnecting because reconnectDelay
+             * is configured.
+             */
+            activeSubscriptions.clear();
+
+            if (!disposed) {
+                setConnected(false);
+            }
+        };
+
+        stompClientRef.current = client;
+        client.activate();
+
+        return () => {
+            disposed = true;
+            setConnected(false);
+
+            activeSubscriptions.clear();
+
+            if (stompClientRef.current === client) {
+                stompClientRef.current = null;
+            }
+
+            void client.deactivate().then(() => {
+                if (process.env.NODE_ENV === "development") {
+                    console.info("WebSocket disconnected");
+                }
+            });
+        };
+    }, [userId, token, activateSubscription]);
 
     return (
-        <WebSocketContext.Provider value={{ connected, subscribe, unsubscribe, sendMessage }}>
+        <WebSocketContext.Provider
+            value={{
+                connected,
+                subscribe,
+                unsubscribe,
+                sendMessage,
+            }}
+        >
             {children}
         </WebSocketContext.Provider>
     );

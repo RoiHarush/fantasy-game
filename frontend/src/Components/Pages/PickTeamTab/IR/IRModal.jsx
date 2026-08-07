@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import ReactDOM from "react-dom";
+import Portal from "../../../../Portal";
 import { lockScroll, unlockScroll } from "../../../../Utils/scrollLock";
 import Style from "../../../../Styles/IRModal.module.css";
 import { usePlayers } from "../../../../Context/PlayersContext";
@@ -70,7 +70,7 @@ function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
         </div>
     );
 
-    return ReactDOM.createPortal(modalContent, document.body);
+    return <Portal>{modalContent}</Portal>;
 }
 
 export default IRModal;

@@ -48,6 +48,13 @@ public class AuthService {
         return new LoginResponse(token, userDto);
     }
 
+    @Transactional(readOnly = true)
+    public UserDto getCurrentUser(int userId) {
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user was not found"));
+        return buildUserDto(user);
+    }
+
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         String name = requireText(request.name(), "Name", 2, 50);

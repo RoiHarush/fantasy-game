@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import API_URL from '../../../config';
-import { getAuthHeaders } from '../../../services/authHelper';
+import { apiRequest } from '../../../services/apiClient';
 
 const modalStyles = {
     overlay: {
@@ -98,11 +97,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
-                    headers: getAuthHeaders()
-                });
-                if (!res.ok) throw new Error('Failed to fetch user details');
-                const data = await res.json();
+                const data = await apiRequest(`/api/admin/user-details/${userId}`);
                 setUserData(data);
             } catch (err) {
                 setError(err.message);
@@ -120,12 +115,10 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
             password: newPassword ? newPassword : null
         };
         try {
-            const res = await fetch(`${API_URL}/api/admin/user-details/${userId}`, {
+            await apiRequest(`/api/admin/user-details/${userId}`, {
                 method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(payload),
+                body: payload,
             });
-            if (!res.ok) throw new Error('Failed to save user details');
             onSave();
         } catch (err) {
             setError(err.message);

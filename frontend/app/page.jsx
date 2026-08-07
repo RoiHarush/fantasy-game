@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LoadingPage from "../src/Components/General/LoadingPage";
 import { useAuth } from "../src/Context/AuthContext";
+import { getRootRedirectRoute } from "../src/Utils/routing";
 
 export default function HomePage() {
     const { user, loading } = useAuth();
@@ -17,12 +18,7 @@ export default function HomePage() {
             return;
         }
 
-        if (user.role === "ROLE_SUPER_ADMIN") {
-            router.replace("/admin");
-            return;
-        }
-
-        router.replace(user.leagueId ? "/status" : "/onboarding");
+        router.replace(getRootRedirectRoute(user));
     }, [loading, router, user]);
 
     return <LoadingPage />;

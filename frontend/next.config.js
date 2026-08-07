@@ -1,4 +1,4 @@
-const backendUrl = process.env.NEXT_PUBLIC_API_URL ?? process.env.VITE_API_URL ?? "http://localhost:8080";
+const backendUrl = (process.env.BACKEND_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

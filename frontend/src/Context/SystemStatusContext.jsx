@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { useWebSocket } from "./WebSocketContext";
 import { fetchSystemStatus } from "../services/systemService";
@@ -11,7 +13,8 @@ const STORAGE_KEY = 'gw_update_start_time';
 export function SystemStatusProvider({ children }) {
     const [isSystemLocked, setIsSystemLocked] = useState(false);
     const lockStartTimeRef = useRef(null);
-    const { subscribe, unsubscribe, connected } = useWebSocket();
+    const unlockTimerRef = useRef(null);
+    const { subscribe, connected } = useWebSocket();
     const { user } = useAuth();
 
     const wipeStorage = useCallback(() => {
@@ -19,6 +22,10 @@ export function SystemStatusProvider({ children }) {
     }, []);
 
     const clearLock = useCallback(() => {
+        if (unlockTimerRef.current !== null) {
+            window.clearTimeout(unlockTimerRef.current);
+            unlockTimerRef.current = null;
+        }
         setIsSystemLocked(false);
         lockStartTimeRef.current = null;
         wipeStorage();
@@ -59,13 +66,23 @@ export function SystemStatusProvider({ children }) {
 
         if (remaining > 0) {
             console.log(`⏳ Global timer: unlocking in ${(remaining / 1000).toFixed(0)}s`);
-            setTimeout(() => {
+            if (unlockTimerRef.current !== null) {
+                window.clearTimeout(unlockTimerRef.current);
+            }
+            unlockTimerRef.current = window.setTimeout(() => {
+                unlockTimerRef.current = null;
                 clearLock();
             }, remaining);
         } else {
             clearLock();
         }
     }, [clearLock]);
+
+    useEffect(() => () => {
+        if (unlockTimerRef.current !== null) {
+            window.clearTimeout(unlockTimerRef.current);
+        }
+    }, []);
 
     useEffect(() => {
         if (!user?.id) {
@@ -109,14 +126,13 @@ export function SystemStatusProvider({ children }) {
     useEffect(() => {
         if (!connected) return;
 
-        const sub = subscribe('/topic/system-status', (data) => {
+        return subscribe('/topic/system-status', (data) => {
             console.log("📡 WS Event in Context:", data);
             if (data?.status === 'LOCKED') handleLock();
             else if (data?.status === 'UNLOCKED') handleUnlock();
         });
 
-        return () => unsubscribe(sub);
-    }, [connected, subscribe, unsubscribe, handleLock, handleUnlock]);
+    }, [connected, subscribe, handleLock, handleUnlock]);
 
     return (
         <SystemStatusContext.Provider value={{ isSystemLocked }}>

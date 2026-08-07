@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useGameweek } from "../../Context/GameweeksContext";
 import styles from "../../Styles/TeamOfTheWeekBlock.module.css";
-import API_URL from "../../config";
 import PlayerKit from "../General/PlayerKit";
+import { apiRequest } from "../../services/apiClient";
 
 function TeamOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
@@ -13,8 +13,7 @@ function TeamOfTheWeekBlock() {
             if (!currentGameweek) return;
 
             try {
-                const res = await fetch(`${API_URL}/api/fpl/dream-team/${currentGameweek.id}`);
-                const data = await res.json();
+                const data = await apiRequest(`/api/fpl/dream-team/${currentGameweek.id}`, { auth: false });
 
                 if (!data?.team?.length) return;
 

@@ -14,7 +14,8 @@ function ControlsBar({
     showAvailable,
     setShowAvailable,
     filteredCount,
-    disablePositionOptions
+    disablePositionOptions,
+    showWaivers = false
 }) {
     const { teams } = useTeams();
 
@@ -69,7 +70,7 @@ function ControlsBar({
             <div className={Style.switchButtons}>
                 <Switcher
                     active={activeButton}
-                    options={["All players", "Watchlist"]}
+                    options={showWaivers ? ["All players", "Watchlist", "Waivers"] : ["All players", "Watchlist"]}
                     onChange={setActiveButton}
                 />
             </div>

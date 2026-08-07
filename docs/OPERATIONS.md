@@ -87,6 +87,28 @@ Neon also provides point-in-time restore history, but the free retention window 
 7. Run the smoke checklist below with two ordinary users, one league administrator, and the super administrator.
 8. Only then set `SCHEDULING_ENABLED=true` and confirm one scheduler instance is running.
 
+## Start a new season
+
+This is a destructive workflow. It deletes users, leagues, squads, scoring history, transfer state and FPL reference data, while preserving the Flyway schema and migration history.
+
+1. Disable traffic and set `SCHEDULING_ENABLED=false`.
+2. Take and verify a PostgreSQL backup if the old season may need to be inspected later.
+3. Start exactly one backend instance with:
+
+   ```text
+   SEASON_RESET_ENABLED=true
+   SEASON_RESET_CONFIRMATION=RESET_ALL_SEASON_DATA
+   BOOTSTRAP_ENABLED=true
+   SCHEDULING_ENABLED=false
+   ```
+
+4. Wait for the explicit reset and bootstrap completion messages. `/actuator/health` remains non-healthy whenever teams, players, fixtures or gameweeks are missing.
+5. Immediately remove `SEASON_RESET_ENABLED` and `SEASON_RESET_CONFIRMATION`, then restart normally with `BOOTSTRAP_ENABLED=false`.
+6. Confirm the reference-data counts and create the new season's users and leagues.
+7. Enable scheduling only after the new draft and league state have been verified.
+
+Never leave either destructive reset variable configured on a persistent service.
+
 ## Deploy frontend
 
 Configure the Vercel project root as `frontend/` and set `VITE_API_URL` to the public HTTPS backend origin without a trailing slash. The checked-in `vercel.json` routes deep links such as `/status` back to the React application.

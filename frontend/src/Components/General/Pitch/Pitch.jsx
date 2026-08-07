@@ -10,6 +10,7 @@ function Pitch({
     playerData
 }) {
     const { players } = usePlayers();
+    const defaultFormation = { GK: 1, DEF: 3, MID: 4, FWD: 3 };
 
     const renderPlayer = (id, index) => {
         const player = id ? getPlayerById(players, id) : null;
@@ -55,11 +56,21 @@ function Pitch({
     return (
         <div className={Style.pitchFrame}>
             <div className={Style.pitch}>
-                {["GK", "DEF", "MID", "FWD"].map(pos => (
-                    <div key={pos} className={Style.row}>
-                        {squad.startingLineup[pos]?.map(renderPlayer)}
-                    </div>
-                ))}
+                {["GK", "DEF", "MID", "FWD"].map(pos => {
+                    const playerIds = squad.startingLineup?.[pos] || [];
+                    const slotCount = view === "pick"
+                        ? playerIds.length
+                        : Number(squad.formation?.[pos]) || defaultFormation[pos];
+                    const slots = Array.from(
+                        { length: Math.max(slotCount, playerIds.length) },
+                        (_, index) => playerIds[index] ?? null
+                    );
+                    return (
+                        <div key={pos} className={Style.row}>
+                            {slots.map((id, index) => renderPlayer(id, `${pos}-${index}`))}
+                        </div>
+                    );
+                })}
 
                 <div className={Style.bench} style={{
                     display: "grid",

@@ -13,6 +13,7 @@ import com.fantasy.domain.user.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +66,25 @@ class DraftServiceTest {
         verify(fixture.marketService, never()).openDraftWindow(eq(7L), eq(1), org.mockito.ArgumentMatchers.anyList());
     }
 
+    @Test
+    void dueScheduledDraftStartsWithoutAnAdminRequest() {
+        Fixture fixture = fixture(2, List.of(manager(10), manager(20)));
+        DraftConfig config = new DraftConfig();
+        config.setLeague(fixture.league);
+        config.setScheduledTime(LocalDateTime.now().minusSeconds(1));
+        config.setProcessed(false);
+        when(fixture.configRepo.findAllByProcessedFalse()).thenReturn(List.of(config));
+        when(fixture.configRepo.findByLeague_Id(7L)).thenReturn(Optional.of(config));
+        when(fixture.gameWeekService.getNextGameweek())
+                .thenReturn(new GameWeekDto(1, "Gameweek 1", null, null, "UPCOMING", null, false, false));
+
+        fixture.service.checkDraftSchedule();
+
+        verify(fixture.marketService).openDraftWindow(eq(7L), eq(1), org.mockito.ArgumentMatchers.anyList());
+        assertEquals(LeagueStatus.DRAFT_LIVE, fixture.league.getStatus());
+        assertEquals(true, config.isProcessed());
+    }
+
     private static Fixture fixture(int capacity, List<UserGameDataEntity> managers) {
         UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
         TransferMarketService marketService = mock(TransferMarketService.class);
@@ -82,13 +102,14 @@ class DraftServiceTest {
         league.setUsers(new ArrayList<>(users));
 
         when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
+        when(leagueRepo.findByIdWithLock(7L)).thenReturn(Optional.of(league));
         when(gameDataRepo.findByLeague_Id(7L)).thenReturn(managers);
         when(configRepo.findByLeague_Id(7L)).thenReturn(Optional.empty());
 
         DraftService service = new DraftService(
                 gameDataRepo, marketService, gameWeekService, configRepo, leagueRepo, leagueAccess, squadRepo
         );
-        return new Fixture(service, marketService, gameWeekService, league, managers);
+        return new Fixture(service, marketService, gameWeekService, configRepo, league, managers);
     }
 
     private static UserGameDataEntity manager(int userId) {
@@ -103,6 +124,7 @@ class DraftServiceTest {
             DraftService service,
             TransferMarketService marketService,
             GameWeekService gameWeekService,
+            DraftConfigRepository configRepo,
             LeagueEntity league,
             List<UserGameDataEntity> managers
     ) {}

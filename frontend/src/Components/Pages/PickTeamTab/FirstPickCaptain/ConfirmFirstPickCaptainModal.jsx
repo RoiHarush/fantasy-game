@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import ReactDOM from "react-dom";
+import Portal from "../../../../Portal";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 import { usePlayers } from "../../../../Context/PlayersContext";
 
@@ -58,7 +58,7 @@ function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, 
         </div>
     );
 
-    return ReactDOM.createPortal(modalContent, document.body);
+    return <Portal>{modalContent}</Portal>;
 }
 
 export default ConfirmFirstPickCaptainModal;

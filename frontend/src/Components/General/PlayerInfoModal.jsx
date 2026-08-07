@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import Style from "../../Styles/PlayerInfoModal.module.css";
-import API_URL from "../../config";
 import Switcher from "./Switcher";
 import { useFixtures } from "../../Context/FixturesContext";
 import PlayerInfoContent from "./PlayerInfoContent";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
+import { apiRequest } from "../../services/apiClient";
 
 function PlayerInfoModal({ player, onClose }) {
     useLockBodyScroll();
@@ -20,8 +20,8 @@ function PlayerInfoModal({ player, onClose }) {
 
     useEffect(() => {
         if (player) {
-            fetch(`${API_URL}/api/players/${player.id}/all-stats`)
-                .then(res => res.ok ? res.json() : [])
+            apiRequest(`/api/players/${player.id}/all-stats`, { auth: false })
+                .then(data => data || [])
                 .then(setMatchStats)
                 .catch(err => console.error("Failed to fetch all-stats:", err));
         }

@@ -1,6 +1,8 @@
 package com.fantasy.domain.auth;
 
+import com.fantasy.domain.user.UserDto;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,5 +37,13 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok("Logged out successfully");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> currentUser(@AuthenticationPrincipal Integer userId) {
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(authService.getCurrentUser(userId));
     }
 }

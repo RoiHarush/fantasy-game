@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import Style from "../../../Styles/ClosedWindow.module.css";
 import { useGameweek } from "../../../Context/GameweeksContext";
 import { useAuth } from "../../../Context/AuthContext";
-import API_URL from "../../../config";
 import TurnOrderModal from "./TurnOrderModal";
-import { getAuthHeaders } from "../../../services/authHelper";
+import { apiRequest } from "../../../services/apiClient";
 
 function ClosedWindow() {
     const { nextGameweek } = useGameweek();
@@ -40,22 +39,14 @@ function ClosedWindow() {
 
         setOpening(true);
         try {
-            const res = await fetch(`${API_URL}/api/market/open/${nextGameweek.id}`, {
+            await apiRequest(`/api/market/open/${nextGameweek.id}`, {
                 method: "POST",
-                headers: getAuthHeaders()
             });
-
-            if (res.ok) {
-                setShowConfirmModal(false);
-                window.location.reload();
-            } else {
-                const msg = await res.text();
-                alert(`Failed to open window: ${msg}`);
-                setShowConfirmModal(false);
-            }
+            setShowConfirmModal(false);
+            router.refresh();
         } catch (err) {
             console.error(err);
-            alert("Error opening window");
+            alert(err.message || "Error opening window");
             setShowConfirmModal(false);
         } finally {
             setOpening(false);
@@ -67,27 +58,18 @@ function ClosedWindow() {
             if (!nextGameweek) return;
 
             try {
-                const usersRes = await fetch(`${API_URL}/api/users`, {
-                    headers: getAuthHeaders()
-                });
-                const usersData = await usersRes.json();
+                const usersData = await apiRequest("/api/users");
                 setUsersList(usersData);
 
-                const orderRes = await fetch(`${API_URL}/api/market/turn-order/${nextGameweek.id}`, {
-                    headers: getAuthHeaders()
-                });
-
-                if (orderRes.ok) {
-                    const orderIds = await orderRes.json();
-                    if (orderIds && orderIds.length > 0) {
-                        const mappedOrder = orderIds.map(id => {
-                            const userObj = usersData.find(u => u.id === id);
-                            return userObj ? userObj.name : `User ${id}`;
-                        });
-                        setCurrentOrder(mappedOrder);
-                    } else {
-                        setCurrentOrder([]);
-                    }
+                const orderIds = await apiRequest(`/api/market/turn-order/${nextGameweek.id}`);
+                if (orderIds && orderIds.length > 0) {
+                    const mappedOrder = orderIds.map(id => {
+                        const userObj = usersData.find(u => u.id === id);
+                        return userObj ? userObj.name : `User ${id}`;
+                    });
+                    setCurrentOrder(mappedOrder);
+                } else {
+                    setCurrentOrder([]);
                 }
             } catch (err) {
                 console.error("Failed to fetch draft info", err);
@@ -143,7 +125,7 @@ function ClosedWindow() {
                     </div>
                 ) : (
                     <div style={{ color: '#9ca3af', textAlign: 'center', fontStyle: 'italic', fontSize: '0.9rem', padding: '12px' }}>
-                        Draft order hasn't been set yet.
+                        Draft order hasn&apos;t been set yet.
                     </div>
                 )}
             </div>

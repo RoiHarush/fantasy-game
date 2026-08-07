@@ -7,15 +7,16 @@ import PlayerOfTheWeekBlock from "./PlayerOfTheWeekBlock";
 import { fetchUserPoints } from "../../../services/pointsService";
 import { fetchDailyStatus } from "../../../services/gameweekService";
 import DailyStatusTable from "./DailyStatusTable";
+import TransferActivityList from "./TransferActivityList";
 
-function Status({ user, league, currentGameweek, nextGameweek }) {
+function Status({ user, league, currentGameweek, nextGameweek, preSeason = false }) {
 
     const [gwPoints, setGwPoints] = useState("-");
     const [dailyStatus, setDailyStatus] = useState([]);
 
     useEffect(() => {
         const loadData = async () => {
-            if (user?.id && currentGameweek?.id) {
+            if (!preSeason && user?.id && currentGameweek?.id) {
                 try {
                     const [points, statusData] = await Promise.all([
                         fetchUserPoints(user.id, currentGameweek.id).catch(err => {
@@ -38,7 +39,7 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
         };
 
         loadData();
-    }, [user?.id, currentGameweek?.id]);
+    }, [preSeason, user?.id, currentGameweek?.id]);
 
     const parseDateArray = (dateArray) => {
         if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
@@ -50,12 +51,24 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
 
     const leagueUser = league?.users?.find(u => u.id === user.id);
     const isCalculated = currentGameweek?.calculated === true;
+    const transferHistoryGameweekId = currentGameweek?.status === "LIVE"
+        ? currentGameweek.id
+        : nextGameweek?.transferWindowProcessed
+            ? nextGameweek.id
+            : currentGameweek?.id;
 
     return (
         <div className={Style.statusPage}>
             <h1>Current Team - {user.fantasyTeamName}</h1>
 
-            <ColumnsBlock title={currentGameweek?.name || "Gameweek"} columns={2}>
+            {preSeason ? (
+                <ColumnsBlock title="Before Gameweek 1" columns={1}>
+                    <div>
+                        <p>Your initial squad is ready.</p>
+                        <h2 className={Style.gradientText}>The season has not started yet</h2>
+                    </div>
+                </ColumnsBlock>
+            ) : <ColumnsBlock title={currentGameweek?.name || "Gameweek"} columns={2}>
                 <div>
                     <p>{currentGameweek?.name} points</p>
                     <h2 className={Style.gradientText}>{gwPoints}</h2>
@@ -67,7 +80,7 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
                         {leagueUser?.rank ?? "-"}{getRankSuffix(leagueUser?.rank)}
                     </h2>
                 </div>
-            </ColumnsBlock>
+            </ColumnsBlock>}
 
             {dailyStatus.length > 0 && (
                 <DailyStatusTable
@@ -91,7 +104,8 @@ function Status({ user, league, currentGameweek, nextGameweek }) {
                 ]}
             />
 
-            <PlayerOfTheWeekBlock />
+            {!preSeason && <PlayerOfTheWeekBlock />}
+            <TransferActivityList gameWeekId={transferHistoryGameweekId} />
             <IRStatusTable />
         </div>
     );

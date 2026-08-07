@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import API_URL from "../config";
-import { getAuthHeaders } from "../services/authHelper";
 import { useAuth } from "./AuthContext";
+import { apiRequest } from "../services/apiClient";
 
 const WatchlistContext = createContext();
 
@@ -16,10 +15,7 @@ export function WatchlistProvider({ children }) {
             return;
         }
 
-        fetch(`${API_URL}/api/teams/${user.id}/watchlist`, {
-            headers: getAuthHeaders()
-        })
-            .then(res => res.json())
+        apiRequest(`/api/teams/${user.id}/watchlist`)
             .then(setWatchlist)
             .catch(console.error);
     }, [user]);
@@ -39,19 +35,13 @@ export function WatchlistProvider({ children }) {
         });
 
         try {
-            const endpoint = `${API_URL}/api/teams/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
+            const endpoint = `/api/teams/${user.id}/watchlist/${isWatched ? "remove" : "add"}`;
             const method = isWatched ? "DELETE" : "POST";
 
-            const res = await fetch(endpoint, {
+            await apiRequest(endpoint, {
                 method,
-                headers: {
-                    ...getAuthHeaders(),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ playerId }),
+                body: { playerId },
             });
-
-            if (!res.ok) throw new Error("Server updated failed");
 
         } catch (err) {
             console.error("Failed to update watchlist:", err);

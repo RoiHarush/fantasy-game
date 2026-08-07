@@ -1,18 +1,20 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from "@eslint/js";
+import globals from "globals";
+import { FlatCompat } from "@eslint/eslintrc";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { defineConfig, globalIgnores } from "eslint/config";
+
+const compat = new FlatCompat({
+  baseDirectory: path.dirname(fileURLToPath(import.meta.url)),
+});
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(["dist", "out", "coverage", ".next"]),
+  ...compat.extends("next/core-web-vitals"),
   {
-    files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    files: ["**/*.{js,jsx}"],
+    extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
@@ -20,19 +22,18 @@ export default defineConfig([
         process: "readonly",
       },
       parserOptions: {
-        ecmaVersion: 'latest',
+        ecmaVersion: "latest",
         ecmaFeatures: { jsx: true },
-        sourceType: 'module',
+        sourceType: "module",
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+      "@next/next/no-img-element": "off",
     },
   },
   {
-    files: ['src/Context/**/*.{js,jsx}'],
-    rules: {
-      'react-refresh/only-export-components': 'off',
-    },
+    files: ["src/Context/**/*.{js,jsx}"],
+    rules: {},
   },
-])
+]);
