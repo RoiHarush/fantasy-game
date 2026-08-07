@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { usePlayers } from "../../../Context/PlayersContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { usePlayers } from "../../../features/players/usePlayers";
 import { useSquad } from "../../../features/squad/useSquad";
 import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
 import styles from "../../../Styles/WaiverPlanner.module.css";

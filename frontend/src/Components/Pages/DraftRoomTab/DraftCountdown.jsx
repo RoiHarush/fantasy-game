@@ -16,9 +16,12 @@ export default function DraftCountdown({ value }) {
 
     useEffect(() => {
         if (!target) return undefined;
-        setNow(Date.now());
+        const frame = window.requestAnimationFrame(() => setNow(Date.now()));
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
-        return () => window.clearInterval(timer);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.clearInterval(timer);
+        };
     }, [target]);
 
     if (!target) return <span>Waiting for the league admin to schedule the draft</span>;

@@ -1,13 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "../../../Context/AuthContext";
+import { buildSettingsPayload } from "../../../features/settings/model";
 import { settingsSchema } from "../../../features/settings/schemas";
-import { updateUserSettings } from "../../../services/SettingsService";
+import { useUpdateSettings } from "../../../features/settings/useSettings";
 import { Button } from "../../../shared/ui/Button";
 
 const inputClassName = "mt-2 h-11 w-full rounded-control border border-slate-300 bg-white px-3 text-brand-ink outline-none transition focus:border-brand-cyan focus:ring-3 focus:ring-brand-cyan/20 aria-invalid:border-red-500";
@@ -29,8 +29,7 @@ function SettingsForm({ user, updateUser }) {
             newPassword: "",
         },
     });
-    const mutation = useMutation({
-        mutationFn: updateUserSettings,
+    const mutation = useUpdateSettings({
         onSuccess: (updatedUser) => {
             updateUser(updatedUser);
             form.reset({
@@ -47,14 +46,7 @@ function SettingsForm({ user, updateUser }) {
 
     const submit = form.handleSubmit((values) => {
         setMessage(null);
-        const payload = {};
-        if (values.name !== user.name) payload.name = values.name;
-        if (values.username !== user.username) payload.username = values.username;
-        if (values.teamName !== user.fantasyTeamName) payload.teamName = values.teamName;
-        if (values.newPassword) {
-            payload.currentPassword = values.currentPassword;
-            payload.newPassword = values.newPassword;
-        }
+        const payload = buildSettingsPayload(values, user);
 
         if (Object.keys(payload).length === 0) {
             setMessage({ type: "info", text: "No changes detected." });

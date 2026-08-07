@@ -6,7 +6,7 @@ import PlayerInfoModal from "../../General/PlayerInfoModal";
 import TeamShortNames from "../../../Utils/teamNameMap";
 import Portal from "../../../Portal";
 import { ArrowRightLeft } from "lucide-react";
-import { useTeams } from "../../../Context/TeamsContext";
+import { useTeams } from "../../../features/teams/useTeams";
 
 const PlayerRow = memo(function PlayerRow({
     player,

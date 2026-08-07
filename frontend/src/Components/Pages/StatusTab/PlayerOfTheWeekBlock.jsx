@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { usePlayers } from "../../../Context/PlayersContext";
-import { queryKeys } from "../../../lib/query/keys";
-import { apiRequest } from "../../../services/apiClient";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { usePlayers } from "../../../features/players/usePlayers";
+import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
 import styles from "../../../Styles/PlayerOfTheWeekBlock.module.css";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
@@ -87,11 +85,7 @@ function PlayerOfTheWeekBlock() {
     const { players } = usePlayers();
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const mobile = useSyncExternalStore(subscribeToMobileViewport, getMobileSnapshot, () => false);
-    const playersOfWeekQuery = useQuery({
-        queryKey: queryKeys.playersOfTheWeek,
-        queryFn: () => apiRequest("/api/fpl/players-of-the-week", { auth: false }),
-        staleTime: 5 * 60_000,
-    });
+    const playersOfWeekQuery = usePlayersOfTheWeek();
     const records = playersOfWeekQuery.data?.playersOfTheWeek ?? [];
 
     return (

@@ -1,9 +1,5 @@
 import { apiRequest } from "./apiClient";
 
-export async function fetchAllUsers() {
-    return apiRequest("/api/users");
-}
-
-export async function fetchUserById(userId) {
-    return apiRequest(`/api/users/${userId}`);
+export async function fetchAllUsers({ signal } = {}) {
+    return apiRequest("/api/users", { signal });
 }

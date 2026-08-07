@@ -16,6 +16,7 @@ export const queryKeys = {
     maintenanceLeague: (leagueId) => ["maintenance-league", leagueId],
     leagueStandings: (leagueId) => ["league-standings", leagueId],
     transferWindow: (leagueId) => ["transfer-window", leagueId],
+    transferEvent: (leagueId) => ["transfer-event", leagueId],
     transferHistory: (leagueId, gameweekId) => ["transfer-history", leagueId, gameweekId],
     transferOrder: (leagueId, gameweekId) => ["transfer-order", leagueId, gameweekId],
     draftConfig: (leagueId) => ["draft-config", leagueId],
@@ -32,4 +33,8 @@ export const queryKeys = {
     adminAssists: (leagueId, gameweekId) => ["admin-assists", leagueId ?? "current", gameweekId],
     adminPenalties: (leagueId, gameweekId) => ["admin-penalties", leagueId ?? "current", gameweekId],
     lockedPlayers: (leagueId) => ["locked-players", leagueId ?? "current"],
+    adminUsers: ["admin-users"],
+    adminUserDetails: (userId) => ["admin-user-details", userId],
+    maintenanceLeagues: ["maintenance-leagues"],
+    adminPlayers: ["admin-players"],
 };

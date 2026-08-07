@@ -2,7 +2,12 @@ import { createContext, useContext, useState } from "react";
 import PlayerMatchModal from "../Components/General/PlayerMatchModal";
 import PlayerActionModal from "../Components/General/PlayerActionModal";
 import PlayerInfoModal from "../Components/General/PlayerInfoModal";
-import { getAllowedSwapIds, swapPlayersInSquad } from "../Utils/PickTeamUtillites";
+import {
+    applySquadSwap,
+    assignCaptain,
+    assignViceCaptain,
+    getAllowedSwapIds,
+} from "../features/pick-team/squadModel";
 
 const PlayerInteractionContext = createContext();
 
@@ -56,60 +61,7 @@ export function PlayerInteractionProvider({
                 return;
             }
 
-            const firstPlayerId = selectedPlayerId;
-            const secondPlayerId = playerId;
-
-            const prevStarting = Object.values(squad.startingLineup).flat();
-
-            const newSquad = swapPlayersInSquad(squad, firstPlayerId, secondPlayerId, players);
-            let { captainId, viceCaptainId, firstPickId } = newSquad;
-
-            const startingIds = Object.values(newSquad.startingLineup).flat();
-
-            if (prevStarting.includes(firstPlayerId)) {
-                if (captainId === firstPlayerId) {
-                    if (secondPlayerId !== firstPickId) {
-                        captainId = secondPlayerId;
-                    } else {
-                        const fallback = startingIds.find(id => id !== firstPlayerId && id !== viceCaptainId && id !== firstPickId);
-                        captainId = fallback || null;
-                    }
-                }
-
-                if (viceCaptainId === firstPlayerId) {
-                    if (secondPlayerId !== firstPickId) {
-                        viceCaptainId = secondPlayerId;
-                    } else {
-                        const fallback = startingIds.find(id => id !== firstPlayerId && id !== captainId && id !== firstPickId);
-                        viceCaptainId = fallback || null;
-                    }
-                }
-            }
-            else {
-                if (captainId === secondPlayerId) {
-                    if (firstPlayerId !== firstPickId) {
-                        captainId = firstPlayerId;
-                    } else {
-                        const fallback = startingIds.find(id => id !== secondPlayerId && id !== viceCaptainId && id !== firstPickId);
-                        captainId = fallback || null;
-                    }
-                }
-
-                if (viceCaptainId === secondPlayerId) {
-                    if (firstPlayerId !== firstPickId) {
-                        viceCaptainId = firstPlayerId;
-                    } else {
-                        const fallback = startingIds.find(id => id !== secondPlayerId && id !== captainId && id !== firstPickId);
-                        viceCaptainId = fallback || null;
-                    }
-                }
-            }
-
-            setSquad({
-                ...newSquad,
-                captainId,
-                viceCaptainId
-            });
+            setSquad(applySquadSwap(squad, selectedPlayerId, playerId, players));
 
             setIsDirty(true);
             setSelectedPlayerId(null);
@@ -142,17 +94,7 @@ export function PlayerInteractionProvider({
     };
 
     const setCaptain = (playerId) => {
-        setSquad(prev => {
-            let { captainId, viceCaptainId } = prev;
-
-            if (viceCaptainId === playerId) {
-                [captainId, viceCaptainId] = [playerId, captainId];
-            } else {
-                captainId = playerId;
-            }
-
-            return { ...prev, captainId, viceCaptainId };
-        });
+        setSquad((previousSquad) => assignCaptain(previousSquad, playerId));
         setIsDirty(true);
 
         setModalType(null);
@@ -160,17 +102,7 @@ export function PlayerInteractionProvider({
     };
 
     const setVice = (playerId) => {
-        setSquad(prev => {
-            let { captainId, viceCaptainId } = prev;
-
-            if (captainId === playerId) {
-                [captainId, viceCaptainId] = [viceCaptainId, playerId];
-            } else {
-                viceCaptainId = playerId;
-            }
-
-            return { ...prev, captainId, viceCaptainId };
-        });
+        setSquad((previousSquad) => assignViceCaptain(previousSquad, playerId));
         setIsDirty(true);
 
         setModalType(null);

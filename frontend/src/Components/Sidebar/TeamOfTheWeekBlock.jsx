@@ -1,19 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { useGameweek } from "../../Context/GameweeksContext";
-import { queryKeys } from "../../lib/query/keys";
-import { apiRequest } from "../../services/apiClient";
+import { useGameweek } from "../../features/gameweeks/useGameweek";
+import { useDreamTeam } from "../../features/status/useStatusData";
 import styles from "../../Styles/TeamOfTheWeekBlock.module.css";
 import PlayerKit from "../General/PlayerKit";
 
 function TeamOfTheWeekBlock() {
     const { currentGameweek } = useGameweek();
-    const dreamTeamQuery = useQuery({
-        queryKey: queryKeys.dreamTeam(currentGameweek?.id),
-        queryFn: () => apiRequest(`/api/fpl/dream-team/${currentGameweek.id}`, { auth: false }),
-        enabled: Boolean(currentGameweek?.id),
-        staleTime: 5 * 60_000,
-    });
+    const dreamTeamQuery = useDreamTeam(currentGameweek?.id);
     const dreamTeam = dreamTeamQuery.data?.team ?? [];
 
     return (

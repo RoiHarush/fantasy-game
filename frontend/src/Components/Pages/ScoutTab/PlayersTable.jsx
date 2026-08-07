@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { TableVirtuoso } from "react-virtuoso";
 import Style from "../../../Styles/PlayerTable.module.css";
 import PlayerRow from "./PlayerRow";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 
 function PlayerTable({
     players,

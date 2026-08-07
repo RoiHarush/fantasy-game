@@ -167,7 +167,6 @@ export function WebSocketProvider({ children }) {
 
     useEffect(() => {
         if (!userId) {
-            setConnected(false);
             return undefined;
         }
 
@@ -276,7 +275,7 @@ export function WebSocketProvider({ children }) {
     return (
         <WebSocketContext.Provider
             value={{
-                connected,
+                connected: Boolean(userId && connected),
                 subscribe,
                 unsubscribe,
                 sendMessage,

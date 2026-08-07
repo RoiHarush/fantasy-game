@@ -3,36 +3,41 @@ import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
 import Style from "../../../../Styles/PickTeam.module.css";
-import { usePlayers } from "../../../../Context/PlayersContext";
-import { apiRequest } from "../../../../services/apiClient";
+import { usePlayers } from "../../../../features/players/usePlayers";
+import { countSquadPlayers } from "../../../../features/pick-team/model";
+import { useIrChip } from "../../../../features/pick-team/usePickTeamActions";
 
-function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData }) {
+function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData }) {
     const [showIRModal, setShowIRModal] = useState(false);
     const [confirmIRPlayer, setConfirmIRPlayer] = useState(null);
     const [showReleaseModal, setShowReleaseModal] = useState(false);
     const [confirmReleasePlayer, setConfirmReleasePlayer] = useState(null);
     const { players } = usePlayers();
+    const irMutation = useIrChip({
+        userId,
+        gameweekId,
+        onSuccess: ({ updatedSquad, updatedChips }, { mode }) => {
+            setSquad(updatedSquad);
+            setChips(updatedChips);
+            if (refreshPlayerData) void refreshPlayerData();
+            alert(mode === "assign" ? "IR assigned successfully!" : "IR released successfully!");
+        },
+        onError: (error) => {
+            console.error("IR mutation failed:", error);
+            alert(error.message || "Unexpected error while processing IR");
+        },
+        onSettled: () => {
+            setConfirmIRPlayer(null);
+            setConfirmReleasePlayer(null);
+            setShowIRModal(false);
+            setShowReleaseModal(false);
+        },
+    });
 
     const isActive = chips.active?.IR === true;
     const isUsedUp = chips.remaining?.IR <= 0;
 
-    const playersCount = useMemo(() => {
-        if (!squad) return 0;
-        let count = 0;
-        if (squad.startingLineup) {
-            Object.values(squad.startingLineup).forEach((playersArray) => {
-                if (Array.isArray(playersArray)) {
-                    count += playersArray.length;
-                }
-            });
-        }
-        if (squad.bench) {
-            Object.values(squad.bench).forEach((playerId) => {
-                if (playerId) count += 1;
-            });
-        }
-        return count;
-    }, [squad]);
+    const playersCount = useMemo(() => countSquadPlayers(squad), [squad]);
 
 
     const isReleaseDisabled = playersCount < 15 || transferWindowProcessed;
@@ -55,49 +60,8 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
     const openIRModal = () => setShowIRModal(true);
     const openReleaseModal = () => setShowReleaseModal(true);
 
-    const handleConfirmAssign = async (player) => {
-        try {
-            const updatedSquad = await apiRequest(`/api/teams/${userId}/chips/ir?playerId=${player.id}`, {
-                method: "POST",
-            });
-            setSquad(updatedSquad);
-            alert(`IR assigned successfully!`);
-
-            const updatedChips = await apiRequest(`/api/teams/${userId}/chips`);
-            setChips(updatedChips);
-
-            if (refreshPlayerData) await refreshPlayerData();
-
-        } catch (err) {
-            console.error("IR request failed:", err);
-            alert("Unexpected error while processing IR");
-        } finally {
-            setConfirmIRPlayer(null);
-            setShowIRModal(false);
-        }
-    };
-
-    const handleConfirmRelease = async (playerOut) => {
-        try {
-            const updatedSquad = await apiRequest(`/api/teams/${userId}/chips/ir/release?playerOutId=${playerOut.id}`, {
-                method: "POST",
-            });
-            setSquad(updatedSquad);
-            alert(`IR released successfully!`);
-
-            const updatedChips = await apiRequest(`/api/teams/${userId}/chips`);
-            setChips(updatedChips);
-
-            if (refreshPlayerData) await refreshPlayerData();
-
-        } catch (err) {
-            console.error("IR release failed:", err);
-            alert("Unexpected error while releasing IR");
-        } finally {
-            setConfirmReleasePlayer(null);
-            setShowReleaseModal(false);
-        }
-    };
+    const handleConfirmAssign = (player) => irMutation.mutate({ mode: "assign", playerId: player.id });
+    const handleConfirmRelease = (player) => irMutation.mutate({ mode: "release", playerId: player.id });
 
     return (
         <div className={Style.chipCard}>
@@ -143,6 +107,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
                     onConfirm={handleConfirmAssign}
                     onCancel={() => setConfirmIRPlayer(null)}
                     isActive={false}
+                    pending={irMutation.isPending}
                 />
             )}
 
@@ -163,6 +128,7 @@ function IRManager({ userId, squad, setSquad, chips, setChips, transferWindowPro
                     onConfirm={handleConfirmRelease}
                     onCancel={() => setConfirmReleasePlayer(null)}
                     isActive={true}
+                    pending={irMutation.isPending}
                 />
             )}
         </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import style from "../../../Styles/PitchWrapper.module.css"
 import Pitch from "./Pitch"
 import Switcher from "../Switcher"
-import { usePlayers } from "../../../Context/PlayersContext";
+import { usePlayers } from "../../../features/players/usePlayers";
 import PlayerKit from "../PlayerKit";
 
 function PitchWrapperBase({

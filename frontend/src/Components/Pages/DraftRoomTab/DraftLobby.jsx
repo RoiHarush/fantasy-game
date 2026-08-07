@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { AdminService } from "../../../services/adminService";
+import { useDraftAction } from "../../../features/draft/useDraft";
 import Style from "../../../Styles/DraftLobby.module.css";
 import DraftCountdown from "./DraftCountdown";
 
-function DraftLobby({ isAdmin, config, league, onRefresh }) {
+function DraftLobby({ isAdmin, config, league }) {
     const [scheduledTime, setScheduledTime] = useState("");
     const [copied, setCopied] = useState(false);
-    const [error, setError] = useState("");
+    const draftAction = useDraftAction(league?.id, {
+        onSuccess: (_result, action) => {
+            if (action.type === "schedule") setScheduledTime("");
+        },
+    });
 
     const formatDate = (dateValue) => {
         if (!dateValue) return "No date scheduled";
@@ -26,33 +30,20 @@ function DraftLobby({ isAdmin, config, league, onRefresh }) {
         return isNaN(d.getTime()) ? "Invalid Date" : d.toLocaleString('en-GB');
     };
 
-    const handleSchedule = async () => {
+    const handleSchedule = () => {
         if (!scheduledTime) return;
-        try {
-            setError("");
-            await AdminService.scheduleDraft(scheduledTime);
-            await onRefresh();
-        } catch (scheduleError) {
-            setError(scheduleError.message);
-        }
+        draftAction.mutate({ type: "schedule", time: scheduledTime });
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (window.confirm("Delete scheduled draft?")) {
-            await AdminService.deleteDraft();
-            onRefresh();
+            draftAction.mutate({ type: "delete" });
         }
     };
 
-    const handleOpenNow = async () => {
+    const handleOpenNow = () => {
         if (window.confirm("Start Snake Draft right now?")) {
-            try {
-                setError("");
-                await AdminService.openDraftNow();
-                await onRefresh();
-            } catch (openError) {
-                setError(openError.message);
-            }
+            draftAction.mutate({ type: "open" });
         }
     };
 
@@ -63,7 +54,7 @@ function DraftLobby({ isAdmin, config, league, onRefresh }) {
             <div className={Style.card}>
                 <h1 className={Style.title}>Draft Room</h1>
 
-                {error && <p role="alert" style={{ color: "#b42318" }}>{error}</p>}
+                {draftAction.error && <p role="alert" style={{ color: "#b42318" }}>{draftAction.error.message}</p>}
 
                 {league?.leagueCode && (
                     <div className={Style.scheduledBox}>
@@ -108,17 +99,17 @@ function DraftLobby({ isAdmin, config, league, onRefresh }) {
                                     onChange={(e) => setScheduledTime(e.target.value)}
                                     className={Style.dateInput}
                                 />
-                                <button onClick={handleSchedule} className={Style.scheduleBtn}>
+                                <button onClick={handleSchedule} className={Style.scheduleBtn} disabled={draftAction.isPending}>
                                     Schedule Draft
                                 </button>
                             </div>
                         ) : (
-                            <button onClick={handleDelete} className={Style.deleteBtn}>
+                            <button onClick={handleDelete} className={Style.deleteBtn} disabled={draftAction.isPending}>
                                 Cancel Scheduled Draft
                             </button>
                         )}
 
-                        <button onClick={handleOpenNow} className={Style.openNowBtn}>
+                        <button onClick={handleOpenNow} className={Style.openNowBtn} disabled={draftAction.isPending}>
                             Open Draft Now (Manual)
                         </button>
                     </div>

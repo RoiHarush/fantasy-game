@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTeams } from '../../Context/TeamsContext';
+import { useTeams } from '../../features/teams/useTeams';
 
 function PlayerKit({ teamId, type = "field", className, style }) {
     const { teams } = useTeams();

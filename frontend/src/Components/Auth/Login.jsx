@@ -5,8 +5,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "../../Context/AuthContext";
+import { authenticateUser } from "../../features/auth/api";
 import { loginSchema, registrationSchema } from "../../features/auth/schemas";
-import { apiRequest, ApiError } from "../../services/apiClient";
 import styles from "../../Styles/Login.module.css";
 
 const LOGIN_LOGOS = Array.from({ length: 20 }, (_, index) => `${index + 1}_logo.svg`);
@@ -47,22 +47,14 @@ export default function Login() {
         clearSessionMessage();
 
         try {
-            const endpoint = isRegistering ? "register" : "login";
-            const payload = isRegistering
-                ? { name: values.name, username: values.username, password: values.password }
-                : { username: values.username, password: values.password };
-            const data = await apiRequest(`/api/auth/${endpoint}`, {
-                method: "POST",
-                body: payload,
-                auth: false,
-            });
+            const data = await authenticateUser(values, isRegistering);
 
             login(data.user);
         } catch (requestError) {
             const fallback = isRegistering ? "Registration failed" : "Wrong username or password";
             setError("root.server", {
                 type: "server",
-                message: requestError instanceof ApiError ? requestError.message || fallback : fallback,
+                message: requestError?.message || fallback,
             });
         }
     };

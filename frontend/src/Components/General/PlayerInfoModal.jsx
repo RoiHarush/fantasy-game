@@ -1,28 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import Style from "../../Styles/PlayerInfoModal.module.css";
 import Switcher from "./Switcher";
 import PlayerInfoContent from "./PlayerInfoContent";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
-import { apiRequest } from "../../services/apiClient";
-import { queryKeys } from "../../lib/query/keys";
+import { useTeamFixtures } from "../../features/fixtures/useFixtures";
+import { usePlayerStats } from "../../features/players/usePlayerDetails";
 
 function PlayerInfoModal({ player, onClose }) {
     useLockBodyScroll();
 
     const [tab, setTab] = useState("fixtures");
-    const fixturesQuery = useQuery({
-        queryKey: queryKeys.teamFixtures(player?.teamId),
-        queryFn: () => apiRequest(`/api/fixtures/team/${player.teamId}`),
-        enabled: Boolean(player?.teamId),
-        staleTime: 5 * 60_000,
-    });
-    const statsQuery = useQuery({
-        queryKey: queryKeys.playerStats(player?.id),
-        queryFn: () => apiRequest(`/api/players/${player.id}/all-stats`, { auth: false }),
-        enabled: Boolean(player?.id),
-        staleTime: 5 * 60_000,
-    });
+    const fixturesQuery = useTeamFixtures(player?.teamId);
+    const statsQuery = usePlayerStats(player?.id);
 
     if (!player) return null;
 

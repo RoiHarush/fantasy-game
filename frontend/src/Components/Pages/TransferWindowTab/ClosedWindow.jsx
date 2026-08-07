@@ -1,15 +1,16 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { queryKeys } from "../../../lib/query/keys";
-import { apiRequest } from "../../../services/apiClient";
-import { fetchAllUsers } from "../../../services/usersService";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { useLeagueUsers } from "../../../features/league/useLeague";
+import {
+    useOpenTransferWindow,
+    useTransferOrder,
+} from "../../../features/transfer-window/useTransferWindow";
 import { Button } from "../../../shared/ui/Button";
 import Style from "../../../Styles/ClosedWindow.module.css";
 import TurnOrderModal from "./TurnOrderModal";
@@ -23,27 +24,13 @@ function ClosedWindow() {
     const { nextGameweek } = useGameweek();
     const { user } = useAuth();
     const router = useRouter();
-    const queryClient = useQueryClient();
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const usersQuery = useQuery({
-        queryKey: queryKeys.leagueUsers(user?.leagueId),
-        queryFn: fetchAllUsers,
-        enabled: Boolean(user?.leagueId),
-        staleTime: 60_000,
-    });
-    const orderKey = queryKeys.transferOrder(user?.leagueId, nextGameweek?.id);
-    const orderQuery = useQuery({
-        queryKey: orderKey,
-        queryFn: () => apiRequest(`/api/market/turn-order/${nextGameweek.id}`),
-        enabled: Boolean(user?.leagueId && nextGameweek?.id),
-    });
-    const openWindow = useMutation({
-        mutationFn: () => apiRequest(`/api/market/open/${nextGameweek.id}`, { method: "POST" }),
-        onSuccess: async () => {
+    const usersQuery = useLeagueUsers(user?.leagueId);
+    const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
+    const openWindow = useOpenTransferWindow(user?.leagueId, nextGameweek?.id, {
+        onSuccess: () => {
             setIsConfirmOpen(false);
-            await queryClient.invalidateQueries({ queryKey: queryKeys.transferWindow(user.leagueId) });
-            router.refresh();
         },
     });
 

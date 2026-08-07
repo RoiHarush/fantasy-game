@@ -1,5 +1,5 @@
 import Style from "../../../Styles/FixturesTable.module.css";
-import { useTeams } from "../../../Context/TeamsContext";
+import { useTeams } from "../../../features/teams/useTeams";
 
 function TeamLogo({ teamId }) {
     const { teams } = useTeams();

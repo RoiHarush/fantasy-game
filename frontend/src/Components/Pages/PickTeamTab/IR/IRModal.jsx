@@ -1,8 +1,6 @@
-import { useEffect } from "react";
-import Portal from "../../../../Portal";
-import { lockScroll, unlockScroll } from "../../../../Utils/scrollLock";
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../../Styles/IRModal.module.css";
-import { usePlayers } from "../../../../Context/PlayersContext";
+import { usePlayers } from "../../../../features/players/usePlayers";
 import PlayerKit from "../../../General/PlayerKit";
 
 function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
@@ -14,26 +12,13 @@ function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
         .map((id) => players.find((p) => p.id === id))
         .filter(Boolean);
 
-    useEffect(() => {
-        lockScroll();
-        return () => unlockScroll();
-    }, []);
-
-    const modalContent = (
-        <div className={Style.modalBackdrop} onClick={() => {
-            unlockScroll();
-            setShowIRModal(false);
-        }}>
-            <div className={Style.modal} onClick={(e) => e.stopPropagation()}>
-                <button
-                    className={Style.closeBtn}
-                    onClick={() => {
-                        unlockScroll();
-                        setShowIRModal(false);
-                    }}
-                >
-                    ✕
-                </button>
+    return (
+        <Dialog.Root open onOpenChange={open => !open && setShowIRModal(false)}>
+            <Dialog.Portal>
+            <Dialog.Overlay className={Style.modalBackdrop} />
+            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`}>
+                <Dialog.Title className="sr-only">Select Player for IR</Dialog.Title>
+                <Dialog.Close asChild><button className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
 
                 <img src="/Icons/ir-chip.svg" alt="IR Chip" style={{ width: 70, marginBottom: 16 }} />
@@ -66,11 +51,10 @@ function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
 
                     </div>
                 )}
-            </div>
-        </div>
+            </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
-
-    return <Portal>{modalContent}</Portal>;
 }
 
 export default IRModal;

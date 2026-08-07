@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { usePointsPageData } from "../../../features/points/usePointsPageData";
 import { Button } from "../../../shared/ui/Button";
 import Style from "../../../Styles/Points.module.css";

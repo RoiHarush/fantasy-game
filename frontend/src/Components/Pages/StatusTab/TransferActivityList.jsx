@@ -1,18 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useAuth } from "../../../Context/AuthContext";
-import { usePlayers } from "../../../Context/PlayersContext";
-import { fetchTransferHistory } from "../../../services/transferWindowService";
+import { usePlayers } from "../../../features/players/usePlayers";
+import { useTransferHistory } from "../../../features/transfer-window/useTransferWindow";
 import styles from "../../../Styles/TransferActivityList.module.css";
-import { queryKeys } from "../../../lib/query/keys";
 
 function TransferActivityList({ gameWeekId }) {
     const { players } = usePlayers();
     const { user } = useAuth();
-    const historyQuery = useQuery({
-        queryKey: queryKeys.transferHistory(user?.leagueId, gameWeekId),
-        queryFn: () => fetchTransferHistory(gameWeekId),
-        enabled: Boolean(user?.leagueId && gameWeekId),
+    const historyQuery = useTransferHistory(user?.leagueId, gameWeekId, {
         staleTime: 30_000,
     });
     const actions = useMemo(

@@ -1,29 +1,15 @@
-import { useEffect } from "react";
-import Portal from "../../../../Portal";
-import { lockScroll, unlockScroll } from "../../../../Utils/scrollLock";
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 
-function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlayer }) {
-    useEffect(() => {
-        if (!confirmIRPlayer) return undefined;
-        lockScroll();
-        return () => unlockScroll();
-    }, [confirmIRPlayer]);
-
+function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlayer, pending = false }) {
     if (!confirmIRPlayer) return null;
 
-    const modalContent = (
-        <div className={Style.modalBackdrop} onClick={onCancel}>
-            <div className={Style.modal} onClick={(e) => e.stopPropagation()}>
-                <button
-                    className={Style.closeBtn}
-                    onClick={() => {
-                        unlockScroll();
-                        onCancel();
-                    }}
-                >
-                    ✕
-                </button>
+    return (
+        <Dialog.Root open onOpenChange={open => !open && onCancel()}>
+            <Dialog.Portal>
+            <Dialog.Overlay className={Style.modalBackdrop} />
+            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3002] -translate-x-1/2 -translate-y-1/2`}>
+                <Dialog.Close asChild><button className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
                 <img
                     src="/Icons/ir-chip.svg"
@@ -32,6 +18,7 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
                 />
 
                 <h2 className={Style.title}>IR Chip</h2>
+                <Dialog.Title className="sr-only">IR Chip confirmation</Dialog.Title>
 
                 <p className={Style.message}>
                     {isActive ? (
@@ -56,19 +43,16 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
                 <div className={Style.modalButtons}>
                     <button
                         className={isActive ? Style.cancelButton : Style.confirmButton}
-                        onClick={() => {
-                            unlockScroll();
-                            onConfirm(confirmIRPlayer);
-                        }}
+                        onClick={() => onConfirm(confirmIRPlayer)}
+                        disabled={pending}
                     >
-                        {isActive ? "Confirm Release" : "Play IR Chip"}
+                        {pending ? "Saving…" : isActive ? "Confirm Release" : "Play IR Chip"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
-
-    return <Portal>{modalContent}</Portal>;
 }
 
 export default ConfirmIRModal;

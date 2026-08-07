@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { queryKeys } from "../../../lib/query/keys";
-import { fetchLeague, fetchMyLeague } from "../../../services/leagueService";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import {
+    useCurrentLeague,
+    useLeagueStandings,
+} from "../../../features/league/useLeague";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
@@ -15,18 +15,12 @@ import Status from "./Status";
 function StatusPage() {
     const { user } = useAuth();
     const { currentGameweek, nextGameweek, lastGameweek } = useGameweek();
-    const leagueDetailsQuery = useQuery({
-        queryKey: queryKeys.currentLeague(user?.leagueId),
-        queryFn: fetchMyLeague,
-        enabled: Boolean(user?.leagueId),
+    const leagueDetailsQuery = useCurrentLeague(user?.leagueId, {
         refetchInterval: (query) => query.state.data?.status === "ACTIVE" ? false : 5_000,
     });
     const leagueIsActive = leagueDetailsQuery.data?.status === "ACTIVE";
-    const standingsQuery = useQuery({
-        queryKey: queryKeys.leagueStandings(user?.leagueId),
-        queryFn: fetchLeague,
-        enabled: Boolean(user?.leagueId && leagueIsActive),
-        staleTime: 30_000,
+    const standingsQuery = useLeagueStandings(user?.leagueId, {
+        enabled: leagueIsActive,
     });
     const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
 

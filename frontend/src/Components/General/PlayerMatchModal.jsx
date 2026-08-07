@@ -1,18 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import Style from "../../Styles/PlayerModal.module.css";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
-import { useTeams } from "../../Context/TeamsContext";
-import { apiRequest } from "../../services/apiClient";
-import { queryKeys } from "../../lib/query/keys";
+import { useTeams } from "../../features/teams/useTeams";
+import { usePlayerMatchStats } from "../../features/players/usePlayerDetails";
 
 function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo }) {
     const { teams } = useTeams();
-    const matchQuery = useQuery({
-        queryKey: queryKeys.playerMatch(player?.id, gameweek?.id, user?.id),
-        queryFn: () => apiRequest(`/api/players/${player.id}/match-stats?gw=${gameweek.id}&userId=${user.id}`, { auth: false }),
-        enabled: Boolean(player?.id && gameweek?.id && user?.id),
-        staleTime: 60_000,
-    });
+    const matchQuery = usePlayerMatchStats(player?.id, gameweek?.id, user?.id);
     const matchData = matchQuery.data;
 
     if (!matchData || !teams.length) return null;

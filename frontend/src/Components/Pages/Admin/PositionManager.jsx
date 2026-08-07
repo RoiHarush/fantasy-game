@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
-import { AdminService } from '../../../services/adminService';
+import { useMemo, useState } from 'react';
 import PlayerKit from '../../General/PlayerKit';
-import { usePlayers } from '../../../Context/PlayersContext';
-
-const normalize = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+import { usePlayers } from '../../../features/players/usePlayers';
+import { findPlayers } from "../../../features/league-admin/playerSearch";
+import { useUpdatePlayerPosition } from "../../../features/league-admin/useLeagueAdmin";
 
 const PositionManager = ({ maintenanceLeagueId = null }) => {
-    const { players, setPlayers } = usePlayers();
+    const { players } = usePlayers();
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
-    const [updatingId, setUpdatingId] = useState(null);
+    const updatePosition = useUpdatePlayerPosition(maintenanceLeagueId);
 
     const positions = [
         { id: 1, code: 'GK', label: 'Goalkeeper' },
@@ -18,39 +16,21 @@ const PositionManager = ({ maintenanceLeagueId = null }) => {
         { id: 4, code: 'FWD', label: 'Forward' }
     ];
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-        if (term.length < 2) { setSearchResults([]); return; }
-        const normTerm = normalize(term);
-
-        const results = players.filter(p => {
-            if (!p.available) return false;
-
-            return normalize(p.viewName).includes(normTerm) ||
-                normalize(p.firstName).includes(normTerm) ||
-                normalize(p.lastName).includes(normTerm);
-        }).slice(0, 5);
-
-        setSearchResults(results);
-    };
+    const searchResults = useMemo(
+        () => findPlayers(players, searchTerm, { availableOnly: true }),
+        [players, searchTerm],
+    );
 
     const handleChangePosition = async (player, posId) => {
-        setUpdatingId(player.id);
         try {
-            await AdminService.updatePlayerPosition(player.id, posId, maintenanceLeagueId);
-
             const newPosCode = positions.find(p => p.id === posId).code;
-            setPlayers(prev => prev.map(p =>
-                p.id === player.id ? { ...p, position: newPosCode } : p
-            ));
-
-            setSearchResults(prev => prev.map(p =>
-                p.id === player.id ? { ...p, position: newPosCode } : p
-            ));
+            await updatePosition.mutateAsync({
+                playerId: player.id,
+                positionId: posId,
+                positionCode: newPosCode,
+            });
         } catch {
             alert("Update failed");
-        } finally {
-            setUpdatingId(null);
         }
     };
 
@@ -78,7 +58,7 @@ const PositionManager = ({ maintenanceLeagueId = null }) => {
                     placeholder="Search free agents..."
                     style={styles.input}
                     value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 />
 
                 <div>
@@ -96,7 +76,7 @@ const PositionManager = ({ maintenanceLeagueId = null }) => {
                                 {positions.map(pos => (
                                     <button
                                         key={pos.id}
-                                        disabled={updatingId === p.id}
+                                        disabled={updatePosition.isPending && updatePosition.variables?.playerId === p.id}
                                         onClick={() => handleChangePosition(p, pos.id)}
                                         style={styles.posBtn(p.position === pos.code)}
                                     >

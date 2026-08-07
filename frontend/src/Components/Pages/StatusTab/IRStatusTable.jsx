@@ -1,14 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import Style from "../../../Styles/IRStatusTable.module.css";
-import { apiRequest } from "../../../services/apiClient";
-import { queryKeys } from "../../../lib/query/keys";
+import { useIrStatuses } from "../../../features/status/useStatusData";
 
 function IRStatusTable() {
-    const { data: irStatuses = [] } = useQuery({
-        queryKey: queryKeys.irStatus,
-        queryFn: () => apiRequest("/api/teams/ir-status"),
-        staleTime: 30_000,
-    });
+    const { data: irStatuses = [] } = useIrStatuses();
 
     return (
         <div className={Style.irStatusSection}>

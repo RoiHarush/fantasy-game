@@ -1,17 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { FixtureCard } from "./FixtureCard";
 import Style from "../../../Styles/FixturesTable.module.css";
-import { apiRequest } from "../../../services/apiClient";
-import { queryKeys } from "../../../lib/query/keys";
+import { useFixtures } from "../../../features/fixtures/useFixtures";
 
 function FixturesTable({ gameweeks, defaultGameweek }) {
     const [selectedGameweek, setSelectedGameweek] = useState(null);
-    const { data: fixtures = [] } = useQuery({
-        queryKey: queryKeys.allFixtures,
-        queryFn: () => apiRequest("/api/fixtures", { auth: false }),
-        staleTime: 5 * 60_000,
-    });
+    const { data: fixtures = [] } = useFixtures();
 
     const orderedGameweeks = [...gameweeks].sort((a, b) => a.id - b.id);
     const currentGameweek = selectedGameweek ?? defaultGameweek?.id ?? orderedGameweeks[0]?.id ?? 1;

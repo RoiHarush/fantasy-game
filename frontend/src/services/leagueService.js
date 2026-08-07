@@ -1,11 +1,11 @@
 import { apiRequest } from "./apiClient";
 
-export async function fetchLeague() {
-    return apiRequest("/api/league");
+export async function fetchLeague({ signal } = {}) {
+    return apiRequest("/api/league", { signal });
 }
 
-export async function fetchMyLeague() {
-    return apiRequest("/api/leagues/me");
+export async function fetchMyLeague({ signal } = {}) {
+    return apiRequest("/api/leagues/me", { signal });
 }
 
 export async function updateLeagueSettings(leagueId, settings) {
@@ -25,8 +25,8 @@ export async function fetchMaintenanceLeagues() {
     return apiRequest("/api/admin/leagues");
 }
 
-export async function fetchMaintenanceLeague(leagueId) {
-    return apiRequest(`/api/admin/leagues/${leagueId}`);
+export async function fetchMaintenanceLeague(leagueId, { signal } = {}) {
+    return apiRequest(`/api/admin/leagues/${leagueId}`, { signal });
 }
 
 export async function updateMaintenanceLeagueSettings(leagueId, settings) {

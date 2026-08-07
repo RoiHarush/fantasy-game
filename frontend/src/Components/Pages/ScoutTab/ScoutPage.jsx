@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useAuth } from "../../../Context/AuthContext";
 import { useSquad } from "../../../features/squad/useSquad";
 import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";

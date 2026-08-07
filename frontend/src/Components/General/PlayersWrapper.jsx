@@ -7,7 +7,7 @@ import CompareModal from "./CompareModal";
 import Portal from "../../Portal";
 import WaiverPlanPanel from "../Pages/ScoutTab/WaiverPlanPanel";
 import WaiverStyle from "../../Styles/WaiverScout.module.css";
-import { usePlayers } from "../../Context/PlayersContext";
+import { usePlayers } from "../../features/players/usePlayers";
 
 function PlayersWrapper({
     user,

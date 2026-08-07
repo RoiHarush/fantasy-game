@@ -1,7 +1,7 @@
 import Style from "../../../Styles/PickTeam.module.css";
 import FixturesTable from "../FixturesTab/FixturesTable";
 import PickTeamBlock from "../../Blocks/PickTeamBlock";
-import { usePlayers } from "../../../Context/PlayersContext";
+import { usePlayers } from "../../../features/players/usePlayers";
 import IRManager from "./IR/IRManager";
 import FirstPickManager from "./FirstPickCaptain/FirstPickManager";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
@@ -42,6 +42,7 @@ function PickTeam({
             <div className={Style.chipBar}>
                 <IRManager
                     userId={user.id}
+                    gameweekId={nextGameweek.id}
                     squad={squad}
                     setSquad={setSquad}
                     chips={chips}
@@ -52,6 +53,7 @@ function PickTeam({
 
                 <FirstPickManager
                     userId={user.id}
+                    gameweekId={nextGameweek.id}
                     squad={squad}
                     setSquad={setSquad}
                     chips={chips}

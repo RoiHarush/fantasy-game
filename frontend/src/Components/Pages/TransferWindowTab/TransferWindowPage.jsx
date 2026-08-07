@@ -1,14 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { useLeagueUsers } from "../../../features/league/useLeague";
 import { useSquad } from "../../../features/squad/useSquad";
-import { queryKeys } from "../../../lib/query/keys";
-import { fetchTransferWindowState } from "../../../services/transferWindowService";
-import { fetchAllUsers } from "../../../services/usersService";
+import { useTransferWindowState } from "../../../features/transfer-window/useTransferWindow";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
@@ -19,17 +17,8 @@ function TransferWindowPage() {
     const { user } = useAuth();
     const { nextGameweek } = useGameweek();
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
-    const usersQuery = useQuery({
-        queryKey: queryKeys.leagueUsers(user?.leagueId),
-        queryFn: fetchAllUsers,
-        enabled: Boolean(user?.leagueId),
-        staleTime: 60_000,
-    });
-    const windowQuery = useQuery({
-        queryKey: queryKeys.transferWindow(user?.leagueId),
-        queryFn: fetchTransferWindowState,
-        enabled: Boolean(user?.leagueId),
-    });
+    const usersQuery = useLeagueUsers(user?.leagueId);
+    const windowQuery = useTransferWindowState(user?.leagueId);
     const selectedSquadQuery = useSquad(selectedUserId, nextGameweek?.id, {
         enabled: Boolean(windowQuery.data?.isOpen && !windowQuery.data?.isDraftMode),
     });
@@ -50,7 +39,6 @@ function TransferWindowPage() {
                 <TransferWindow
                     user={user}
                     allUsers={users}
-                    initialWindowState={windowState}
                 />
             }
             right={

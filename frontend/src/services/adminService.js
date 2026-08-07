@@ -1,11 +1,11 @@
 import { apiRequest } from "./apiClient";
 
 export const AdminService = {
-    getAssisters: async (gameweek, leagueId = null) => {
+    getAssisters: async (gameweek, leagueId = null, { signal } = {}) => {
         const endpoint = leagueId
             ? `/api/admin/leagues/${leagueId}/players/assists/${gameweek}`
             : `/api/league-admin/players/assists/${gameweek}`;
-        return apiRequest(endpoint);
+        return apiRequest(endpoint, { signal });
     },
 
     updateAssist: async (playerId, gameweek, action, leagueId = null) => {
@@ -18,11 +18,11 @@ export const AdminService = {
         });
     },
 
-    getPenaltiesConceded: async (gameweek, leagueId = null) => {
+    getPenaltiesConceded: async (gameweek, leagueId = null, { signal } = {}) => {
         const endpoint = leagueId
             ? `/api/admin/leagues/${leagueId}/players/penalties/${gameweek}`
             : `/api/league-admin/players/penalties/${gameweek}`;
-        return apiRequest(endpoint);
+        return apiRequest(endpoint, { signal });
     },
 
     updatePenaltyConceded: async (playerId, gameweek, action, leagueId = null) => {
@@ -42,11 +42,11 @@ export const AdminService = {
         return apiRequest(endpoint, { method: "POST" });
     },
 
-    getLockedPlayers: async (leagueId = null) => {
+    getLockedPlayers: async (leagueId = null, { signal } = {}) => {
         const endpoint = leagueId
             ? `/api/admin/leagues/${leagueId}/players/locked`
             : `/api/league-admin/players/locked`;
-        return apiRequest(endpoint);
+        return apiRequest(endpoint, { signal });
     },
 
     updatePlayerPosition: async (playerId, positionId, leagueId = null) => {

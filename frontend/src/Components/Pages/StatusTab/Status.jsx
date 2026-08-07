@@ -1,27 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
 import ColumnsBlock from "../../Blocks/ColumnsBlock";
 import SplitBlock from "../../Blocks/SplitBlock";
 import Style from "../../../Styles/Status.module.css";
 import IRStatusTable from "./IRStatusTable";
 import PlayerOfTheWeekBlock from "./PlayerOfTheWeekBlock";
-import { fetchUserPoints } from "../../../services/pointsService";
-import { fetchDailyStatus } from "../../../services/gameweekService";
+import { useUserGameweekPoints } from "../../../features/points/usePointSummaries";
+import { useDailyStatus } from "../../../features/status/useStatusData";
 import DailyStatusTable from "./DailyStatusTable";
 import TransferActivityList from "./TransferActivityList";
-import { queryKeys } from "../../../lib/query/keys";
 
 function Status({ user, league, currentGameweek, nextGameweek, preSeason = false }) {
 
-    const pointsQuery = useQuery({
-        queryKey: queryKeys.userGameweekPoints(user?.id, currentGameweek?.id),
-        queryFn: () => fetchUserPoints(user.id, currentGameweek.id),
-        enabled: Boolean(!preSeason && user?.id && currentGameweek?.id),
-    });
-    const dailyStatusQuery = useQuery({
-        queryKey: queryKeys.dailyStatus(currentGameweek?.id),
-        queryFn: () => fetchDailyStatus(currentGameweek.id),
-        enabled: Boolean(!preSeason && currentGameweek?.id),
-    });
+    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id, !preSeason);
+    const dailyStatusQuery = useDailyStatus(currentGameweek?.id, !preSeason);
     const gwPoints = pointsQuery.data ?? "-";
     const dailyStatus = dailyStatusQuery.data ?? [];
 

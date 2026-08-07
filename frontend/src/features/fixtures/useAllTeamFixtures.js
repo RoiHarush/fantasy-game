@@ -1,16 +1,18 @@
+"use client";
+
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { useTeams } from "../Context/TeamsContext";
-import { queryKeys } from "../lib/query/keys";
-import { apiRequest } from "../services/apiClient";
+import { useTeams } from "../teams/useTeams";
+import { queryKeys } from "../../lib/query/keys";
+import { getTeamFixtures } from "./api";
 
 export function useAllTeamFixtures() {
     const { teams } = useTeams();
     const queries = useQueries({
         queries: teams.map((team) => ({
             queryKey: queryKeys.teamFixtures(team.id),
-            queryFn: () => apiRequest(`/api/fixtures/team/${team.id}`),
+            queryFn: ({ signal }) => getTeamFixtures(team.id, { signal }),
             staleTime: 5 * 60_000,
         })),
     });

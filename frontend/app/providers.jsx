@@ -1,32 +1,19 @@
 "use client";
 
 import { AuthProvider } from "../src/Context/AuthContext";
-import { WatchlistProvider } from "../src/Context/WatchlistContext";
 import { WebSocketProvider } from "../src/Context/WebSocketProvider";
 import { SystemStatusProvider } from "../src/Context/SystemStatusContext";
-import { GameweekProvider } from "../src/Context/GameweeksContext";
-import { PlayersProvider } from "../src/Context/PlayersContext";
-import { TeamsProvider } from "../src/Context/TeamsContext";
-import { FixturesProvider } from "../src/Context/FixturesContext";
+import RealtimeTransferSync from "../src/features/transfer-window/RealtimeTransferSync";
 import QueryProvider from "../src/lib/query/QueryProvider";
 
-export default function Providers({ children, initialUser }) {
+export default function Providers({ children, initialUser, dehydratedState }) {
     return (
-        <QueryProvider>
+        <QueryProvider dehydratedState={dehydratedState}>
             <AuthProvider initialUser={initialUser}>
-                <WatchlistProvider>
-                    <WebSocketProvider>
-                        <SystemStatusProvider>
-                            <GameweekProvider>
-                                <PlayersProvider>
-                                    <TeamsProvider>
-                                        <FixturesProvider>{children}</FixturesProvider>
-                                    </TeamsProvider>
-                                </PlayersProvider>
-                            </GameweekProvider>
-                        </SystemStatusProvider>
-                    </WebSocketProvider>
-                </WatchlistProvider>
+                <WebSocketProvider>
+                    <RealtimeTransferSync />
+                    <SystemStatusProvider>{children}</SystemStatusProvider>
+                </WebSocketProvider>
             </AuthProvider>
         </QueryProvider>
     );

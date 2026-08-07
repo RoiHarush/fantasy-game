@@ -1,41 +1,29 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { queryKeys } from "../../../lib/query/keys";
-import { apiRequest } from "../../../services/apiClient";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import {
+    useSaveTransferOrder,
+    useTransferOrder,
+} from "../../../features/transfer-window/useTransferWindow";
 import { Button } from "../../../shared/ui/Button";
 
 export default function TurnOrderModal({ onClose, usersList }) {
     const { nextGameweek } = useGameweek();
     const { user } = useAuth();
-    const queryClient = useQueryClient();
     const pickCount = usersList.length * 2;
     const [editedPicks, setEditedPicks] = useState(null);
-    const queryKey = queryKeys.transferOrder(user?.leagueId, nextGameweek?.id);
-    const orderQuery = useQuery({
-        queryKey,
-        queryFn: () => apiRequest(`/api/market/turn-order/${nextGameweek.id}`),
-        enabled: Boolean(user?.leagueId && nextGameweek?.id),
-    });
+    const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
     const initialPicks = Array.from({ length: pickCount }, (_, index) => (
         index < (orderQuery.data?.length ?? 0) ? String(orderQuery.data[index]) : ""
     ));
     const picks = editedPicks ?? initialPicks;
-    const saveOrder = useMutation({
-        mutationFn: (order) => apiRequest(`/api/market/set-order/${nextGameweek.id}`, {
-            method: "POST",
-            body: { order },
-        }),
-        onSuccess: (_response, order) => {
-            queryClient.setQueryData(queryKey, order);
-            onClose();
-        },
+    const saveOrder = useSaveTransferOrder(user?.leagueId, nextGameweek?.id, {
+        onSuccess: onClose,
     });
 
     const handleUserSelect = (index, userId) => {

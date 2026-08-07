@@ -1,6 +1,7 @@
 import "./globals.css";
 import Providers from "./providers";
 import { getCurrentUser } from "../src/server/auth";
+import { buildInitialQueryState } from "../src/server/queryPrefetch";
 
 export const metadata = {
     title: {
@@ -16,11 +17,12 @@ export const metadata = {
 
 export default async function RootLayout({ children }) {
     const initialUser = await getCurrentUser();
+    const dehydratedState = await buildInitialQueryState(initialUser);
 
     return (
         <html lang="en">
             <body>
-                <Providers initialUser={initialUser}>{children}</Providers>
+                <Providers initialUser={initialUser} dehydratedState={dehydratedState}>{children}</Providers>
             </body>
         </html>
     );

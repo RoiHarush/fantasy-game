@@ -11,13 +11,13 @@ export function usePickTeamData(userId, gameweekId) {
     const squad = useSquad(userId, gameweekId);
     const chips = useQuery({
         queryKey: queryKeys.userChips(userId),
-        queryFn: () => fetchUserChips(userId),
+        queryFn: ({ signal }) => fetchUserChips(userId, { signal }),
         enabled: Boolean(userId),
         staleTime: 60_000,
     });
     const playerData = useQuery({
         queryKey: queryKeys.squadPlayerData(userId, gameweekId),
-        queryFn: () => fetchPlayerDataForGameweek(userId, gameweekId),
+        queryFn: ({ signal }) => fetchPlayerDataForGameweek(userId, gameweekId, { signal }),
         enabled: Boolean(userId && gameweekId),
         staleTime: 30_000,
     });

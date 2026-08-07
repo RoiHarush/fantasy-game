@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { filterPlayers } from "../Utils/filterPlayers";
-import { usePlayers } from "../Context/PlayersContext";
-import { useWatchlist } from "../Context/WatchlistContext";
+import { usePlayers } from "../features/players/usePlayers";
+import { useWatchlist } from "../features/watchlist/useWatchlist";
 
 export function useFilteredPlayers({
     activeButton,

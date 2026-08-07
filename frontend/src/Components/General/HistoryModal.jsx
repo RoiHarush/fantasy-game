@@ -1,15 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import styles from "../../Styles/HistoryModal.module.css";
-import { apiRequest } from "../../services/apiClient";
-import { queryKeys } from "../../lib/query/keys";
+import { usePointsHistory } from "../../features/points/usePointSummaries";
 
 function HistoryModal({ userId, onClose }) {
-    const historyQuery = useQuery({
-        queryKey: queryKeys.pointsHistory(userId),
-        queryFn: () => apiRequest(`/api/points/${userId}/history`),
-        enabled: Boolean(userId),
-        staleTime: 60_000,
-    });
+    const historyQuery = usePointsHistory(userId);
     const history = historyQuery.data ?? [];
 
     return (

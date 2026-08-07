@@ -11,3 +11,7 @@ export async function fetchUserLivePoints(userId, gameweekId) {
 export async function fetchUserTotalPoints(userId) {
     return apiRequest(`/api/points/${userId}`);
 }
+
+export async function fetchUserHistory(userId) {
+    return apiRequest(`/api/points/${userId}/history`);
+}

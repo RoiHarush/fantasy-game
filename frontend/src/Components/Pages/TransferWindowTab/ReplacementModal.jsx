@@ -1,265 +1,100 @@
-import { useEffect, useMemo, useState } from "react";
-import { useGameweek } from "../../../Context/GameweeksContext";
-import { useFixtures } from "../../../Context/FixturesContext";
+"use client";
+
+import * as Dialog from "@radix-ui/react-dialog";
+import { useMemo } from "react";
+
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { useSquad } from "../../../features/squad/useSquad";
+import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
+import { useTransferPlayer } from "../../../features/transfer-window/useTransferWindow";
 import Style from "../../../Styles/TransferModal.module.css";
-import PlayerKit from "../../General/PlayerKit";
-import { apiRequest } from "../../../services/apiClient";
 import TeamShortNames from "../../../Utils/teamNameMap";
+import PlayerKit from "../../General/PlayerKit";
 
-function ReplacementModal({ playerIn, user, setUser, onClose, players }) {
+function ReplacementModal({ playerIn, user, onClose, players }) {
     const { nextGameweek } = useGameweek();
-    const { getFixturesForTeam } = useFixtures();
-
-    const [squad, setSquad] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
-
-    const [allFixtures, setAllFixtures] = useState({});
-
-    useEffect(() => {
-        async function fetchSquad() {
-            try {
-                const data = await apiRequest(`/api/teams/${user.id}/squad?gw=${nextGameweek.id}`);
-                setSquad(data);
-            } catch (err) {
-                console.error("Error fetching squad:", err);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        if (user?.id && nextGameweek?.id) {
-            fetchSquad();
-        }
-    }, [user, nextGameweek]);
-
+    const squadQuery = useSquad(user?.id, nextGameweek?.id);
+    const squad = squadQuery.data;
+    const allFixtures = useAllTeamFixtures() ?? {};
     const samePositionPlayers = useMemo(() => {
         if (!playerIn) return [];
-        const lineupArrays = Object.values(squad?.startingLineup || {});
+        const lineupIds = Object.values(squad?.startingLineup || {}).flat();
         const benchIds = Object.values(squad?.bench || {});
-        const allPlayerIds = lineupArrays.flat().concat(benchIds);
-        return players.filter(
-            (p) => allPlayerIds.includes(p.id) && p.position === playerIn.position
-        );
+        const squadIds = [...lineupIds, ...benchIds];
+        return players.filter(player => squadIds.includes(player.id) && player.position === playerIn.position);
     }, [playerIn, players, squad]);
+    const transfer = useTransferPlayer({
+        leagueId: user?.leagueId,
+        userId: user?.id,
+        gameweekId: nextGameweek?.id,
+        playerInId: playerIn?.id,
+        onSuccess: onClose,
+    });
 
-    useEffect(() => {
-        const fetchAllFixtures = async () => {
-            const teamsToFetch = new Set();
-
-            if (playerIn?.teamId) teamsToFetch.add(playerIn.teamId);
-
-            samePositionPlayers.forEach(p => {
-                if (p.teamId) teamsToFetch.add(p.teamId);
-            });
-
-            const entries = await Promise.all(
-                [...teamsToFetch].map(async teamId => [teamId, await getFixturesForTeam(teamId)])
-            );
-            setAllFixtures(Object.fromEntries(entries));
-        };
-
-        if (playerIn || samePositionPlayers.length > 0) {
-            fetchAllFixtures();
-        }
-    }, [playerIn, samePositionPlayers, getFixturesForTeam]);
-
-
-    const renderFixtureCell = (teamId, offsetGW) => {
-        const currentGwId = (nextGameweek?.id || 0) + offsetGW;
-        const teamFixtures = allFixtures[teamId];
-        const fixture = teamFixtures?.[currentGwId];
-
-        if (!fixture) {
-            return <td key={offsetGW} className={Style.hideOnMobile}>-</td>;
-        }
-
+    function renderFixtureCell(teamId, offsetGameweek) {
+        const gameweekId = (nextGameweek?.id || 0) + offsetGameweek;
+        const fixture = allFixtures[teamId]?.[gameweekId];
+        if (!fixture) return <td key={offsetGameweek} className={Style.hideOnMobile}>-</td>;
         const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
         const fullName = match ? match[1].trim() : fixture.opponent;
-        const ha = match ? match[2] : "";
-        const shortName = TeamShortNames[fullName] || fullName;
-
-        return (
-            <td key={offsetGW} className={Style.hideOnMobile}>
-                {shortName} ({ha})
-            </td>
-        );
-    };
-
-    const handleReplace = async (playerOut) => {
-        setSaving(true);
-        setError("");
-        try {
-            await apiRequest(`/api/market/transfer`, {
-                method: "POST",
-                body: {
-                    playerOutId: playerOut.id,
-                    playerInId: playerIn.id
-                },
-            });
-
-            setUser((prev) => ({
-                ...prev,
-                squad: {
-                    ...squad,
-                    startingLineup: {
-                        ...squad.startingLineup,
-                        [playerOut.position]: (squad.startingLineup[playerOut.position] || []).map((id) =>
-                            id === playerOut.id ? playerIn.id : id
-                        ),
-                    },
-                    bench: Object.fromEntries(
-                        Object.entries(squad.bench || {}).map(([slot, id]) =>
-                            [slot, id === playerOut.id ? playerIn.id : id]
-                        )
-                    ),
-                },
-            }));
-            onClose();
-        } catch (requestError) {
-            setError(requestError.message || "Transfer failed on server");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    if (!playerIn || loading) {
-        return (
-            <div className={Style.overlay}>
-                <div className={Style.modal}>
-                    <p>Loading squad data...</p>
-                </div>
-            </div>
-        );
+        const location = match ? match[2] : "";
+        return <td key={offsetGameweek} className={Style.hideOnMobile}>{TeamShortNames[fullName] || fullName} ({location})</td>;
     }
 
-    if (!squad) {
-        return (
-            <div className={Style.overlay}>
-                <div className={Style.modal}>
-                    <p>Could not load squad for this user.</p>
-                    <button className={Style.closeBtn} onClick={onClose}>Close</button>
-                </div>
-            </div>
-        );
-    }
+    if (!playerIn) return null;
 
     return (
-        <div className={Style.overlay}>
-            <div className={Style.modal} role="dialog" aria-modal="true" aria-label="Select player to replace">
-                <h3>
-                    You have requested to sign{" "}
-                    <span className={Style.green}>{playerIn.viewName}</span>.
-                </h3>
+        <Dialog.Root open onOpenChange={open => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className={Style.overlay} />
+                <Dialog.Content className={Style.modal} aria-label="Select player to replace">
+                    {squadQuery.isPending ? <p role="status">Loading squad data…</p> : squadQuery.error || !squad ? (
+                        <>
+                            <p role="alert">{squadQuery.error?.message || "Could not load squad for this user."}</p>
+                            <Dialog.Close asChild><button className={Style.closeBtn}>Close</button></Dialog.Close>
+                        </>
+                    ) : (
+                        <>
+                            <h3>You have requested to sign <span className={Style.green}>{playerIn.viewName}</span>.</h3>
+                            <div className={Style.section}>
+                                <div className={Style.tableWrapper}>
+                                    <table className={Style.table}>
+                                        <thead><tr><th>Player</th><th>Points</th><th className={Style.hideOnMobile}>GW{nextGameweek?.id}</th><th className={Style.hideOnMobile}>GW{nextGameweek.id + 1}</th><th className={Style.hideOnMobile}>GW{nextGameweek.id + 2}</th><th /></tr></thead>
+                                        <tbody><tr>
+                                            <td className={Style.playerCell}><PlayerKit teamId={playerIn.teamId} type={playerIn.position === "GK" ? "gk" : "field"} className={Style["player-shirt"]} /><span>{playerIn.viewName}</span></td>
+                                            <td>{playerIn.points}</td>
+                                            {renderFixtureCell(playerIn.teamId, 0)}{renderFixtureCell(playerIn.teamId, 1)}{renderFixtureCell(playerIn.teamId, 2)}
+                                            <td><Dialog.Close asChild><button className={Style.cancelBtnSmall}>Cancel</button></Dialog.Close></td>
+                                        </tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
 
-                <div className={Style.section}>
-                    <div className={Style.tableWrapper}>
-                        <table className={Style.table}>
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Points</th>
-                                    <th className={Style.hideOnMobile}>GW{nextGameweek?.id || "Next"}</th>
-                                    <th className={Style.hideOnMobile}>GW{(nextGameweek?.id || 0) + 1}</th>
-                                    <th className={Style.hideOnMobile}>GW{(nextGameweek?.id || 0) + 2}</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td className={Style.playerCell}>
-                                        <PlayerKit
-                                            teamId={playerIn.teamId}
-                                            type={playerIn.position === "GK" ? "gk" : "field"}
-                                            className={Style["player-shirt"]}
-                                        />
-                                        <span>{playerIn.viewName}</span>
-                                    </td>
-                                    <td>{playerIn.points}</td>
-
-                                    {renderFixtureCell(playerIn.teamId, 0)}
-                                    {renderFixtureCell(playerIn.teamId, 1)}
-                                    {renderFixtureCell(playerIn.teamId, 2)}
-
-                                    <td>
-                                        <button className={Style.cancelBtnSmall} onClick={onClose}>
-                                            Cancel
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <h4 className={Style.subtitle}>
-                    Which player would you like{" "}
-                    <span className={Style.green}>{playerIn.viewName}</span> to replace?
-                </h4>
-
-                {error && <p role="alert">{error}</p>}
-
-                <div className={Style.section}>
-                    <div className={Style.tableWrapper}>
-                        <table className={Style.table}>
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Points</th>
-                                    <th className={Style.hideOnMobile}>GW{nextGameweek?.id || "Next"}</th>
-                                    <th className={Style.hideOnMobile}>GW{(nextGameweek?.id || 0) + 1}</th>
-                                    <th className={Style.hideOnMobile}>GW{(nextGameweek?.id || 0) + 2}</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {samePositionPlayers.length > 0 ? (
-                                    samePositionPlayers.map((p) => (
-                                        <tr key={p.id}>
-                                            <td className={Style.playerCell}>
-                                                <PlayerKit
-                                                    teamId={p.teamId}
-                                                    type={p.position === "GK" ? "gk" : "field"}
-                                                    className={Style["player-shirt"]}
-                                                />
-                                                <span>{p.viewName}</span>
-                                            </td>
-                                            <td>{p.points}</td>
-
-                                            {renderFixtureCell(p.teamId, 0)}
-                                            {renderFixtureCell(p.teamId, 1)}
-                                            {renderFixtureCell(p.teamId, 2)}
-
-                                            <td>
-                                                <button
-                                                    className={Style.replaceBtn}
-                                                    onClick={() => handleReplace(p)}
-                                                    disabled={saving}
-                                                >
-                                                    {saving ? "Saving..." : "Replace"}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="6" style={{ textAlign: "center", color: "#aaa" }}>
-                                            No players in this position.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <button className={Style.closeBtn} onClick={onClose}>
-                    Close
-                </button>
-            </div>
-        </div>
+                            <h4 className={Style.subtitle}>Which player would you like <span className={Style.green}>{playerIn.viewName}</span> to replace?</h4>
+                            {transfer.error && <p role="alert">{transfer.error.message || "Transfer failed on server"}</p>}
+                            <div className={Style.section}>
+                                <div className={Style.tableWrapper}>
+                                    <table className={Style.table}>
+                                        <thead><tr><th>Player</th><th>Points</th><th className={Style.hideOnMobile}>GW{nextGameweek.id}</th><th className={Style.hideOnMobile}>GW{nextGameweek.id + 1}</th><th className={Style.hideOnMobile}>GW{nextGameweek.id + 2}</th><th /></tr></thead>
+                                        <tbody>
+                                            {samePositionPlayers.length > 0 ? samePositionPlayers.map(player => (
+                                                <tr key={player.id}>
+                                                    <td className={Style.playerCell}><PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={Style["player-shirt"]} /><span>{player.viewName}</span></td>
+                                                    <td>{player.points}</td>
+                                                    {renderFixtureCell(player.teamId, 0)}{renderFixtureCell(player.teamId, 1)}{renderFixtureCell(player.teamId, 2)}
+                                                    <td><button className={Style.replaceBtn} onClick={() => transfer.mutate(player.id)} disabled={transfer.isPending}>{transfer.isPending ? "Saving…" : "Replace"}</button></td>
+                                                </tr>
+                                            )) : <tr><td colSpan="6" className="text-center text-slate-400">No players in this position.</td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <Dialog.Close asChild><button className={Style.closeBtn}>Close</button></Dialog.Close>
+                        </>
+                    )}
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }
 

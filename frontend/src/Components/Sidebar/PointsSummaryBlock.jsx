@@ -1,26 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { useGameweek } from "../../Context/GameweeksContext";
-import { queryKeys } from "../../lib/query/keys";
-import { fetchUserPoints, fetchUserTotalPoints } from "../../services/pointsService";
+import { useGameweek } from "../../features/gameweeks/useGameweek";
+import {
+    useUserGameweekPoints,
+    useUserTotalPoints,
+} from "../../features/points/usePointSummaries";
 import styles from "../../Styles/PointsSummaryBlock.module.css";
 import HistoryModal from "../General/HistoryModal";
 
 function PointsSummaryBlock({ user }) {
     const [showHistory, setShowHistory] = useState(false);
     const { currentGameweek } = useGameweek();
-    const pointsQuery = useQuery({
-        queryKey: queryKeys.userGameweekPoints(user?.id, currentGameweek?.id),
-        queryFn: () => fetchUserPoints(user.id, currentGameweek.id),
-        enabled: Boolean(user?.id && currentGameweek?.id),
-    });
-    const totalQuery = useQuery({
-        queryKey: queryKeys.userTotalPoints(user?.id),
-        queryFn: () => fetchUserTotalPoints(user.id),
-        enabled: Boolean(user?.id),
-        staleTime: 30_000,
-    });
+    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id);
+    const totalQuery = useUserTotalPoints(user?.id);
 
     if (!user) return null;
 

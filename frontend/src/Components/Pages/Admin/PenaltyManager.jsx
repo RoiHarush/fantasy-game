@@ -1,37 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
-import { usePlayers } from '../../../Context/PlayersContext';
-import { useGameweek } from '../../../Context/GameweeksContext';
-import { queryKeys } from "../../../lib/query/keys";
-
-const normalize = (str) =>
-    (str || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[øØöÖœŒ]/g, "o")
-        .replace(/[åÅäÄáÁàÀâÂ]/g, "a")
-        .replace(/[éÉèÈêÊëË]/g, "e")
-        .replace(/[íÍìÌîÎïÏ]/g, "i")
-        .replace(/[úÚùÙûÛüÜ]/g, "u")
-        .replace(/[ñÑ]/g, "n")
-        .replace(/[łŁ]/g, "l")
-        .toLowerCase();
+import { usePlayers } from '../../../features/players/usePlayers';
+import { useGameweek } from '../../../features/gameweeks/useGameweek';
+import { findPlayers } from "../../../features/league-admin/playerSearch";
+import { useAdminPenalties } from "../../../features/league-admin/useLeagueAdmin";
 
 const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     const { players } = usePlayers();
     const { currentGameweek } = useGameweek();
-    const queryClient = useQueryClient();
     const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const gameweek = selectedGameweek ?? currentGameweek?.id;
-    const queryKey = queryKeys.adminPenalties(maintenanceLeagueId, gameweek);
-    const penaltiesQuery = useQuery({
-        queryKey,
-        queryFn: () => AdminService.getPenaltiesConceded(gameweek, maintenanceLeagueId),
-        enabled: Boolean(gameweek),
-    });
+    const { query: penaltiesQuery, mutation: updatePenalty } = useAdminPenalties(maintenanceLeagueId, gameweek);
     const punishedPlayers = penaltiesQuery.data ?? [];
 
     const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
@@ -39,28 +19,8 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
 
     const searchResults = useMemo(() => {
-        if (searchTerm.length < 2) return [];
-        const term = normalize(searchTerm);
-        return players.filter(p => {
-                const pName = normalize(p.viewName);
-                const pFirst = normalize(p.firstName);
-                const pLast = normalize(p.lastName);
-                return pName.includes(term) || pFirst.includes(term) || pLast.includes(term);
-            }).slice(0, 5);
+        return findPlayers(players, searchTerm);
     }, [players, searchTerm]);
-    const updatePenalty = useMutation({
-        mutationFn: ({ playerId, action }) => AdminService.updatePenaltyConceded(playerId, gameweek, action, maintenanceLeagueId),
-        onSuccess: (updatedPlayer) => {
-            queryClient.setQueryData(queryKey, (current = []) => {
-                if (updatedPlayer.penaltiesConceded === 0) return current.filter(player => player.playerId !== updatedPlayer.playerId);
-                const exists = current.some(player => player.playerId === updatedPlayer.playerId);
-                return exists
-                    ? current.map(player => player.playerId === updatedPlayer.playerId ? updatedPlayer : player)
-                    : [...current, updatedPlayer];
-            });
-            setSearchTerm("");
-        },
-    });
 
     const handlePunish = async (playerId, action) => {
         if (!canEdit) {
@@ -69,6 +29,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
         }
         try {
             await updatePenalty.mutateAsync({ playerId, action });
+            setSearchTerm("");
         } catch {
             alert("Failed to update penalty");
         }

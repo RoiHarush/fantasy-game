@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePlayers } from "../../Context/PlayersContext";
+import { usePlayers } from "../../features/players/usePlayers";
 import styles from "../../Styles/SquadPlayersTable.module.css";
 import PlayerKit from "../General/PlayerKit";
 import { Info } from "lucide-react";

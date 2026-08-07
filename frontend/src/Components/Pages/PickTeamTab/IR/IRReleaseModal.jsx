@@ -1,19 +1,8 @@
-import { useEffect } from "react";
-import Portal from "../../../../Portal";
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../../Styles/IRReleaseModal.module.css";
 import PlayerKit from "../../../General/PlayerKit";
 
 function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
-    useEffect(() => {
-        const originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        document.body.style.touchAction = "none";
-        return () => {
-            document.body.style.overflow = originalOverflow;
-            document.body.style.touchAction = "auto";
-        };
-    }, []);
-
     if (!irPlayer) return null;
 
     const samePositionPlayers = Object.values(squad.startingLineup)
@@ -23,10 +12,12 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
         .filter(p => p && p.position === irPlayer.position && p.id !== irPlayer.id);
 
     return (
-        <Portal>
-        <div className={Style.modalBackdrop} onClick={onClose}>
-            <div className={Style.modal} onClick={(e) => e.stopPropagation()}>
-                <button className={Style.closeBtn} onClick={onClose}>✕</button>
+        <Dialog.Root open onOpenChange={open => !open && onClose()}>
+        <Dialog.Portal>
+            <Dialog.Overlay className={Style.modalBackdrop} />
+            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`}>
+                <Dialog.Title className="sr-only">Release IR Player</Dialog.Title>
+                <Dialog.Close asChild><button className={Style.closeBtn}>✕</button></Dialog.Close>
 
                 <img
                     src="/Icons/ir-chip.svg"
@@ -73,9 +64,9 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                         Cancel
                     </button>
                 </div>
-            </div>
-        </div>
-        </Portal>
+            </Dialog.Content>
+        </Dialog.Portal>
+        </Dialog.Root>
     );
 }
 

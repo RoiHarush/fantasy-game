@@ -1,32 +1,19 @@
-import { useEffect } from "react";
-import Portal from "../../../../Portal";
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
-import { usePlayers } from "../../../../Context/PlayersContext";
+import { usePlayers } from "../../../../features/players/usePlayers";
 
-function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, isActive }) {
+function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, isActive, pending = false }) {
     const { players } = usePlayers();
     const player = players.find(p => p.id === firstPickPlayerId);
 
-    useEffect(() => {
-        if (!player) return undefined;
-
-        const originalOverflow = document.body.style.overflow;
-        const originalTouchAction = document.body.style.touchAction;
-        document.body.style.overflow = "hidden";
-        document.body.style.touchAction = "none";
-
-        return () => {
-            document.body.style.overflow = originalOverflow;
-            document.body.style.touchAction = originalTouchAction;
-        };
-    }, [player]);
-
     if (!player) return null;
 
-    const modalContent = (
-        <div className={Style.modalBackdrop} onClick={onCancel}>
-            <div className={Style.modal} role="dialog" aria-modal="true" aria-labelledby="captain-chip-title" onClick={e => e.stopPropagation()}>
-                <button type="button" className={Style.closeBtn} onClick={onCancel} aria-label="Close captain chip dialog">✕</button>
+    return (
+        <Dialog.Root open onOpenChange={open => !open && onCancel()}>
+            <Dialog.Portal>
+            <Dialog.Overlay className={Style.modalBackdrop} />
+            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`} aria-labelledby="captain-chip-title">
+                <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close captain chip dialog">✕</button></Dialog.Close>
 
                 <img
                     src="/Icons/captain-chip.svg"
@@ -50,15 +37,15 @@ function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, 
                         type="button"
                         className={isActive ? Style.cancelButton : Style.confirmButton}
                         onClick={onConfirm}
+                        disabled={pending}
                     >
-                        {isActive ? "Cancel Chip" : "Play Chip"}
+                        {pending ? "Saving…" : isActive ? "Cancel Chip" : "Play Chip"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
-
-    return <Portal>{modalContent}</Portal>;
 }
 
 export default ConfirmFirstPickCaptainModal;

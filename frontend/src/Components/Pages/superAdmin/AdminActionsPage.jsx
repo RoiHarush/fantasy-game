@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { apiRequest } from '../../../services/apiClient';
+import { useMemo, useState } from "react";
+import {
+    useAdminActionData,
+    useRunAdminAction,
+} from "../../../features/super-admin/useSuperAdmin";
 
 const styles = {
     section: {
@@ -138,37 +141,28 @@ export default function AdminActionsPage() {
     const [squadGw, setSquadGw] = useState('');
     const [squadDto, setSquadDto] = useState(JSON.stringify(DEFAULT_SQUAD_DTO, null, 2));
 
-    const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    const [allPlayers, setAllPlayers] = useState([]);
     const [playerSearch, setPlayerSearch] = useState('');
-
-    const [allUsersList, setAllUsersList] = useState([]);
-
-    useEffect(() => {
-
-        const fetchPlayers = async () => {
-            try {
-                const data = await apiRequest('/api/players');
-                setAllPlayers(data.map(p => ({ id: p.id, viewName: p.viewName })));
-            } catch (err) {
-                console.error("Error fetching players list:", err);
-            }
-        };
-
-        const fetchUsers = async () => {
-            try {
-                const data = await apiRequest('/api/admin/users-summary');
-                setAllUsersList(data.map(u => ({ userId: u.userId, username: u.username })));
-            } catch (err) {
-                console.error("Error fetching users list:", err);
-            }
-        };
-
-        fetchPlayers();
-        fetchUsers();
-    }, []);
+    const { players: playersQuery, users: usersQuery } = useAdminActionData();
+    const allPlayers = useMemo(
+        () => (playersQuery.data ?? []).map(player => ({ id: player.id, viewName: player.viewName })),
+        [playersQuery.data],
+    );
+    const allUsersList = useMemo(
+        () => (usersQuery.data ?? []).map(user => ({ userId: user.userId, username: user.username })),
+        [usersQuery.data],
+    );
+    const adminAction = useRunAdminAction({
+        onSuccess: (responseBody) => {
+            const responseText = typeof responseBody === "string"
+                ? responseBody
+                : responseBody == null ? "Success!" : JSON.stringify(responseBody);
+            setMessage({ text: responseText, type: "success" });
+        },
+        onError: (error) => setMessage({ text: error.message, type: "error" }),
+    });
+    const loading = adminAction.isPending;
 
     const filteredPlayers = useMemo(() => {
         if (!playerSearch) {
@@ -179,27 +173,9 @@ export default function AdminActionsPage() {
         );
     }, [allPlayers, playerSearch]);
 
-    const callAdminApi = async (endpoint, method = 'POST', body = null) => {
-        setLoading(true);
+    const callAdminApi = (endpoint, method = 'POST', body = null) => {
         setMessage({ text: '', type: '' });
-
-        try {
-            const responseBody = await apiRequest(endpoint, {
-                method: method,
-                body,
-            });
-            const responseText = typeof responseBody === 'string'
-                ? responseBody
-                : responseBody == null
-                    ? 'Success!'
-                    : JSON.stringify(responseBody);
-            setMessage({ text: responseText, type: 'success' });
-
-        } catch (err) {
-            setMessage({ text: err.message, type: 'error' });
-        } finally {
-            setLoading(false);
-        }
+        adminAction.mutate({ endpoint, method, body });
     };
 
     const handleOpenGameweek = () => {
@@ -394,6 +370,11 @@ export default function AdminActionsPage() {
             {message.text && (
                 <div style={{ ...styles.message, ...(message.type === 'success' ? styles.success : styles.error) }}>
                     {message.text}
+                </div>
+            )}
+            {(playersQuery.error || usersQuery.error) && (
+                <div style={{ ...styles.message, ...styles.error }} role="alert">
+                    {(playersQuery.error || usersQuery.error).message}
                 </div>
             )}
         </div>

@@ -1,53 +1,29 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { useSaveTeam } from "../../../features/pick-team/usePickTeamActions";
 import { usePickTeamData } from "../../../features/pick-team/usePickTeamData";
-import { queryKeys } from "../../../lib/query/keys";
-import { saveTeamRequest } from "../../../services/pickTeamService";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import PickTeam from "./PickTeam";
 
-function buildSaveTeamDto(squad) {
-    return {
-        startingLineup: squad.startingLineup,
-        bench: squad.bench,
-        formation: {
-            GK: squad.startingLineup.GK?.length || 0,
-            DEF: squad.startingLineup.DEF?.length || 0,
-            MID: squad.startingLineup.MID?.length || 0,
-            FWD: squad.startingLineup.FWD?.length || 0,
-        },
-        captainId: squad.captainId || null,
-        viceCaptainId: squad.viceCaptainId || null,
-        irId: squad.irId || null,
-        firstPickId: squad.firstPickId || null,
-    };
-}
-
 function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialChips, playerData, refreshPlayerData }) {
-    const queryClient = useQueryClient();
     const [squad, setSquad] = useState(initialSquad);
     const [chips, setChips] = useState(initialChips);
     const [isDirty, setIsDirty] = useState(false);
-    const saveMutation = useMutation({
-        mutationFn: (dto) => saveTeamRequest(user.id, dto),
-        onSuccess: (updatedSquad) => {
+    const saveMutation = useSaveTeam(user.id, nextGameweek.id, (updatedSquad) => {
             setSquad(updatedSquad);
             setIsDirty(false);
-            queryClient.setQueryData(queryKeys.squad(user.id, nextGameweek.id), updatedSquad);
-        },
     });
 
     const saveTeam = useCallback(async () => {
         if (!squad) return false;
         try {
-            await saveMutation.mutateAsync(buildSaveTeamDto(squad));
+            await saveMutation.mutateAsync(squad);
             return true;
         } catch (error) {
             console.error("Failed to save team:", error);

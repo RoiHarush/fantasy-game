@@ -1,42 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import Style from "../../Styles/CompareModal.module.css";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import useLockBodyScroll from "../../hooks/useLockBodyScroll";
-import { apiRequest } from "../../services/apiClient";
-import { queryKeys } from "../../lib/query/keys";
+import { useTeamFixtures } from "../../features/fixtures/useFixtures";
+import { usePlayerStats } from "../../features/players/usePlayerDetails";
 
 function CompareModal({ players, onClose }) {
     useLockBodyScroll();
 
     const [tab, setTab] = useState("fixtures");
     const [left, right] = players;
-    const leftFixturesQuery = useQuery({
-        queryKey: queryKeys.teamFixtures(left?.teamId),
-        queryFn: () => apiRequest(`/api/fixtures/team/${left.teamId}`),
-        enabled: Boolean(left?.teamId),
-        staleTime: 5 * 60_000,
-    });
-    const rightFixturesQuery = useQuery({
-        queryKey: queryKeys.teamFixtures(right?.teamId),
-        queryFn: () => apiRequest(`/api/fixtures/team/${right.teamId}`),
-        enabled: Boolean(right?.teamId),
-        staleTime: 5 * 60_000,
-    });
-    const leftStatsQuery = useQuery({
-        queryKey: queryKeys.playerStats(left?.id),
-        queryFn: () => apiRequest(`/api/players/${left.id}/all-stats`, { auth: false }),
-        enabled: Boolean(left?.id),
-        staleTime: 5 * 60_000,
-    });
-    const rightStatsQuery = useQuery({
-        queryKey: queryKeys.playerStats(right?.id),
-        queryFn: () => apiRequest(`/api/players/${right.id}/all-stats`, { auth: false }),
-        enabled: Boolean(right?.id),
-        staleTime: 5 * 60_000,
-    });
+    const leftFixturesQuery = useTeamFixtures(left?.teamId);
+    const rightFixturesQuery = useTeamFixtures(right?.teamId);
+    const leftStatsQuery = usePlayerStats(left?.id);
+    const rightStatsQuery = usePlayerStats(right?.id);
 
     if (!left || !right) return null;
 

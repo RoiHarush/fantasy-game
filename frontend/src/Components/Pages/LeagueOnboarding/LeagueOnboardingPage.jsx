@@ -1,15 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { createLeagueSchema, joinLeagueSchema } from "../../../features/league-onboarding/schemas";
-import { queryKeys } from "../../../lib/query/keys";
-import { apiRequest } from "../../../services/apiClient";
+import {
+    useCreateLeague,
+    useJoinLeague,
+    useScoringDefaults,
+} from "../../../features/league-onboarding/useLeagueOnboarding";
 import { Button } from "../../../shared/ui/Button";
 import styles from "../../../Styles/LeagueOnboarding.module.css";
 import { getPostLoginRoute } from "../../../Utils/routing";
@@ -29,18 +31,7 @@ function CreateLeagueForm({ scoringRules, onCreated }) {
             scoringRules,
         },
     });
-    const mutation = useMutation({
-        mutationFn: (values) => apiRequest("/api/leagues", {
-            method: "POST",
-            body: {
-                name: values.leagueName,
-                maxParticipants: values.maxParticipants,
-                fantasyTeamName: values.teamName,
-                scoringRules: values.scoringRules,
-            },
-        }),
-        onSuccess: onCreated,
-    });
+    const mutation = useCreateLeague(onCreated);
 
     return (
         <form onSubmit={form.handleSubmit(values => mutation.mutate(values))} className={styles.form} noValidate>
@@ -89,16 +80,7 @@ function JoinLeagueForm({ onJoined }) {
         resolver: zodResolver(joinLeagueSchema),
         defaultValues: { leagueCode: "", teamName: "" },
     });
-    const mutation = useMutation({
-        mutationFn: (values) => apiRequest("/api/leagues/join", {
-            method: "POST",
-            body: {
-                leagueCode: values.leagueCode.trim().toUpperCase(),
-                fantasyTeamName: values.teamName,
-            },
-        }),
-        onSuccess: onJoined,
-    });
+    const mutation = useJoinLeague(onJoined);
 
     return (
         <form onSubmit={form.handleSubmit(values => mutation.mutate(values))} className={styles.form} noValidate>
@@ -131,11 +113,7 @@ export default function LeagueOnboardingPage() {
     const [copied, setCopied] = useState(false);
     const { refreshCurrentUser } = useAuth();
     const router = useRouter();
-    const scoringQuery = useQuery({
-        queryKey: queryKeys.scoringDefaults,
-        queryFn: () => apiRequest("/api/leagues/scoring-rules/defaults"),
-        staleTime: Infinity,
-    });
+    const scoringQuery = useScoringDefaults();
 
     async function handleCreated(league) {
         setCreatedLeague(league);

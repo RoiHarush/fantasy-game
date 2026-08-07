@@ -39,7 +39,6 @@ export function SystemStatusProvider({ children }) {
         setIsSystemLocked(false);
         lockStartTimeRef.current = null;
         wipeStorage();
-        console.log("🔓 System fully unlocked.");
     }, [wipeStorage]);
 
     const handleLock = useCallback(() => {
@@ -75,7 +74,6 @@ export function SystemStatusProvider({ children }) {
         const remaining = MIN_DISPLAY_TIME - timePassed;
 
         if (remaining > 0) {
-            console.log(`⏳ Global timer: unlocking in ${(remaining / 1000).toFixed(0)}s`);
             if (unlockTimerRef.current !== null) {
                 window.clearTimeout(unlockTimerRef.current);
             }
@@ -127,7 +125,6 @@ export function SystemStatusProvider({ children }) {
         if (!connected) return;
 
         return subscribe('/topic/system-status', (data) => {
-            console.log("📡 WS Event in Context:", data);
             if (data?.status === 'LOCKED') {
                 queryClient.setQueryData(queryKeys.systemStatus, true);
                 handleLock();

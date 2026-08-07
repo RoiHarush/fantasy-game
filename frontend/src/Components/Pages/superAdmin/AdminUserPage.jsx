@@ -1,119 +1,57 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import AdminUserEditModal from './AdminUserEditModal';
-import { apiRequest } from '../../../services/apiClient';
+"use client";
 
-const styles = {
-    table: {
-        width: '100%',
-        borderCollapse: 'collapse',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
-    },
-    th: {
-        backgroundColor: '#f3f4f6',
-        padding: '12px 16px',
-        textAlign: 'left',
-        borderBottom: '2px solid #e5e7eb',
-        fontWeight: 'bold',
-    },
-    td: {
-        padding: '12px 16px',
-        borderBottom: '1px solid #e5e7eb',
-    },
-    editButton: {
-        backgroundColor: '#3b82f6',
-        color: 'white',
-        padding: '6px 12px',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-    }
-};
+import { useState } from "react";
+
+import { useAdminUsers } from "../../../features/super-admin/useSuperAdmin";
+import { Button } from "../../../shared/ui/Button";
+import AdminUserEditModal from "./AdminUserEditModal";
 
 export default function AdminUsersPage() {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [editingUser, setEditingUser] = useState(null);
+    const [editingUserId, setEditingUserId] = useState(null);
+    const usersQuery = useAdminUsers();
 
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const data = await apiRequest('/api/admin/users-summary');
-            setUsers(data);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
-
-    const handleCloseModal = () => {
-        setEditingUser(null);
-    };
-
-    const handleSaveAndClose = () => {
-        setEditingUser(null);
-        fetchUsers();
-    };
-
-    if (loading) return <div>Loading Users...</div>;
-    if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
+    if (usersQuery.isPending) return <p role="status">Loading users…</p>;
+    if (usersQuery.error) return <p className="text-red-700" role="alert">{usersQuery.error.message}</p>;
 
     return (
-        <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '20px' }}>
-                Users Management
-            </h1>
-
-            <table style={styles.table}>
-                <thead>
-                    <tr>
-                        <th style={styles.th}>User ID</th>
-                        <th style={styles.th}>Username</th>
-                        <th style={styles.th}>Role</th>
-                        <th style={styles.th}>Fantasy Team</th>
-                        <th style={styles.th}>Total Points</th>
-                        <th style={styles.th}>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {users.map((u) => (
-                        <tr key={u.userId}>
-                            <td style={styles.td}>{u.userId}</td>
-                            <td style={styles.td}>{u.username}</td>
-                            <td style={styles.td}>{u.role}</td>
-                            <td style={styles.td}>{u.fantasyTeamName}</td>
-                            <td style={styles.td}>{u.totalPoints}</td>
-                            <td style={styles.td}>
-                                <button
-                                    style={styles.editButton}
-                                    onClick={() => setEditingUser(u.userId)}
-                                >
-                                    Edit
-                                </button>
-                            </td>
+        <section>
+            <h1 className="mb-5 text-3xl font-bold">Users Management</h1>
+            <div className="overflow-x-auto rounded-xl bg-white shadow-md">
+                <table className="w-full border-collapse text-left">
+                    <thead className="bg-slate-100">
+                        <tr>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">User ID</th>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">Username</th>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">Role</th>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">Fantasy Team</th>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">Total Points</th>
+                            <th className="border-b-2 border-slate-200 px-4 py-3">Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {(usersQuery.data ?? []).map(user => (
+                            <tr key={user.userId} className="border-b border-slate-200 last:border-0">
+                                <td className="px-4 py-3">{user.userId}</td>
+                                <td className="px-4 py-3">{user.username}</td>
+                                <td className="px-4 py-3">{user.role}</td>
+                                <td className="px-4 py-3">{user.fantasyTeamName}</td>
+                                <td className="px-4 py-3">{user.totalPoints}</td>
+                                <td className="px-4 py-3">
+                                    <Button size="sm" onClick={() => setEditingUserId(user.userId)}>Edit</Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
-            {editingUser && (
+            {editingUserId && (
                 <AdminUserEditModal
-                    userId={editingUser}
-                    onClose={handleCloseModal}
-                    onSave={handleSaveAndClose}
+                    userId={editingUserId}
+                    onClose={() => setEditingUserId(null)}
+                    onSave={() => setEditingUserId(null)}
                 />
             )}
-        </div>
+        </section>
     );
 }

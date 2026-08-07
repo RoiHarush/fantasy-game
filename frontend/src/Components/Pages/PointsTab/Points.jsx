@@ -2,7 +2,7 @@
 import FixturesTable from "../FixturesTab/FixturesTable";
 import Style from "../../../Styles/Points.module.css";
 import PointsBlock from "../../Blocks/PointsBlock";
-import { usePlayers } from "../../../Context/PlayersContext";
+import { usePlayers } from "../../../features/players/usePlayers";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import GameweekController from "../../General/Pitch/GameweekController";
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";

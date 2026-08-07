@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
+const subscribe = () => () => {};
+
 export default function Portal({ children }) {
-    const [mountNode, setMountNode] = useState(null);
+    const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+    if (!mounted) return null;
 
-    useEffect(() => {
-        const root = document.getElementById("modal-root") || document.body;
-        setMountNode(root);
-        return () => setMountNode(null);
-    }, []);
-
-    if (!mountNode) return null;
-
-    return createPortal(children, mountNode);
+    return createPortal(children, document.getElementById("modal-root") || document.body);
 }

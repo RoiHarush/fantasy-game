@@ -1,4 +1,4 @@
-import { useGameweek } from "../../Context/GameweeksContext";
+import { useGameweek } from "../../features/gameweeks/useGameweek";
 import Style from "../../Styles/PlayerInfoContent.module.css";
 
 function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {

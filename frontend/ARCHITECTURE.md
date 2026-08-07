@@ -33,6 +33,12 @@ components reserved for interaction and browser APIs.
   WebSocket updates, mutations, and invalidation always address the same cache entry.
 - React Context is not used as a second server-state cache.
 - WebSocket messages invalidate or update Query data; reconnects always reconcile with HTTP state.
+- League transfer and draft events are subscribed to once at the application boundary.
+  A tested domain reducer updates the shared transfer-window cache, while reconnects
+  invalidate that cache and the player cache against Spring.
+- The root Server Component prefetches stable session-scoped teams, players,
+  gameweeks, and watchlist data and hydrates the browser Query cache. Live data
+  continues through Query and WebSocket after hydration.
 
 ## Styling and UI
 
@@ -41,6 +47,9 @@ components reserved for interaction and browser APIs.
 - `class-variance-authority`, `clsx`, and `tailwind-merge` power reusable variants.
 - CSS Modules remain supported for complex existing screens during migration.
 - New inline style objects are avoided except for truly runtime-calculated values.
+- ESLint prevents components from importing TanStack Query or transport services
+  directly. Components consume feature APIs/hooks, so cache behavior and endpoint
+  ownership cannot drift back into presentation code.
 
 ## Forms
 
@@ -57,9 +66,13 @@ components reserved for interaction and browser APIs.
   active tabs, open dialogs, and selections.
 - A keyed editor component initializes an unsaved draft from Query data without a
   synchronization effect. Successful mutations update the shared Query cache.
+- Game rules and event transitions are pure functions under their owning feature
+  (for example pick-team squad swaps and transfer-window events), not branches hidden
+  inside rendering components.
 
 ## Migration rule
 
 Each feature migration must preserve its public route and behavior, pass `npm run lint`
-and `npm run build`, and remove its corresponding legacy lint exception when its effects
-have moved to Query or derived render state.
+and `npm run build`. Shared hooks, schemas, and UI primitives also carry Vitest tests
+through `npm test`. React Compiler rules apply to the entire frontend without legacy
+exceptions, and the production build runs with `reactCompiler: true`.

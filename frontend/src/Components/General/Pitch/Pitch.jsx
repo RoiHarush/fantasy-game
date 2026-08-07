@@ -1,7 +1,7 @@
 import Style from "../../../Styles/Pitch.module.css";
 import PlayerCard from "../PlayerCard";
 import { getPlayerById } from "../../../Utils/ItemGetters";
-import { usePlayers } from "../../../Context/PlayersContext";
+import { usePlayers } from "../../../features/players/usePlayers";
 
 function Pitch({
     squad,

@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from "lucide-react";
-import { useWatchlist } from "../../Context/WatchlistContext";
+import { useWatchlist } from "../../features/watchlist/useWatchlist";
 import Style from "../../Styles/WatchButton.module.css";
 
 function WatchButton({ playerId }) {

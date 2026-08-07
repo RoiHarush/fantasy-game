@@ -1,56 +1,58 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, useRef } from "react";
-import { usePlayers } from "../../../Context/PlayersContext";
-import { useWebSocket } from "../../../Context/WebSocketContext";
-import { fetchTransferHistory, makeDraftPick, passTurn } from "../../../services/transferWindowService";
-import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
+import { useMemo, useState } from "react";
+import { usePlayers } from "../../../features/players/usePlayers";
+import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
+import {
+    useDraftPlayer,
+    useLatestTransferEvent,
+    usePassTransferTurn,
+    useTransferHistory,
+    useTransferWindowState,
+} from "../../../features/transfer-window/useTransferWindow";
+import { getTransferNoticeMessage } from "../../../features/transfer-window/model";
 import Style from "../../../Styles/TransferWindow.module.css";
 import ReplacementModal from "./ReplacementModal";
 import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
 import PlayersWrapper from "../../General/PlayersWrapper";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useSquad } from "../../../features/squad/useSquad";
-import { queryKeys } from "../../../lib/query/keys";
 
-function TransferWindow({ user, allUsers, initialWindowState }) {
-    const queryClient = useQueryClient();
-    const { players, setPlayers } = usePlayers();
+function TransferWindow({ user, allUsers }) {
+    const { players } = usePlayers();
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
-
-    const [currentTurnUserId, setCurrentTurnUserId] = useState(initialWindowState?.currentUserId ?? null);
-    const [lastTransferMessage, setLastTransferMessage] = useState(null);
-    const [isWindowOpen, setIsWindowOpen] = useState(initialWindowState?.isOpen ?? false);
-
-    const [turnOrder, setTurnOrder] = useState(initialWindowState?.order || []);
-    const [initialOrder, setInitialOrder] = useState(initialWindowState?.initialOrder || []);
-
-    const [turnsUsed, setTurnsUsed] = useState(initialWindowState?.turnsUsed || {});
-    const [totalTurnsMap, setTotalTurnsMap] = useState(initialWindowState?.totalTurns || {});
-
-    const { subscribe, connected } = useWebSocket();
-
-    const [isIrRound, setIsIrRound] = useState(initialWindowState?.currentRound === 'IR');
-    const [irPosition, setIrPosition] = useState(null);
-    const isDraftMode = Boolean(initialWindowState?.isDraftMode);
     const { nextGameweek } = useGameweek();
     const [draftView, setDraftView] = useState("players");
-
+    const windowQuery = useTransferWindowState(user?.leagueId);
+    const latestEventQuery = useLatestTransferEvent(user?.leagueId);
+    const windowState = windowQuery.data ?? {};
+    const currentTurnUserId = windowState.currentUserId ?? null;
+    const turnOrder = windowState.order ?? [];
+    const initialOrder = windowState.initialOrder ?? [];
+    const turnsUsed = windowState.turnsUsed ?? {};
+    const totalTurnsMap = windowState.totalTurns ?? {};
+    const isWindowOpen = Boolean(windowState.isOpen);
+    const isDraftMode = Boolean(windowState.isDraftMode);
+    const isIrRound = windowState.currentRound === "IR";
+    const irPosition = windowState.irPosition ?? null;
     const allTeamFixtures = useAllTeamFixtures();
-
-    const playersRef = useRef(players);
-    useEffect(() => {
-        playersRef.current = players;
-    }, [players]);
-
-    const draftGameweekId = initialWindowState?.gameWeekId > 0
-        ? initialWindowState.gameWeekId
+    const lastTransferMessage = getTransferNoticeMessage(
+        latestEventQuery.data,
+        players,
+        isDraftMode,
+    );
+    const draftGameweekId = windowState.gameWeekId > 0
+        ? windowState.gameWeekId
         : nextGameweek?.id;
     const draftSquadQuery = useSquad(user?.id, draftGameweekId, { enabled: isDraftMode });
-    const draftHistoryQuery = useQuery({
-        queryKey: queryKeys.transferHistory(user?.leagueId, draftGameweekId),
-        queryFn: () => fetchTransferHistory(draftGameweekId),
-        enabled: Boolean(isDraftMode && draftGameweekId),
+    const passMutation = usePassTransferTurn(user?.id);
+    const draftPlayerMutation = useDraftPlayer({
+        leagueId: user?.leagueId,
+        userId: user?.id,
+        gameweekId: draftGameweekId,
+        onSuccess: () => setSelectedPlayerIn(null),
+    });
+    const draftHistoryQuery = useTransferHistory(user?.leagueId, draftGameweekId, {
+        enabled: isDraftMode,
     });
     const draftSquad = draftSquadQuery.data;
     const draftActions = useMemo(
@@ -98,91 +100,6 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
     }
 
     const turnsLeft = turnsUntilMyTurn();
-
-    useEffect(() => {
-        if (!connected) return;
-
-        const handleTransferEvent = (event) => {
-            if (event.event === "window_opened") {
-                setIsWindowOpen(true);
-                setCurrentTurnUserId(event.userId);
-                setInitialOrder(event.initialOrder || []);
-                setTurnOrder(event.turnOrder || []);
-                setTurnsUsed(event.turnsUsed || {});
-                if (event.totalTurns) setTotalTurnsMap(event.totalTurns);
-                setIsIrRound(false);
-            }
-
-            if (event.event === "window_closed") {
-                setIsWindowOpen(false);
-                setCurrentTurnUserId(null);
-            }
-
-            if (event.event === "turn_started") {
-                setCurrentTurnUserId(event.userId);
-                if (event.turnOrder) setTurnOrder(event.turnOrder);
-                if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
-                if (event.roundType) {
-                    setIsIrRound(event.roundType === "IR");
-                }
-            }
-
-            if (event.event === "ir_round_started") {
-                setIsWindowOpen(true);
-                setCurrentTurnUserId(event.userId);
-                setLastTransferMessage(null);
-                if (event.turnOrder) setTurnOrder(event.turnOrder);
-                setIrPosition(event.irPosition);
-                if (event.turnsUsed) setTurnsUsed(event.turnsUsed);
-                setIsIrRound(true);
-            }
-
-            if (event.event === "transfer_done") {
-                const { userId, playerOutId, playerInId, userName } = event;
-
-                setPlayers(prev => prev.map(p => {
-                    if (p.id === playerInId) return { ...p, available: false, ownerId: userId };
-                    if (p.id === playerOutId) return { ...p, available: true, ownerId: null };
-                    return p;
-                }));
-
-                setTurnsUsed(prev => ({
-                    ...prev,
-                    [userId]: (prev[userId] || 0) + 1
-                }));
-
-                const currentPlayers = playersRef.current;
-                const playerIn = currentPlayers.find(p => p.id === playerInId);
-                const inName = playerIn ? playerIn.viewName : "Player In";
-                const playerOut = currentPlayers.find(p => p.id === playerOutId);
-                const outName = playerOut ? playerOut.viewName : "Player Out";
-
-                setLastTransferMessage(isDraftMode
-                    ? `${userName || "User"} drafted ${inName}`
-                    : `${userName || "User"} signed ${inName} | over ${outName}`);
-
-                if (isDraftMode && userId === user.id) {
-                    queryClient.invalidateQueries({
-                        queryKey: queryKeys.squad(user.id, draftGameweekId),
-                    });
-                }
-                if (isDraftMode) {
-                    queryClient.invalidateQueries({
-                        queryKey: queryKeys.transferHistory(user.leagueId, draftGameweekId),
-                    });
-                }
-            }
-
-            if (event.event === "turn_passed") {
-                setLastTransferMessage(`${event.userName || "User"} passed his turn!`);
-            }
-        };
-
-        if (!user.leagueId) return;
-        const topic = `/topic/leagues/${user.leagueId}/transfers`;
-        return subscribe(topic, handleTransferEvent);
-
-    }, [connected, draftGameweekId, isDraftMode, queryClient, subscribe, user.id, user.leagueId, setPlayers]);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
@@ -264,16 +181,10 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                             {!isIrRound && !isDraftMode && (
                                 <button
                                     className={Style.passButton}
-                                    onClick={async () => {
-                                        try {
-                                            await passTurn(user.id);
-                                        } catch (err) {
-                                            console.error("Error passing turn:", err);
-                                            alert(err.message);
-                                        }
-                                    }}
+                                    onClick={() => passMutation.mutate()}
+                                    disabled={passMutation.isPending}
                                 >
-                                    Pass Turn
+                                    {passMutation.isPending ? "Passing…" : "Pass Turn"}
                                 </button>
                             )}
                         </>
@@ -293,6 +204,11 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
 
             {lastTransferMessage && (
                 <div className={Style.transferMessage}>{lastTransferMessage}</div>
+            )}
+            {(passMutation.error || draftPlayerMutation.error) && (
+                <div className={Style.transferMessage} role="alert">
+                    {(passMutation.error || draftPlayerMutation.error).message}
+                </div>
             )}
 
             {isDraftMode && (
@@ -343,22 +259,15 @@ function TransferWindow({ user, allUsers, initialWindowState }) {
                 ) : isDraftMode ? (
                     <div role="dialog" aria-modal="true" className={Style.transferMessage}>
                         <p>Draft <strong>{selectedPlayerIn.viewName}</strong>?</p>
-                        <button onClick={async () => {
-                            try {
-                                await makeDraftPick(selectedPlayerIn.id);
-                                await draftSquadQuery.refetch();
-                                setSelectedPlayerIn(null);
-                            } catch (error) {
-                                alert(error.message);
-                            }
-                        }}>Confirm pick</button>
+                        <button onClick={() => draftPlayerMutation.mutate(selectedPlayerIn.id)} disabled={draftPlayerMutation.isPending}>
+                            {draftPlayerMutation.isPending ? "Saving…" : "Confirm pick"}
+                        </button>
                         <button onClick={() => setSelectedPlayerIn(null)}>Cancel</button>
                     </div>
                 ) : (
                     <ReplacementModal
                         playerIn={selectedPlayerIn}
                         user={user}
-                        setUser={() => { }}
                         players={players}
                         onClose={() => setSelectedPlayerIn(null)}
                     />

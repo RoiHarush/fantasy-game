@@ -1,254 +1,109 @@
-import React, { useState, useEffect } from 'react';
-import { apiRequest } from '../../../services/apiClient';
+"use client";
 
-const modalStyles = {
-    overlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-    },
-    modal: {
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '8px',
-        width: '90%',
-        maxWidth: '800px',
-        height: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
-    },
-    header: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        marginBottom: '1rem',
-        borderBottom: '1px solid #eee',
-        paddingBottom: '1rem',
-    },
-    content: {
-        flex: 1,
-        overflowY: 'auto',
-        paddingRight: '10px',
-    },
-    footer: {
-        marginTop: '1.5rem',
-        borderTop: '1px solid #eee',
-        paddingTop: '1rem',
-        textAlign: 'right',
-    },
-    button: {
-        backgroundColor: '#3b82f6',
-        color: 'white',
-        padding: '10px 16px',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        marginLeft: '10px',
-        fontSize: '0.9rem',
-    },
-    buttonSecondary: {
-        backgroundColor: '#6b7280',
-        color: 'white',
-    },
-    inputGroup: {
-        marginBottom: '1rem',
-    },
-    label: {
-        display: 'block',
-        fontWeight: 'bold',
-        marginBottom: '4px',
-    },
-    input: {
-        width: '100%',
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        boxSizing: 'border-box',
-    },
-    select: {
-        width: '100%',
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        backgroundColor: 'white',
-    },
-    grid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-    },
-};
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
+import { useForm } from "react-hook-form";
 
-export default function AdminUserEditModal({ userId, onClose, onSave }) {
-    const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [newPassword, setNewPassword] = useState('');
+import { adminUserDetailsSchema } from "../../../features/super-admin/schemas";
+import {
+    useAdminUserDetails,
+    useUpdateAdminUser,
+} from "../../../features/super-admin/useSuperAdmin";
+import { Button } from "../../../shared/ui/Button";
 
-    useEffect(() => {
-        const fetchDetails = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await apiRequest(`/api/admin/user-details/${userId}`);
-                setUserData(data);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchDetails();
-    }, [userId]);
+const inputClassName = "mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 outline-none focus:border-brand-cyan focus:ring-3 focus:ring-brand-cyan/20";
 
-    const handleSave = async () => {
-        setLoading(true);
-        const payload = {
-            ...userData,
-            password: newPassword ? newPassword : null
-        };
-        try {
-            await apiRequest(`/api/admin/user-details/${userId}`, {
-                method: 'PUT',
-                body: payload,
-            });
-            onSave();
-        } catch (err) {
-            setError(err.message);
-            setLoading(false);
-        }
+function AdminUserEditForm({ details, userId, onSave }) {
+    const defaultValues = {
+        userId: details.userId,
+        username: details.username || "",
+        name: details.name || "",
+        role: details.role,
+        fantasyTeamName: details.fantasyTeamName || "",
+        password: "",
+        chips: details.chips || {},
+        activeChips: details.activeChips || {},
+        gameweekPoints: [...(details.gameweekPoints || [])].sort((left, right) => left.gameweek - right.gameweek),
     };
-
-    const handleChange = (e) => {
-        setUserData({ ...userData, [e.target.name]: e.target.value });
-    };
-
-    const handlePointsChange = (index, newPoints) => {
-        const updatedPoints = [...userData.gameweekPoints];
-        updatedPoints[index].points = parseInt(newPoints, 10) || 0;
-        setUserData({ ...userData, gameweekPoints: updatedPoints });
-    };
-
-    const handleChipCountChange = (chipName, newCount) => {
-        setUserData({
-            ...userData,
-            chips: { ...userData.chips, [chipName]: parseInt(newCount, 10) || 0 }
-        });
-    };
-
-    const handleActiveChipChange = (chipName, isActive) => {
-        setUserData({
-            ...userData,
-            activeChips: { ...userData.activeChips, [chipName]: isActive }
-        });
-    };
-
-    if (loading && !userData) return <div>Loading Details...</div>;
-    if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
-    if (!userData) return null;
+    const form = useForm({ resolver: zodResolver(adminUserDetailsSchema), defaultValues });
+    const saveUser = useUpdateAdminUser(userId, onSave);
 
     return (
-        <div style={modalStyles.overlay} onClick={onClose}>
-            <div style={modalStyles.modal} onClick={(e) => e.stopPropagation()}>
-                <h2 style={modalStyles.header}>Edit User: {userData.username} (ID: {userData.userId})</h2>
-
-                <div style={modalStyles.content}>
-                    {loading && <div style={{ position: 'absolute', top: '50%', left: '50%' }}>Saving...</div>}
-
-                    <div style={modalStyles.grid}>
-                        <div style={modalStyles.inputGroup}>
-                            <label style={modalStyles.label}>Username</label>
-                            <input style={modalStyles.input} name="username" value={userData.username} onChange={handleChange} />
-                        </div>
-                        <div style={modalStyles.inputGroup}>
-                            <label style={modalStyles.label}>Name</label>
-                            <input style={modalStyles.input} name="name" value={userData.name} onChange={handleChange} />
-                        </div>
-                        <div style={modalStyles.inputGroup}>
-                            <label style={modalStyles.label}>Role</label>
-                            <select style={modalStyles.select} name="role" value={userData.role} onChange={handleChange}>
-                                <option value="ROLE_USER">USER</option>
-                                <option value="ROLE_SUPER_ADMIN">SUPER ADMIN</option>
-                            </select>
-                        </div>
-                        <div style={modalStyles.inputGroup}>
-                            <label style={modalStyles.label}>Fantasy Team Name</label>
-                            <input style={modalStyles.input} name="fantasyTeamName" value={userData.fantasyTeamName} onChange={handleChange} />
-                        </div>
-
-                        <div style={modalStyles.inputGroup}>
-                            <label style={{ ...modalStyles.label, color: '#b45309' }}>Reset Password</label>
-                            <input
-                                type="password"
-                                style={{ ...modalStyles.input, border: '1px solid #b45309' }}
-                                placeholder="Leave empty to keep current"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <hr style={{ margin: '1.5rem 0' }} />
-
-                    <h3>Chips</h3>
-                    <div style={modalStyles.grid}>
-                        {Object.entries(userData.chips).map(([chipName, count]) => (
-                            <div style={modalStyles.inputGroup} key={chipName}>
-                                <label style={modalStyles.label}>{chipName} (Count)</label>
-                                <input
-                                    type="number"
-                                    style={modalStyles.input}
-                                    value={count}
-                                    onChange={(e) => handleChipCountChange(chipName, e.target.value)}
-                                />
-                            </div>
-                        ))}
-                        {Object.entries(userData.activeChips).map(([chipName, isActive]) => (
-                            <div style={modalStyles.inputGroup} key={chipName}>
-                                <label style={modalStyles.label}>{chipName} (Active)</label>
-                                <input
-                                    type="checkbox"
-                                    checked={isActive}
-                                    onChange={(e) => handleActiveChipChange(chipName, e.target.checked)}
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    <hr style={{ margin: '1.5rem 0' }} />
-
-                    <h3>Gameweek Points</h3>
-                    <div style={modalStyles.grid}>
-                        {userData.gameweekPoints.sort((a, b) => a.gameweek - b.gameweek).map((gwPoint, index) => (
-                            <div style={modalStyles.inputGroup} key={gwPoint.gameweek}>
-                                <label style={modalStyles.label}>Gameweek {gwPoint.gameweek}</label>
-                                <input
-                                    type="number"
-                                    style={modalStyles.input}
-                                    value={gwPoint.points}
-                                    onChange={(e) => handlePointsChange(index, e.target.value)}
-                                />
-                            </div>
-                        ))}
-                    </div>
+        <form onSubmit={form.handleSubmit(values => saveUser.mutate(values))} className="flex min-h-0 flex-1 flex-col" noValidate>
+            <div className="flex-1 overflow-y-auto pr-2">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <label className="text-sm font-semibold">Username<input className={inputClassName} {...form.register("username")} /></label>
+                    <label className="text-sm font-semibold">Name<input className={inputClassName} {...form.register("name")} /></label>
+                    <label className="text-sm font-semibold">Role
+                        <select className={inputClassName} {...form.register("role")}>
+                            <option value="ROLE_USER">USER</option>
+                            <option value="ROLE_SUPER_ADMIN">SUPER ADMIN</option>
+                        </select>
+                    </label>
+                    <label className="text-sm font-semibold">Fantasy Team Name<input className={inputClassName} {...form.register("fantasyTeamName")} /></label>
+                    <label className="text-sm font-semibold text-amber-700">Reset Password
+                        <input type="password" autoComplete="new-password" placeholder="Leave empty to keep current" className={`${inputClassName} border-amber-600`} {...form.register("password")} />
+                    </label>
                 </div>
 
-                <div style={modalStyles.footer}>
-                    <button style={{ ...modalStyles.button, ...modalStyles.buttonSecondary }} onClick={onClose} disabled={loading}>
-                        Cancel
-                    </button>
-                    <button style={modalStyles.button} onClick={handleSave} disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
-                    </button>
+                <hr className="my-6 border-slate-200" />
+                <h3 className="mb-3 text-lg font-bold">Chips</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {Object.keys(details.chips || {}).map(chipName => (
+                        <label className="text-sm font-semibold" key={chipName}>{chipName} (Count)
+                            <input type="number" min="0" className={inputClassName} {...form.register(`chips.${chipName}`, { valueAsNumber: true })} />
+                        </label>
+                    ))}
+                    {Object.keys(details.activeChips || {}).map(chipName => (
+                        <label className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 text-sm font-semibold" key={chipName}>
+                            <input type="checkbox" {...form.register(`activeChips.${chipName}`)} />{chipName} (Active)
+                        </label>
+                    ))}
                 </div>
+
+                <hr className="my-6 border-slate-200" />
+                <h3 className="mb-3 text-lg font-bold">Gameweek Points</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {defaultValues.gameweekPoints.map((gameweekPoint, index) => (
+                        <label className="text-sm font-semibold" key={gameweekPoint.pointsEntityId}>
+                            Gameweek {gameweekPoint.gameweek}
+                            <input type="hidden" {...form.register(`gameweekPoints.${index}.gameweek`, { valueAsNumber: true })} />
+                            <input type="hidden" {...form.register(`gameweekPoints.${index}.pointsEntityId`, { valueAsNumber: true })} />
+                            <input type="number" className={inputClassName} {...form.register(`gameweekPoints.${index}.points`, { valueAsNumber: true })} />
+                        </label>
+                    ))}
+                </div>
+
+                {Object.keys(form.formState.errors).length > 0 && <p className="mt-5 text-sm text-red-700" role="alert">Check the highlighted user values before saving.</p>}
+                {saveUser.error && <p className="mt-5 text-sm text-red-700" role="alert">{saveUser.error.message}</p>}
             </div>
-        </div >
+
+            <footer className="mt-6 flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <Dialog.Close asChild><Button variant="ghost" disabled={saveUser.isPending}>Cancel</Button></Dialog.Close>
+                <Button type="submit" disabled={saveUser.isPending}>{saveUser.isPending ? "Saving…" : "Save Changes"}</Button>
+            </footer>
+        </form>
+    );
+}
+
+export default function AdminUserEditModal({ userId, onClose, onSave }) {
+    const detailsQuery = useAdminUserDetails(userId);
+
+    return (
+        <Dialog.Root open onOpenChange={open => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex h-[90vh] w-[min(94vw,50rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white p-7 shadow-2xl focus:outline-none">
+                    <Dialog.Title className="mb-5 border-b border-slate-200 pb-4 text-2xl font-bold">
+                        {detailsQuery.data ? `Edit User: ${detailsQuery.data.username} (ID: ${detailsQuery.data.userId})` : "Edit User"}
+                    </Dialog.Title>
+                    <Dialog.Close asChild><Button variant="ghost" size="icon" className="absolute right-4 top-4" aria-label="Close"><X /></Button></Dialog.Close>
+                    {detailsQuery.isPending ? <p role="status">Loading details…</p>
+                        : detailsQuery.error ? <p className="text-red-700" role="alert">{detailsQuery.error.message}</p>
+                            : <AdminUserEditForm key={userId} details={detailsQuery.data} userId={userId} onSave={onSave} />}
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

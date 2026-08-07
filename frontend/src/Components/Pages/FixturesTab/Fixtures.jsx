@@ -1,6 +1,6 @@
 import FixturesTable from "./FixturesTable";
 import Style from "../../../Styles/Fixtures.module.css";
-import { useGameweek } from "../../../Context/GameweeksContext";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 
 function Fixtures() {
     const { gameweeks, nextGameweek } = useGameweek();

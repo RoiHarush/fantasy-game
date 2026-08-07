@@ -10,7 +10,7 @@ export function useSquad(userId, gameweekId, options = {}) {
 
     return useQuery({
         queryKey: queryKeys.squad(userId, gameweekId),
-        queryFn: () => fetchSquadForGameweek(userId, gameweekId),
+        queryFn: ({ signal }) => fetchSquadForGameweek(userId, gameweekId, { signal }),
         enabled: Boolean(enabled && userId && gameweekId),
         staleTime: 30_000,
     });

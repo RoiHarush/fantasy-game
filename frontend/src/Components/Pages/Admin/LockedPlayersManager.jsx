@@ -1,47 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { AdminService } from '../../../services/adminService';
 import PlayerKit from '../../General/PlayerKit';
-import { usePlayers } from '../../../Context/PlayersContext';
-import { queryKeys } from "../../../lib/query/keys";
-
-const normalize = (str) =>
-    (str || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[øØöÖœŒ]/g, "o")
-        .replace(/[åÅäÄáÁàÀâÂ]/g, "a")
-        .replace(/[éÉèÈêÊëË]/g, "e")
-        .replace(/[íÍìÌîÎïÏ]/g, "i")
-        .replace(/[úÚùÙûÛüÜ]/g, "u")
-        .replace(/[ñÑ]/g, "n")
-        .replace(/[łŁ]/g, "l")
-        .toLowerCase();
+import { usePlayers } from '../../../features/players/usePlayers';
+import { findPlayers } from "../../../features/league-admin/playerSearch";
+import { useLockedPlayers } from "../../../features/league-admin/useLeagueAdmin";
 
 const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
-    const { players, setPlayers } = usePlayers();
-    const queryClient = useQueryClient();
+    const { players } = usePlayers();
     const [searchTerm, setSearchTerm] = useState("");
-    const queryKey = queryKeys.lockedPlayers(maintenanceLeagueId);
-    const lockedQuery = useQuery({
-        queryKey,
-        queryFn: () => AdminService.getLockedPlayers(maintenanceLeagueId),
-    });
+    const { query: lockedQuery, mutation: toggleLock } = useLockedPlayers(maintenanceLeagueId);
     const serverLockedPlayers = lockedQuery.data ?? [];
     const searchResults = useMemo(() => {
-        if (searchTerm.length < 2) return [];
-        const normTerm = normalize(searchTerm);
-        return players.filter(player => player.available && [player.viewName, player.firstName, player.lastName]
-            .some(name => normalize(name).includes(normTerm))).slice(0, 5);
+        return findPlayers(players, searchTerm, { availableOnly: true });
     }, [players, searchTerm]);
-    const toggleLock = useMutation({
-        mutationFn: ({ player, shouldLock }) => AdminService.togglePlayerLock(player.id, shouldLock, maintenanceLeagueId),
-        onSuccess: (updatedPlayer, { shouldLock }) => {
-            queryClient.invalidateQueries({ queryKey });
-            setPlayers(current => current.map(player => player.id === updatedPlayer.id ? updatedPlayer : player));
-            if (shouldLock) setSearchTerm("");
-        },
-    });
 
     const handleSearch = (term) => {
         setSearchTerm(term);
@@ -50,6 +20,7 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
     const handleToggleLock = async (player, shouldLock) => {
         try {
             await toggleLock.mutateAsync({ player, shouldLock });
+            if (shouldLock) setSearchTerm("");
         } catch { alert("Failed"); }
     };
 

@@ -1,9 +1,9 @@
-import { usePlayers } from "../../Context/PlayersContext";
+import { usePlayers } from "../../features/players/usePlayers";
 import { useCallback } from "react";
 import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
-import { useGameweek } from "../../Context/GameweeksContext";
-import { useAllTeamFixtures } from "../../hooks/useAllTeamFixtures";
+import { useGameweek } from "../../features/gameweeks/useGameweek";
+import { useAllTeamFixtures } from "../../features/fixtures/useAllTeamFixtures";
 
 const EMPTY_SQUAD = { startingLineup: {}, bench: {} };
 

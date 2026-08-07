@@ -1,6 +1,6 @@
 import Switcher from "./Switcher";
 import Style from "../../Styles/ScoutWrapper.module.css";
-import { useTeams } from "../../Context/TeamsContext";
+import { useTeams } from "../../features/teams/useTeams";
 
 function ControlsBar({
     searchQuery,

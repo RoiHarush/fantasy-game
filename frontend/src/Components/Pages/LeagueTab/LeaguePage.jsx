@@ -1,8 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchLeague } from "../../../services/leagueService";
-import { queryKeys } from "../../../lib/query/keys";
+import { useLeagueStandings } from "../../../features/league/useLeague";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
 import SidebarContainer from "../../Sidebar/SidebarContainer";
@@ -12,12 +10,7 @@ import { useAuth } from "../../../Context/AuthContext";
 
 function LeaguePage() {
     const { user } = useAuth();
-    const leagueQuery = useQuery({
-        queryKey: queryKeys.leagueStandings(user?.leagueId),
-        queryFn: fetchLeague,
-        enabled: Boolean(user?.leagueId),
-        staleTime: 30_000,
-    });
+    const leagueQuery = useLeagueStandings(user?.leagueId);
     const league = leagueQuery.data;
 
     if (leagueQuery.isPending) {

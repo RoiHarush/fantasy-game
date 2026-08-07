@@ -1,21 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { leagueSettingsSchema } from "../../../features/league-control/schemas";
-import { queryKeys } from "../../../lib/query/keys";
 import {
-    fetchMaintenanceLeague,
-    fetchMyLeague,
-    removeLeagueMember,
-    updateLeagueSettings,
-    updateMaintenanceLeagueSettings,
-} from "../../../services/leagueService";
-import { fetchAllUsers } from "../../../services/usersService";
+    useCurrentLeague,
+    useLeagueUsers,
+    useMaintenanceLeague,
+    useRemoveLeagueMember,
+    useUpdateLeagueSettings,
+} from "../../../features/league/useLeague";
 import styles from "../../../Styles/LeagueControl.module.css";
 
 const AssistManager = lazy(() => import("./AssistManager"));
@@ -23,8 +20,7 @@ const PenaltyManager = lazy(() => import("./PenaltyManager"));
 const LockedPlayersManager = lazy(() => import("./LockedPlayersManager"));
 const PositionManager = lazy(() => import("./PositionManager"));
 
-function LeagueControlContent({ league, managers, maintenanceLeagueId, leagueQueryKey }) {
-    const queryClient = useQueryClient();
+function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
     const [activeTab, setActiveTab] = useState("settings");
     const [message, setMessage] = useState("");
     const form = useForm({
@@ -35,12 +31,10 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId, leagueQue
             scoringRules: league.scoringRules || {},
         },
     });
-    const saveSettings = useMutation({
-        mutationFn: (values) => maintenanceLeagueId
-            ? updateMaintenanceLeagueSettings(league.id, values)
-            : updateLeagueSettings(league.id, values),
+    const saveSettings = useUpdateLeagueSettings({
+        leagueId: league.id,
+        maintenance: Boolean(maintenanceLeagueId),
         onSuccess: (updated) => {
-            queryClient.setQueryData(leagueQueryKey, updated);
             form.reset({
                 name: updated.name,
                 maxParticipants: updated.maxParticipants,
@@ -49,13 +43,8 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId, leagueQue
             setMessage("League settings saved.");
         },
     });
-    const removeManager = useMutation({
-        mutationFn: (manager) => removeLeagueMember(league.id, manager.id),
-        onSuccess: (updated, manager) => {
-            queryClient.setQueryData(leagueQueryKey, updated);
-            queryClient.setQueryData(queryKeys.leagueUsers(league.id), (current = []) => (
-                current.filter(item => item.id !== manager.id)
-            ));
+    const removeManager = useRemoveLeagueMember(league.id, {
+        onSuccess: (_updated, manager) => {
             setMessage(`${manager.name} was removed from the league.`);
         },
     });
@@ -162,20 +151,12 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId, leagueQue
 
 function LeagueControlPage({ maintenanceLeagueId = null }) {
     const { user } = useAuth();
-    const leagueQueryKey = maintenanceLeagueId
-        ? queryKeys.maintenanceLeague(maintenanceLeagueId)
-        : queryKeys.currentLeague(user?.leagueId);
-    const leagueQuery = useQuery({
-        queryKey: leagueQueryKey,
-        queryFn: () => maintenanceLeagueId ? fetchMaintenanceLeague(maintenanceLeagueId) : fetchMyLeague(),
-        enabled: Boolean(maintenanceLeagueId || user?.leagueId),
+    const currentLeagueQuery = useCurrentLeague(user?.leagueId, {
+        enabled: !maintenanceLeagueId,
     });
-    const managersQuery = useQuery({
-        queryKey: queryKeys.leagueUsers(user?.leagueId),
-        queryFn: fetchAllUsers,
-        enabled: Boolean(!maintenanceLeagueId && user?.leagueId),
-        staleTime: 60_000,
-    });
+    const maintenanceLeagueQuery = useMaintenanceLeague(maintenanceLeagueId);
+    const leagueQuery = maintenanceLeagueId ? maintenanceLeagueQuery : currentLeagueQuery;
+    const managersQuery = useLeagueUsers(user?.leagueId, { enabled: !maintenanceLeagueId });
 
     if (leagueQuery.isPending || (!maintenanceLeagueId && managersQuery.isPending)) {
         return <section className={styles.page}><p>Loading league settings…</p></section>;
@@ -191,7 +172,6 @@ function LeagueControlPage({ maintenanceLeagueId = null }) {
             league={leagueQuery.data}
             managers={managersQuery.data ?? []}
             maintenanceLeagueId={maintenanceLeagueId}
-            leagueQueryKey={leagueQueryKey}
         />
     );
 }

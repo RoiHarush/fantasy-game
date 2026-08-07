@@ -1,24 +1,12 @@
 import Style from "../../../Styles/IRSignModal.module.css";
-import { apiRequest } from "../../../services/apiClient";
+import { useSignIrPlayer } from "../../../features/transfer-window/useTransferWindow";
 
 export default function IRSignModal({ player, user, onClose }) {
-    const handleConfirm = async () => {
-        try {
-            await apiRequest(`/api/market/ir-sign`, {
-                method: "POST",
-                body: {
-                    userId: user.id,
-                    playerId: player.id
-                },
-            });
-
-            console.log("IR player signed successfully");
-            onClose();
-        } catch (err) {
-            console.error("Failed to sign IR player:", err);
-            alert(err.message || "Error signing IR player");
-        }
-    };
+    const signPlayer = useSignIrPlayer({
+        leagueId: user?.leagueId,
+        userId: user?.id,
+        onSuccess: onClose,
+    });
 
     return (
         <div className={Style.overlay}>
@@ -30,13 +18,14 @@ export default function IRSignModal({ player, user, onClose }) {
                 </p>
 
                 <div className={Style.actions}>
-                    <button className={Style.confirm} onClick={handleConfirm}>
-                        Confirm
+                    <button className={Style.confirm} onClick={() => signPlayer.mutate(player.id)} disabled={signPlayer.isPending}>
+                        {signPlayer.isPending ? "Signing…" : "Confirm"}
                     </button>
                     <button className={Style.cancel} onClick={onClose}>
                         Cancel
                     </button>
                 </div>
+                {signPlayer.error && <p role="alert">{signPlayer.error.message || "Error signing IR player"}</p>}
             </div>
         </div>
     );

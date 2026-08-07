@@ -1,5 +1,5 @@
-import { usePlayers } from "../../../Context/PlayersContext";
-import { useAllTeamFixtures } from "../../../hooks/useAllTeamFixtures";
+import { usePlayers } from "../../../features/players/usePlayers";
+import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
 import Style from "../../../Styles/Scout.module.css";
 import PlayersWrapper from "../../General/PlayersWrapper";
 

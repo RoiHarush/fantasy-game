@@ -10,6 +10,11 @@
 }
 
 .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 3001;
+    transform: translate(-50%, -50%);
     background: #4a148c;
     color: #fff;
     border-radius: 14px;

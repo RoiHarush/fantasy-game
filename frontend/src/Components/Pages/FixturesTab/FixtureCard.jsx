@@ -1,6 +1,6 @@
 import TeamLogo from "./TeamLogo";
 import Style from "../../../Styles/FixturesTable.module.css";
-import { useTeams } from "../../../Context/TeamsContext";
+import { useTeams } from "../../../features/teams/useTeams";
 
 export function FixtureCard({ fixture }) {
     const { teams } = useTeams();
