@@ -89,7 +89,7 @@ Copy the two `.env.example` files as a reference, but configure secrets in the h
 - `DATABASE_URL` in JDBC format
 - `DATABASE_USER` and `DATABASE_PASSWORD`
 - a random `JWT_SECRET` containing at least 32 bytes
-- `CORS_ALLOWED_ORIGINS` and `WEBSOCKET_ALLOWED_ORIGIN_PATTERNS`
+- `WEBSOCKET_ALLOWED_ORIGIN_PATTERNS`, containing every production frontend origin allowed to open a SockJS/STOMP connection
 - `SCHEDULING_ENABLED`, kept `false` until post-deploy state checks pass
 - `BOOTSTRAP_ENABLED`, normally `false`; set to `true` only for an explicit initial/season load
 
@@ -112,6 +112,8 @@ The production rollout and database recovery process is documented in [docs/OPER
 ## Hosting notes
 
 The frontend can remain a Vercel static deployment. The backend currently needs a continuously running process because it owns WebSocket sessions and scheduled gameweek work. Render's free web service sleeps after inactivity, so it is suitable for a demo but not a reliable season backend without redesigning scheduled execution. A free Neon database is a practical low-cost option while its storage and compute quotas remain sufficient.
+
+Browser REST calls stay same-origin and are forwarded to the backend by the Next.js `/api` rewrite; the backend intentionally does not maintain a second REST CORS allowlist. Before every production launch, test the authenticated `/ws` path from at least two real devices: verify connection, a live cross-device update, automatic reconnection after temporarily disabling one device's network, and state recovery after refreshing the page.
 
 ## Data and trademarks
 

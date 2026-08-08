@@ -56,3 +56,29 @@ export function groupTransferActions(actions = []) {
         return groups;
     }, new Map());
 }
+
+export function getUpcomingDeadline({ transferWindow, lineupLock }, now) {
+    return [
+        { kind: "transfer-window", targetTime: transferWindow },
+        { kind: "lineup-lock", targetTime: lineupLock },
+    ]
+        .filter(({ targetTime }) => Number.isFinite(targetTime) && targetTime > now)
+        .sort((left, right) => left.targetTime - right.targetTime)[0] ?? null;
+}
+
+export function getCountdownParts(targetTime, now) {
+    const totalSeconds = Math.max(0, Math.ceil((targetTime - now) / 1000));
+
+    return {
+        days: Math.floor(totalSeconds / 86_400),
+        hours: Math.floor((totalSeconds % 86_400) / 3_600),
+        minutes: Math.floor((totalSeconds % 3_600) / 60),
+        seconds: totalSeconds % 60,
+    };
+}
+
+export function getVisibleCountdownUnits(parts) {
+    if (parts.days > 0) return [["days", "d"], ["hours", "h"], ["minutes", "m"]];
+    if (parts.hours > 0) return [["hours", "h"], ["minutes", "m"]];
+    return [["minutes", "m"], ["seconds", "s"]];
+}

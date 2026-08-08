@@ -1,13 +1,34 @@
 @import "tailwindcss";
-@import "../src/Styles/Reset.css";
 
-@theme {
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
     --font-sans: "Segoe UI", Arial, sans-serif;
 
-    --color-brand-purple: #8f2fff;
-    --color-brand-cyan: #00cfe8;
+    --color-brand-purple: var(--brand-purple);
+    --color-brand-cyan: var(--brand-cyan);
     --color-brand-green: #00e59b;
     --color-brand-ink: #1b1035;
+    --color-brand-on-gradient: #ffffff;
+    --background-image-brand-gradient: var(--brand-gradient);
+    --background-image-component-gradient: var(--component-gradient);
+
+    --color-app-background: var(--app-background);
+    --color-app-surface: var(--app-surface);
+    --color-app-surface-muted: var(--app-surface-muted);
+    --color-app-surface-elevated: var(--app-surface-elevated);
+    --color-app-foreground: var(--app-foreground);
+    --color-app-muted: var(--app-muted);
+    --color-app-border: var(--app-border);
+    --color-app-accent: var(--app-accent);
+    --color-app-accent-foreground: var(--app-accent-foreground);
+    --color-app-accent-muted: var(--app-accent-muted);
+    --color-app-accent-surface: var(--app-accent-surface);
+    --color-app-accent-hover: var(--app-accent-hover);
+    --color-app-accent-border: var(--app-accent-border);
+    --color-app-danger-foreground: var(--app-danger-foreground);
+    --color-app-danger-surface: var(--app-danger-surface);
+    --color-app-danger-border: var(--app-danger-border);
 
     --radius-control: 0.625rem;
     --shadow-panel: 0 12px 32px rgb(27 16 53 / 0.14);
@@ -15,16 +36,61 @@
 
 :root {
     color-scheme: light;
+    --brand-purple: #9b2fff;
+    --brand-cyan: #00eaff;
+    --brand-gradient: linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-cyan) 100%);
+    --component-gradient: linear-gradient(90deg, var(--brand-cyan) 0%, var(--brand-purple) 100%);
     --app-background: #ffffff;
+    --app-surface: #ffffff;
+    --app-surface-muted: #f7f7fa;
+    --app-surface-elevated: #ffffff;
     --app-foreground: #171717;
     --app-muted: #667085;
     --app-border: #e4e7ec;
+    --app-accent: #7b2fe5;
+    --app-accent-foreground: #4d167d;
+    --app-accent-muted: #756482;
+    --app-accent-surface: #f6f0ff;
+    --app-accent-hover: #eefcff;
+    --app-accent-border: #e2d2f6;
+    --app-danger-foreground: #b42343;
+    --app-danger-surface: #fff1f3;
+    --app-danger-border: #fecdd6;
+}
+
+.dark {
+    color-scheme: dark;
+    --app-background: #0d0815;
+    --app-surface: #171020;
+    --app-surface-muted: #21182d;
+    --app-surface-elevated: #281d35;
+    --app-foreground: #f8fafc;
+    --app-muted: #a7b0c0;
+    --app-border: #3b3048;
+    --app-accent: #c7a1ff;
+    --app-accent-foreground: #e7d6ff;
+    --app-accent-muted: #b8a5cb;
+    --app-accent-surface: #241533;
+    --app-accent-hover: #1b2634;
+    --app-accent-border: #49315f;
+    --app-danger-foreground: #ffc2cc;
+    --app-danger-surface: #3a1722;
+    --app-danger-border: #6c293b;
+}
+
+html {
+    min-width: 20rem;
+    background: var(--app-background);
+    overflow-x: clip;
 }
 
 body {
     min-height: 100vh;
+    min-width: 0;
     background: var(--app-background);
     color: var(--app-foreground);
+    overflow-x: clip;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
 button,

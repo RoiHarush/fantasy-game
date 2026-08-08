@@ -1,6 +1,5 @@
 import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { useDreamTeam } from "../../features/status/useStatusData";
-import styles from "../../Styles/TeamOfTheWeekBlock.module.css";
 import PlayerKit from "../General/PlayerKit";
 
 function TeamOfTheWeekBlock() {
@@ -9,41 +8,43 @@ function TeamOfTheWeekBlock() {
     const dreamTeam = dreamTeamQuery.data?.team ?? [];
 
     return (
-        <div className={styles.block}>
-            <div className={styles.header}>
-                <span className={styles.icon}>★</span>
+        <section className="mb-5 w-full overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm transition-colors">
+            <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink">
+                <span className="text-xl text-brand-green" aria-hidden="true">★</span>
                 Team of the Week
             </div>
 
             {dreamTeamQuery.isPending ? (
-                <p className={styles.loading}>Loading dream team...</p>
+                <p className="p-4 text-center text-sm text-app-muted">Loading dream team...</p>
             ) : dreamTeam.length === 0 ? (
-                <p className={styles.loading}>No dream team is available yet.</p>
+                <p className="p-4 text-center text-sm text-app-muted">No dream team is available yet.</p>
             ) : (
-                <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                        <thead><tr><th>Pos</th><th>Player</th><th>Club</th><th>Pts</th></tr></thead>
+                <div className="w-full overflow-hidden">
+                    <table className="w-full table-fixed border-collapse text-sm">
+                        <thead className="bg-app-surface-muted text-xs tracking-wide text-app-muted uppercase"><tr><th className="w-[15%] px-1 py-2 text-center">Pos</th><th className="w-[55%] px-1 py-2 text-center">Player</th><th className="w-[15%] px-1 py-2 text-center">Club</th><th className="w-[15%] px-1 py-2 text-center">Pts</th></tr></thead>
                         <tbody>
                             {dreamTeam.map((player, index) => (
-                                <tr key={player.id ?? `row-${index}`}>
-                                    <td>{player.position}</td>
-                                    <td className={styles.playerCell}>
+                                <tr key={player.id ?? `row-${index}`} className="border-b border-app-border last:border-b-0">
+                                    <td className="overflow-hidden px-1 py-2 text-center text-ellipsis whitespace-nowrap">{player.position}</td>
+                                    <td className="px-1 py-2">
+                                        <div className="flex min-w-0 items-center justify-start gap-1.5">
                                         <PlayerKit
                                             teamId={player.teamId}
                                             type={player.position === "GK" ? "gk" : "field"}
-                                            className={styles["player-shirt"]}
+                                            className="size-6 shrink-0 object-contain"
                                         />
-                                        <span>{player.name}</span>
+                                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{player.name}</span>
+                                        </div>
                                     </td>
-                                    <td>{player.team}</td>
-                                    <td className={styles.points}>{player.points}</td>
+                                    <td className="overflow-hidden px-1 py-2 text-center text-ellipsis whitespace-nowrap">{player.team}</td>
+                                    <td className="px-1 py-2 text-center font-bold text-violet-950 dark:text-violet-200">{player.points}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             )}
-        </div>
+        </section>
     );
 }
 

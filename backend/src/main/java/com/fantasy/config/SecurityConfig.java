@@ -17,10 +17,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 import java.util.Arrays;
 import java.util.Set;
 
@@ -31,17 +27,11 @@ import com.fantasy.domain.auth.AuthCookieService;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final java.util.List<String> allowedOrigins;
     private final boolean secureCookies;
     private static final Set<String> SAFE_HTTP_METHODS = Set.of("GET", "HEAD", "TRACE", "OPTIONS");
 
     public SecurityConfig(
-            @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}") String allowedOrigins,
             @Value("${app.auth.cookie-secure:false}") boolean secureCookies) {
-        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(origin -> !origin.isEmpty())
-                .toList();
         this.secureCookies = secureCookies;
     }
 
@@ -61,7 +51,6 @@ public class SecurityConfig {
                         // the application's CSRF header. It is enabled only in the dev profile.
                         .ignoringRequestMatchers("/h2-console/**")
                         .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
@@ -115,15 +104,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-XSRF-TOKEN"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 }

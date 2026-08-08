@@ -1,17 +1,10 @@
 export default function Footer() {
     return (
-        <footer style={{
-            textAlign: 'center',
-            padding: '20px',
-            fontSize: '0.8rem',
-            color: '#6b7280',
-            marginTop: 'auto',
-            borderTop: '1px solid #e5e7eb'
-        }}>
+        <footer className="mt-auto border-t border-app-border px-4 py-5 text-center text-xs text-app-muted transition-colors">
             <p>
                 Fantasy Draft Project © {new Date().getFullYear()} By Roi Harush
             </p>
-            <p style={{ fontSize: '0.7rem', marginTop: '5px' }}>
+            <p className="mt-1 text-[0.7rem]">
                 This is an educational project. Not affiliated with the Premier League.
             </p>
         </footer>

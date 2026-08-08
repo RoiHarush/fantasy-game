@@ -24,7 +24,13 @@ function StatusPage() {
         enabled: leagueIsActive,
     });
     const leagueError = leagueDetailsQuery.error ?? standingsQuery.error;
-    if (leagueError) return <p role="alert">Error loading status: {leagueError.message}</p>;
+    if (leagueError) {
+        return (
+            <p role="alert" className="mx-auto my-8 max-w-3xl rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                Error loading status: {leagueError.message}
+            </p>
+        );
+    }
 
     if (!leagueDetailsQuery.isPending && leagueDetailsQuery.data?.status !== "ACTIVE") {
         return <PreDraftStatus league={leagueDetailsQuery.data} />;
@@ -36,12 +42,16 @@ function StatusPage() {
     if (loading) return <LoadingPage />;
 
     if (gameweekState.error) {
-        return <p role="alert">Error loading the gameweek schedule: {gameweekState.error}</p>;
+        return (
+            <p role="alert" className="mx-auto my-8 max-w-3xl rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                Error loading the gameweek schedule: {gameweekState.error}
+            </p>
+        );
     }
 
     const gameweekView = deriveStatusGameweekView(gameweekState);
     if (!gameweekView.displayedGameweek) {
-        return <p role="status">No gameweek schedule is currently available.</p>;
+        return <p role="status" className="mx-auto my-8 max-w-3xl px-4 text-center text-app-muted">No gameweek schedule is currently available.</p>;
     }
 
     const league = standingsQuery.data ?? leagueDetailsQuery.data;
@@ -57,6 +67,7 @@ function StatusPage() {
                     preSeason={gameweekView.preSeason}
                     seasonComplete={gameweekView.seasonComplete}
                     transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}
+                    refreshGameweeks={gameweekState.refreshGameweeks}
                 />
             }
             right={<StatusSidebar league={league} user={user} preSeason={gameweekView.preSeason} />}

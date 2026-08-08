@@ -16,7 +16,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fpl")
-@CrossOrigin(origins = "http://localhost:5173")
 public class FplProxyController {
 
     private static final Logger log = LoggerFactory.getLogger(FplProxyController.class);

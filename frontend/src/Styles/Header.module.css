@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    background: linear-gradient(90deg, #9b2fff 0%, #00eaff 100%);
+    background: var(--brand-gradient);
     color: white;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
@@ -22,6 +22,7 @@
     justify-content: flex-start;
     box-sizing: border-box;
     width: 100%;
+    min-width: 0;
 }
 
 .topBar {
@@ -31,6 +32,8 @@
     align-items: center;
     gap: 15px;
     justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
 }
 
 .logo {
@@ -80,18 +83,20 @@
     }
 
     .topSection {
-        padding: 10px 15px;
+        min-height: 68px;
+        padding: 10px 12px;
         justify-content: flex-start;
     }
 
     .topBar {
         justify-content: flex-start;
         width: 100%;
+        gap: 10px;
     }
 
     .logo {
         height: 28px;
-        max-width: 200px;
+        max-width: min(200px, calc(100vw - 92px));
     }
 
     .version {
@@ -99,7 +104,22 @@
     }
 
     .navBar {
-        gap: 15px;
+        gap: 8px;
         height: 44px;
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 520px) {
+    .header {
+        min-height: 112px;
+    }
+
+    .version {
+        display: none;
+    }
+
+    .pattern {
+        opacity: 0.35;
     }
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveStatusGameweekView, getRankLabel, groupTransferActions } from "./model";
+import {
+    deriveStatusGameweekView,
+    getCountdownParts,
+    getRankLabel,
+    getUpcomingDeadline,
+    getVisibleCountdownUnits,
+    groupTransferActions,
+} from "./model";
 
 describe("status model", () => {
     it("identifies the state before gameweek one", () => {
@@ -49,5 +56,35 @@ describe("status model", () => {
             { id: 3, userId: 7, userName: "Roi" },
         ]);
         expect(grouped.get(7).actions.map(({ id }) => id)).toEqual([1, 3]);
+    });
+
+    it("moves the single countdown from the transfer window to lineup lock", () => {
+        const deadlines = { transferWindow: 2_000, lineupLock: 6_500 };
+
+        expect(getUpcomingDeadline(deadlines, 1_000)).toMatchObject({ kind: "transfer-window", targetTime: 2_000 });
+        expect(getUpcomingDeadline(deadlines, 2_000)).toMatchObject({ kind: "lineup-lock", targetTime: 6_500 });
+        expect(getUpcomingDeadline(deadlines, 6_500)).toBeNull();
+    });
+
+    it("splits the remaining duration without displaying zero too early", () => {
+        expect(getCountdownParts(90_061_001, 1_000)).toEqual({
+            days: 1,
+            hours: 1,
+            minutes: 1,
+            seconds: 1,
+        });
+        expect(getCountdownParts(1_001, 1_000).seconds).toBe(1);
+    });
+
+    it("only shows seconds during the final hour", () => {
+        expect(getVisibleCountdownUnits({ days: 2, hours: 3 })).toEqual([
+            ["days", "d"], ["hours", "h"], ["minutes", "m"],
+        ]);
+        expect(getVisibleCountdownUnits({ days: 0, hours: 3 })).toEqual([
+            ["hours", "h"], ["minutes", "m"],
+        ]);
+        expect(getVisibleCountdownUnits({ days: 0, hours: 0 })).toEqual([
+            ["minutes", "m"], ["seconds", "s"],
+        ]);
     });
 });

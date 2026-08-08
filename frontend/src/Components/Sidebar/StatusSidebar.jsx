@@ -1,16 +1,15 @@
 import SidebarContainer from "./SidebarContainer";
 import LeagueBlock from "./LeagueBlock";
-import styles from "../../Styles/StatusSidebar.module.css";
 import TeamOfTheWeekBlock from "./TeamOfTheWeekBlock";
 
 function StatusSidebar({ user, league, preSeason = false }) {
     return (
-        <div className={styles.statusSidebar}>
+        <aside className="flex w-full min-w-0 flex-col gap-5">
             <SidebarContainer>
                 <LeagueBlock league={league} currentUser={user} />
                 {!preSeason && <TeamOfTheWeekBlock />}
             </SidebarContainer>
-        </div>
+        </aside>
     );
 }
 

@@ -17,17 +17,17 @@ function CookieConsentContent() {
         <section
             aria-labelledby="cookie-consent-title"
             aria-describedby="cookie-consent-description"
-            className="w-[min(42rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-2xl sm:p-5"
+            className="w-[min(42rem,calc(100vw-2rem))] rounded-2xl border border-app-border bg-app-surface p-4 text-app-foreground shadow-2xl transition-colors sm:p-5"
         >
             <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700" aria-hidden="true">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" aria-hidden="true">
                     <Cookie size={21} />
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 id="cookie-consent-title" className="text-base font-bold sm:text-lg">
                         Your cookie preferences
                     </h2>
-                    <p id="cookie-consent-description" className="mt-1 text-sm leading-6 text-slate-600">
+                    <p id="cookie-consent-description" className="mt-1 text-sm leading-6 text-app-muted">
                         We use essential cookies to keep you signed in and protect account actions. We do not currently use analytics or advertising cookies.
                     </p>
                 </div>
@@ -36,7 +36,7 @@ function CookieConsentContent() {
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                     type="button"
-                    className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                    className="min-h-11 rounded-xl border border-app-border px-4 py-2 text-sm font-semibold transition hover:bg-app-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
                     onClick={() => savePreference("essential")}
                 >
                     Essential only

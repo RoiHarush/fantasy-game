@@ -2,7 +2,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { usePlayers } from "../../../features/players/usePlayers";
 import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
-import styles from "../../../Styles/PlayerOfTheWeekBlock.module.css";
+import { cn } from "../../../lib/cn";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerOfWeekCard from "../../General/PlayerOfTheWeekCard";
@@ -51,11 +51,11 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
     }
 
     return (
-        <div className={styles.carouselWrapper}>
-            <button type="button" className={styles.arrow} onClick={() => move(-1)} aria-label="Previous gameweek">‹</button>
-            <div className={styles.viewport}>
+        <div className="relative flex items-center justify-center py-3">
+            <button type="button" className="mx-1 shrink-0 rounded-lg bg-app-surface-muted px-2 py-1 text-2xl text-app-foreground transition hover:bg-app-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple sm:mx-2 sm:px-3 sm:text-3xl" onClick={() => move(-1)} aria-label="Previous gameweek">‹</button>
+            <div className="w-[min(300px,calc(100vw-6rem))] overflow-hidden md:w-[600px]">
                 <div
-                    className={styles.track}
+                    className="flex will-change-transform"
                     style={{
                         transform: `translateX(${currentIndex * cardWidth * -1}px)`,
                         transition: isTransitioning ? "transform 0.4s ease-in-out" : "none",
@@ -66,7 +66,10 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                         <button
                             type="button"
                             key={`player-${player?.gameweek ?? index}-${index}`}
-                            className={styles.cardWrapper}
+                            className={cn(
+                                "flex shrink-0 justify-center px-1.5",
+                                mobile ? "w-[100px]" : "w-[120px]",
+                            )}
                             onClick={() => player?.id && onSelect(player)}
                         >
                             <PlayerOfWeekCard player={player} size={mobile ? "small" : "normal"} />
@@ -74,7 +77,7 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                     ))}
                 </div>
             </div>
-            <button type="button" className={styles.arrow} onClick={() => move(1)} aria-label="Next gameweek">›</button>
+            <button type="button" className="mx-1 shrink-0 rounded-lg bg-app-surface-muted px-2 py-1 text-2xl text-app-foreground transition hover:bg-app-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple sm:mx-2 sm:px-3 sm:text-3xl" onClick={() => move(1)} aria-label="Next gameweek">›</button>
         </div>
     );
 }
@@ -90,12 +93,12 @@ function PlayerOfTheWeekBlock({ gameweekId }) {
         : null;
 
     return (
-        <div className={styles.block}>
-            <div className={styles.header}><span className={styles.icon}>★</span>Player of the Week</div>
+        <section className="w-full overflow-hidden rounded-xl border border-app-border bg-app-surface pb-4 shadow-sm transition-colors">
+            <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink sm:text-xl"><span className="text-xl text-brand-green" aria-hidden="true">★</span>Player of the Week</div>
             {playersOfWeekQuery.isPending ? (
-                <p role="status">Loading players of the week…</p>
+                <p role="status" className="p-4 text-app-muted">Loading players of the week…</p>
             ) : playersOfWeekQuery.error ? (
-                <p role="alert">Players of the week are temporarily unavailable.</p>
+                <p role="alert" className="p-4 text-red-600 dark:text-red-300">Players of the week are temporarily unavailable.</p>
             ) : (
                 <PlayerCarousel
                     key={`${mobile}-${gameweekId}-${playersOfWeekQuery.dataUpdatedAt}`}
@@ -111,7 +114,7 @@ function PlayerOfTheWeekBlock({ gameweekId }) {
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}
-        </div>
+        </section>
     );
 }
 

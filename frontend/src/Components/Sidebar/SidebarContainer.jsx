@@ -1,7 +1,5 @@
-import styles from "../../Styles/SidebarContainer.module.css";
-
 function SidebarContainer({ children }) {
-    return <div className={styles.sidebar}>{children}</div>;
+    return <div className="flex flex-col gap-5">{children}</div>;
 }
 
 export default SidebarContainer;

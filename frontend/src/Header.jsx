@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import NavButtons from "./NavButtons";
+import ThemeToggle from "./Components/Theme/ThemeToggle";
 import styles from "./Styles/Header.module.css";
 
 function Header() {
@@ -17,6 +18,7 @@ function Header() {
                         priority
                     />
                     <span className={styles.version}>(The Fun Version)</span>
+                    <ThemeToggle />
                 </div>
                 <Image
                     src="/UI/pattern-1_header.png"

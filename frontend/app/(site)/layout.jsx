@@ -9,10 +9,10 @@ export default async function SiteLayout({ children }) {
 
     return (
         <TeamsProvider>
-            <div>
+            <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip">
                 <HeaderCollage />
                 <Header />
-                <main>{children}</main>
+                <main className="min-w-0 flex-1">{children}</main>
                 <Footer />
             </div>
         </TeamsProvider>

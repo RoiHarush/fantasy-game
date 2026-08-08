@@ -15,12 +15,17 @@ export const metadata = {
     manifest: "/manifest.json",
 };
 
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
+};
+
 export default async function RootLayout({ children }) {
     const { user: initialUser, invalidSession } = await getCurrentSession();
     const dehydratedState = await buildInitialQueryState(initialUser);
 
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
             <body>
                 <Providers
                     initialUser={initialUser}
