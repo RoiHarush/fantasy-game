@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { derivePointsGameweekView } from "../../../features/points/model";
 import { usePointsPageData } from "../../../features/points/usePointsPageData";
 import { Button } from "../../../shared/ui/Button";
 import Style from "../../../Styles/Points.module.css";
@@ -15,21 +16,25 @@ import Points from "./Points";
 
 function PointsPage({ displayedUser }) {
     const { user: loggedUser } = useAuth();
-    const { currentGameweek, nextGameweek, gameweeks, lastGameweek } = useGameweek();
-    const [selectedGameweek, setSelectedGameweek] = useState(null);
+    const gameweekState = useGameweek();
+    const [selectedGameweekId, setSelectedGameweekId] = useState(null);
 
     const targetUser = displayedUser || loggedUser;
-    const effectiveGameweek = selectedGameweek ?? currentGameweek;
-    const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
-    const isLive = Boolean(currentGameweek && effectiveGameweek?.id === currentGameweek.id);
+    const gameweekView = derivePointsGameweekView({
+        ...gameweekState,
+        selectedGameweekId,
+    });
     const query = usePointsPageData({
         userId: targetUser?.id,
-        gameweekId: effectiveGameweek?.id,
-        live: isLive,
-        enabled: !isPreSeason,
+        gameweekId: gameweekView.effectiveGameweek?.id,
+        live: gameweekView.isLive,
+        enabled: !gameweekView.preSeason,
     });
 
-    if (isPreSeason) {
+    if (gameweekState.loading) return <LoadingPage />;
+    if (gameweekState.error) return <p role="alert">Error loading gameweeks: {gameweekState.error}</p>;
+
+    if (gameweekView.preSeason) {
         return (
             <section className={Style.preSeasonState}>
                 <h1>The season has not started yet</h1>
@@ -41,8 +46,14 @@ function PointsPage({ displayedUser }) {
         );
     }
 
-    if (!effectiveGameweek || query.isPending) return <LoadingPage />;
-    if (query.error) return <div>Error loading points: {query.error.message}</div>;
+    if (!gameweekView.effectiveGameweek) {
+        return <p role="status">No completed or live gameweek is available yet.</p>;
+    }
+    if (query.isPending) return <LoadingPage />;
+    if (query.error) return <p role="alert">Error loading points: {query.error.message}</p>;
+    if (!query.data?.squad) {
+        return <p role="status">No saved squad is available for this manager and gameweek.</p>;
+    }
 
     return (
         <PageLayout
@@ -52,10 +63,9 @@ function PointsPage({ displayedUser }) {
                     squad={query.data?.squad}
                     points={query.data?.points}
                     playerData={query.data?.playerData ?? []}
-                    selectedGameweek={effectiveGameweek}
-                    setSelectedGameweek={setSelectedGameweek}
-                    gameweeks={gameweeks}
-                    currentGameweek={currentGameweek}
+                    gameweekView={gameweekView}
+                    allGameweeks={gameweekState.gameweeks}
+                    onSelectGameweek={setSelectedGameweekId}
                 />
             }
             right={<UserSidebar user={targetUser} />}

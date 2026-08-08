@@ -16,4 +16,20 @@ describe("leagueSettingsSchema", () => {
             scoringRules: { PENALTY_MISS: -2 },
         });
     });
+
+    it("preserves dotted scoring-rule keys submitted as form rows", () => {
+        const result = leagueSettingsSchema.parse({
+            name: "Seven Managers",
+            maxParticipants: 7,
+            scoringRules: [
+                { rule: "GOAL.FORWARD", points: "4" },
+                { rule: "GOAL.MIDFIELDER", points: "5" },
+            ],
+        });
+
+        expect(result.scoringRules).toEqual({
+            "GOAL.FORWARD": 4,
+            "GOAL.MIDFIELDER": 5,
+        });
+    });
 });

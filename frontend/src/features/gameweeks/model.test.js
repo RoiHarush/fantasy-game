@@ -31,6 +31,32 @@ describe("normalizeGameweekResponses", () => {
         expect(state.currentGameweek).toBeNull();
     });
 
+    it("recovers the upcoming gameweek from the season list when the boundary request is stale", () => {
+        const upcoming = { id: 1, status: "UPCOMING" };
+        const state = normalizeGameweekResponses([
+            fulfilled([upcoming, { id: 2, status: "UPCOMING" }]),
+            fulfilled(null),
+            fulfilled(null),
+            fulfilled(null),
+        ]);
+
+        expect(state.nextGameweek).toEqual(upcoming);
+    });
+
+    it("treats Spring's empty 200 boundary responses as missing before the season", () => {
+        const upcoming = { id: 1, status: "UPCOMING" };
+        const state = normalizeGameweekResponses([
+            fulfilled([upcoming, { id: 2, status: "UPCOMING" }]),
+            fulfilled(""),
+            fulfilled(upcoming),
+            fulfilled(""),
+        ]);
+
+        expect(state.currentGameweek).toBeNull();
+        expect(state.nextGameweek).toEqual(upcoming);
+        expect(state.lastGameweek).toBeNull();
+    });
+
     it("fails when the season gameweek list cannot be loaded", () => {
         const error = new Error("gameweeks unavailable");
 

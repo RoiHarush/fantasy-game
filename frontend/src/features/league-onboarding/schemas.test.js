@@ -23,6 +23,23 @@ describe("league onboarding schemas", () => {
         }).success).toBe(false);
     });
 
+    it("preserves dotted scoring-rule keys from form rows", () => {
+        const result = createLeagueSchema.parse({
+            leagueName: "Friends League",
+            teamName: "Query United",
+            maxParticipants: 7,
+            scoringRules: [
+                { rule: "GOAL.FORWARD", points: "6" },
+                { rule: "ASSIST.ALL", points: "3" },
+            ],
+        });
+
+        expect(result.scoringRules).toEqual({
+            "GOAL.FORWARD": 6,
+            "ASSIST.ALL": 3,
+        });
+    });
+
     it("requires a usable league code and fantasy team name", () => {
         expect(joinLeagueSchema.safeParse({
             leagueCode: "ABC123",

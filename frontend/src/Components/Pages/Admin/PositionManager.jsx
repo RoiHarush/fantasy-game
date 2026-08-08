@@ -4,34 +4,30 @@ import { usePlayers } from '../../../features/players/usePlayers';
 import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useUpdatePlayerPosition } from "../../../features/league-admin/useLeagueAdmin";
 
+const POSITIONS = [
+    { id: 1, code: "GK", label: "Goalkeeper" },
+    { id: 2, code: "DEF", label: "Defender" },
+    { id: 3, code: "MID", label: "Midfielder" },
+    { id: 4, code: "FWD", label: "Forward" },
+];
+
 const PositionManager = ({ maintenanceLeagueId = null }) => {
-    const { players } = usePlayers();
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
     const [searchTerm, setSearchTerm] = useState("");
     const updatePosition = useUpdatePlayerPosition(maintenanceLeagueId);
-
-    const positions = [
-        { id: 1, code: 'GK', label: 'Goalkeeper' },
-        { id: 2, code: 'DEF', label: 'Defender' },
-        { id: 3, code: 'MID', label: 'Midfielder' },
-        { id: 4, code: 'FWD', label: 'Forward' }
-    ];
 
     const searchResults = useMemo(
         () => findPlayers(players, searchTerm, { availableOnly: true }),
         [players, searchTerm],
     );
 
-    const handleChangePosition = async (player, posId) => {
-        try {
-            const newPosCode = positions.find(p => p.id === posId).code;
-            await updatePosition.mutateAsync({
-                playerId: player.id,
-                positionId: posId,
-                positionCode: newPosCode,
-            });
-        } catch {
-            alert("Update failed");
-        }
+    const handleChangePosition = (player, position) => {
+        updatePosition.mutate({
+            playerId: player.id,
+            positionId: position.id,
+            positionCode: position.code,
+        });
     };
 
     const styles = {
@@ -55,11 +51,17 @@ const PositionManager = ({ maintenanceLeagueId = null }) => {
                 </h3>
                 <input
                     type="text"
+                    aria-label="Search free agents"
                     placeholder="Search free agents..."
                     style={styles.input}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
+
+                {playersQuery.isPending && <p role="status">Loading players…</p>}
+                {(playersQuery.error || updatePosition.error) && (
+                    <p role="alert">{playersQuery.error?.message || updatePosition.error?.message || "Update failed."}</p>
+                )}
 
                 <div>
                     {searchResults.map(p => (
@@ -73,12 +75,15 @@ const PositionManager = ({ maintenanceLeagueId = null }) => {
                             </div>
 
                             <div style={styles.posGrid}>
-                                {positions.map(pos => (
+                                {POSITIONS.map(pos => (
                                     <button
+                                        type="button"
                                         key={pos.id}
                                         disabled={updatePosition.isPending && updatePosition.variables?.playerId === p.id}
-                                        onClick={() => handleChangePosition(p, pos.id)}
+                                        onClick={() => handleChangePosition(p, pos)}
                                         style={styles.posBtn(p.position === pos.code)}
+                                        aria-pressed={p.position === pos.code}
+                                        aria-label={`Set ${p.viewName} as ${pos.label}`}
                                     >
                                         {pos.code}
                                     </button>

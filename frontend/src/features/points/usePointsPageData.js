@@ -9,14 +9,14 @@ import { fetchPlayerDataForGameweek, fetchSquadForGameweek } from "../../service
 export function usePointsPageData({ userId, gameweekId, live, enabled }) {
     return useQuery({
         queryKey: queryKeys.pointsPage(userId, gameweekId, live),
-        queryFn: async () => {
+        queryFn: async ({ signal }) => {
             const pointsRequest = live
-                ? fetchUserLivePoints(userId, gameweekId)
-                : fetchUserPoints(userId, gameweekId);
+                ? fetchUserLivePoints(userId, gameweekId, { signal })
+                : fetchUserPoints(userId, gameweekId, { signal });
             const [squad, points, playerData] = await Promise.all([
-                fetchSquadForGameweek(userId, gameweekId),
+                fetchSquadForGameweek(userId, gameweekId, { signal }),
                 pointsRequest,
-                fetchPlayerDataForGameweek(userId, gameweekId),
+                fetchPlayerDataForGameweek(userId, gameweekId, { signal }),
             ]);
             return { squad, points, playerData };
         },

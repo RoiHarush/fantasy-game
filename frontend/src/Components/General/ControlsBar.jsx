@@ -1,6 +1,5 @@
 import Switcher from "./Switcher";
 import Style from "../../Styles/ScoutWrapper.module.css";
-import { useTeams } from "../../features/teams/useTeams";
 
 function ControlsBar({
     searchQuery,
@@ -15,9 +14,16 @@ function ControlsBar({
     setShowAvailable,
     filteredCount,
     disablePositionOptions,
+    teams,
+    showDrafted = false,
     showWaivers = false
 }) {
-    const { teams } = useTeams();
+    const switcherOptions = [
+        "All players",
+        "Watchlist",
+        ...(showDrafted ? ["Drafted"] : []),
+        ...(showWaivers ? ["Waivers"] : []),
+    ];
 
     return (
         <div className={Style.controls}>
@@ -25,7 +31,8 @@ function ControlsBar({
                 <div className={Style.search}>
                     <h3>Search</h3>
                     <input
-                        type="text"
+                        type="search"
+                        aria-label="Search players"
                         placeholder="Search players"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -36,6 +43,7 @@ function ControlsBar({
                     <div className={Style.view}>
                         <h3>View</h3>
                         <select
+                            aria-label="Filter players"
                             value={viewFilter}
                             onChange={(e) => setViewFilter(e.target.value)}
                         >
@@ -57,6 +65,7 @@ function ControlsBar({
                     <div className={Style.sort}>
                         <h3>Sort</h3>
                         <select
+                            aria-label="Sort players"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >
@@ -70,7 +79,7 @@ function ControlsBar({
             <div className={Style.switchButtons}>
                 <Switcher
                     active={activeButton}
-                    options={showWaivers ? ["All players", "Watchlist", "Waivers"] : ["All players", "Watchlist"]}
+                    options={switcherOptions}
                     onChange={setActiveButton}
                 />
             </div>

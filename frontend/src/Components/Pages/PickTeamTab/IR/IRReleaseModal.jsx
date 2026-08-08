@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import Image from "next/image";
 import Style from "../../../../Styles/IRReleaseModal.module.css";
 import PlayerKit from "../../../General/PlayerKit";
 
@@ -8,8 +9,12 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
     const samePositionPlayers = Object.values(squad.startingLineup)
         .flat()
         .concat(Object.values(squad.bench))
-        .map((id) => players.find(p => p.id === id))
-        .filter(p => p && p.position === irPlayer.position && p.id !== irPlayer.id);
+        .map((id) => players.find((player) => String(player.id) === String(id)))
+        .filter((player) => (
+            player
+            && player.position === irPlayer.position
+            && String(player.id) !== String(irPlayer.id)
+        ));
 
     return (
         <Dialog.Root open onOpenChange={open => !open && onClose()}>
@@ -17,11 +22,13 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
             <Dialog.Overlay className={Style.modalBackdrop} />
             <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`}>
                 <Dialog.Title className="sr-only">Release IR Player</Dialog.Title>
-                <Dialog.Close asChild><button className={Style.closeBtn}>✕</button></Dialog.Close>
+                <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
-                <img
+                <Image
                     src="/Icons/ir-chip.svg"
                     alt="IR Chip"
+                    width={70}
+                    height={70}
                     className={Style.chipIconLarge}
                 />
 
@@ -38,6 +45,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                     <div className={Style.playerList}>
                         {samePositionPlayers.map(p => (
                             <button
+                                type="button"
                                 key={p.id}
                                 className={Style.playerButton}
                                 onClick={() => {
@@ -60,7 +68,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                 )}
 
                 <div className={Style.modalButtons}>
-                    <button className={Style.cancelButton} onClick={onClose}>
+                    <button type="button" className={Style.cancelButton} onClick={onClose}>
                         Cancel
                     </button>
                 </div>

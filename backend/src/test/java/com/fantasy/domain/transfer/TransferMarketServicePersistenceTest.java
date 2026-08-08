@@ -17,6 +17,7 @@ import com.fantasy.domain.team.UserSquadRepository;
 import com.fantasy.domain.user.UserEntity;
 import com.fantasy.domain.user.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
@@ -52,7 +53,8 @@ class TransferMarketServicePersistenceTest {
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket, 30
+                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                mock(SupplementalDraftPoolService.class), 30
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -150,6 +152,7 @@ class TransferMarketServicePersistenceTest {
                 actionRepo,
                 presenceService,
                 webSocket,
+                mock(SupplementalDraftPoolService.class),
                 30
         );
 
@@ -207,6 +210,82 @@ class TransferMarketServicePersistenceTest {
     }
 
     @Test
+    void supplementalDraftAllowsAReplacementAndReleasesUnpickedArrivalsWhenItEnds() {
+        PlayerRepository playerRepo = mock(PlayerRepository.class);
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        UserSquadRepository squadRepo = mock(UserSquadRepository.class);
+        UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        WaiverPreferenceRepository waiverPreferenceRepo = mock(WaiverPreferenceRepository.class);
+        LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
+        WebSocketPresenceService presenceService = mock(WebSocketPresenceService.class);
+        TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
+        SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
+        TransferMarketService service = new TransferMarketService(
+                playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
+                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                poolService, 30
+        );
+
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        league.setStatus(LeagueStatus.ACTIVE);
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(20);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setWindowType(TransferWindowType.SUPPLEMENTAL);
+        window.setTurnOrder(List.of(10));
+        window.open(List.of());
+
+        UserEntity user = new UserEntity();
+        user.setId(10);
+        user.setName("Manager");
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(List.of(100));
+        squad.setBenchMap(new LinkedHashMap<>());
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setLeague(league);
+        gameData.setUser(user);
+        gameData.setNextSquad(squad);
+
+        PlayerEntity outgoing = player(100, PlayerPosition.DEFENDER, 1);
+        PlayerEntity newArrival = player(501, PlayerPosition.DEFENDER, 2);
+        TransferRequestDto request = new TransferRequestDto();
+        request.setUserId(10);
+        request.setPlayerOutId(100);
+        request.setPlayerInId(501);
+
+        when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
+        when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
+        when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
+                .thenReturn(List.of(window));
+        when(gameDataRepo.findByUserId(10)).thenReturn(Optional.of(gameData));
+        when(gameDataRepo.findAllByLeagueIdWithSquads(7L)).thenReturn(List.of(gameData));
+        when(playerRepo.findById(100)).thenReturn(Optional.of(outgoing));
+        when(playerRepo.findById(501)).thenReturn(Optional.of(newArrival));
+        when(playerRepo.findAllById(any())).thenReturn(List.of(newArrival));
+        when(userRepo.findById(10)).thenReturn(Optional.of(user));
+
+        service.processTransfer(request);
+
+        assertEquals(List.of(501), squad.getStartingLineup());
+        assertEquals(TransferWindowStatus.CLOSED, window.getStatus());
+        verify(poolService).requireEligible(7L, 501);
+        verify(poolService).releasePool(7L);
+        verify(webSocket).sendWindowClosedEvent(7L);
+        ArgumentCaptor<LeagueTransferActionEntity> actionCaptor =
+                ArgumentCaptor.forClass(LeagueTransferActionEntity.class);
+        verify(actionRepo).save(actionCaptor.capture());
+        assertEquals(TransferActionSource.DRAFT, actionCaptor.getValue().getSource());
+        assertEquals(TransferWindowType.SUPPLEMENTAL, actionCaptor.getValue().getWindowType());
+    }
+
+    @Test
     void completedLegacyDraftStillSuppliesTheFirstTransferOrder() {
         PlayerRepository playerRepo = mock(PlayerRepository.class);
         GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
@@ -222,7 +301,8 @@ class TransferMarketServicePersistenceTest {
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket, 30
+                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                mock(SupplementalDraftPoolService.class), 30
         );
 
         LeagueTransferWindowEntity completedDraft = new LeagueTransferWindowEntity();

@@ -1,43 +1,51 @@
 "use client";
-import FixturesTable from "../FixturesTab/FixturesTable";
-import Style from "../../../Styles/Points.module.css";
-import PointsBlock from "../../Blocks/PointsBlock";
+
+import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
 import { usePlayers } from "../../../features/players/usePlayers";
+import styles from "../../../Styles/Points.module.css";
+import PointsBlock from "../../Blocks/PointsBlock";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import GameweekController from "../../General/Pitch/GameweekController";
-import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
+import FixturesTable from "../FixturesTab/FixturesTable";
 
 function Points({
     user,
     squad,
     points,
     playerData,
-    selectedGameweek,
-    setSelectedGameweek,
-    gameweeks,
-    currentGameweek
+    gameweekView,
+    allGameweeks,
+    onSelectGameweek,
 }) {
-    const { players } = usePlayers();
-    const selectedIndex = gameweeks.findIndex(gw => gw.id === selectedGameweek.id);
-    const latestVisibleIndex = gameweeks.findIndex(gw => gw.id === currentGameweek?.id);
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
+    const {
+        effectiveGameweek: selectedGameweek,
+        visibleGameweeks,
+        selectedIndex,
+        canGoPrevious,
+        canGoNext,
+    } = gameweekView;
 
     const handlePrev = () => {
-        if (selectedIndex > 0) setSelectedGameweek(gameweeks[selectedIndex - 1]);
+        if (canGoPrevious) onSelectGameweek(visibleGameweeks[selectedIndex - 1].id);
     };
 
     const handleNext = () => {
-        const nextGw = gameweeks[selectedIndex + 1];
-        if (nextGw && selectedIndex < latestVisibleIndex) setSelectedGameweek(nextGw);
+        if (canGoNext) onSelectGameweek(visibleGameweeks[selectedIndex + 1].id);
     };
 
+    if (playersQuery.isPending) return <p role="status">Loading player data…</p>;
+    if (playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
+
     return (
-        <div className={Style.pointsScreen}>
-            <h3 className={Style.title}>
+        <div className={styles.pointsScreen}>
+            <h3 className={styles.title}>
                 {selectedGameweek.name} – {user.fantasyTeamName}
             </h3>
 
-            <div className={Style.contentWrapper}>
-                <div className={Style.pitchWrapper}>
+            <div className={styles.contentWrapper}>
+                <div className={styles.pitchWrapper}>
                     <PlayerInteractionProvider
                         mode="points"
                         players={players}
@@ -49,13 +57,14 @@ function Points({
                             view="points"
                             currentGw={selectedGameweek}
                             playerData={playerData}
+                            players={players}
                             block={<PointsBlock points={points} />}
                             gwControl={
                                 <GameweekController
                                     onPrev={handlePrev}
                                     onNext={handleNext}
-                                    hidePrev={selectedIndex <= 0}
-                                    hideNext={selectedIndex < 0 || selectedIndex >= latestVisibleIndex}
+                                    canGoPrevious={canGoPrevious}
+                                    canGoNext={canGoNext}
                                     gw={selectedGameweek.id}
                                 />
                             }
@@ -63,9 +72,9 @@ function Points({
                     </PlayerInteractionProvider>
                 </div>
 
-                <div className={Style.fixtures}>
+                <div className={styles.fixtures}>
                     <FixturesTable
-                        gameweeks={gameweeks}
+                        gameweeks={allGameweeks}
                         defaultGameweek={selectedGameweek}
                     />
                 </div>

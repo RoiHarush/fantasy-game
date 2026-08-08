@@ -1,16 +1,18 @@
 import Style from "../../../Styles/Pitch.module.css";
 import PlayerCard from "../PlayerCard";
 import { getPlayerById } from "../../../Utils/ItemGetters";
-import { usePlayers } from "../../../features/players/usePlayers";
 
 function Pitch({
     squad,
     view,
     currentGw,
-    playerData
+    playerData,
+    players,
 }) {
-    const { players } = usePlayers();
     const defaultFormation = { GK: 1, DEF: 3, MID: 4, FWD: 3 };
+    const playerDataById = new Map(
+        (playerData ?? []).map((player) => [String(player.playerId), player]),
+    );
 
     const renderPlayer = (id, index) => {
         const player = id ? getPlayerById(players, id) : null;
@@ -19,7 +21,7 @@ function Pitch({
         let nextFixture = null;
 
         if (player) {
-            const playerDynamic = playerData?.find(p => Number(p.playerId) === Number(id));
+            const playerDynamic = playerDataById.get(String(id));
             points = playerDynamic?.points ?? null;
             nextFixture = playerDynamic?.nextFixture ?? null;
         }
@@ -44,8 +46,8 @@ function Pitch({
                 key={id}
                 player={player}
                 view={view}
-                captain={squad.captainId === id}
-                viceCaptain={squad.viceCaptainId === id}
+                captain={String(squad.captainId) === String(id)}
+                viceCaptain={String(squad.viceCaptainId) === String(id)}
                 currentGw={currentGw}
                 points={points}
                 nextFixture={nextFixture}

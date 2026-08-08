@@ -50,7 +50,7 @@ public class LeagueTransferWindowEntity {
     private GameWeekEntity gameWeek;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "window_type", nullable = false, length = 16)
+    @Column(name = "window_type", nullable = false, length = 24)
     private TransferWindowType windowType = TransferWindowType.TRANSFER;
 
     @Enumerated(EnumType.STRING)

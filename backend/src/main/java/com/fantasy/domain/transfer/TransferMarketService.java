@@ -57,6 +57,7 @@ public class TransferMarketService {
     private final LeagueTransferActionRepository transferActionRepo;
     private final WebSocketPresenceService presenceService;
     private final TransferWebSocketController webSocketController;
+    private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final long offlineGraceSeconds;
 
     public TransferMarketService(PlayerRepository playerRepo,
@@ -71,6 +72,7 @@ public class TransferMarketService {
                                  LeagueTransferActionRepository transferActionRepo,
                                  WebSocketPresenceService presenceService,
                                  TransferWebSocketController webSocketController,
+                                 SupplementalDraftPoolService supplementalDraftPoolService,
                                  @Value("${app.waivers.offline-grace-seconds:30}") long offlineGraceSeconds) {
         this.playerRepo = playerRepo;
         this.gameWeekRepo = gameWeekRepo;
@@ -84,6 +86,7 @@ public class TransferMarketService {
         this.transferActionRepo = transferActionRepo;
         this.presenceService = presenceService;
         this.webSocketController = webSocketController;
+        this.supplementalDraftPoolService = supplementalDraftPoolService;
         this.offlineGraceSeconds = Math.max(0, offlineGraceSeconds);
     }
 
@@ -95,6 +98,13 @@ public class TransferMarketService {
     @Transactional
     public void openDraftWindow(long leagueId, int gameWeekId, List<Integer> draftOrder) {
         openWindow(leagueId, gameWeekId, TransferWindowType.DRAFT, draftOrder);
+    }
+
+    @Transactional
+    public void openSupplementalDraftWindow(long leagueId,
+                                            int gameWeekId,
+                                            List<Integer> draftOrder) {
+        openWindow(leagueId, gameWeekId, TransferWindowType.SUPPLEMENTAL, draftOrder);
     }
 
     @Transactional
@@ -157,9 +167,9 @@ public class TransferMarketService {
         window.setGameWeek(gameWeek);
         window.setWindowType(type);
         window.setTurnOrder(order);
-        List<Integer> eligibleForIr = type == TransferWindowType.DRAFT
-                ? List.of()
-                : findUsersEligibleForIr(leagueId, order);
+        List<Integer> eligibleForIr = type == TransferWindowType.TRANSFER
+                ? findUsersEligibleForIr(leagueId, order)
+                : List.of();
         window.open(eligibleForIr);
         windowRepo.saveAndFlush(window);
 
@@ -175,7 +185,8 @@ public class TransferMarketService {
                 initialOrder,
                 remainingOrder,
                 turnsUsed,
-                totalTurns
+                totalTurns,
+                type
         ));
         log.info("{} window opened for league {} and GW {}", type, leagueId, gameWeekId);
     }
@@ -212,12 +223,15 @@ public class TransferMarketService {
                 window.getLeague().getId(),
                 request.getUserId(),
                 request.getPlayerOutId(),
-                request.getPlayerInId()
+                request.getPlayerInId(),
+                window.getWindowType() == TransferWindowType.SUPPLEMENTAL
         );
         recordAction(
                 window,
                 request.getUserId(),
-                TransferActionSource.MANUAL,
+                window.getWindowType() == TransferWindowType.SUPPLEMENTAL
+                        ? TransferActionSource.DRAFT
+                        : TransferActionSource.MANUAL,
                 request.getPlayerInId(),
                 request.getPlayerOutId()
         );
@@ -302,7 +316,11 @@ public class TransferMarketService {
         advanceTurn(window);
     }
 
-    private void performTransfer(long leagueId, int userId, int playerOutId, int playerInId) {
+    private void performTransfer(long leagueId,
+                                 int userId,
+                                 int playerOutId,
+                                 int playerInId,
+                                 boolean supplementalDraft) {
         if (playerOutId == playerInId) {
             throw new FantasyTeamException("Incoming and outgoing player must be different");
         }
@@ -317,6 +335,12 @@ public class TransferMarketService {
         PlayerEntity playerIn = playerRepo.findById(playerInId)
                 .orElseThrow(() -> new FantasyTeamException("Incoming player was not found"));
         LeagueEntity league = requireLeague(leagueId);
+
+        if (supplementalDraft) {
+            supplementalDraftPoolService.requireEligible(leagueId, playerInId);
+        } else if (supplementalDraftPoolService.isEligible(leagueId, playerInId)) {
+            throw new FantasyTeamException("Incoming player is reserved for the next supplemental draft");
+        }
 
         if (!containsRosterPlayer(squad, playerOutId)) {
             throw new FantasyTeamException("Outgoing player is not in your active squad");
@@ -500,6 +524,8 @@ public class TransferMarketService {
                 league.setStatus(LeagueStatus.ACTIVE);
                 leagueRepo.save(league);
                 prepareFirstTransferOrder(window);
+            } else if (type == TransferWindowType.SUPPLEMENTAL) {
+                supplementalDraftPoolService.releasePool(leagueId);
             } else if (type == TransferWindowType.TRANSFER) {
                 prepareNextWeekOrder(window);
             }
@@ -547,6 +573,8 @@ public class TransferMarketService {
             window.close();
             if (window.getWindowType() == TransferWindowType.TRANSFER) {
                 prepareNextWeekOrder(window);
+            } else if (window.getWindowType() == TransferWindowType.SUPPLEMENTAL) {
+                supplementalDraftPoolService.releasePool(leagueId);
             }
         }
         windowRepo.saveAll(windows);
@@ -600,6 +628,11 @@ public class TransferMarketService {
     @Transactional(readOnly = true)
     public List<Integer> getCurrentTurnOrder(int requestingUserId, int gameWeekId) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        return getConfiguredTransferOrderForLeague(leagueId, gameWeekId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Integer> getConfiguredTransferOrderForLeague(long leagueId, int gameWeekId) {
         return windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                         leagueId,
                         gameWeekId,
@@ -640,6 +673,7 @@ public class TransferMarketService {
         if (activeWindow.isEmpty()) {
             state.put("gameWeekId", -1);
             state.put("isDraftMode", false);
+            state.put("draftType", null);
             state.put("currentUserId", null);
             state.put("currentRound", null);
             state.put("order", null);
@@ -651,7 +685,12 @@ public class TransferMarketService {
 
         LeagueTransferWindowEntity window = activeWindow.get();
         state.put("gameWeekId", window.getGameWeek().getId());
-        state.put("isDraftMode", window.getWindowType() == TransferWindowType.DRAFT);
+        state.put("isDraftMode", window.getWindowType() != TransferWindowType.TRANSFER);
+        state.put("draftType", window.getWindowType() == TransferWindowType.DRAFT
+                ? DraftType.INITIAL.name()
+                : window.getWindowType() == TransferWindowType.SUPPLEMENTAL
+                    ? DraftType.SUPPLEMENTAL.name()
+                    : null);
         state.put("currentUserId", window.currentUserId().orElse(null));
         state.put("currentRound", window.getPhase().name());
         state.put("order", window.remainingOrder());
@@ -705,7 +744,8 @@ public class TransferMarketService {
                         leagueId,
                         userId,
                         preference.getPlayerOutId(),
-                        preference.getPlayerInId()
+                        preference.getPlayerInId(),
+                        false
                 );
                 completedPreference = preference;
                 break;
@@ -988,11 +1028,11 @@ public class TransferMarketService {
         if (order.isEmpty() || order.stream().anyMatch(userId -> !leagueUsers.contains(userId))) {
             throw new IllegalArgumentException("Transfer order contains a user outside this league");
         }
-        if (type == TransferWindowType.TRANSFER) {
+        if (type != TransferWindowType.DRAFT) {
             Map<Integer, Integer> turnsPerUser = new HashMap<>();
             for (Integer userId : order) {
                 if (turnsPerUser.merge(userId, 1, Integer::sum) > 2) {
-                    throw new IllegalArgumentException("A user cannot receive more than two regular turns");
+                    throw new IllegalArgumentException("A user cannot receive more than two turns");
                 }
             }
         }

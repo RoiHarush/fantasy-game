@@ -1,19 +1,23 @@
-import { usePlayers } from "../../features/players/usePlayers";
 import { useCallback } from "react";
 import SquadPlayerRow from "./SquadPlayerRow";
 import styles from "../../Styles/SquadPlayersTable.module.css";
-import { useGameweek } from "../../features/gameweeks/useGameweek";
-import { useAllTeamFixtures } from "../../features/fixtures/useAllTeamFixtures";
 
 const EMPTY_SQUAD = { startingLineup: {}, bench: {} };
 
-function SquadPlayersTable({ squad }) {
-    const { players } = usePlayers();
-    const { nextGameweek } = useGameweek();
-    const fixtures = useAllTeamFixtures() ?? {};
+function SquadPlayersTable({
+    squad,
+    players = [],
+    fixturesByTeam = {},
+    nextGameweek,
+    isLoading = false,
+    error = null,
+}) {
     const safeSquad = squad || EMPTY_SQUAD;
 
-    const getPlayer = useCallback((id) => players.find((p) => p.id === id), [players]);
+    const getPlayer = useCallback(
+        (id) => players.find((player) => String(player.id) === String(id)),
+        [players],
+    );
 
     const sections = [
         { key: "GK", label: "Goalkeepers", size: 2 },
@@ -25,7 +29,7 @@ function SquadPlayersTable({ squad }) {
     const getNextFixtureText = (player) => {
         if (!nextGameweek) return "-";
 
-        const teamFixtures = fixtures[player.teamId];
+        const teamFixtures = fixturesByTeam[player.teamId];
         if (!teamFixtures) return "-";
 
         const fixture = teamFixtures[nextGameweek.id];
@@ -50,6 +54,9 @@ function SquadPlayersTable({ squad }) {
         });
         return [...starting, ...benchOfPos];
     };
+
+    if (isLoading) return <p role="status">Loading squad…</p>;
+    if (error) return <p role="alert">{error.message || "Squad data is temporarily unavailable."}</p>;
 
     return (
         <div className={styles.tableWrapper}>

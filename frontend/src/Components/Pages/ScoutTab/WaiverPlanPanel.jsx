@@ -9,7 +9,7 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
         void onChange(reordered);
     };
 
-    const playerName = id => playersById.get(id)?.viewName || `Player #${id}`;
+    const playerName = (id) => playersById.get(String(id))?.viewName || `Player #${id}`;
 
     return (
         <section className={styles.panel}>
@@ -24,7 +24,7 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
                 These choices are attempted only if you are offline when your transfer turn begins.
                 Drag rows or change their priority number to reorder them.
             </p>
-            {message && <p className={styles.message}>{message}</p>}
+            {message && <p className={styles.message} role="status">{message}</p>}
             <ol className={styles.list}>
                 {entries.map((entry, index) => (
                     <li

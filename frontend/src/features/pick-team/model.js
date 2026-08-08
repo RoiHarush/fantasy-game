@@ -19,10 +19,11 @@ export function countSquadPlayers(squad) {
     if (!squad) return 0;
     const starting = Object.values(squad.startingLineup ?? {}).flat().filter(Boolean);
     const bench = Object.values(squad.bench ?? {}).filter(Boolean);
-    return starting.length + bench.length;
+    return new Set([...starting, ...bench].map(String)).size;
 }
 
 export function isFirstPickStarting(squad) {
     if (!squad?.firstPickId) return false;
-    return Object.values(squad.startingLineup ?? {}).flat().includes(squad.firstPickId);
+    return Object.values(squad.startingLineup ?? {}).flat()
+        .some((playerId) => String(playerId) === String(squad.firstPickId));
 }

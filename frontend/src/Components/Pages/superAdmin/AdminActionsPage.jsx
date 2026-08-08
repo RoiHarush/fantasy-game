@@ -1,8 +1,13 @@
+"use client";
+
+import * as Dialog from "@radix-ui/react-dialog";
 import { useMemo, useState } from "react";
 import {
     useAdminActionData,
     useRunAdminAction,
 } from "../../../features/super-admin/useSuperAdmin";
+import { manualSquadOverrideSchema } from "../../../features/super-admin/schemas";
+import { Button } from "../../../shared/ui/Button";
 
 const styles = {
     section: {
@@ -142,6 +147,7 @@ export default function AdminActionsPage() {
     const [squadDto, setSquadDto] = useState(JSON.stringify(DEFAULT_SQUAD_DTO, null, 2));
 
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [confirmation, setConfirmation] = useState(null);
 
     const [playerSearch, setPlayerSearch] = useState('');
     const { players: playersQuery, users: usersQuery } = useAdminActionData();
@@ -178,57 +184,92 @@ export default function AdminActionsPage() {
         adminAction.mutate({ endpoint, method, body });
     };
 
+    const parseGameweek = () => {
+        const gameweek = Number(gwInput);
+        if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) {
+            setMessage({ text: "Enter a Gameweek ID between 1 and 38.", type: "error" });
+            return null;
+        }
+        return gameweek;
+    };
+
+    const requestConfirmation = ({ title, description, endpoint, method = "POST", body = null }) => {
+        setMessage({ text: "", type: "" });
+        setConfirmation({ title, description, endpoint, method, body });
+    };
+
+    const confirmAdminAction = () => {
+        if (!confirmation) return;
+        callAdminApi(
+            confirmation.endpoint,
+            confirmation.method,
+            confirmation.body,
+        );
+        setConfirmation(null);
+    };
+
     const handleOpenGameweek = () => {
-        if (!gwInput || isNaN(gwInput)) return alert('Please enter a valid Gameweek ID');
-        if (!window.confirm(`Are you sure you want to OPEN Gameweek ${gwInput}?`)) return;
-        callAdminApi(`/api/admin/open/${gwInput}`);
+        const gameweek = parseGameweek();
+        if (!gameweek) return;
+        requestConfirmation({ title: `Open Gameweek ${gameweek}?`, description: "This changes the live gameweek state for every league.", endpoint: `/api/admin/open/${gameweek}` });
     };
     const handleProcessGameweek = () => {
-        if (!gwInput || isNaN(gwInput)) return alert('Please enter a valid Gameweek ID');
-        if (!window.confirm(`Are you sure you want to PROCESS points for Gameweek ${gwInput}?`)) return;
-        callAdminApi(`/api/admin/process-gameweek/${gwInput}`);
+        const gameweek = parseGameweek();
+        if (!gameweek) return;
+        requestConfirmation({ title: `Process Gameweek ${gameweek}?`, description: "Points will be recalculated for every league.", endpoint: `/api/admin/process-gameweek/${gameweek}` });
     };
     const handleUpdatePlayerPoints = () => {
-        if (!gwInput || isNaN(gwInput)) return alert('Please enter a valid Gameweek ID');
-        if (!window.confirm(`Are you sure you want to UPDATE player points for Gameweek ${gwInput}?`)) return;
-        callAdminApi(`/api/admin/players/update-points?gw=${gwInput}`);
+        const gameweek = parseGameweek();
+        if (!gameweek) return;
+        requestConfirmation({ title: `Update FPL points for Gameweek ${gameweek}?`, description: "Player points will be synchronized from the upstream API.", endpoint: `/api/admin/players/update-points?gw=${gameweek}` });
     };
     const handleOpenTransferWindow = () => {
-        if (!gwInput || isNaN(gwInput)) return alert('Please enter a valid Gameweek ID');
-        if (!window.confirm(`Are you sure you want to OPEN transfer window for Gameweek ${gwInput}?`)) return;
-        callAdminApi(`/api/admin/open-transfer-window/${gwInput}`);
+        const gameweek = parseGameweek();
+        if (!gameweek) return;
+        requestConfirmation({ title: `Open transfer windows for Gameweek ${gameweek}?`, description: "This affects all eligible leagues immediately.", endpoint: `/api/admin/open-transfer-window/${gameweek}` });
     };
     const handleCloseTransferWindow = () => {
-        if (!window.confirm(`Are you sure you want to CLOSE the current transfer window?`)) return;
-        callAdminApi(`/api/admin/close-transfer-window`);
+        requestConfirmation({ title: "Close current transfer windows?", description: "Any active transfer turns will be stopped.", endpoint: "/api/admin/close-transfer-window" });
     };
     const handleUpdateGameweeks = () => {
-        if (!window.confirm(`Are you sure you want to update all gameweeks from API?`)) return;
-        callAdminApi(`/api/admin/update-gameweeks`);
+        requestConfirmation({ title: "Update all gameweeks?", description: "Schedules and deadlines will be refreshed from the upstream API.", endpoint: "/api/admin/update-gameweeks" });
     };
     const handleRefreshPlayers = () => {
-        if (!window.confirm(`Are you sure you want to refresh basic player data from API?`)) return;
-        callAdminApi(`/api/admin/refresh-players`);
+        requestConfirmation({ title: "Refresh the player list?", description: "Basic player data will be synchronized from the upstream API.", endpoint: "/api/admin/refresh-players" });
     };
     const handleSyncCurrent = () => {
-        if (!window.confirm(`Are you sure you want to SYNC CURRENT GW?`)) return;
-        callAdminApi(`/api/admin/sync-current`);
+        requestConfirmation({ title: "Synchronize the current gameweek?", description: "Live data for the current gameweek will be refreshed.", endpoint: "/api/admin/sync-current" });
     };
     const handleSyncForGw = () => {
-        if (!gwInput || isNaN(gwInput)) return alert('Please enter a valid Gameweek ID');
-        if (!window.confirm(`Are you sure you want to SYNC Gameweek ${gwInput}?`)) return;
-        callAdminApi(`/api/admin/sync/?gw=${gwInput}`);
+        const gameweek = parseGameweek();
+        if (!gameweek) return;
+        requestConfirmation({ title: `Synchronize Gameweek ${gameweek}?`, description: "All upstream data for this gameweek will be refreshed.", endpoint: `/api/admin/sync/?gw=${gameweek}` });
     };
     const handleSaveSquad = () => {
-        if (!squadUserId || !squadGw) return alert('Please enter User ID and Gameweek');
-        let dto;
-        try {
-            dto = JSON.parse(squadDto);
-        } catch {
-            return alert('Invalid JSON in Squad DTO field');
+        const userId = Number(squadUserId);
+        const gameweek = Number(squadGw);
+        if (!Number.isInteger(userId) || userId < 1 || !Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38) {
+            setMessage({ text: "Select a user and enter a Gameweek ID between 1 and 38.", type: "error" });
+            return;
         }
-        if (!window.confirm(`Are you sure you want to MANUALLY OVERWRITE squad for user ${squadUserId} in GW ${squadGw}?`)) return;
-        callAdminApi(`/api/admin/user/${squadUserId}/squad/${squadGw}`, 'POST', dto);
+        let parsedJson;
+        try {
+            parsedJson = JSON.parse(squadDto);
+        } catch {
+            setMessage({ text: "The squad value is not valid JSON.", type: "error" });
+            return;
+        }
+        const validation = manualSquadOverrideSchema.safeParse(parsedJson);
+        if (!validation.success) {
+            setMessage({ text: "The squad JSON does not match the required squad structure.", type: "error" });
+            return;
+        }
+        requestConfirmation({
+            title: `Overwrite user ${userId}'s Gameweek ${gameweek} squad?`,
+            description: "This replaces the saved squad and cannot be automatically undone.",
+            endpoint: `/api/admin/user/${userId}/squad/${gameweek}`,
+            body: validation.data,
+        });
     };
 
     return (
@@ -242,19 +283,20 @@ export default function AdminActionsPage() {
                 <div>
                     <input
                         type="number"
+                        aria-label="Gameweek ID for gameweek actions"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID"
                         style={styles.input}
                         disabled={loading}
                     />
-                    <button style={styles.button} onClick={handleOpenGameweek} disabled={loading}>
+                    <button type="button" style={styles.button} onClick={handleOpenGameweek} disabled={loading}>
                         Open Gameweek
                     </button>
-                    <button style={styles.buttonDestructive} onClick={handleProcessGameweek} disabled={loading}>
+                    <button type="button" style={styles.buttonDestructive} onClick={handleProcessGameweek} disabled={loading}>
                         Process Gameweek Points
                     </button>
-                    <button style={styles.buttonDestructive} onClick={handleUpdatePlayerPoints} disabled={loading}>
+                    <button type="button" style={styles.buttonDestructive} onClick={handleUpdatePlayerPoints} disabled={loading}>
                         Update Player Points for GW
                     </button>
                 </div>
@@ -265,16 +307,17 @@ export default function AdminActionsPage() {
                 <div>
                     <input
                         type="number"
+                        aria-label="Gameweek ID for transfer window"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID (for opening)"
                         style={styles.input}
                         disabled={loading}
                     />
-                    <button style={styles.button} onClick={handleOpenTransferWindow} disabled={loading}>
+                    <button type="button" style={styles.button} onClick={handleOpenTransferWindow} disabled={loading}>
                         Open Transfer Window
                     </button>
-                    <button style={styles.buttonDestructive} onClick={handleCloseTransferWindow} disabled={loading}>
+                    <button type="button" style={styles.buttonDestructive} onClick={handleCloseTransferWindow} disabled={loading}>
                         Close Transfer Window
                     </button>
                 </div>
@@ -282,25 +325,26 @@ export default function AdminActionsPage() {
 
             <div style={styles.section}>
                 <h3 style={styles.h3}>Data Sync (API)</h3>
-                <button style={styles.button} onClick={handleUpdateGameweeks} disabled={loading}>
+                <button type="button" style={styles.button} onClick={handleUpdateGameweeks} disabled={loading}>
                     Update All Gameweeks
                 </button>
-                <button style={styles.button} onClick={handleRefreshPlayers} disabled={loading}>
+                <button type="button" style={styles.button} onClick={handleRefreshPlayers} disabled={loading}>
                     Refresh Player List
                 </button>
-                <button style={styles.button} onClick={handleSyncCurrent} disabled={loading}>
+                <button type="button" style={styles.button} onClick={handleSyncCurrent} disabled={loading}>
                     Full Sync Current GW
                 </button>
                 <div>
                     <input
                         type="number"
+                        aria-label="Gameweek ID for data synchronization"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID"
                         style={{ ...styles.input, marginTop: '10px' }}
                         disabled={loading}
                     />
-                    <button style={styles.button} onClick={handleSyncForGw} disabled={loading}>
+                    <button type="button" style={styles.button} onClick={handleSyncForGw} disabled={loading}>
                         Full Sync for Specific GW
                     </button>
                 </div>
@@ -313,6 +357,7 @@ export default function AdminActionsPage() {
                     <h4 style={styles.h4}>Player ID Finder</h4>
                     <input
                         type="text"
+                        aria-label="Search player ID"
                         value={playerSearch}
                         onChange={(e) => setPlayerSearch(e.target.value)}
                         placeholder="Search player name..."
@@ -333,6 +378,7 @@ export default function AdminActionsPage() {
 
                 <div>
                     <select
+                        aria-label="Squad owner"
                         value={squadUserId}
                         onChange={(e) => setSquadUserId(e.target.value)}
                         style={styles.select}
@@ -348,6 +394,7 @@ export default function AdminActionsPage() {
 
                     <input
                         type="number"
+                        aria-label="Squad gameweek ID"
                         value={squadGw}
                         onChange={(e) => setSquadGw(e.target.value)}
                         placeholder="Gameweek ID"
@@ -355,20 +402,24 @@ export default function AdminActionsPage() {
                         disabled={loading}
                     />
                     <textarea
+                        aria-label="Squad JSON"
                         value={squadDto}
                         onChange={(e) => setSquadDto(e.target.value)}
                         placeholder="Paste SquadDto JSON here"
                         style={styles.textarea}
                         disabled={loading}
                     />
-                    <button style={styles.buttonDestructive} onClick={handleSaveSquad} disabled={loading}>
+                    <button type="button" style={styles.buttonDestructive} onClick={handleSaveSquad} disabled={loading}>
                         Save Manual Squad
                     </button>
                 </div>
             </div>
 
             {message.text && (
-                <div style={{ ...styles.message, ...(message.type === 'success' ? styles.success : styles.error) }}>
+                <div
+                    style={{ ...styles.message, ...(message.type === 'success' ? styles.success : styles.error) }}
+                    role={message.type === "error" ? "alert" : "status"}
+                >
                     {message.text}
                 </div>
             )}
@@ -377,6 +428,28 @@ export default function AdminActionsPage() {
                     {(playersQuery.error || usersQuery.error).message}
                 </div>
             )}
+
+            {(playersQuery.isPending || usersQuery.isPending) && <p role="status">Loading administration data…</p>}
+
+            <Dialog.Root open={Boolean(confirmation)} onOpenChange={(open) => !open && setConfirmation(null)}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75" />
+                    <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(90vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-slate-900 p-7 text-center text-white shadow-2xl focus:outline-none">
+                        <Dialog.Title className="text-xl font-bold">{confirmation?.title}</Dialog.Title>
+                        <Dialog.Description className="mt-3 text-slate-300">
+                            {confirmation?.description}
+                        </Dialog.Description>
+                        <div className="mt-6 flex justify-center gap-3">
+                            <Dialog.Close asChild>
+                                <Button variant="ghost" className="text-white" disabled={loading}>Cancel</Button>
+                            </Dialog.Close>
+                            <Button variant="danger" onClick={confirmAdminAction} disabled={loading}>
+                                {loading ? "Running…" : "Confirm action"}
+                            </Button>
+                        </div>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
         </div>
     );
 }

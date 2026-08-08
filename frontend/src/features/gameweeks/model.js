@@ -3,10 +3,28 @@ export function normalizeGameweekResponses([all, current, next, last]) {
         throw all.reason;
     }
 
+    const gameweeks = [...all.value].sort((left, right) => left.id - right.id);
+    const fulfilledBoundary = response => (
+        response.status === "fulfilled"
+        && response.value
+        && typeof response.value === "object"
+            ? response.value
+            : null
+    );
+    const endpointCurrent = fulfilledBoundary(current);
+    const endpointNext = fulfilledBoundary(next);
+    const endpointLast = fulfilledBoundary(last);
+
     return {
-        gameweeks: [...all.value].sort((left, right) => left.id - right.id),
-        currentGameweek: current.status === "fulfilled" ? current.value : null,
-        nextGameweek: next.status === "fulfilled" ? next.value : null,
-        lastGameweek: last.status === "fulfilled" ? last.value : null,
+        gameweeks,
+        currentGameweek: endpointCurrent
+            ?? gameweeks.find(gameweek => gameweek.status === "LIVE")
+            ?? null,
+        nextGameweek: endpointNext
+            ?? gameweeks.find(gameweek => gameweek.status === "UPCOMING")
+            ?? null,
+        lastGameweek: endpointLast
+            ?? [...gameweeks].reverse().find(gameweek => gameweek.status === "FINISHED")
+            ?? null,
     };
 }

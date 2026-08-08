@@ -6,8 +6,10 @@ import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useAdminAssists } from "../../../features/league-admin/useLeagueAdmin";
 
 const AssistManager = ({ maintenanceLeagueId = null }) => {
-    const { players } = usePlayers();
-    const { currentGameweek } = useGameweek();
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
+    const gameweekState = useGameweek();
+    const { currentGameweek } = gameweekState;
 
     const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -24,17 +26,12 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
         return findPlayers(players, searchTerm);
     }, [players, searchTerm]);
 
-    const handleUpdate = async (playerId, action) => {
-        if (!canEdit) {
-            alert("Cannot edit assists: Gameweek is locked/not calculated yet.");
-            return;
-        }
-        try {
-            await updateAssist.mutateAsync({ playerId, action });
-            setSearchTerm("");
-        } catch {
-            alert("Failed to update assist");
-        }
+    const handleUpdate = (playerId, action) => {
+        if (!canEdit) return;
+        updateAssist.mutate(
+            { playerId, action },
+            { onSuccess: () => setSearchTerm("") },
+        );
     };
 
     const styles = {
@@ -91,6 +88,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                     Update stats for Gameweek {gameweek}
                 </div>
                 <select
+                    aria-label="Assists gameweek"
                     style={styles.select}
                     value={gameweek || ''}
                     onChange={(e) => setSelectedGameweek(Number(e.target.value))}
@@ -107,6 +105,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                 </svg>
                 <input
                     type="text"
+                    aria-label="Search player for assist adjustment"
                     placeholder={canEdit ? "Search player..." : "Gameweek is locked"}
                     style={{ ...styles.searchInput, opacity: canEdit ? 1 : 0.6, cursor: canEdit ? 'text' : 'not-allowed' }}
                     value={searchTerm}
@@ -122,6 +121,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                                     <span style={{ fontWeight: '600' }}>{player.viewName}</span>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={() => handleUpdate(player.id, "ADD")}
                                     style={{ ...styles.addBtn, opacity: canEdit ? 1 : 0.5, cursor: canEdit ? 'pointer' : 'not-allowed' }}
                                     disabled={!canEdit}
@@ -135,7 +135,12 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
             </div>
 
             <div>
-                {assistersQuery.isPending ? <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div> : (
+                {(playersQuery.error || assistersQuery.error || updateAssist.error || gameweekState.error) && (
+                    <p role="alert">
+                        {playersQuery.error?.message || assistersQuery.error?.message || updateAssist.error?.message || gameweekState.error}
+                    </p>
+                )}
+                {(playersQuery.isPending || assistersQuery.isPending || gameweekState.loading) ? <div role="status" style={{ textAlign: 'center', padding: '20px' }}>Loading...</div> : (
                     <>
                         {assisters.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', backgroundColor: 'white', borderRadius: '16px' }}>
@@ -143,7 +148,7 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                             </div>
                         ) : (
                             assisters.map((item) => {
-                                const realPlayer = players.find(p => p.id === item.playerId);
+                                const realPlayer = players.find((player) => String(player.id) === String(item.playerId));
                                 const position = realPlayer ? realPlayer.position : "MID";
 
                                 return (
@@ -162,6 +167,8 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
 
                                         <div style={styles.controls}>
                                             <button
+                                                type="button"
+                                                aria-label={`Remove one assist from ${item.viewName}`}
                                                 onClick={() => handleUpdate(item.playerId, "REMOVE")}
                                                 disabled={!canEdit}
                                                 style={{ ...styles.roundBtn, backgroundColor: 'white', color: '#ef4444', opacity: canEdit ? 1 : 0.5 }}
@@ -172,6 +179,8 @@ const AssistManager = ({ maintenanceLeagueId = null }) => {
                                             </span>
 
                                             <button
+                                                type="button"
+                                                aria-label={`Add one assist to ${item.viewName}`}
                                                 onClick={() => handleUpdate(item.playerId, "ADD")}
                                                 disabled={!canEdit}
                                                 style={{ ...styles.roundBtn, backgroundColor: '#3b82f6', color: 'white', opacity: canEdit ? 1 : 0.5 }}

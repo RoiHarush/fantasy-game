@@ -1,11 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import Image from "next/image";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
-import { usePlayers } from "../../../../features/players/usePlayers";
 
-function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, isActive, pending = false }) {
-    const { players } = usePlayers();
-    const player = players.find(p => p.id === firstPickPlayerId);
-
+function ConfirmFirstPickCaptainModal({ player, onConfirm, onCancel, isActive, pending = false }) {
     if (!player) return null;
 
     return (
@@ -15,10 +12,12 @@ function ConfirmFirstPickCaptainModal({ firstPickPlayerId, onConfirm, onCancel, 
             <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`} aria-labelledby="captain-chip-title">
                 <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close captain chip dialog">✕</button></Dialog.Close>
 
-                <img
+                <Image
                     src="/Icons/captain-chip.svg"
                     alt="Captain Chip"
-                    style={{ width: 70, marginBottom: 16 }}
+                    width={70}
+                    height={70}
+                    style={{ marginBottom: 16 }}
                 />
 
                 <h2 id="captain-chip-title" className={Style.title}>Captain Chip</h2>

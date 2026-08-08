@@ -12,6 +12,10 @@ import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.score.LeagueScoringService;
+import com.fantasy.domain.transfer.LeagueTransferWindowRepository;
+import com.fantasy.domain.transfer.SupplementalDraftPoolService;
+import com.fantasy.domain.transfer.TransferWindowStatus;
+import com.fantasy.domain.transfer.TransferWindowType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +36,8 @@ public class PlayerService {
     private final LeagueRepository leagueRepo;
     private final UserGameDataRepository gameDataRepo;
     private final LeagueScoringService leagueScoringService;
+    private final SupplementalDraftPoolService supplementalDraftPoolService;
+    private final LeagueTransferWindowRepository transferWindowRepository;
 
     public PlayerService(PlayerRepository playerRepo,
                          PlayerPointsRepository pointsRepo,
@@ -42,7 +48,9 @@ public class PlayerService {
                          FixtureService fixtureService,
                          LeagueRepository leagueRepo,
                          UserGameDataRepository gameDataRepo,
-                         LeagueScoringService leagueScoringService) {
+                         LeagueScoringService leagueScoringService,
+                         SupplementalDraftPoolService supplementalDraftPoolService,
+                         LeagueTransferWindowRepository transferWindowRepository) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
@@ -53,6 +61,8 @@ public class PlayerService {
         this.leagueRepo = leagueRepo;
         this.gameDataRepo = gameDataRepo;
         this.leagueScoringService = leagueScoringService;
+        this.supplementalDraftPoolService = supplementalDraftPoolService;
+        this.transferWindowRepository = transferWindowRepository;
     }
 
 
@@ -66,6 +76,18 @@ public class PlayerService {
                 ? null
                 : leagueRepo.findFirstByUsers_Id(requestingUserId).orElse(null);
         Map<Integer, Integer> leaguePointsByPlayer = new HashMap<>();
+        Set<Integer> supplementalPlayerIds = scoringLeague == null
+                ? Set.of()
+                : Optional.ofNullable(supplementalDraftPoolService.playerIds(scoringLeague.getId()))
+                    .orElseGet(Set::of);
+        boolean supplementalDraftOpen = scoringLeague != null
+                && transferWindowRepository
+                .findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
+                        scoringLeague.getId(),
+                        TransferWindowStatus.OPEN
+                )
+                .map(window -> window.getWindowType() == TransferWindowType.SUPPLEMENTAL)
+                .orElse(false);
         if (scoringLeague != null) {
             for (PlayerGameweekStatsEntity stats : statsRepo.findAll()) {
                 leaguePointsByPlayer.merge(
@@ -87,10 +109,13 @@ public class PlayerService {
                     boolean locked = scoringLeague == null
                             ? false
                             : scoringLeague.isPlayerLocked(p.getId());
-                    boolean available = ownerId == null && !locked;
+                    boolean supplementalEligible = supplementalPlayerIds.contains(p.getId());
+                    boolean available = ownerId == null
+                            && !locked
+                            && (!supplementalEligible || supplementalDraftOpen);
 
                     if (scoringLeague != null) {
-                        return PlayerMapper.toDtoWithTotalPoints(
+                        PlayerDto dto = PlayerMapper.toDtoWithTotalPoints(
                                 p,
                                 leaguePointsByPlayer.getOrDefault(p.getId(), 0),
                                 ownerId,
@@ -98,6 +123,8 @@ public class PlayerService {
                                 available,
                                 effectivePosition
                         );
+                        dto.setSupplementalDraftEligible(supplementalEligible);
+                        return dto;
                     }
                     return PlayerMapper.toDto(
                                 p,

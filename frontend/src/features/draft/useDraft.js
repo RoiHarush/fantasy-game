@@ -10,9 +10,15 @@ function executeDraftAction(action, leagueId, maintenance) {
 
     switch (action.type) {
         case "schedule":
-            return AdminService.scheduleDraft(action.time, scopedLeagueId);
+            return AdminService.scheduleDraft(action.time, scopedLeagueId, {
+                orderSource: action.orderSource,
+                order: action.order,
+            });
         case "open":
-            return AdminService.openDraftNow(scopedLeagueId);
+            return AdminService.openDraftNow(scopedLeagueId, {
+                orderSource: action.orderSource,
+                order: action.order,
+            });
         case "delete":
             return AdminService.deleteDraft(scopedLeagueId);
         default:

@@ -1,11 +1,13 @@
+import Image from "next/image";
 import { useState } from "react";
 import ConfirmFirstPickCaptainModal from "./ConfirmFirstPickCaptainModal";
 import style from "../../../../Styles/PickTeam.module.css";
 import { isFirstPickStarting } from "../../../../features/pick-team/model";
 import { useFirstPickCaptain } from "../../../../features/pick-team/usePickTeamActions";
 
-function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips }) {
+function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips, players }) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [message, setMessage] = useState("");
 
     const isActive = chips.active?.FIRST_PICK_CAPTAIN === true;
     const isUsedUp = chips.remaining?.FIRST_PICK_CAPTAIN <= 0;
@@ -21,11 +23,10 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
         onSuccess: ({ updatedSquad, updatedChips }) => {
             setSquad(updatedSquad);
             setChips(updatedChips);
-            alert(`Captain Chip ${isActive ? "cancelled" : "activated"} successfully!`);
+            setMessage(`Captain Chip ${isActive ? "cancelled" : "activated"} successfully.`);
         },
         onError: (error) => {
-            console.error("Chip toggle failed:", error);
-            alert(error.message || "Unexpected error while toggling chip");
+            setMessage(error.message || "Unexpected error while toggling chip.");
         },
         onSettled: () => {
             setShowConfirmModal(false);
@@ -34,14 +35,17 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
 
     return (
         <div className={style.chipCard}>
-            <img
+            <Image
                 src="/Icons/captain-chip.svg"
                 alt="Captain Chip Icon"
+                width={64}
+                height={64}
                 className={style.chipIcon}
             />
             <div className={style.chipTitle}>Captain Chip</div>
 
             <button
+                type="button"
                 className={`${style.chipButton} ${isActive ? style.active : ""}`}
                 onClick={handleToggle}
                 disabled={(!isFirstPickInStarting && !isActive) || (isUsedUp && !isActive)}
@@ -53,9 +57,11 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
                         : "Play"}
             </button>
 
+            {message && <p role="status">{message}</p>}
+
             {showConfirmModal && (
                 <ConfirmFirstPickCaptainModal
-                    firstPickPlayerId={squad.firstPickId}
+                    player={players.find((item) => String(item.id) === String(squad.firstPickId))}
                     onConfirm={() => chipMutation.mutate()}
                     onCancel={() => setShowConfirmModal(false)}
                     isActive={isActive}

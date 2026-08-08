@@ -57,6 +57,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        // The embedded H2 console has its own form flow and cannot provide
+                        // the application's CSRF header. It is enabled only in the dev profile.
+                        .ignoringRequestMatchers("/h2-console/**")
                         .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authz -> authz

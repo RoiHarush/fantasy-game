@@ -1,4 +1,6 @@
-import { createContext, useContext, useState } from "react";
+"use client";
+
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import PlayerMatchModal from "../Components/General/PlayerMatchModal";
 import PlayerActionModal from "../Components/General/PlayerActionModal";
 import PlayerInfoModal from "../Components/General/PlayerInfoModal";
@@ -9,7 +11,9 @@ import {
     getAllowedSwapIds,
 } from "../features/pick-team/squadModel";
 
-const PlayerInteractionContext = createContext();
+const PlayerInteractionContext = createContext(null);
+
+const isSameId = (firstId, secondId) => String(firstId) === String(secondId);
 
 export function PlayerInteractionProvider({
     mode,          // "pick" | "points"
@@ -33,54 +37,53 @@ export function PlayerInteractionProvider({
     // ============================
     // GENERAL CLICK HANDLER
     // ============================
-    const handlePlayerClick = (playerId) => {
-        if (mode === "points") return handlePointsClick(playerId);
-        if (mode === "pick") return handlePickClick(playerId);
-    };
-
-    // ============================
-    // POINTS MODE LOGIC
-    // ============================
-    const handlePointsClick = (playerId) => {
-        const player = players.find(p => p.id === playerId);
+    const handlePointsClick = useCallback((playerId) => {
+        const player = players.find((item) => isSameId(item.id, playerId));
         if (!player) return;
 
         setModalType("match");
         setModalPlayer(player);
-    };
+    }, [players]);
 
     // ============================
     // PICK MODE LOGIC
     // ============================
-    const handlePickClick = (playerId) => {
+    const handlePickClick = useCallback((playerId) => {
         // CASE 1: Already selecting someone → try to swap
-        if (selectedPlayerId) {
-            if (selectedPlayerId === playerId) {
+        if (selectedPlayerId !== null) {
+            if (isSameId(selectedPlayerId, playerId)) {
                 setSelectedPlayerId(null);
                 setDisabledIds([]);
                 return;
             }
 
-            setSquad(applySquadSwap(squad, selectedPlayerId, playerId, players));
+            setSquad((previousSquad) => (
+                applySquadSwap(previousSquad, selectedPlayerId, playerId, players)
+            ));
 
-            setIsDirty(true);
+            setIsDirty?.(true);
             setSelectedPlayerId(null);
             setDisabledIds([]);
             return;
         }
 
         // CASE 2: No selected player → open action modal
-        const player = players.find(p => p.id === playerId);
+        const player = players.find((item) => isSameId(item.id, playerId));
         if (player) {
             setModalType("action");
             setModalPlayer(player);
         }
-    };
+    }, [players, selectedPlayerId, setIsDirty, setSquad]);
+
+    const handlePlayerClick = useCallback((playerId) => {
+        if (mode === "points") handlePointsClick(playerId);
+        if (mode === "pick") handlePickClick(playerId);
+    }, [handlePickClick, handlePointsClick, mode]);
 
     // ============================
     // ACTIONS FROM PICK TEAM MODAL
     // ============================
-    const switchPlayer = (playerId) => {
+    const switchPlayer = useCallback((playerId) => {
         // Enter switch mode
         setModalPlayer(null);
         setModalType(null);
@@ -90,43 +93,48 @@ export function PlayerInteractionProvider({
         const allowed = getAllowedSwapIds(squad, playerId, players, chips?.active?.FIRST_PICK_CAPTAIN);
         const allIds = Object.values(squad.startingLineup).flat().concat(Object.values(squad.bench));
 
-        setDisabledIds(allIds.filter(id => id !== playerId && !allowed.includes(id)));
-    };
+        setDisabledIds(allIds.filter((id) => (
+            !isSameId(id, playerId)
+            && !allowed.some((allowedId) => isSameId(allowedId, id))
+        )));
+    }, [chips?.active?.FIRST_PICK_CAPTAIN, players, squad]);
 
-    const setCaptain = (playerId) => {
+    const setCaptain = useCallback((playerId) => {
         setSquad((previousSquad) => assignCaptain(previousSquad, playerId));
-        setIsDirty(true);
+        setIsDirty?.(true);
 
         setModalType(null);
         setModalPlayer(null);
-    };
+    }, [setIsDirty, setSquad]);
 
-    const setVice = (playerId) => {
+    const setVice = useCallback((playerId) => {
         setSquad((previousSquad) => assignViceCaptain(previousSquad, playerId));
-        setIsDirty(true);
+        setIsDirty?.(true);
 
         setModalType(null);
         setModalPlayer(null);
-    };
+    }, [setIsDirty, setSquad]);
 
-    const viewInfo = (player) => {
+    const viewInfo = useCallback((player) => {
         setModalType("info");
         setModalPlayer(player);
-    };
+    }, []);
 
-    const closeModal = () => {
+    const closeModal = useCallback(() => {
         setModalType(null);
         setModalPlayer(null);
-    };
+    }, []);
+
+    const contextValue = useMemo(() => ({
+        handlePlayerClick,
+        selectedPlayerId,
+        disabledIds,
+        closeModal,
+    }), [closeModal, disabledIds, handlePlayerClick, selectedPlayerId]);
 
     return (
         <PlayerInteractionContext.Provider
-            value={{
-                handlePlayerClick,
-                selectedPlayerId,
-                disabledIds,
-                closeModal
-            }}
+            value={contextValue}
         >
 
             {children}
@@ -153,11 +161,11 @@ export function PlayerInteractionProvider({
                     onSetCaptain={setCaptain}
                     onSetVice={setVice}
                     onViewInfo={viewInfo}
-                    isCaptain={squad.captainId === modalPlayer.id}
-                    isVice={squad.viceCaptainId === modalPlayer.id}
+                    isCaptain={isSameId(squad.captainId, modalPlayer.id)}
+                    isVice={isSameId(squad.viceCaptainId, modalPlayer.id)}
                     canBeCaptain={
-                        !Object.values(squad.bench).includes(modalPlayer.id) &&
-                        modalPlayer.id !== squad.firstPickId
+                        !Object.values(squad.bench).some((id) => isSameId(id, modalPlayer.id)) &&
+                        !isSameId(modalPlayer.id, squad.firstPickId)
                     }
                     firstPickUsed={chips?.active?.FIRST_PICK_CAPTAIN}
                 />
@@ -176,5 +184,9 @@ export function PlayerInteractionProvider({
 }
 
 export function usePlayerInteraction() {
-    return useContext(PlayerInteractionContext);
+    const context = useContext(PlayerInteractionContext);
+    if (!context) {
+        throw new Error("usePlayerInteraction must be used inside PlayerInteractionProvider");
+    }
+    return context;
 }

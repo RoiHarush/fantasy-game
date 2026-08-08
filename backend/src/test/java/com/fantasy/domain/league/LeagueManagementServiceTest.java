@@ -263,6 +263,33 @@ class LeagueManagementServiceTest {
         assertEquals(null, result.leagueCode());
     }
 
+    @Test
+    void leagueAdminCannotChangeCapacityAfterTheInitialDraftStarts() {
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        UserEntity owner = user(1, UserRole.ROLE_USER);
+        LeagueEntity league = league(owner, 4);
+        league.setStatus(LeagueStatus.ACTIVE);
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+        when(leagueRepository.findByIdWithLock(10L)).thenReturn(Optional.of(league));
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> new LeagueManagementService(
+                        leagueRepository,
+                        userRepository,
+                        mock(UserGameDataRepository.class)
+                ).updateSettings(
+                        1,
+                        10L,
+                        new UpdateLeagueSettingsRequest(null, 5, null)
+                )
+        );
+
+        assertEquals("League size cannot change after the initial draft starts", error.getMessage());
+        assertEquals(4, league.getMaxParticipants());
+    }
+
     private static LeagueEntity league(UserEntity admin, int capacity) {
         LeagueEntity league = new LeagueEntity();
         league.setName("Test League");

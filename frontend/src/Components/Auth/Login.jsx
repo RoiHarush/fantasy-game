@@ -1,12 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Image from "next/image";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "../../Context/AuthContext";
-import { authenticateUser } from "../../features/auth/api";
 import { loginSchema, registrationSchema } from "../../features/auth/schemas";
+import { useAuthenticateUser } from "../../features/auth/useAuthActions";
 import styles from "../../Styles/Login.module.css";
 
 const LOGIN_LOGOS = Array.from({ length: 20 }, (_, index) => `${index + 1}_logo.svg`);
@@ -19,52 +20,134 @@ function FieldError({ id, error }) {
     return <p id={id} className={styles.fieldError}>{error.message}</p>;
 }
 
-export default function Login() {
-    const [isRegistering, setIsRegistering] = useState(false);
-    const { login, sessionMessage, clearSessionMessage } = useAuth();
+function AuthenticationForm({ isRegistering, initialUsername, auth, onToggleMode }) {
     const schema = isRegistering ? registrationSchema : loginSchema;
+    const authentication = useAuthenticateUser({
+        registering: isRegistering,
+        onSuccess: ({ user }) => auth.login(user),
+    });
 
     const {
         register,
         handleSubmit,
-        reset,
         getValues,
         setError,
-        clearErrors,
-        formState: { errors, isSubmitting },
+        formState: { errors },
     } = useForm({
         resolver: zodResolver(schema),
         defaultValues: {
             name: "",
-            username: "",
+            username: initialUsername,
             password: "",
             confirmPassword: "",
         },
         mode: "onBlur",
     });
 
-    const onSubmit = async (values) => {
-        clearSessionMessage();
-
-        try {
-            const data = await authenticateUser(values, isRegistering);
-
-            login(data.user);
-        } catch (requestError) {
-            const fallback = isRegistering ? "Registration failed" : "Wrong username or password";
-            setError("root.server", {
-                type: "server",
-                message: requestError?.message || fallback,
-            });
-        }
+    const onSubmit = (values) => {
+        auth.clearSessionMessage();
+        authentication.mutate(values, {
+            onError: (requestError) => {
+                const fallback = isRegistering ? "Registration failed" : "Wrong username or password";
+                setError("root.server", {
+                    type: "server",
+                    message: requestError?.message || fallback,
+                });
+            },
+        });
     };
 
     const toggleMode = () => {
-        const username = getValues("username");
+        auth.clearSessionMessage();
+        onToggleMode(getValues("username"));
+    };
+
+    return (
+        <form className={styles.card} onSubmit={handleSubmit(onSubmit)} noValidate>
+            {isRegistering && (
+                <>
+                    <label className={styles.srOnly} htmlFor="display-name">Display name</label>
+                    <input
+                        id="display-name"
+                        {...register("name")}
+                        className={styles.input}
+                        placeholder="Display name"
+                        autoComplete="name"
+                        aria-invalid={Boolean(errors.name)}
+                        aria-describedby={errors.name ? "name-error" : undefined}
+                    />
+                    <FieldError id="name-error" error={errors.name} />
+                </>
+            )}
+
+            <label className={styles.srOnly} htmlFor="username">Username</label>
+            <input
+                id="username"
+                {...register("username")}
+                className={styles.input}
+                placeholder="Username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck="false"
+                aria-invalid={Boolean(errors.username)}
+                aria-describedby={errors.username ? "username-error" : undefined}
+            />
+            <FieldError id="username-error" error={errors.username} />
+
+            <label className={styles.srOnly} htmlFor="password">Password</label>
+            <input
+                id="password"
+                {...register("password")}
+                className={styles.input}
+                type="password"
+                placeholder="Password"
+                autoComplete={isRegistering ? "new-password" : "current-password"}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-error" : undefined}
+            />
+            <FieldError id="password-error" error={errors.password} />
+
+            {isRegistering && (
+                <>
+                    <label className={styles.srOnly} htmlFor="confirm-password">Confirm password</label>
+                    <input
+                        id="confirm-password"
+                        {...register("confirmPassword")}
+                        className={styles.input}
+                        type="password"
+                        placeholder="Confirm password"
+                        autoComplete="new-password"
+                        aria-invalid={Boolean(errors.confirmPassword)}
+                        aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
+                    />
+                    <FieldError id="confirm-password-error" error={errors.confirmPassword} />
+                </>
+            )}
+
+            {errors.root?.server && (
+                <div className={styles.error} role="alert" aria-live="polite">
+                    {errors.root.server.message}
+                </div>
+            )}
+
+            <button type="submit" className={styles.button} disabled={authentication.isPending}>
+                {authentication.isPending ? "Please wait…" : isRegistering ? "Create Account" : "Sign In"}
+            </button>
+            <button type="button" className={styles.secondaryButton} disabled={authentication.isPending} onClick={toggleMode}>
+                {isRegistering ? "Already have an account? Sign in" : "New here? Create an account"}
+            </button>
+        </form>
+    );
+}
+
+export default function Login() {
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [usernameDraft, setUsernameDraft] = useState("");
+    const auth = useAuth();
+
+    const toggleMode = (username) => {
+        setUsernameDraft(username);
         setIsRegistering((current) => !current);
-        clearErrors();
-        clearSessionMessage();
-        reset({ name: "", username, password: "", confirmPassword: "" });
     };
 
     return (
@@ -82,7 +165,14 @@ export default function Login() {
                     >
                         <div className={styles.marqueeTrack}>
                             {[...row, ...row].map((logo, logoIndex) => (
-                                <img key={`${logo}-${logoIndex}`} src={`/Logos/${logo}`} alt="" loading="lazy" />
+                                <Image
+                                    key={`${logo}-${logoIndex}`}
+                                    src={`/Logos/${logo}`}
+                                    alt=""
+                                    width={55}
+                                    height={55}
+                                    unoptimized
+                                />
                             ))}
                         </div>
                     </div>
@@ -91,82 +181,30 @@ export default function Login() {
 
             <div className={styles.contentWrapper}>
                 <div className={styles.logoWrapper}>
-                    <img src="/UI/premier-league-logo.svg" alt="Premier League Logo" className={styles.premierLogo} />
+                    <Image
+                        src="/UI/premier-league-logo.svg"
+                        alt="Premier League Logo"
+                        className={styles.premierLogo}
+                        width={130}
+                        height={130}
+                        priority
+                    />
                 </div>
 
                 <h1 className={styles.title}>Fantasy Draft</h1>
 
-                <form className={styles.card} onSubmit={handleSubmit(onSubmit)} noValidate>
-                    {isRegistering && (
-                        <>
-                            <input
-                                {...register("name")}
-                                className={styles.input}
-                                placeholder="Display name"
-                                autoComplete="name"
-                                aria-invalid={Boolean(errors.name)}
-                                aria-describedby={errors.name ? "name-error" : undefined}
-                            />
-                            <FieldError id="name-error" error={errors.name} />
-                        </>
-                    )}
-
-                    <input
-                        {...register("username")}
-                        className={styles.input}
-                        placeholder="Username"
-                        autoComplete="username"
-                        autoCapitalize="none"
-                        spellCheck="false"
-                        aria-invalid={Boolean(errors.username)}
-                        aria-describedby={errors.username ? "username-error" : undefined}
-                    />
-                    <FieldError id="username-error" error={errors.username} />
-
-                    <input
-                        {...register("password")}
-                        className={styles.input}
-                        type="password"
-                        placeholder="Password"
-                        autoComplete={isRegistering ? "new-password" : "current-password"}
-                        aria-invalid={Boolean(errors.password)}
-                        aria-describedby={errors.password ? "password-error" : undefined}
-                    />
-                    <FieldError id="password-error" error={errors.password} />
-
-                    {isRegistering && (
-                        <>
-                            <input
-                                {...register("confirmPassword")}
-                                className={styles.input}
-                                type="password"
-                                placeholder="Confirm password"
-                                autoComplete="new-password"
-                                aria-invalid={Boolean(errors.confirmPassword)}
-                                aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
-                            />
-                            <FieldError id="confirm-password-error" error={errors.confirmPassword} />
-                        </>
-                    )}
-
-                    {errors.root?.server && (
-                        <div className={styles.error} role="alert" aria-live="polite">
-                            {errors.root.server.message}
-                        </div>
-                    )}
-
-                    <button type="submit" className={styles.button} disabled={isSubmitting}>
-                        {isSubmitting ? "Please wait…" : isRegistering ? "Create Account" : "Sign In"}
-                    </button>
-                    <button type="button" className={styles.secondaryButton} disabled={isSubmitting} onClick={toggleMode}>
-                        {isRegistering ? "Already have an account? Sign in" : "New here? Create an account"}
-                    </button>
-                </form>
+                <AuthenticationForm
+                    key={isRegistering ? "register" : "login"}
+                    isRegistering={isRegistering}
+                    initialUsername={usernameDraft}
+                    auth={auth}
+                    onToggleMode={toggleMode}
+                />
             </div>
 
             <div className={styles.disclaimer}>Educational Project | Not affiliated with the Premier League</div>
 
-            {sessionMessage && <div className={styles.error} role="status" aria-live="polite">{sessionMessage}</div>}
+            {auth.sessionMessage && <div className={styles.error} role="status" aria-live="polite">{auth.sessionMessage}</div>}
         </div>
     );
 }

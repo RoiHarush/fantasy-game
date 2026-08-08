@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,14 +15,36 @@ import static org.mockito.Mockito.when;
 class AuthControllerCurrentUserTest {
 
     private final AuthService authService = mock(AuthService.class);
-    private final AuthController controller = new AuthController(authService, mock(AuthCookieService.class));
+    private final AuthCookieService authCookieService = mock(AuthCookieService.class);
+    private final AuthController controller = new AuthController(authService, authCookieService);
 
     @Test
     void rejectsUnauthenticatedCurrentUserRequest() {
+        when(authCookieService.clearSessionCookie()).thenReturn(
+                org.springframework.http.ResponseCookie.from("fantasy_session", "").maxAge(0).build()
+        );
+
         ResponseEntity<UserDto> response = controller.currentUser(null);
 
         assertEquals(401, response.getStatusCode().value());
         assertNull(response.getBody());
+        assertTrue(response.getHeaders().getFirst("Set-Cookie").startsWith("fantasy_session=; Max-Age=0"));
+    }
+
+    @Test
+    void clearsSessionWhenTokenReferencesDeletedUser() {
+        when(authService.getCurrentUser(17))
+                .thenThrow(new IllegalStateException("Authenticated user was not found"));
+        when(authCookieService.clearSessionCookie()).thenReturn(
+                org.springframework.http.ResponseCookie.from("fantasy_session", "").maxAge(0).build()
+        );
+
+        ResponseEntity<UserDto> response = controller.currentUser(17);
+
+        assertEquals(401, response.getStatusCode().value());
+        assertNull(response.getBody());
+        assertTrue(response.getHeaders().getFirst("Set-Cookie").startsWith("fantasy_session=; Max-Age=0"));
+        verify(authCookieService).clearSessionCookie();
     }
 
     @Test

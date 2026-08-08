@@ -1,24 +1,26 @@
-import Style from "../../../Styles/FixturesTable.module.css";
-import { useTeams } from "../../../features/teams/useTeams";
+import styles from "../../../Styles/FixturesTable.module.css";
 
-function TeamLogo({ teamId }) {
-    const { teams } = useTeams();
-    const team = teams.find(item => item.id === teamId);
-    const localFallback = `/Logos/${teamId}_logo.svg`;
+function TeamLogo({ team }) {
+    const localFallback = `/Logos/${team?.id ?? 0}_logo.svg`;
     const badgeUrl = team?.badgeUrl || localFallback;
+
+    function useFallback(event) {
+        if (event.currentTarget.dataset.fallbackApplied === "true") return;
+        event.currentTarget.dataset.fallbackApplied = "true";
+        event.currentTarget.src = localFallback;
+    }
 
     return (
         <img
             src={badgeUrl}
-            alt={`${team?.name || `Team ${teamId}`} logo`}
-            className={Style["team-logo"]}
-            onError={event => {
-                if (!event.currentTarget.src.endsWith(localFallback)) {
-                    event.currentTarget.src = localFallback;
-                }
-            }}
+            alt={`${team?.name || "Unknown team"} logo`}
+            width="48"
+            height="48"
+            loading="lazy"
+            className={styles["team-logo"]}
+            onError={useFallback}
         />
-    )
+    );
 }
 
-export default TeamLogo
+export default TeamLogo;

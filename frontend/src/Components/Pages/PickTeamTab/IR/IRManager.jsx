@@ -1,18 +1,19 @@
-import { useState, useMemo } from "react";
+import Image from "next/image";
+import { useState } from "react";
 import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
 import Style from "../../../../Styles/PickTeam.module.css";
-import { usePlayers } from "../../../../features/players/usePlayers";
 import { countSquadPlayers } from "../../../../features/pick-team/model";
 import { useIrChip } from "../../../../features/pick-team/usePickTeamActions";
 
-function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData }) {
+function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData, players }) {
     const [showIRModal, setShowIRModal] = useState(false);
     const [confirmIRPlayer, setConfirmIRPlayer] = useState(null);
     const [showReleaseModal, setShowReleaseModal] = useState(false);
     const [confirmReleasePlayer, setConfirmReleasePlayer] = useState(null);
-    const { players } = usePlayers();
+    const [message, setMessage] = useState("");
+    const irPlayer = players.find((player) => String(player.id) === String(squad.irId));
     const irMutation = useIrChip({
         userId,
         gameweekId,
@@ -20,11 +21,10 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
             setSquad(updatedSquad);
             setChips(updatedChips);
             if (refreshPlayerData) void refreshPlayerData();
-            alert(mode === "assign" ? "IR assigned successfully!" : "IR released successfully!");
+            setMessage(mode === "assign" ? "IR assigned successfully." : "IR released successfully.");
         },
         onError: (error) => {
-            console.error("IR mutation failed:", error);
-            alert(error.message || "Unexpected error while processing IR");
+            setMessage(error.message || "Unexpected error while processing IR.");
         },
         onSettled: () => {
             setConfirmIRPlayer(null);
@@ -37,7 +37,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
     const isActive = chips.active?.IR === true;
     const isUsedUp = chips.remaining?.IR <= 0;
 
-    const playersCount = useMemo(() => countSquadPlayers(squad), [squad]);
+    const playersCount = countSquadPlayers(squad);
 
 
     const isReleaseDisabled = playersCount < 15 || transferWindowProcessed;
@@ -65,15 +65,18 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
 
     return (
         <div className={Style.chipCard}>
-            <img
+            <Image
                 src="/Icons/ir-chip.svg"
                 alt="IR Chip Icon"
+                width={64}
+                height={64}
                 className={Style.chipIcon}
             />
             <div className={Style.chipTitle}>IR Chip</div>
 
             {isActive ? (
                 <button
+                    type="button"
                     className={`${Style.chipButton} ${Style.active}`}
                     onClick={openReleaseModal}
                     disabled={isReleaseDisabled}
@@ -83,6 +86,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 </button>
             ) : (
                 <button
+                    type="button"
                     className={Style.chipButton}
                     onClick={openIRModal}
                     disabled={isPlayDisabled}
@@ -92,12 +96,17 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 </button>
             )}
 
+            {message && <p role="status">{message}</p>}
+
             {showIRModal && (
                 <IRModal
                     squad={squad}
-                    isActive={isActive}
-                    setConfirmIRPlayer={setConfirmIRPlayer}
-                    setShowIRModal={setShowIRModal}
+                    players={players}
+                    onSelect={(player) => {
+                        setConfirmIRPlayer(player);
+                        setShowIRModal(false);
+                    }}
+                    onClose={() => setShowIRModal(false)}
                 />
             )}
 
@@ -115,7 +124,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 <IRReleaseModal
                     squad={squad}
                     players={players}
-                    irPlayer={players.find(p => p.id === squad.irId)}
+                    irPlayer={irPlayer}
                     onClose={() => setShowReleaseModal(false)}
                     onConfirm={(selected) => setConfirmReleasePlayer(selected)}
                     setSquad={setSquad}
@@ -128,6 +137,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                     onConfirm={handleConfirmRelease}
                     onCancel={() => setConfirmReleasePlayer(null)}
                     isActive={true}
+                    irPlayer={irPlayer}
                     pending={irMutation.isPending}
                 />
             )}

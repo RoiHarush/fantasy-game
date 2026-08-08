@@ -1,98 +1,94 @@
+"use client";
+
+import Image from "next/image";
 import { useState } from "react";
-import { FixtureCard } from "./FixtureCard";
-import Style from "../../../Styles/FixturesTable.module.css";
+
+import { getFixtureGameweekNavigation, groupFixturesByDay } from "../../../features/fixtures/model";
 import { useFixtures } from "../../../features/fixtures/useFixtures";
+import { useTeams } from "../../../features/teams/useTeams";
+import { formatAppLongDate } from "../../../lib/dateTime";
+import styles from "../../../Styles/FixturesTable.module.css";
+import { FixtureCard } from "./FixtureCard";
 
 function FixturesTable({ gameweeks, defaultGameweek }) {
-    const [selectedGameweek, setSelectedGameweek] = useState(null);
-    const { data: fixtures = [] } = useFixtures();
+    const [selectedGameweekId, setSelectedGameweekId] = useState(null);
+    const fixturesQuery = useFixtures();
+    const teamsQuery = useTeams();
+    const defaultGameweekId = defaultGameweek?.id ?? gameweeks[0]?.id ?? null;
+    const currentGameweekId = selectedGameweekId ?? defaultGameweekId;
+    const navigation = getFixtureGameweekNavigation(gameweeks, currentGameweekId);
+    const teamsById = new Map(teamsQuery.teams.map((team) => [String(team.id), team]));
+    const gameweekFixtures = (fixturesQuery.data ?? []).filter(
+        (fixture) => String(fixture.event) === String(currentGameweekId),
+    );
+    const fixtureDays = groupFixturesByDay(gameweekFixtures);
 
-    const orderedGameweeks = [...gameweeks].sort((a, b) => a.id - b.id);
-    const currentGameweek = selectedGameweek ?? defaultGameweek?.id ?? orderedGameweeks[0]?.id ?? 1;
-    const currentIndex = orderedGameweeks.findIndex(gameweek => gameweek.id === currentGameweek);
+    function handlePrevious() {
+        if (!navigation.canGoPrevious) return;
+        setSelectedGameweekId(navigation.orderedGameweeks[navigation.selectedIndex - 1].id);
+    }
 
-    const gameweekFixtures = fixtures.filter(f => f.event === currentGameweek);
-
-    const handlePrev = () => {
-        if (currentIndex > 0) setSelectedGameweek(orderedGameweeks[currentIndex - 1].id);
-    };
-
-    const handleNext = () => {
-        if (currentIndex >= 0 && currentIndex < orderedGameweeks.length - 1) {
-            setSelectedGameweek(orderedGameweeks[currentIndex + 1].id);
-        }
-    };
-
-    const fixturesByDay = gameweekFixtures.reduce((acc, fix) => {
-        const dateKey = new Date(fix.kickoff_time).toDateString();
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push(fix);
-        return acc;
-    }, {});
-
-    const sortedFixturesByDay = Object.entries(fixturesByDay)
-        .map(([day, dayFixtures]) => [
-            day,
-            dayFixtures.sort(
-                (a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time)
-            ),
-        ])
-        .sort(
-            (a, b) => new Date(a[1][0].kickoff_time) - new Date(b[1][0].kickoff_time)
-        );
+    function handleNext() {
+        if (!navigation.canGoNext) return;
+        setSelectedGameweekId(navigation.orderedGameweeks[navigation.selectedIndex + 1].id);
+    }
 
     return (
-        <div className={Style.fixturesWrapper}>
-            <div className={Style.fixturesTop}>
-                <div className={Style.fixturesHeader}>
-                    <img
+        <div className={styles.fixturesWrapper}>
+            <div className={styles.fixturesTop}>
+                <div className={styles.fixturesHeader}>
+                    <Image
                         src="/UI/premier-league-logo.svg"
                         alt="Premier League Logo"
-                        className={Style.fixturesLogo}
+                        className={styles.fixturesLogo}
+                        width={90}
+                        height={90}
                     />
-                    <h2 className={Style.fixturesTitle}>
-                        Fixtures – Gameweek {currentGameweek}
+                    <h2 className={styles.fixturesTitle}>
+                        Fixtures – Gameweek {currentGameweekId}
                     </h2>
                 </div>
 
-                <div className={Style.fixturesControls}>
-                    <button
-                        onClick={handlePrev}
-                        className={Style.controlButton}
-                        style={{ visibility: currentIndex <= 0 ? "hidden" : "visible" }}
-                    >
-                        ← Previous
-                    </button>
-                    <div className={Style.gameweekInfo}>
-                        Gameweek {currentGameweek}
-                    </div>
-                    <button
-                        onClick={handleNext}
-                        className={Style.controlButton}
-                        style={{ visibility: currentIndex < 0 || currentIndex >= orderedGameweeks.length - 1 ? "hidden" : "visible" }}
-                    >
-                        Next →
-                    </button>
+                <div className={styles.fixturesControls}>
+                    {navigation.canGoPrevious ? (
+                        <button type="button" onClick={handlePrevious} className={styles.controlButton}>
+                            ← Previous
+                        </button>
+                    ) : <span aria-hidden="true" />}
+                    <div className={styles.gameweekInfo}>Gameweek {currentGameweekId}</div>
+                    {navigation.canGoNext ? (
+                        <button type="button" onClick={handleNext} className={styles.controlButton}>
+                            Next →
+                        </button>
+                    ) : <span aria-hidden="true" />}
                 </div>
 
-                <img src="/UI/pattern-2.png" alt="pattern" className={Style.fixturesPattern} />
-                <div className={Style.fixturesFade}></div>
+                <Image src="/UI/pattern-2.png" alt="" width={900} height={220} className={styles.fixturesPattern} />
+                <div className={styles.fixturesFade} />
             </div>
 
-            <div className={Style["fixtures-table"]}>
-                {sortedFixturesByDay.map(([day, dayFixtures]) => (
-                    <div key={day} className={Style["fixtures-day-block"]}>
-                        <h4 className={Style["fixtures-day-title"]}>
-                            {new Date(dayFixtures[0].kickoff_time).toLocaleDateString("en-GB", {
-                                weekday: "long",
-                                day: "numeric",
-                                month: "short",
-                            })}
+            <div className={styles["fixtures-table"]}>
+                {(fixturesQuery.isPending || teamsQuery.isPending) && <p role="status">Loading fixtures…</p>}
+                {(fixturesQuery.error || teamsQuery.error) && (
+                    <p role="alert">Fixture data is temporarily unavailable.</p>
+                )}
+                {!fixturesQuery.isPending && !teamsQuery.isPending && !fixturesQuery.error && !teamsQuery.error && fixtureDays.length === 0 && (
+                    <p role="status">No fixtures are scheduled for this gameweek.</p>
+                )}
+                {fixtureDays.map(({ dateKey, fixtures }) => (
+                    <section key={dateKey} className={styles["fixtures-day-block"]}>
+                        <h4 className={styles["fixtures-day-title"]}>
+                            {formatAppLongDate(fixtures[0].kickoff_time)}
                         </h4>
-                        {dayFixtures.map((fix) => (
-                            <FixtureCard key={fix.id} fixture={fix} />
+                        {fixtures.map((fixture) => (
+                            <FixtureCard
+                                key={fixture.id}
+                                fixture={fixture}
+                                homeTeam={teamsById.get(String(fixture.homeTeamId))}
+                                awayTeam={teamsById.get(String(fixture.awayTeamId))}
+                            />
                         ))}
-                    </div>
+                    </section>
                 ))}
             </div>
         </div>

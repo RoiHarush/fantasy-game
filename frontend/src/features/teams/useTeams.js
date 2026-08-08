@@ -6,12 +6,12 @@ import { useAuth } from "../../Context/AuthContext";
 import { queryKeys } from "../../lib/query/keys";
 import { getTeams } from "./api";
 
-export function useTeams() {
+export function useTeams(options = {}) {
     const { user } = useAuth();
     const query = useQuery({
         queryKey: queryKeys.teams,
         queryFn: ({ signal }) => getTeams({ signal }),
-        enabled: Boolean(user?.id),
+        enabled: Boolean(user?.id && (options.enabled ?? true)),
         staleTime: 5 * 60_000,
     });
 

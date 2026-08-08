@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { filterPlayers } from "../Utils/filterPlayers";
-import { usePlayers } from "../features/players/usePlayers";
-import { useWatchlist } from "../features/watchlist/useWatchlist";
 
 export function useFilteredPlayers({
+    players,
+    watchlist,
     activeButton,
     searchQuery,
     viewFilter,
@@ -11,10 +11,6 @@ export function useFilteredPlayers({
     showAvailable,
     irPosition
 }) {
-    const { players } = usePlayers();
-    const { watchlist } = useWatchlist();
-
-
     const filteredPlayers = useMemo(() => {
         return filterPlayers({
             players,

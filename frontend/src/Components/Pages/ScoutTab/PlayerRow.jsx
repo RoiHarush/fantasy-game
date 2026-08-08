@@ -1,15 +1,16 @@
-import React, { useState, memo } from "react";
+import { ArrowRightLeft } from "lucide-react";
+import Image from "next/image";
+import { memo, useState } from "react";
+
+import styles from "../../../Styles/PlayerRow.module.css";
+import TeamShortNames from "../../../Utils/teamNameMap";
 import WatchButton from "../../General/WatchButton";
 import PlayerKit from "../../General/PlayerKit";
-import Style from "../../../Styles/PlayerRow.module.css";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
-import TeamShortNames from "../../../Utils/teamNameMap";
-import Portal from "../../../Portal";
-import { ArrowRightLeft } from "lucide-react";
-import { useTeams } from "../../../features/teams/useTeams";
 
 const PlayerRow = memo(function PlayerRow({
     player,
+    team,
     user,
     mode,
     currentTurnUserId,
@@ -19,14 +20,15 @@ const PlayerRow = memo(function PlayerRow({
     onPlayerSelect,
     teamFixtures,
     ruleLocked = false,
+    isWatched,
+    onToggleWatch,
+    watchlistUpdating,
     onWaiverSelect,
     waiverPlanned = false
 }) {
-    const { teams } = useTeams();
     const [showInfo, setShowInfo] = useState(false);
 
-    const isMyTurn = currentTurnUserId === user?.id;
-    const team = teams.find(t => t.id === player.teamId);
+    const isMyTurn = String(currentTurnUserId) === String(user?.id);
     const teamName = team ? team.shortName : "";
 
     let injuryColor = null;
@@ -40,24 +42,32 @@ const PlayerRow = memo(function PlayerRow({
 
     const ownerLabel = player.available
         ? "Free"
-        : player.ownerId === user?.id
+        : String(player.ownerId) === String(user?.id)
             ? "You"
             : player.ownerName || "Unknown";
 
     return (
         <>
-            <td className={Style.playerMainCell}>
-                <div className={Style.playerCell}>
-                    <div className={Style.infoIconWrapper} onClick={(e) => { e.stopPropagation(); setShowInfo(true); }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={Style.infoIcon}>
+            <td className={styles.playerMainCell}>
+                <div className={styles.playerCell}>
+                    <button
+                        type="button"
+                        className={styles.infoIconWrapper}
+                        aria-label={`View ${player.viewName} information`}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setShowInfo(true);
+                        }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={styles.infoIcon} aria-hidden="true">
                             <circle cx="12" cy="12" r="10" fill={injuryColor || "#888"} />
                             <text x="12" y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="white">i</text>
                         </svg>
-                    </div>
-                    <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={Style.playerShirt} />
-                    <div className={Style.playerInfo}>
-                        <span className={Style.playerName}>{player.viewName}</span>
-                        <span className={Style.playerSubinfo}>{teamName} • {player.position}</span>
+                    </button>
+                    <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={styles.playerShirt} />
+                    <div className={styles.playerInfo}>
+                        <span className={styles.playerName}>{player.viewName}</span>
+                        <span className={styles.playerSubinfo}>{teamName} • {player.position}</span>
                     </div>
                 </div>
             </td>
@@ -66,7 +76,7 @@ const PlayerRow = memo(function PlayerRow({
 
             {upcomingGws.map((gw) => {
                 const fixture = teamFixtures?.[String(gw)];
-                if (!fixture) return <td key={gw} className={Style.fixtureCell}>-</td>;
+                if (!fixture) return <td key={gw} className={styles.fixtureCell}>-</td>;
 
                 const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
                 const fullName = match ? match[1].trim() : fixture.opponent;
@@ -74,42 +84,43 @@ const PlayerRow = memo(function PlayerRow({
                 const shortName = TeamShortNames[fullName] || fullName;
 
                 return (
-                    <td key={gw} className={Style.fixtureCell}>
+                    <td key={gw} className={styles.fixtureCell}>
                         {shortName} ({ha})
                     </td>
                 );
             })}
 
-            <td className={Style.actionCell}>
+            <td className={styles.actionCell}>
                 <button
-                    className={`${Style.compareBtn} ${isSelectedForCompare ? Style.selectedCompare : ""}`}
+                    type="button"
+                    className={`${styles.compareBtn} ${isSelectedForCompare ? styles.selectedCompare : ""}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         !isSelectedForCompare && onCompare?.(player);
                     }}
                     disabled={isSelectedForCompare}
                 >
-                    <ArrowRightLeft size={18} className={Style.compareIcon} />
-                    <span className={Style.compareText}>
+                    <ArrowRightLeft size={18} className={styles.compareIcon} />
+                    <span className={styles.compareText}>
                         {isSelectedForCompare ? "Selected" : "Compare"}
                     </span>
                 </button>
             </td>
 
-            <td className={Style.squareBtnCell}>
-                <div className={Style.watchWrapper}>
-                    <WatchButton playerId={player.id} />
+            <td className={styles.squareBtnCell}>
+                <div className={styles.watchWrapper}>
+                    <WatchButton isWatched={isWatched} onToggle={onToggleWatch} disabled={watchlistUpdating} />
                 </div>
             </td>
 
             {mode === "scout" && (
-                <td className={Style.actionCell}>
+                <td className={styles.actionCell}>
                     <span
-                        className={`${Style.ownerBadge} ${player.available
-                            ? Style.ownerFree
-                            : player.ownerId === user.id
-                                ? Style.ownerMe
-                                : Style.ownerOther
+                        className={`${styles.ownerBadge} ${player.available
+                            ? styles.ownerFree
+                            : String(player.ownerId) === String(user?.id)
+                                ? styles.ownerMe
+                                : styles.ownerOther
                             }`}
                     >
                         {ownerLabel}
@@ -118,24 +129,26 @@ const PlayerRow = memo(function PlayerRow({
             )}
 
             {mode === "scout" && onWaiverSelect && (
-                <td className={Style.actionCell}>
-                    {player.available || (player.ownerId != null && player.ownerId !== user?.id) ? (
+                <td className={styles.actionCell}>
+                    {player.available || (player.ownerId != null && String(player.ownerId) !== String(user?.id)) ? (
                         <button
                             type="button"
-                            className={Style.waiverBtn}
+                            className={styles.waiverBtn}
                             onClick={event => {
                                 event.stopPropagation();
                                 onWaiverSelect(player);
                             }}
                         >{waiverPlanned ? "Planned" : "Waiver"}</button>
                     ) : (
-                        <img
+                        <Image
                             src="/Icons/lock.svg"
                             alt="Unavailable"
-                            title={player.ownerId === user?.id
+                            title={String(player.ownerId) === String(user?.id)
                                 ? "This player is already in your squad"
                                 : "This player is locked by the league manager"}
-                            className={Style.lockIcon}
+                            width={24}
+                            height={24}
+                            className={styles.lockIcon}
                         />
                     )}
                 </td>
@@ -143,10 +156,11 @@ const PlayerRow = memo(function PlayerRow({
 
             {
                 (mode === "transfer" || mode === "draft") && (
-                    <td className={Style.actionCell}>
+                    <td className={styles.actionCell}>
                         {player.available && !ruleLocked ? (
                             <button
-                                className={Style.signBtn}
+                                type="button"
+                                className={styles.signBtn}
                                 disabled={!isMyTurn}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -156,11 +170,13 @@ const PlayerRow = memo(function PlayerRow({
                                 {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
                             </button>
                         ) : (
-                            <img
+                            <Image
                                 src="/Icons/lock.svg"
                                 alt="Locked"
                                 title={ruleLocked ? "This pick would exceed a squad position or three-player club limit" : "Player is unavailable"}
-                                className={Style.lockIcon}
+                                width={24}
+                                height={24}
+                                className={styles.lockIcon}
                             />
                         )}
                     </td>
@@ -169,9 +185,7 @@ const PlayerRow = memo(function PlayerRow({
 
             {
                 showInfo && (
-                    <Portal>
-                        <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />
-                    </Portal>
+                    <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />
                 )
             }
         </>

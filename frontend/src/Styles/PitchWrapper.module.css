@@ -136,16 +136,15 @@
     height: auto;
 }
 
-.pointsButtonInside[style*="hidden"] {
-    pointer-events: none;
-}
-
 .irToggleBtn {
     display: none;
 }
 
 .backdrop {
     display: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
 }
 
 .closeIrBtn {

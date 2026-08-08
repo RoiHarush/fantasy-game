@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import Image from "next/image";
 import Style from "../../../../Styles/ConfirmFirstPickCaptainModal.module.css";
 
 function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlayer, pending = false }) {
@@ -9,12 +10,14 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
             <Dialog.Portal>
             <Dialog.Overlay className={Style.modalBackdrop} />
             <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3002] -translate-x-1/2 -translate-y-1/2`}>
-                <Dialog.Close asChild><button className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
+                <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
-                <img
+                <Image
                     src="/Icons/ir-chip.svg"
                     alt="IR Chip"
-                    style={{ width: 70, marginBottom: 16 }}
+                    width={70}
+                    height={70}
+                    style={{ marginBottom: 16 }}
                 />
 
                 <h2 className={Style.title}>IR Chip</h2>
@@ -42,6 +45,7 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
 
                 <div className={Style.modalButtons}>
                     <button
+                        type="button"
                         className={isActive ? Style.cancelButton : Style.confirmButton}
                         onClick={() => onConfirm(confirmIRPlayer)}
                         disabled={pending}

@@ -71,3 +71,8 @@
 .logoutLink::after {
     background: #ff3b3b;
 }
+
+.adminLink {
+    color: #3dd2c2;
+    border-color: #5ff3e4;
+}

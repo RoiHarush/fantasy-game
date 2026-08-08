@@ -3,12 +3,10 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { useTeams } from "../teams/useTeams";
 import { queryKeys } from "../../lib/query/keys";
 import { getTeamFixtures } from "./api";
 
-export function useAllTeamFixtures() {
-    const { teams } = useTeams();
+export function useAllTeamFixtures(teams = []) {
     const queries = useQueries({
         queries: teams.map((team) => ({
             queryKey: queryKeys.teamFixtures(team.id),
@@ -17,10 +15,14 @@ export function useAllTeamFixtures() {
         })),
     });
 
-    return useMemo(() => {
-        if (teams.length === 0 || queries.some((query) => query.isPending)) return null;
+    const isPending = teams.length > 0 && queries.some((query) => query.isPending);
+    const error = queries.find((query) => query.error)?.error ?? null;
+    const fixturesByTeam = useMemo(() => {
+        if (teams.length === 0 || isPending || error) return null;
         return Object.fromEntries(
             teams.map((team, index) => [team.id, queries[index]?.data ?? {}]),
         );
-    }, [queries, teams]);
+    }, [error, isPending, queries, teams]);
+
+    return { fixturesByTeam, isPending, error };
 }

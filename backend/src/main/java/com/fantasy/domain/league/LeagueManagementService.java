@@ -96,7 +96,7 @@ public class LeagueManagementService {
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
         requireLeagueAdmin(actingUser, league);
 
-        return applySettings(league, request, actingUser);
+        return applySettings(league, request, actingUser, false);
     }
 
     @Transactional
@@ -145,18 +145,26 @@ public class LeagueManagementService {
                                                           UpdateLeagueSettingsRequest request) {
         LeagueEntity league = leagueRepository.findByIdWithLock(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
-        return applySettings(league, request, null);
+        return applySettings(league, request, null, true);
     }
 
     private LeagueDetailsDto applySettings(LeagueEntity league,
                                             UpdateLeagueSettingsRequest request,
-                                            UserEntity actingUser) {
+                                            UserEntity actingUser,
+                                            boolean maintenanceOverride) {
 
         if (request.name() != null) {
             league.setName(requireText(request.name(), "League name", 3, 60));
         }
         if (request.maxParticipants() != null) {
             int capacity = request.maxParticipants();
+            boolean capacityLocked = league.getStatus() == LeagueStatus.DRAFT_LIVE
+                    || league.getStatus() == LeagueStatus.ACTIVE;
+            if (capacityLocked && !maintenanceOverride && capacity != league.getMaxParticipants()) {
+                throw new IllegalStateException(
+                        "League size cannot change after the initial draft starts"
+                );
+            }
             if (capacity < league.getUsers().size() || capacity > 20) {
                 throw new IllegalArgumentException(
                         "League size must be between the current participant count and 20"

@@ -9,6 +9,16 @@
     cursor: pointer;
     text-align: center;
     transition: transform 0.15s ease, opacity 0.15s ease;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.player-card:focus-visible {
+    outline: 3px solid #00ff87;
+    outline-offset: 3px;
 }
 
 

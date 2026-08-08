@@ -1,8 +1,7 @@
-import React from 'react';
-import { useTeams } from '../../features/teams/useTeams';
+import { useTeam } from '../../Context/TeamsContext';
 
 function PlayerKit({ teamId, type = "field", className, style }) {
-    const { teams } = useTeams();
+    const team = useTeam(teamId);
 
     if (teamId === 0) {
         return (
@@ -15,7 +14,6 @@ function PlayerKit({ teamId, type = "field", className, style }) {
         )
     }
 
-    const team = teams.find(item => item.id === teamId);
     const localFallback = `/Kits/${teamId}_${type}.webp`;
     const kitUrl = type === "gk"
         ? team?.goalkeeperKitUrl || localFallback

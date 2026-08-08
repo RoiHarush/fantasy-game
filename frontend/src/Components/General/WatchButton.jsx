@@ -1,19 +1,17 @@
-import { Eye, EyeOff } from "lucide-react";
-import { useWatchlist } from "../../features/watchlist/useWatchlist";
+import { Eye } from "lucide-react";
 import Style from "../../Styles/WatchButton.module.css";
 
-function WatchButton({ playerId }) {
-    const { watchlist, toggleWatch } = useWatchlist();
-    const isWatched = Array.isArray(watchlist) && watchlist.includes(playerId);
-
+function WatchButton({ isWatched, onToggle, disabled = false }) {
     const handleClick = (e) => {
         e.stopPropagation();
-        toggleWatch(playerId, isWatched);
+        onToggle();
     };
 
     return (
         <button
+            type="button"
             onClick={handleClick}
+            disabled={disabled}
             className={`${Style.watchBtn} ${isWatched ? Style.watched : Style.notWatched}`}
             title={isWatched ? "Remove from watchlist" : "Add to watchlist"}
         >

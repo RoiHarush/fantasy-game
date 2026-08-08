@@ -60,8 +60,21 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserDto> currentUser(@AuthenticationPrincipal Integer userId) {
         if (userId == null) {
-            return ResponseEntity.status(401).build();
+            return expiredSessionResponse();
         }
-        return ResponseEntity.ok(authService.getCurrentUser(userId));
+
+        try {
+            return ResponseEntity.ok(authService.getCurrentUser(userId));
+        } catch (IllegalStateException exception) {
+            // A signed token can outlive its database user after a seasonal reset.
+            // Treat that token as an expired session and remove it from the browser.
+            return expiredSessionResponse();
+        }
+    }
+
+    private ResponseEntity<UserDto> expiredSessionResponse() {
+        return ResponseEntity.status(401)
+                .header(HttpHeaders.SET_COOKIE, authCookieService.clearSessionCookie().toString())
+                .build();
     }
 }

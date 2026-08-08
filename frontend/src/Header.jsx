@@ -1,25 +1,35 @@
-"use client";
+import Image from "next/image";
 
-import { usePathname } from "next/navigation";
-import styles from "./Styles/Header.module.css";
 import NavButtons from "./NavButtons";
+import styles from "./Styles/Header.module.css";
 
 function Header() {
-    const pathname = usePathname();
-    const isPointsActive = pathname === "/points";
-
     return (
         <header className={styles.header}>
             <div className={styles.topSection}>
                 <div className={styles.topBar}>
-                    <img src="/UI/draft-logo.svg" alt="Fantasy Draft Logo" className={styles.logo} />
+                    <Image
+                        src="/UI/draft-logo.svg"
+                        alt="Fantasy Draft Logo"
+                        className={styles.logo}
+                        width={300}
+                        height={40}
+                        priority
+                    />
                     <span className={styles.version}>(The Fun Version)</span>
                 </div>
-                <img src="/UI/pattern-1_header.png" alt="" className={styles.pattern} />
+                <Image
+                    src="/UI/pattern-1_header.png"
+                    alt=""
+                    className={styles.pattern}
+                    width={480}
+                    height={140}
+                    priority
+                />
             </div>
 
             <div className={styles.navBar}>
-                <NavButtons isPointsActive={isPointsActive} />
+                <NavButtons />
             </div>
         </header>
     );

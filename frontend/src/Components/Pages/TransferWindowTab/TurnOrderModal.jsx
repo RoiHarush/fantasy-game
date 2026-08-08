@@ -10,6 +10,7 @@ import {
     useSaveTransferOrder,
     useTransferOrder,
 } from "../../../features/transfer-window/useTransferWindow";
+import { validateTransferOrder } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
 
 export default function TurnOrderModal({ onClose, usersList }) {
@@ -17,6 +18,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
     const { user } = useAuth();
     const pickCount = usersList.length * 2;
     const [editedPicks, setEditedPicks] = useState(null);
+    const [validationError, setValidationError] = useState("");
     const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
     const initialPicks = Array.from({ length: pickCount }, (_, index) => (
         index < (orderQuery.data?.length ?? 0) ? String(orderQuery.data[index]) : ""
@@ -27,16 +29,20 @@ export default function TurnOrderModal({ onClose, usersList }) {
     });
 
     const handleUserSelect = (index, userId) => {
+        setValidationError("");
         setEditedPicks(picks.map((pick, pickIndex) => (
             pickIndex === index ? userId : pick
         )));
     };
 
-    const handleSave = async () => {
+    const handleSave = () => {
         const cleanOrder = picks.filter(Boolean).map(Number);
-
-        if (cleanOrder.length === 0
-            && !window.confirm("You are saving an empty list. This will clear the transfer order. Continue?")) {
+        const nextValidationError = validateTransferOrder(
+            cleanOrder,
+            usersList.map((item) => item.id),
+        );
+        if (nextValidationError) {
+            setValidationError(nextValidationError);
             return;
         }
 
@@ -79,7 +85,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
                                     <option value="">Select user</option>
                                     {usersList.map((user) => (
                                         <option key={user.id} value={user.id}>
-                                            {user.name}{user.fantasyTeam ? ` (${user.fantasyTeam})` : ""}
+                                            {user.name}{user.fantasyTeamName ? ` (${user.fantasyTeamName})` : ""}
                                         </option>
                                     ))}
                                 </select>
@@ -95,7 +101,11 @@ export default function TurnOrderModal({ onClose, usersList }) {
                             {saveOrder.isPending ? "Saving…" : "Save Order"}
                         </Button>
                     </div>
-                    {saveOrder.error && <p className="mt-3 text-right text-sm text-red-300" role="alert">{saveOrder.error.message}</p>}
+                    {(validationError || orderQuery.error || saveOrder.error) && (
+                        <p className="mt-3 text-right text-sm text-red-300" role="alert">
+                            {validationError || orderQuery.error?.message || saveOrder.error?.message}
+                        </p>
+                    )}
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>

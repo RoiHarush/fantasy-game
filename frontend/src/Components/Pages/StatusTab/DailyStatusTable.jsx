@@ -1,62 +1,41 @@
-import React from 'react';
-import Style from '../../../Styles/Status.module.css';
+import { formatAppLongDate } from "../../../lib/dateTime";
+import styles from "../../../Styles/Status.module.css";
 
 function DailyStatusTable({ dailyStatus, isGameweekFinished }) {
-
-    const formatDate = (dateInput) => {
-        if (!dateInput) return "";
-
-        let date;
-
-        if (Array.isArray(dateInput)) {
-            date = new Date(dateInput[0], dateInput[1] - 1, dateInput[2]);
-        } else {
-            date = new Date(dateInput);
-        }
-
-        if (isNaN(date.getTime())) return "Invalid Date";
-
-        return date.toLocaleDateString('en-GB', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long'
-        });
-    };
-
     return (
-        <div className={Style.dailyTableContainer}>
-            <div className={Style.tableHeader}>
-                <span>Day</span>
-                <span>Match Points</span>
+        <div className={styles.dailyTableContainer} role="table" aria-label="Daily gameweek status">
+            <div className={styles.tableHeader} role="row">
+                <span role="columnheader">Day</span>
+                <span role="columnheader">Match Points</span>
             </div>
 
-            <div className={Style.tableRows}>
+            <div className={styles.tableRows} role="rowgroup">
                 {dailyStatus.map((day, index) => (
-                    <div key={index} className={Style.tableRow}>
-                        <div className={Style.dateCell}>
-                            {formatDate(day.date)}
+                    <div key={Array.isArray(day.date) ? day.date.join("-") : day.date ?? index} className={styles.tableRow} role="row">
+                        <div className={styles.dateCell} role="cell">
+                            {formatAppLongDate(day.date) || "Date unavailable"}
                         </div>
-                        <div className={Style.statusCell}>
+                        <div className={styles.statusCell} role="cell">
                             {day.isCalculated ? (
-                                <span className={Style.pointsAdded}>Points Added</span>
+                                <span className={styles.pointsAdded}>Points Added</span>
                             ) : (
-                                <span className={Style.liveText}>LIVE</span>
+                                <span className={styles.liveText}>LIVE</span>
                             )}
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className={`${Style.summaryBar} ${isGameweekFinished ? Style.summaryFinal : Style.summaryLive}`}>
+            <div className={`${styles.summaryBar} ${isGameweekFinished ? styles.summaryFinal : styles.summaryLive}`}>
                 {isGameweekFinished ? (
                     <>
                         <span>Gameweek Finished</span>
-                        <span className={Style.badge}>UPDATED</span>
+                        <span className={styles.badge}>UPDATED</span>
                     </>
                 ) : (
                     <>
                         <span>Gameweek in Progress</span>
-                        <span className={Style.badge}>LIVE</span>
+                        <span className={styles.badge}>LIVE</span>
                     </>
                 )}
             </div>

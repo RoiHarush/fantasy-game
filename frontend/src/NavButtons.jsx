@@ -2,115 +2,54 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import styles from "./Styles/NavButtons.module.css";
-import { useAuth } from "./Context/AuthContext";
+import { useTransition } from "react";
 
-function NavButtons() {
+import { useAuth } from "./Context/AuthContext";
+import { getSiteNavigation, isNavigationItemActive } from "./features/navigation/model";
+import { cn } from "./lib/cn";
+import styles from "./Styles/NavButtons.module.css";
+
+export default function NavButtons() {
     const { user, logout } = useAuth();
     const pathname = usePathname();
+    const [isLoggingOut, startLogout] = useTransition();
+    const navigationItems = getSiteNavigation(user);
 
-    function handleLogout(e) {
-        e.preventDefault();
-        logout();
-    }
-
-    const isAdmin = Boolean(user?.leagueAdmin);
-
-    const getClassName = (href, exact = false, extraClassName = "") => {
-        const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-        return isActive ? `${styles.navLink} ${styles.activeLink} ${extraClassName}`.trim() : `${styles.navLink} ${extraClassName}`.trim();
-    };
-
-    if (!user?.leagueId) {
-        return (
-            <nav className={styles.navbar}>
-                <Link href="/scout" className={styles.navLink}>Scout</Link>
-                <Link href="/onboarding" className={styles.navLink}>Create / Join League</Link>
-                <button type="button" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
-                    Logout
-                </button>
-            </nav>
-        );
-    }
-
-    if (user.leagueStatus !== "ACTIVE") {
-        return (
-            <nav className={styles.navbar}>
-                <Link href="/status" className={getClassName("/status", true)}>Status</Link>
-                <Link href="/league" className={getClassName("/league", true)}>League</Link>
-                <Link href="/fixtures" className={getClassName("/fixtures", true)}>Fixtures</Link>
-                <Link href="/scout" className={getClassName("/scout", true)}>Scout</Link>
-                <Link href="/draft-room" className={getClassName("/draft-room", true)}>Draft Room</Link>
-                {isAdmin && <Link href="/league-control" className={getClassName("/league-control", true)}>League Control</Link>}
-                <Link href="/settings" className={getClassName("/settings", true)}>Settings</Link>
-                <button type="button" onClick={handleLogout} className={`${styles.navLink} ${styles.logoutLink}`}>
-                    Logout
-                </button>
-            </nav>
-        );
+    function handleLogout() {
+        startLogout(async () => {
+            await logout();
+        });
     }
 
     return (
-        <nav className={styles.navbar}>
-            <Link href="/status" className={getClassName("/status", true)}>
-                Status
-            </Link>
+        <nav className={styles.navbar} aria-label="Primary navigation">
+            {navigationItems.map(({ href, label, kind }) => {
+                const isActive = isNavigationItemActive(pathname, href);
 
-            <Link href="/points" className={getClassName("/points", true)}>
-                Points
-            </Link>
-
-            <Link href="/pick-team" className={getClassName("/pick-team", true)}>
-                Pick Team
-            </Link>
-
-            <Link href="/league" className={getClassName("/league", true)}>
-                League
-            </Link>
-
-            <Link href="/fixtures" className={getClassName("/fixtures", true)}>
-                Fixtures
-            </Link>
-
-            <Link href="/scout" className={getClassName("/scout", true)}>
-                Scout
-            </Link>
-
-            <Link href="/transfer-window" className={getClassName("/transfer-window", true)}>
-                Transfer Window
-            </Link>
-
-            <Link href="/draft-room" className={getClassName("/draft-room", true)}>
-                Draft Room
-            </Link>
-
-            {isAdmin && (
-                <Link
-                    href="/league-control"
-                    style={{
-                        color: '#3dd2c2',
-                        borderColor: '#5ff3e4'
-                    }}
-                    className={getClassName("/league-control", true)}
-                >
-                    League Control
-                </Link>
-            )}
-
-            <Link href="/settings" className={getClassName("/settings", true)}>
-                Settings
-            </Link>
-
+                return (
+                    <Link
+                        key={href}
+                        href={href}
+                        aria-current={isActive ? "page" : undefined}
+                        className={cn(
+                            styles.navLink,
+                            isActive && styles.activeLink,
+                            kind === "admin" && styles.adminLink,
+                        )}
+                    >
+                        {label}
+                    </Link>
+                );
+            })}
 
             <button
                 type="button"
                 onClick={handleLogout}
-                className={`${styles.navLink} ${styles.logoutLink}`}
+                disabled={isLoggingOut}
+                className={cn(styles.navLink, styles.logoutLink)}
             >
-                Logout
+                {isLoggingOut ? "Logging out…" : "Logout"}
             </button>
         </nav>
     );
 }
-
-export default NavButtons;

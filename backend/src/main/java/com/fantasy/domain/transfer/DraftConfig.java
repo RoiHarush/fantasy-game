@@ -19,6 +19,23 @@ public class DraftConfig {
     private LocalDateTime scheduledTime;
     private boolean processed = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24)
+    private DraftType draftType = DraftType.INITIAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24)
+    private DraftOrderSource orderSource = DraftOrderSource.TRANSFER_ORDER;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "league_draft_config_order",
+            joinColumns = @JoinColumn(name = "config_id")
+    )
+    @OrderColumn(name = "pick_position")
+    @Column(name = "user_id", nullable = false)
+    private java.util.List<Integer> manualOrder = new java.util.ArrayList<>();
+
     public Long getId() { return id; }
     @JsonIgnore
     public LeagueEntity getLeague() { return league; }
@@ -27,4 +44,14 @@ public class DraftConfig {
     public void setScheduledTime(LocalDateTime scheduledTime) { this.scheduledTime = scheduledTime; }
     public boolean isProcessed() { return processed; }
     public void setProcessed(boolean processed) { this.processed = processed; }
+    public DraftType getDraftType() { return draftType; }
+    public void setDraftType(DraftType draftType) { this.draftType = draftType; }
+    public DraftOrderSource getOrderSource() { return orderSource; }
+    public void setOrderSource(DraftOrderSource orderSource) { this.orderSource = orderSource; }
+    public java.util.List<Integer> getManualOrder() { return manualOrder; }
+    public void setManualOrder(java.util.List<Integer> manualOrder) {
+        this.manualOrder = manualOrder == null
+                ? new java.util.ArrayList<>()
+                : new java.util.ArrayList<>(manualOrder);
+    }
 }

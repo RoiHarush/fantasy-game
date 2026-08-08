@@ -4,6 +4,7 @@ import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.score.*;
 import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.transfer.SupplementalDraftPoolService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.time.LocalDateTime;
 
 @Service
 public class PlayerSyncService {
@@ -34,6 +36,7 @@ public class PlayerSyncService {
     private final PlayerStatsUpdater statsUpdater;
     private final GameWeekService gameWeekService;
     private final PlayerSyncPersistenceService persistenceService;
+    private final SupplementalDraftPoolService supplementalDraftPoolService;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
@@ -44,6 +47,7 @@ public class PlayerSyncService {
                              PlayerStatsUpdater statsUpdater,
                              GameWeekService gameWeekService,
                              PlayerSyncPersistenceService persistenceService,
+                             SupplementalDraftPoolService supplementalDraftPoolService,
                              RestTemplate restTemplate,
                              ObjectMapper mapper) {
         this.playerRepo = playerRepo;
@@ -52,6 +56,7 @@ public class PlayerSyncService {
         this.statsUpdater = statsUpdater;
         this.gameWeekService = gameWeekService;
         this.persistenceService = persistenceService;
+        this.supplementalDraftPoolService = supplementalDraftPoolService;
         this.restTemplate = restTemplate;
         this.mapper = mapper;
     }
@@ -240,16 +245,22 @@ public class PlayerSyncService {
                 int fplId = node.get("id").asInt();
                 if (!node.get("can_select").asBoolean()) continue;
 
-                PlayerEntity entity = playerRepo.findById(fplId).orElseGet(() -> {
+                Optional<PlayerEntity> existingPlayer = playerRepo.findById(fplId);
+                boolean newlyDiscovered = existingPlayer.isEmpty();
+                PlayerEntity entity = existingPlayer.orElseGet(() -> {
                     PlayerEntity e = new PlayerEntity();
                     e.setId(fplId);
                     e.setTotalPoints(0);
                     e.setPhoto(node.get("code").asText());
+                    e.setFirstSeenAt(LocalDateTime.now());
                     return e;
                 });
 
                 updateEntityBasicData(entity, node);
                 playerRepo.save(entity);
+                if (newlyDiscovered) {
+                    supplementalDraftPoolService.reserveNewPlayer(entity);
+                }
 
             }
         } catch (HttpServerErrorException.ServiceUnavailable e) {
@@ -282,6 +293,7 @@ public class PlayerSyncService {
     private PlayerEntity mapJsonToEntity(JsonNode node) {
         PlayerEntity entity = new PlayerEntity();
         entity.setId(node.get("id").asInt());
+        entity.setFirstSeenAt(LocalDateTime.now());
         updateEntityBasicData(entity, node);
         entity.setTotalPoints(0);
         return entity;

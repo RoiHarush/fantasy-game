@@ -21,8 +21,8 @@ function PlayerCard({
         );
     }
 
-    const isSelected = view === "pick" && selectedPlayerId === player.id;
-    const isDisabled = view === "pick" && disabledIds.includes(player.id);
+    const isSelected = view === "pick" && String(selectedPlayerId) === String(player.id);
+    const isDisabled = view === "pick" && disabledIds.some((id) => String(id) === String(player.id));
 
     const handleClick = () => {
         if (isDisabled) return;
@@ -46,11 +46,15 @@ function PlayerCard({
             : Style["player-points"];
 
     return (
-        <div
+        <button
+            type="button"
             className={`${Style["player-card"]} 
                 ${isSelected ? Style["selected"] : ""} 
                 ${isDisabled ? Style["disabled"] : ""}`}
             onClick={handleClick}
+            disabled={isDisabled}
+            aria-pressed={isSelected}
+            aria-label={`${player.viewName}${captain ? ", captain" : viceCaptain ? ", vice-captain" : ""}`}
         >
             {(player.injured || injuryColor) && (
                 <div className={Style["injury-icon"]} style={{ backgroundColor: injuryColor || "#d81919" }}>
@@ -79,7 +83,7 @@ function PlayerCard({
             </div>
 
             <div className={shownClass}>{shownValue}</div>
-        </div>
+        </button>
     );
 }
 

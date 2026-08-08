@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
@@ -16,20 +16,14 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
     const [chips, setChips] = useState(initialChips);
     const [isDirty, setIsDirty] = useState(false);
     const saveMutation = useSaveTeam(user.id, nextGameweek.id, (updatedSquad) => {
-            setSquad(updatedSquad);
-            setIsDirty(false);
+        setSquad(updatedSquad);
+        setIsDirty(false);
     });
 
-    const saveTeam = useCallback(async () => {
-        if (!squad) return false;
-        try {
-            await saveMutation.mutateAsync(squad);
-            return true;
-        } catch (error) {
-            console.error("Failed to save team:", error);
-            return false;
-        }
-    }, [saveMutation, squad]);
+    function saveTeam() {
+        if (!squad) return Promise.resolve(null);
+        return saveMutation.mutateAsync(squad);
+    }
 
     return (
         <PageLayout
@@ -44,6 +38,9 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
                     setChips={setChips}
                     playerData={playerData}
                     saveTeam={saveTeam}
+                    savePending={saveMutation.isPending}
+                    saveSucceeded={saveMutation.isSuccess}
+                    saveError={saveMutation.error}
                     isDirty={isDirty}
                     setIsDirty={setIsDirty}
                     refreshPlayerData={refreshPlayerData}
@@ -56,18 +53,24 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
 
 function PickTeamPage() {
     const { user } = useAuth();
-    const { nextGameweek, gameweeks } = useGameweek();
-    const data = usePickTeamData(user?.id, nextGameweek?.id);
+    const gameweekState = useGameweek();
+    const data = usePickTeamData(user?.id, gameweekState.nextGameweek?.id);
 
-    if (!nextGameweek || data.isPending) return <LoadingPage />;
-    if (data.error) return <div>Error: {data.error.message}</div>;
+    if (gameweekState.loading) return <LoadingPage />;
+    if (gameweekState.error) return <p role="alert">Error loading gameweeks: {gameweekState.error}</p>;
+    if (!gameweekState.nextGameweek) {
+        return <p role="status">There is no upcoming gameweek to prepare a squad for.</p>;
+    }
+    if (data.isPending) return <LoadingPage />;
+    if (data.error) return <p role="alert">Error loading your squad: {data.error.message}</p>;
+    if (!data.squad.data) return <p role="status">Your squad has not been created yet.</p>;
 
     return (
         <PickTeamEditor
-            key={`${user.id}-${nextGameweek.id}`}
+            key={`${user.id}-${gameweekState.nextGameweek.id}`}
             user={user}
-            nextGameweek={nextGameweek}
-            gameweeks={gameweeks}
+            nextGameweek={gameweekState.nextGameweek}
+            gameweeks={gameweekState.gameweeks}
             initialSquad={data.squad.data}
             initialChips={data.chips.data ?? { remaining: {}, active: {} }}
             playerData={data.playerData.data ?? []}

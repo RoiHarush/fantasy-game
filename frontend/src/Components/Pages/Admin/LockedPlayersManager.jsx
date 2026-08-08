@@ -5,7 +5,8 @@ import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useLockedPlayers } from "../../../features/league-admin/useLeagueAdmin";
 
 const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
-    const { players } = usePlayers();
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
     const [searchTerm, setSearchTerm] = useState("");
     const { query: lockedQuery, mutation: toggleLock } = useLockedPlayers(maintenanceLeagueId);
     const serverLockedPlayers = lockedQuery.data ?? [];
@@ -13,15 +14,11 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
         return findPlayers(players, searchTerm, { availableOnly: true });
     }, [players, searchTerm]);
 
-    const handleSearch = (term) => {
-        setSearchTerm(term);
-    };
-
-    const handleToggleLock = async (player, shouldLock) => {
-        try {
-            await toggleLock.mutateAsync({ player, shouldLock });
-            if (shouldLock) setSearchTerm("");
-        } catch { alert("Failed"); }
+    const handleToggleLock = (player, shouldLock) => {
+        toggleLock.mutate(
+            { player, shouldLock },
+            { onSuccess: () => shouldLock && setSearchTerm("") },
+        );
     };
 
     const styles = {
@@ -62,11 +59,17 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
                 </div>
                 <input
                     type="text"
+                    aria-label="Find player to lock"
                     placeholder="Find player to lock..."
                     style={styles.input}
                     value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {(playersQuery.error || lockedQuery.error || toggleLock.error) && (
+                    <p role="alert">
+                        {playersQuery.error?.message || lockedQuery.error?.message || toggleLock.error?.message || "Player lock could not be updated."}
+                    </p>
+                )}
                 <div style={styles.listWrapper}>
                     {searchResults.map(p => (
                         <div key={p.id} style={styles.listItem}>
@@ -77,7 +80,12 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
                                     <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{p.position}</div>
                                 </div>
                             </div>
-                            <button onClick={() => handleToggleLock(p, true)} style={styles.lockBtn}>Lock</button>
+                            <button
+                                type="button"
+                                onClick={() => handleToggleLock(p, true)}
+                                style={styles.lockBtn}
+                                disabled={toggleLock.isPending}
+                            >Lock</button>
                         </div>
                     ))}
                 </div>
@@ -97,7 +105,7 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
                         <div style={{ color: '#991b1b', opacity: 0.7, fontStyle: 'italic', textAlign: 'center' }}>No locked players</div>
                     ) : (
                         serverLockedPlayers.map(p => {
-                            const realPlayer = players.find(pl => pl.id === p.id);
+                            const realPlayer = players.find((player) => String(player.id) === String(p.id));
                             const position = realPlayer ? realPlayer.position : (p.position || "MID");
 
                             return (
@@ -110,7 +118,12 @@ const LockedPlayersManager = ({ maintenanceLeagueId = null }) => {
                                         />
                                         <div style={{ fontWeight: 'bold', color: '#7f1d1d' }}>{p.viewName}</div>
                                     </div>
-                                    <button onClick={() => handleToggleLock(p, false)} style={styles.unlockBtn}>Unlock</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleLock(p, false)}
+                                        style={styles.unlockBtn}
+                                        disabled={toggleLock.isPending}
+                                    >Unlock</button>
                                 </div>
                             );
                         })

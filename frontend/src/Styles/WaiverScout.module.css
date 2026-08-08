@@ -13,8 +13,8 @@
 .list li div span { color: #c92a2a; font-weight: 700; }
 .list button { border: 0; background: transparent; color: #c92a2a; cursor: pointer; }
 .empty { padding: 2rem; text-align: center; color: #667085; }
-.modalBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1rem; background: rgba(18, 5, 24, 0.72); }
-.modal { width: min(460px, 100%); padding: 1.25rem; border-radius: 14px; background: white; color: #24102d; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.modalBackdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(18, 5, 24, 0.72); }
+.modal { position: fixed; top: 50%; left: 50%; z-index: 1001; width: min(460px, calc(100% - 2rem)); padding: 1.25rem; border-radius: 14px; background: white; color: #24102d; box-shadow: 0 20px 60px rgba(0,0,0,.35); transform: translate(-50%, -50%); }
 .modal select { width: 100%; margin: 0.75rem 0 1rem; padding: 0.7rem; }
 .modalActions { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .modalActions button { padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #37003c; cursor: pointer; }

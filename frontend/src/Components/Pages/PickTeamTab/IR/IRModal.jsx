@@ -1,27 +1,25 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import Image from "next/image";
 import Style from "../../../../Styles/IRModal.module.css";
-import { usePlayers } from "../../../../features/players/usePlayers";
 import PlayerKit from "../../../General/PlayerKit";
 
-function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
-    const { players } = usePlayers();
-
+function IRModal({ squad, players, onClose, onSelect }) {
     const eligiblePlayers = Object.values(squad.startingLineup)
         .flat()
         .concat(Object.values(squad.bench))
-        .map((id) => players.find((p) => p.id === id))
+        .map((id) => players.find((player) => String(player.id) === String(id)))
         .filter(Boolean);
 
     return (
-        <Dialog.Root open onOpenChange={open => !open && setShowIRModal(false)}>
+        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
             <Dialog.Portal>
             <Dialog.Overlay className={Style.modalBackdrop} />
             <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`}>
                 <Dialog.Title className="sr-only">Select Player for IR</Dialog.Title>
-                <Dialog.Close asChild><button className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
+                <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
 
-                <img src="/Icons/ir-chip.svg" alt="IR Chip" style={{ width: 70, marginBottom: 16 }} />
+                <Image src="/Icons/ir-chip.svg" alt="IR Chip" width={70} height={70} style={{ marginBottom: 16 }} />
 
                 <h2 className={Style.title}>Select Player for IR</h2>
 
@@ -32,8 +30,9 @@ function IRModal({ squad, setShowIRModal, setConfirmIRPlayer }) {
                         <div className={Style.playerList}>
                             {eligiblePlayers.map((p) => (
                                 <button
+                                    type="button"
                                     key={p.id}
-                                    onClick={() => setConfirmIRPlayer(p)}
+                                    onClick={() => onSelect(p)}
                                     className={Style.playerButton}
                                 >
                                     <div className={Style.playerInfo}>

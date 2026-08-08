@@ -1,5 +1,5 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../Styles/PlayerActionModal.module.css";
-import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 
 function PlayerActionModal({
     player,
@@ -17,18 +17,25 @@ function PlayerActionModal({
     if (!player) return null;
 
     const isLockedFirstPickCaptain =
-        firstPickUsed && isCaptain && squad?.firstPickId === player.id;
+        firstPickUsed && isCaptain && String(squad?.firstPickId) === String(player.id);
 
     return (
-        <div className={Style.overlay} onClick={onClose}>
-            <div className={Style.modal} onClick={e => e.stopPropagation()}>
+        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+            <Dialog.Overlay className={Style.overlay} />
+            <Dialog.Content className={Style.modal}>
                 <div className={Style.header}>
-                    <h2 className={Style.playerName}>{player.firstName + " " + player.lastName}</h2>
-                    <button className={Style.closeBtn} onClick={onClose}>✕</button>
+                    <Dialog.Title className={Style.playerName}>
+                        {`${player.firstName} ${player.lastName}`}
+                    </Dialog.Title>
+                    <Dialog.Close asChild>
+                        <button type="button" className={Style.closeBtn} aria-label="Close player actions">✕</button>
+                    </Dialog.Close>
                 </div>
 
                 <div className={Style.body}>
                     <button
+                        type="button"
                         className={`${Style.switchBtn} ${isLockedFirstPickCaptain ? Style.disabledLabel : ""}`}
                         onClick={() => onSwitch(player.id)}
                         disabled={isLockedFirstPickCaptain}
@@ -56,13 +63,14 @@ function PlayerActionModal({
                         </label>
                     </div>
 
-                    <button className={Style.infoBtn} onClick={() => onViewInfo(player)}>
+                    <button type="button" className={Style.infoBtn} onClick={() => onViewInfo(player)}>
                         View Information
                     </button>
 
                 </div>
-            </div>
-        </div>
+            </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }
 

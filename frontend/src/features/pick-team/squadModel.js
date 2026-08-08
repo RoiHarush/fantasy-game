@@ -7,6 +7,9 @@ const MIN_STARTING_PLAYERS = {
     FWD: 1,
 };
 
+const isSameId = (firstId, secondId) => String(firstId) === String(secondId);
+const includesId = (ids, playerId) => ids.some((id) => isSameId(id, playerId));
+
 function cloneSquad(squad) {
     return typeof structuredClone === "function"
         ? structuredClone(squad)
@@ -21,8 +24,8 @@ export function getSquadPlayers(squad) {
 }
 
 function swapInBench(squad, playerInId, playerOutId) {
-    const inKey = Object.keys(squad.bench).find((key) => squad.bench[key] === playerInId);
-    const outKey = Object.keys(squad.bench).find((key) => squad.bench[key] === playerOutId);
+    const inKey = Object.keys(squad.bench).find((key) => isSameId(squad.bench[key], playerInId));
+    const outKey = Object.keys(squad.bench).find((key) => isSameId(squad.bench[key], playerOutId));
 
     if (!inKey || !outKey) return;
 
@@ -33,8 +36,11 @@ function swapInBench(squad, playerInId, playerOutId) {
 function swapBetweenStartAndBench(squad, playerInId, playerOutId, players) {
     const playerIn = getPlayerById(players, playerInId);
     const playerOut = getPlayerById(players, playerOutId);
-    const benchKey = Object.keys(squad.bench).find((key) => squad.bench[key] === playerInId);
-    const outIndex = squad.startingLineup[playerOut.position].findIndex((id) => id === playerOutId);
+    if (!playerIn || !playerOut) return;
+
+    const benchKey = Object.keys(squad.bench).find((key) => isSameId(squad.bench[key], playerInId));
+    const outIndex = squad.startingLineup[playerOut.position]
+        .findIndex((id) => isSameId(id, playerOutId));
 
     if (!benchKey || outIndex === -1) return;
 
@@ -47,16 +53,16 @@ function swapBetweenStartAndBench(squad, playerInId, playerOutId, players) {
     squad.bench[benchKey] = playerOutId;
     squad.startingLineup[playerIn.position].push(playerInId);
     squad.startingLineup[playerOut.position] = squad.startingLineup[playerOut.position]
-        .filter((id) => id !== playerOutId);
+        .filter((id) => !isSameId(id, playerOutId));
 }
 
 export function swapPlayersInSquad(squad, playerInId, playerOutId, players) {
     const updatedSquad = cloneSquad(squad);
     const benchIds = Object.values(updatedSquad.bench);
 
-    if (benchIds.includes(playerInId) && benchIds.includes(playerOutId)) {
+    if (includesId(benchIds, playerInId) && includesId(benchIds, playerOutId)) {
         swapInBench(updatedSquad, playerInId, playerOutId);
-    } else if (benchIds.includes(playerInId)) {
+    } else if (includesId(benchIds, playerInId)) {
         swapBetweenStartAndBench(updatedSquad, playerInId, playerOutId, players);
     } else {
         swapBetweenStartAndBench(updatedSquad, playerOutId, playerInId, players);
@@ -69,13 +75,16 @@ export function getAllowedSwapIds(squad, playerId, players, firstPickUsed) {
     const player = getPlayerById(players, playerId);
     const squadPlayers = getSquadPlayers(squad);
 
+    if (!player) return [];
+
     if (player.position === "GK") {
-        return squadPlayers.filter((id) => getPlayerById(players, id).position === "GK");
+        return squadPlayers.filter((id) => getPlayerById(players, id)?.position === "GK");
     }
 
-    if (squad.startingLineup[player.position].includes(playerId)) {
+    if (includesId(squad.startingLineup[player.position] ?? [], playerId)) {
         return Object.values(squad.bench).filter((id) => {
             const incomingPlayer = getPlayerById(players, id);
+            if (!incomingPlayer) return false;
             if (incomingPlayer.position === "GK") return false;
             if (incomingPlayer.position === player.position) return true;
 
@@ -85,11 +94,12 @@ export function getAllowedSwapIds(squad, playerId, players, firstPickUsed) {
     }
 
     return squadPlayers.filter((id) => {
-        if (firstPickUsed && squad.firstPickId === id) return false;
+        if (firstPickUsed && isSameId(squad.firstPickId, id)) return false;
 
         const outgoingPlayer = getPlayerById(players, id);
+        if (!outgoingPlayer) return false;
         if (outgoingPlayer.position === player.position) return true;
-        if (Object.values(squad.bench).includes(id)) {
+        if (includesId(Object.values(squad.bench), id)) {
             return outgoingPlayer.position !== "GK";
         }
 
@@ -99,7 +109,7 @@ export function getAllowedSwapIds(squad, playerId, players, firstPickUsed) {
 }
 
 function findLeadershipFallback(startingIds, excludedIds) {
-    return startingIds.find((id) => !excludedIds.includes(id)) ?? null;
+    return startingIds.find((id) => !includesId(excludedIds, id)) ?? null;
 }
 
 export function applySquadSwap(squad, firstPlayerId, secondPlayerId, players) {
@@ -109,25 +119,25 @@ export function applySquadSwap(squad, firstPlayerId, secondPlayerId, players) {
     let { captainId, viceCaptainId } = updatedSquad;
     const { firstPickId } = updatedSquad;
 
-    if (previousStartingIds.includes(firstPlayerId)) {
-        if (captainId === firstPlayerId) {
-            captainId = secondPlayerId !== firstPickId
+    if (includesId(previousStartingIds, firstPlayerId)) {
+        if (isSameId(captainId, firstPlayerId)) {
+            captainId = !isSameId(secondPlayerId, firstPickId)
                 ? secondPlayerId
                 : findLeadershipFallback(startingIds, [firstPlayerId, viceCaptainId, firstPickId]);
         }
-        if (viceCaptainId === firstPlayerId) {
-            viceCaptainId = secondPlayerId !== firstPickId
+        if (isSameId(viceCaptainId, firstPlayerId)) {
+            viceCaptainId = !isSameId(secondPlayerId, firstPickId)
                 ? secondPlayerId
                 : findLeadershipFallback(startingIds, [firstPlayerId, captainId, firstPickId]);
         }
     } else {
-        if (captainId === secondPlayerId) {
-            captainId = firstPlayerId !== firstPickId
+        if (isSameId(captainId, secondPlayerId)) {
+            captainId = !isSameId(firstPlayerId, firstPickId)
                 ? firstPlayerId
                 : findLeadershipFallback(startingIds, [secondPlayerId, viceCaptainId, firstPickId]);
         }
-        if (viceCaptainId === secondPlayerId) {
-            viceCaptainId = firstPlayerId !== firstPickId
+        if (isSameId(viceCaptainId, secondPlayerId)) {
+            viceCaptainId = !isSameId(firstPlayerId, firstPickId)
                 ? firstPlayerId
                 : findLeadershipFallback(startingIds, [secondPlayerId, captainId, firstPickId]);
         }
@@ -137,7 +147,7 @@ export function applySquadSwap(squad, firstPlayerId, secondPlayerId, players) {
 }
 
 export function assignCaptain(squad, playerId) {
-    if (squad.viceCaptainId === playerId) {
+    if (isSameId(squad.viceCaptainId, playerId)) {
         return {
             ...squad,
             captainId: playerId,
@@ -149,7 +159,7 @@ export function assignCaptain(squad, playerId) {
 }
 
 export function assignViceCaptain(squad, playerId) {
-    if (squad.captainId === playerId) {
+    if (isSameId(squad.captainId, playerId)) {
         return {
             ...squad,
             captainId: squad.viceCaptainId,

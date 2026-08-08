@@ -10,11 +10,15 @@
 }
 
 .compareModal {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 1001;
+    transform: translate(-50%, -50%);
     background: #fff;
     width: min(95vw, 950px);
     max-height: 90vh;
     overflow-y: auto;
-    position: relative;
     box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;

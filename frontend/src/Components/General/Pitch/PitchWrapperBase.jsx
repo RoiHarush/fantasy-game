@@ -1,36 +1,35 @@
+import Image from "next/image";
 import { useState } from "react";
-import style from "../../../Styles/PitchWrapper.module.css"
-import Pitch from "./Pitch"
-import Switcher from "../Switcher"
-import { usePlayers } from "../../../features/players/usePlayers";
+
+import style from "../../../Styles/PitchWrapper.module.css";
 import PlayerKit from "../PlayerKit";
+import Switcher from "../Switcher";
+import Pitch from "./Pitch";
 
 function PitchWrapperBase({
     squad,
     view,
     currentGw,
     playerData,
+    players,
     block,
     gwControl
 }) {
     const [activeButton, setActiveButton] = useState("Pitch View");
     const [isIROpen, setIsIROpen] = useState(false);
-    const { players } = usePlayers();
-
-    const getIRPlayer = () => {
-        if (!squad?.irId) return null;
-        return players.find((p) => p.id === squad.irId);
-    };
-
-    const irPlayer = getIRPlayer();
+    const irPlayer = squad?.irId
+        ? players.find((player) => String(player.id) === String(squad.irId))
+        : null;
 
     return (
         <div className={style.pitchContainer}>
             <div className={style.pitchWrapper}>
                 <div className={style.topArea}>
-                    <img
+                    <Image
                         src="/UI/pattern-2.png"
-                        alt="pattern"
+                        alt=""
+                        width={900}
+                        height={220}
                         className={style.pattern}
                     />
                     <div>{view === "points" && gwControl}</div>
@@ -53,6 +52,7 @@ function PitchWrapperBase({
                             view={view}
                             currentGw={currentGw}
                             playerData={playerData}
+                            players={players}
                         />
                     </div>
                 ) : (
@@ -65,6 +65,7 @@ function PitchWrapperBase({
             {squad && (
                 <>
                     <button
+                        type="button"
                         className={`${style.irToggleBtn} ${isIROpen ? style.hidden : ''}`}
                         onClick={() => setIsIROpen(true)}
                     >
@@ -72,34 +73,29 @@ function PitchWrapperBase({
                     </button>
 
                     {isIROpen && (
-                        <div className={style.backdrop} onClick={() => setIsIROpen(false)}></div>
+                        <button type="button" aria-label="Close IR panel" className={style.backdrop} onClick={() => setIsIROpen(false)} />
                     )}
 
                     <div className={`${style.irSlotContainer} ${isIROpen ? style.irSlotOpen : ''}`}>
 
-                        <button className={style.closeIrBtn} onClick={() => setIsIROpen(false)}>✕</button>
+                        <button type="button" className={style.closeIrBtn} onClick={() => setIsIROpen(false)} aria-label="Close IR panel">✕</button>
 
-                        {squad.irId ? (
-                            (() => {
-                                if (!irPlayer) return null;
-                                return (
-                                    <div className={style.irCard}>
-                                        <PlayerKit
-                                            teamId={irPlayer.teamId}
-                                            type={irPlayer.position === "GK" ? "gk" : "field"}
-                                            className={style["player-shirt"]}
-                                        />
-                                        <span className={style.irName}>
-                                            {irPlayer.viewName}
-                                        </span>
-                                    </div>
-                                );
-                            })()
+                        {irPlayer ? (
+                            <div className={style.irCard}>
+                                <PlayerKit
+                                    teamId={irPlayer.teamId}
+                                    type={irPlayer.position === "GK" ? "gk" : "field"}
+                                    className={style["player-shirt"]}
+                                />
+                                <span className={style.irName}>{irPlayer.viewName}</span>
+                            </div>
                         ) : (
                             <div className={style.irCardEmpty}>
-                                <img
+                                <Image
                                     src="/Kits/0.webp"
                                     alt="Empty IR slot"
+                                    width={80}
+                                    height={100}
                                     className={style.irEmptyImg}
                                 />
                                 <span className={style.irName}>Empty</span>

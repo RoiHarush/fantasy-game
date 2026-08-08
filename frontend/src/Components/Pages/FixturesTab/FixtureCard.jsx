@@ -1,37 +1,28 @@
+import { formatAppTime } from "../../../lib/dateTime";
+import styles from "../../../Styles/FixturesTable.module.css";
 import TeamLogo from "./TeamLogo";
-import Style from "../../../Styles/FixturesTable.module.css";
-import { useTeams } from "../../../features/teams/useTeams";
 
-export function FixtureCard({ fixture }) {
-    const { teams } = useTeams();
-
-    const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
-    const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
-
+export function FixtureCard({ fixture, homeTeam, awayTeam }) {
     const displayScore =
         fixture.homeScore !== null && fixture.awayScore !== null
             ? `${fixture.homeScore} - ${fixture.awayScore}`
-            : new Date(fixture.kickoff_time).toLocaleTimeString("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-            });
+            : formatAppTime(fixture.kickoff_time) || "TBA";
 
     return (
-        <div className={Style["fixture-card"]}>
-            <span className={Style["home-team"]}>
+        <article className={styles["fixture-card"]}>
+            <span className={styles["home-team"]}>
                 {homeTeam?.name || "TBD"}
             </span>
 
-            <TeamLogo teamId={homeTeam?.id} />
+            <TeamLogo team={homeTeam} />
 
-            <span className={Style.score}>{displayScore}</span>
+            <span className={styles.score}>{displayScore}</span>
 
-            <TeamLogo teamId={awayTeam?.id} />
+            <TeamLogo team={awayTeam} />
 
-            <span className={Style["away-team"]}>
+            <span className={styles["away-team"]}>
                 {awayTeam?.name || "TBD"}
             </span>
-
-        </div>
+        </article>
     );
 }

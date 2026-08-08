@@ -49,7 +49,8 @@ class WaiverAutomationTest {
                 mock(PlayerRepository.class), mock(GameWeekRepository.class), mock(UserSquadRepository.class),
                 mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
                 mock(LeagueAccessService.class), windowRepo, waiverRepo,
-                mock(LeagueTransferActionRepository.class), presence, mock(TransferWebSocketController.class), 0
+                mock(LeagueTransferActionRepository.class), presence, mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class), 0
         );
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
@@ -89,6 +90,7 @@ class WaiverAutomationTest {
                 actionRepo,
                 presence,
                 webSocket,
+                mock(SupplementalDraftPoolService.class),
                 0
         );
 
@@ -154,6 +156,7 @@ class WaiverAutomationTest {
                 mock(LeagueTransferActionRepository.class),
                 presence,
                 webSocket,
+                mock(SupplementalDraftPoolService.class),
                 0
         );
 
@@ -209,6 +212,7 @@ class WaiverAutomationTest {
                 actionRepo,
                 presence,
                 webSocket,
+                mock(SupplementalDraftPoolService.class),
                 0
         );
 

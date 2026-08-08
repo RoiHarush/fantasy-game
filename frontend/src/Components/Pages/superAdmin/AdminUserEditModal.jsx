@@ -31,6 +31,7 @@ function AdminUserEditForm({ details, userId, onSave }) {
 
     return (
         <form onSubmit={form.handleSubmit(values => saveUser.mutate(values))} className="flex min-h-0 flex-1 flex-col" noValidate>
+            <input type="hidden" {...form.register("userId", { valueAsNumber: true })} />
             <div className="flex-1 overflow-y-auto pr-2">
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <label className="text-sm font-semibold">Username<input className={inputClassName} {...form.register("username")} /></label>
@@ -98,7 +99,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
                     <Dialog.Title className="mb-5 border-b border-slate-200 pb-4 text-2xl font-bold">
                         {detailsQuery.data ? `Edit User: ${detailsQuery.data.username} (ID: ${detailsQuery.data.userId})` : "Edit User"}
                     </Dialog.Title>
-                    <Dialog.Close asChild><Button variant="ghost" size="icon" className="absolute right-4 top-4" aria-label="Close"><X /></Button></Dialog.Close>
+                    <Dialog.Close asChild><Button variant="ghost" size="icon" className="absolute right-4 top-4" aria-label="Close"><X aria-hidden="true" /></Button></Dialog.Close>
                     {detailsQuery.isPending ? <p role="status">Loading details…</p>
                         : detailsQuery.error ? <p className="text-red-700" role="alert">{detailsQuery.error.message}</p>
                             : <AdminUserEditForm key={userId} details={detailsQuery.data} userId={userId} onSave={onSave} />}

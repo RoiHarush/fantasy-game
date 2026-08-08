@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useState } from "react";
 
 import { useAuth } from "../../Context/AuthContext";
 import { queryKeys } from "../../lib/query/keys";
@@ -11,12 +12,13 @@ import { updateWatchlist } from "./model";
 export function useWatchlist() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const [clientError, setClientError] = useState(null);
     const queryKey = useMemo(
         () => queryKeys.watchlist(user?.id, user?.leagueId),
         [user?.id, user?.leagueId],
     );
 
-    const { data: watchlist = [] } = useQuery({
+    const query = useQuery({
         queryKey,
         queryFn: ({ signal }) => getWatchlist(user.id, { signal }),
         enabled: Boolean(user?.id && user?.leagueId),
@@ -29,6 +31,7 @@ export function useWatchlist() {
                 : addToWatchlist(user.id, playerId)
         ),
         onMutate: async ({ playerId, isWatched }) => {
+            setClientError(null);
             await queryClient.cancelQueries({ queryKey });
             const previous = queryClient.getQueryData(queryKey) ?? [];
             queryClient.setQueryData(
@@ -37,17 +40,15 @@ export function useWatchlist() {
             );
             return { previous };
         },
-        onError: (error, _variables, context) => {
-            console.error("Failed to update watchlist:", error);
+        onError: (_error, _variables, context) => {
             queryClient.setQueryData(queryKey, context?.previous ?? []);
-            alert("Connection error: Could not update watchlist");
         },
         onSettled: () => queryClient.invalidateQueries({ queryKey }),
     });
 
     const toggleWatch = (playerId, isWatched) => {
         if (!user?.leagueId) {
-            alert("Join a league before creating a watchlist");
+            setClientError(new Error("Join a league before creating a watchlist."));
             return;
         }
 
@@ -55,8 +56,10 @@ export function useWatchlist() {
     };
 
     return {
-        watchlist,
+        watchlist: query.data ?? [],
         toggleWatch,
         isUpdating: mutation.isPending,
+        isPending: query.isPending && Boolean(user?.leagueId),
+        error: clientError ?? query.error ?? mutation.error ?? null,
     };
 }

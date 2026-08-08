@@ -12,6 +12,8 @@ import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.team.UserSquadRepository;
 import com.fantasy.domain.user.UserEntity;
 import com.fantasy.domain.user.UserRole;
+import com.fantasy.domain.transfer.LeagueTransferWindowRepository;
+import com.fantasy.domain.transfer.SupplementalDraftPoolService;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -59,7 +61,9 @@ class PlayerServiceOwnershipTest {
                 mock(FixtureService.class),
                 leagueRepository,
                 gameDataRepository,
-                mock(LeagueScoringService.class)
+                mock(LeagueScoringService.class),
+                mock(SupplementalDraftPoolService.class),
+                mock(LeagueTransferWindowRepository.class)
         );
 
         List<PlayerDto> players = service.getAllPlayers(42);

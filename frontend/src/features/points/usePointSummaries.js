@@ -12,7 +12,7 @@ import {
 export function useUserGameweekPoints(userId, gameweekId, enabled = true) {
     return useQuery({
         queryKey: queryKeys.userGameweekPoints(userId, gameweekId),
-        queryFn: () => fetchUserPoints(userId, gameweekId),
+        queryFn: ({ signal }) => fetchUserPoints(userId, gameweekId, { signal }),
         enabled: Boolean(enabled && userId && gameweekId),
     });
 }
@@ -20,7 +20,7 @@ export function useUserGameweekPoints(userId, gameweekId, enabled = true) {
 export function useUserTotalPoints(userId) {
     return useQuery({
         queryKey: queryKeys.userTotalPoints(userId),
-        queryFn: () => fetchUserTotalPoints(userId),
+        queryFn: ({ signal }) => fetchUserTotalPoints(userId, { signal }),
         enabled: Boolean(userId),
         staleTime: 30_000,
     });
@@ -29,7 +29,7 @@ export function useUserTotalPoints(userId) {
 export function usePointsHistory(userId) {
     return useQuery({
         queryKey: queryKeys.pointsHistory(userId),
-        queryFn: () => fetchUserHistory(userId),
+        queryFn: ({ signal }) => fetchUserHistory(userId, { signal }),
         enabled: Boolean(userId),
         staleTime: 60_000,
     });

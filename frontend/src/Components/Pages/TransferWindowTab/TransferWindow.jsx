@@ -1,30 +1,34 @@
 import { useMemo, useState } from "react";
-import { usePlayers } from "../../../features/players/usePlayers";
-import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
 import {
     useDraftPlayer,
     useLatestTransferEvent,
     usePassTransferTurn,
     useTransferHistory,
-    useTransferWindowState,
 } from "../../../features/transfer-window/useTransferWindow";
-import { getTransferNoticeMessage } from "../../../features/transfer-window/model";
+import {
+    getDraftRuleLockedIds,
+    getTransferNoticeMessage,
+    getTurnsUntilUser,
+    isSameTransferId,
+} from "../../../features/transfer-window/model";
 import Style from "../../../Styles/TransferWindow.module.css";
 import ReplacementModal from "./ReplacementModal";
-import ClosedWindow from "./ClosedWindow";
 import IRSignModal from "./IRSignModal";
+import DraftPickDialog from "./DraftPickDialog";
 import PlayersWrapper from "../../General/PlayersWrapper";
-import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useSquad } from "../../../features/squad/useSquad";
 
-function TransferWindow({ user, allUsers }) {
-    const { players } = usePlayers();
+function TransferWindow({
+    user,
+    allUsers,
+    windowState,
+    nextGameweek,
+    players,
+    teams,
+    fixturesByTeam,
+}) {
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
-    const { nextGameweek } = useGameweek();
-    const [draftView, setDraftView] = useState("players");
-    const windowQuery = useTransferWindowState(user?.leagueId);
     const latestEventQuery = useLatestTransferEvent(user?.leagueId);
-    const windowState = windowQuery.data ?? {};
     const currentTurnUserId = windowState.currentUserId ?? null;
     const turnOrder = windowState.order ?? [];
     const initialOrder = windowState.initialOrder ?? [];
@@ -32,9 +36,9 @@ function TransferWindow({ user, allUsers }) {
     const totalTurnsMap = windowState.totalTurns ?? {};
     const isWindowOpen = Boolean(windowState.isOpen);
     const isDraftMode = Boolean(windowState.isDraftMode);
+    const isSupplementalDraft = windowState.draftType === "SUPPLEMENTAL";
     const isIrRound = windowState.currentRound === "IR";
     const irPosition = windowState.irPosition ?? null;
-    const allTeamFixtures = useAllTeamFixtures();
     const lastTransferMessage = getTransferNoticeMessage(
         latestEventQuery.data,
         players,
@@ -56,67 +60,42 @@ function TransferWindow({ user, allUsers }) {
     });
     const draftSquad = draftSquadQuery.data;
     const draftActions = useMemo(
-        () => (draftHistoryQuery.data ?? []).filter(action => action.windowType === "DRAFT"),
+        () => (draftHistoryQuery.data ?? []).filter(action => (
+            action.windowType === "DRAFT" || action.windowType === "SUPPLEMENTAL"
+        )),
         [draftHistoryQuery.data],
     );
 
-    const draftRuleLockedIds = useMemo(() => {
-        if (!isDraftMode) return new Set();
-        const rosterIds = [
-            ...Object.values(draftSquad?.startingLineup || {}).flat(),
-            ...Object.values(draftSquad?.bench || {}),
-        ].filter(Boolean);
-        const rosterPlayers = rosterIds
-            .map(id => players.find(player => player.id === id))
-            .filter(Boolean);
-        const positionLimits = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
-        const positionCounts = {};
-        const clubCounts = {};
-        rosterPlayers.forEach(player => {
-            positionCounts[player.position] = (positionCounts[player.position] || 0) + 1;
-            clubCounts[player.teamId] = (clubCounts[player.teamId] || 0) + 1;
-        });
-
-        return new Set(players
-            .filter(player => player.available)
-            .filter(player => (
-                (positionCounts[player.position] || 0) >= (positionLimits[player.position] || 0)
-                || (clubCounts[player.teamId] || 0) >= 3
-            ))
-            .map(player => player.id));
-    }, [draftSquad, isDraftMode, players]);
+    const draftRuleLockedIds = useMemo(
+        () => getDraftRuleLockedIds(players, draftSquad, isDraftMode && !isSupplementalDraft),
+        [draftSquad, isDraftMode, isSupplementalDraft, players],
+    );
+    const displayedPlayers = isSupplementalDraft
+        ? players.filter(player => player.supplementalDraftEligible)
+        : players;
 
     const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
 
-    function turnsUntilMyTurn() {
-        if (!turnOrder.length || !currentTurnUserId) return null;
-        const currentIndex = turnOrder.indexOf(currentTurnUserId);
-        const myIndex = turnOrder.indexOf(user.id);
-
-        if (currentIndex === -1 || myIndex === -1) return null;
-
-        const diff = myIndex - currentIndex;
-        return diff >= 0 ? diff : turnOrder.length + diff;
-    }
-
-    const turnsLeft = turnsUntilMyTurn();
+    const turnsLeft = getTurnsUntilUser(turnOrder, currentTurnUserId, user.id);
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
 
     function getUserNameById(id) {
-        const found = allUsers.find(u => u.id === id);
-        return found ? found.name : `User #${id}`;
+        const found = allUsers.find((item) => isSameTransferId(item.id, id));
+        return found?.name || found?.fantasyTeamName || "Unknown manager";
     }
 
     if (!isWindowOpen) {
-        return <div><ClosedWindow /></div>;
+        return null;
     }
 
     const displayedOrder = isIrRound ? turnOrder : initialOrder;
 
     return (
         <div className={Style.transferPage}>
-            <h2 className={Style.title}>{isDraftMode ? "Initial Draft" : "Transfer Window"}</h2>
+            <h2 className={Style.title}>
+                {isSupplementalDraft ? "Supplemental Draft" : isDraftMode ? "Initial Draft" : "Transfer Window"}
+            </h2>
 
             <div className={Style.roundHeader}>
                 <div className={Style.roundInfo}>
@@ -140,7 +119,7 @@ function TransferWindow({ user, allUsers }) {
 
                         const showProgress = !isIrRound;
                         const done = !isIrRound && used >= userMax;
-                        const isCurrent = id === currentTurnUserId;
+                        const isCurrent = isSameTransferId(id, currentTurnUserId);
 
                         return (
                             <div
@@ -170,16 +149,19 @@ function TransferWindow({ user, allUsers }) {
 
             <div className={Style.turnBar}>
                 <div className={Style.turnContent}>
-                    {currentTurnUserId === user.id ? (
+                    {isSameTransferId(currentTurnUserId, user.id) ? (
                         <>
                             <span className={Style.myTurn}>
                                 {isIrRound
                                     ? `Pick replacement for ${irPosition} (IR)`
-                                    : isDraftMode ? "Your turn to draft a player" : "Your turn to make a transfer"}
+                                    : isSupplementalDraft
+                                        ? "Your turn to replace a player with a new arrival"
+                                        : isDraftMode ? "Your turn to draft a player" : "Your turn to make a transfer"}
                             </span>
 
-                            {!isIrRound && !isDraftMode && (
+                            {!isIrRound && (!isDraftMode || isSupplementalDraft) && (
                                 <button
+                                    type="button"
                                     className={Style.passButton}
                                     onClick={() => passMutation.mutate()}
                                     disabled={passMutation.isPending}
@@ -195,7 +177,7 @@ function TransferWindow({ user, allUsers }) {
                     )}
                 </div>
 
-                {!isIrRound && currentTurnUserId !== user.id && turnsLeft !== null && (
+                {!isIrRound && !isSameTransferId(currentTurnUserId, user.id) && turnsLeft !== null && (
                     <div className={Style.turnHint}>
                         {turnsLeft === 1 ? "You're next!" : `Your turn in ${turnsLeft} turns`}
                     </div>
@@ -211,43 +193,29 @@ function TransferWindow({ user, allUsers }) {
                 </div>
             )}
 
-            {isDraftMode && (
-                <div className={Style.draftTabs} role="tablist" aria-label="Draft views">
-                    <button
-                        type="button"
-                        className={draftView === "players" ? Style.activeDraftTab : ""}
-                        onClick={() => setDraftView("players")}
-                    >Players</button>
-                    <button
-                        type="button"
-                        className={draftView === "drafted" ? Style.activeDraftTab : ""}
-                        onClick={() => setDraftView("drafted")}
-                    >Drafted ({draftActions.length})</button>
-                </div>
-            )}
-
-            {isDraftMode && draftView === "drafted" ? (
-                <ol className={Style.draftedList}>
-                    {draftActions.map((action, index) => (
-                        <li key={action.id}>
-                            <span>#{index + 1}</span>
-                            <strong>{action.userName}</strong>
-                            <span>{players.find(player => player.id === action.playerInId)?.viewName || `Player #${action.playerInId}`}</span>
-                        </li>
-                    ))}
-                    {draftActions.length === 0 && <li>No players have been drafted yet.</li>}
-                </ol>
-            ) : (
-                <PlayersWrapper
-                    user={user}
-                    mode={isDraftMode ? "draft" : "transfer"}
-                    onPlayerSelect={setSelectedPlayerIn}
-                    currentTurnUserId={currentTurnUserId}
-                    irPosition={isIrRound ? irPosition : null}
-                    allTeamFixtures={allTeamFixtures}
-                    disabledPlayerIds={draftRuleLockedIds}
-                />
-            )}
+            <PlayersWrapper
+                user={user}
+                players={displayedPlayers}
+                teams={teams}
+                mode={isDraftMode && !isSupplementalDraft ? "draft" : "transfer"}
+                onPlayerSelect={setSelectedPlayerIn}
+                currentTurnUserId={currentTurnUserId}
+                irPosition={isIrRound ? irPosition : null}
+                allTeamFixtures={fixturesByTeam}
+                disabledPlayerIds={draftRuleLockedIds}
+                draftedContent={isDraftMode ? (
+                    <ol className={Style.draftedList} aria-label="Drafted players in pick order">
+                        {draftActions.map((action, index) => (
+                            <li key={action.id}>
+                                <span>Pick {index + 1}</span>
+                                <strong>{action.userName || "Unknown manager"}</strong>
+                                <span>{players.find((player) => isSameTransferId(player.id, action.playerInId))?.viewName || "Unknown player"}</span>
+                            </li>
+                        ))}
+                        {draftActions.length === 0 && <li>No players have been drafted yet.</li>}
+                    </ol>
+                ) : null}
+            />
 
             {selectedPlayerIn && (
                 isIrRound ? (
@@ -256,19 +224,19 @@ function TransferWindow({ user, allUsers }) {
                         user={user}
                         onClose={() => setSelectedPlayerIn(null)}
                     />
-                ) : isDraftMode ? (
-                    <div role="dialog" aria-modal="true" className={Style.transferMessage}>
-                        <p>Draft <strong>{selectedPlayerIn.viewName}</strong>?</p>
-                        <button onClick={() => draftPlayerMutation.mutate(selectedPlayerIn.id)} disabled={draftPlayerMutation.isPending}>
-                            {draftPlayerMutation.isPending ? "Saving…" : "Confirm pick"}
-                        </button>
-                        <button onClick={() => setSelectedPlayerIn(null)}>Cancel</button>
-                    </div>
+                ) : isDraftMode && !isSupplementalDraft ? (
+                    <DraftPickDialog
+                        player={selectedPlayerIn}
+                        mutation={draftPlayerMutation}
+                        onClose={() => setSelectedPlayerIn(null)}
+                    />
                 ) : (
                     <ReplacementModal
                         playerIn={selectedPlayerIn}
                         user={user}
                         players={players}
+                        fixturesByTeam={fixturesByTeam}
+                        nextGameweek={nextGameweek}
                         onClose={() => setSelectedPlayerIn(null)}
                     />
                 )

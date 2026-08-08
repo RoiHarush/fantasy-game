@@ -6,6 +6,7 @@ import {
     useCurrentLeague,
     useLeagueStandings,
 } from "../../../features/league/useLeague";
+import { deriveStatusGameweekView } from "../../../features/status/model";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
@@ -14,7 +15,7 @@ import Status from "./Status";
 
 function StatusPage() {
     const { user } = useAuth();
-    const { currentGameweek, nextGameweek, lastGameweek } = useGameweek();
+    const gameweekState = useGameweek();
     const leagueDetailsQuery = useCurrentLeague(user?.leagueId, {
         refetchInterval: (query) => query.state.data?.status === "ACTIVE" ? false : 5_000,
     });
@@ -22,10 +23,8 @@ function StatusPage() {
     const standingsQuery = useLeagueStandings(user?.leagueId, {
         enabled: leagueIsActive,
     });
-    const isPreSeason = !lastGameweek && !currentGameweek && nextGameweek?.status === "UPCOMING";
-
-    const error = leagueDetailsQuery.error ?? standingsQuery.error;
-    if (error) return <div>Error loading status: {error.message}</div>;
+    const leagueError = leagueDetailsQuery.error ?? standingsQuery.error;
+    if (leagueError) return <p role="alert">Error loading status: {leagueError.message}</p>;
 
     if (!leagueDetailsQuery.isPending && leagueDetailsQuery.data?.status !== "ACTIVE") {
         return <PreDraftStatus league={leagueDetailsQuery.data} />;
@@ -33,12 +32,19 @@ function StatusPage() {
 
     const loading = leagueDetailsQuery.isPending
         || (leagueIsActive && standingsQuery.isPending)
-        || !nextGameweek
-        || (!currentGameweek && !isPreSeason);
+        || gameweekState.loading;
     if (loading) return <LoadingPage />;
 
+    if (gameweekState.error) {
+        return <p role="alert">Error loading the gameweek schedule: {gameweekState.error}</p>;
+    }
+
+    const gameweekView = deriveStatusGameweekView(gameweekState);
+    if (!gameweekView.displayedGameweek) {
+        return <p role="status">No gameweek schedule is currently available.</p>;
+    }
+
     const league = standingsQuery.data ?? leagueDetailsQuery.data;
-    const displayedGameweek = currentGameweek ?? nextGameweek;
 
     return (
         <PageLayout
@@ -46,12 +52,14 @@ function StatusPage() {
                 <Status
                     user={user}
                     league={league}
-                    currentGameweek={displayedGameweek}
-                    nextGameweek={nextGameweek}
-                    preSeason={isPreSeason}
+                    currentGameweek={gameweekView.displayedGameweek}
+                    nextGameweek={gameweekState.nextGameweek}
+                    preSeason={gameweekView.preSeason}
+                    seasonComplete={gameweekView.seasonComplete}
+                    transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}
                 />
             }
-            right={<StatusSidebar league={league} user={user} preSeason={isPreSeason} />}
+            right={<StatusSidebar league={league} user={user} preSeason={gameweekView.preSeason} />}
         />
     );
 }

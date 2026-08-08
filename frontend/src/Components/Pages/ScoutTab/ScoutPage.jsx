@@ -6,6 +6,9 @@ import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useAuth } from "../../../Context/AuthContext";
 import { useSquad } from "../../../features/squad/useSquad";
 import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
+import { usePlayers } from "../../../features/players/usePlayers";
+import { useTeams } from "../../../features/teams/useTeams";
+import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
 import PageLayout from "../../PageLayout";
 import UserSquadSidebar from "../../Sidebar/UserSquadSidebar";
 import Scout from "./Scout";
@@ -17,8 +20,12 @@ function ScoutPage() {
 
     const [waiverMessage, setWaiverMessage] = useState("");
     const hasUpcomingSquad = Boolean(user?.leagueId && nextGameweek?.id);
+    const waiversEnabled = hasUpcomingSquad && user?.leagueStatus === "ACTIVE";
     const squadQuery = useSquad(user?.id, nextGameweek?.id, { enabled: hasUpcomingSquad });
-    const waiverPlan = useWaiverPlan(hasUpcomingSquad ? nextGameweek?.id : null);
+    const waiverPlan = useWaiverPlan(waiversEnabled ? nextGameweek?.id : null);
+    const playersQuery = usePlayers();
+    const teamsQuery = useTeams();
+    const fixturesQuery = useAllTeamFixtures(teamsQuery.teams);
 
     async function updateWaiverEntries(nextEntries) {
         if (!nextGameweek?.id) return;
@@ -32,12 +39,21 @@ function ScoutPage() {
     }
 
     const loading = gameweeksLoading
-        || (hasUpcomingSquad && (squadQuery.isPending || waiverPlan.loading));
-    const error = gameweeksError || squadQuery.error?.message || waiverPlan.error?.message;
+        || playersQuery.isPending
+        || teamsQuery.isPending
+        || fixturesQuery.isPending
+        || (hasUpcomingSquad && squadQuery.isPending)
+        || (waiversEnabled && waiverPlan.loading);
+    const error = gameweeksError
+        || squadQuery.error?.message
+        || waiverPlan.loadError?.message
+        || playersQuery.error?.message
+        || teamsQuery.error?.message
+        || fixturesQuery.error?.message;
 
     if (loading) return <LoadingPage />;
 
-    if (error) return <div>Error loading squad: {error}</div>;
+    if (error) return <p role="alert">Error loading squad: {error}</p>;
 
     const sidebar = !user.leagueId ? (
         <aside>
@@ -46,7 +62,13 @@ function ScoutPage() {
             <Link href="/onboarding">Create or join a league</Link>
         </aside>
     ) : nextGameweek ? (
-        <UserSquadSidebar user={user} squad={squadQuery.data} />
+        <UserSquadSidebar
+            user={user}
+            squad={squadQuery.data}
+            players={playersQuery.players}
+            fixturesByTeam={fixturesQuery.fixturesByTeam ?? {}}
+            nextGameweek={nextGameweek}
+        />
     ) : (
         <aside>
             <h2>No upcoming gameweek</h2>
@@ -59,9 +81,12 @@ function ScoutPage() {
             left={
                 <Scout
                     user={user}
+                    players={playersQuery.players}
+                    teams={teamsQuery.teams}
+                    fixturesByTeam={fixturesQuery.fixturesByTeam ?? {}}
                     squad={squadQuery.data ?? null}
                     waiverEntries={waiverPlan.entries}
-                    onWaiverEntriesChange={updateWaiverEntries}
+                    onWaiverEntriesChange={waiversEnabled ? updateWaiverEntries : undefined}
                     waiverSaving={waiverPlan.saving}
                     waiverMessage={waiverMessage}
                     waiverGameweekId={nextGameweek?.id}

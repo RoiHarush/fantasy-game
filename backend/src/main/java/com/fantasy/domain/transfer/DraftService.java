@@ -31,12 +31,16 @@ public class DraftService {
     private final LeagueRepository leagueRepo;
     private final LeagueAccessService leagueAccessService;
     private final UserSquadRepository squadRepo;
+    private final TransferWebSocketController webSocketController;
+    private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public DraftService(UserGameDataRepository gameDataRepo, TransferMarketService marketService,
                         GameWeekService gameWeekService, DraftConfigRepository draftConfigRepo,
                         LeagueRepository leagueRepo, LeagueAccessService leagueAccessService,
-                        UserSquadRepository squadRepo) {
+                        UserSquadRepository squadRepo,
+                        TransferWebSocketController webSocketController,
+                        SupplementalDraftPoolService supplementalDraftPoolService) {
         this.gameDataRepo = gameDataRepo;
         this.marketService = marketService;
         this.gameWeekService = gameWeekService;
@@ -44,6 +48,8 @@ public class DraftService {
         this.leagueRepo = leagueRepo;
         this.leagueAccessService = leagueAccessService;
         this.squadRepo = squadRepo;
+        this.webSocketController = webSocketController;
+        this.supplementalDraftPoolService = supplementalDraftPoolService;
     }
 
     public DraftConfig getDraftConfig(int requestingUserId) {
@@ -64,31 +70,74 @@ public class DraftService {
     @Transactional
     public void deleteDraftConfigForLeague(long leagueId) {
         LeagueEntity league = requireLeague(leagueId);
-        if (league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE) {
-            throw new IllegalStateException("A live or completed initial draft cannot be cancelled");
+        if (league.getStatus() == LeagueStatus.DRAFT_LIVE) {
+            throw new IllegalStateException("A live draft cannot be cancelled");
         }
-        draftConfigRepo.findByLeague_Id(leagueId).ifPresent(config -> {
+        DraftConfig existingConfig = draftConfigRepo.findByLeague_Id(leagueId).orElse(null);
+        DraftType cancelledType = existingConfig == null
+                ? (league.getStatus() == LeagueStatus.ACTIVE ? DraftType.SUPPLEMENTAL : DraftType.INITIAL)
+                : existingConfig.getDraftType();
+        Optional.ofNullable(existingConfig).ifPresent(config -> {
             config.setScheduledTime(null);
             config.setProcessed(true);
             draftConfigRepo.save(config);
         });
-        league.setStatus(LeagueStatus.WAITING_FOR_DRAFT);
-        leagueRepo.save(league);
+        if (league.getStatus() == LeagueStatus.DRAFT_SCHEDULED) {
+            league.setStatus(LeagueStatus.WAITING_FOR_DRAFT);
+            leagueRepo.save(league);
+        }
+        webSocketController.sendDraftCancelledEvent(leagueId, cancelledType);
     }
 
     @Transactional
     public void scheduleDraft(int actingUserId, LocalDateTime time) {
-        scheduleDraftForLeague(requireLeagueAdmin(actingUserId), time);
+        scheduleDraftForLeague(
+                requireLeagueAdmin(actingUserId),
+                time,
+                DraftOrderSource.TRANSFER_ORDER,
+                List.of()
+        );
     }
 
     @Transactional
     public void scheduleDraftForLeague(long leagueId, LocalDateTime time) {
+        scheduleDraftForLeague(leagueId, time, DraftOrderSource.TRANSFER_ORDER, List.of());
+    }
+
+    @Transactional
+    public void scheduleDraft(int actingUserId,
+                              LocalDateTime time,
+                              DraftOrderSource orderSource,
+                              List<Integer> manualOrder) {
+        scheduleDraftForLeague(requireLeagueAdmin(actingUserId), time, orderSource, manualOrder);
+    }
+
+    @Transactional
+    public void scheduleDraftForLeague(long leagueId,
+                                       LocalDateTime time,
+                                       DraftOrderSource requestedOrderSource,
+                                       List<Integer> requestedManualOrder) {
         if (time == null || !time.isAfter(LocalDateTime.now(LEAGUE_TIME_ZONE))) {
             throw new IllegalArgumentException("Draft time must be in the future");
         }
         LeagueEntity league = requireLeague(leagueId);
-        if (league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE) {
-            throw new IllegalStateException("The initial draft has already started");
+        if (league.getStatus() == LeagueStatus.DRAFT_LIVE) {
+            throw new IllegalStateException("A draft is already live");
+        }
+        DraftType draftType = league.getStatus() == LeagueStatus.ACTIVE
+                ? DraftType.SUPPLEMENTAL
+                : DraftType.INITIAL;
+        DraftOrderSource orderSource = requestedOrderSource == null
+                ? DraftOrderSource.TRANSFER_ORDER
+                : requestedOrderSource;
+        List<Integer> manualOrder = requestedManualOrder == null
+                ? List.of()
+                : List.copyOf(requestedManualOrder);
+        if (draftType == DraftType.SUPPLEMENTAL) {
+            requireSupplementalPool(leagueId);
+            if (orderSource == DraftOrderSource.MANUAL) {
+                validateTwoRoundOrder(league, manualOrder);
+            }
         }
         DraftConfig config = draftConfigRepo.findByLeague_Id(leagueId).orElseGet(() -> {
             DraftConfig created = new DraftConfig();
@@ -97,17 +146,23 @@ public class DraftService {
         });
         config.setScheduledTime(time);
         config.setProcessed(false);
+        config.setDraftType(draftType);
+        config.setOrderSource(orderSource);
+        config.setManualOrder(orderSource == DraftOrderSource.MANUAL ? manualOrder : List.of());
         draftConfigRepo.save(config);
-        league.setStatus(LeagueStatus.DRAFT_SCHEDULED);
-        leagueRepo.save(league);
+        if (draftType == DraftType.INITIAL) {
+            league.setStatus(LeagueStatus.DRAFT_SCHEDULED);
+            leagueRepo.save(league);
+        }
+        webSocketController.sendDraftScheduledEvent(leagueId, time, draftType);
     }
 
     @Transactional
     public void runSnakeDraft() {
         for (LeagueEntity league : leagueRepo.findAll()) {
             if (!league.getUsers().isEmpty()
-                    && league.getStatus() != LeagueStatus.DRAFT_LIVE
-                    && league.getStatus() != LeagueStatus.ACTIVE) {
+                    && league.getStatus() != LeagueStatus.ACTIVE
+                    && league.getStatus() != LeagueStatus.DRAFT_LIVE) {
                 runSnakeDraft(league.getId());
             }
         }
@@ -119,12 +174,37 @@ public class DraftService {
     }
 
     @Transactional
+    public void runDraftForUser(int actingUserId,
+                                DraftOrderSource orderSource,
+                                List<Integer> manualOrder) {
+        long leagueId = requireLeagueAdmin(actingUserId);
+        configureImmediateDraft(leagueId, orderSource, manualOrder);
+        runSnakeDraft(leagueId);
+    }
+
+    @Transactional
     public void runSnakeDraft(long leagueId) {
         LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
-        if (league.getStatus() == LeagueStatus.DRAFT_LIVE || league.getStatus() == LeagueStatus.ACTIVE) {
-            throw new IllegalStateException("The initial draft has already started");
+        if (league.getStatus() == LeagueStatus.DRAFT_LIVE) {
+            throw new IllegalStateException("A draft is already live");
         }
+        DraftType draftType = league.getStatus() == LeagueStatus.ACTIVE
+                ? DraftType.SUPPLEMENTAL
+                : DraftType.INITIAL;
+        DraftConfig config = draftConfigRepo.findByLeague_Id(leagueId).orElse(null);
+        if (draftType == DraftType.SUPPLEMENTAL) {
+            openSupplementalDraft(league, config);
+            markProcessed(config);
+            return;
+        }
+
+        openInitialDraft(league);
+        markProcessed(config);
+    }
+
+    private void openInitialDraft(LeagueEntity league) {
+        long leagueId = league.getId();
         List<UserGameDataEntity> managers = gameDataRepo.findByLeague_Id(leagueId).stream()
                 .filter(data -> data.getUser() != null)
                 .toList();
@@ -146,10 +226,84 @@ public class DraftService {
         league.setStatus(LeagueStatus.DRAFT_LIVE);
         leagueRepo.save(league);
         marketService.openDraftWindow(leagueId, nextGwId, snakeOrder);
-        draftConfigRepo.findByLeague_Id(leagueId).ifPresent(config -> {
-            config.setProcessed(true);
-            draftConfigRepo.save(config);
+    }
+
+    private void openSupplementalDraft(LeagueEntity league, DraftConfig config) {
+        long leagueId = league.getId();
+        requireSupplementalPool(leagueId);
+        var nextGameweek = gameWeekService.getNextGameweek();
+        if (nextGameweek == null) {
+            throw new IllegalStateException("No upcoming gameweek is available for the supplemental draft");
+        }
+
+        DraftOrderSource orderSource = config == null || config.getOrderSource() == null
+                ? DraftOrderSource.TRANSFER_ORDER
+                : config.getOrderSource();
+        List<Integer> order = orderSource == DraftOrderSource.MANUAL
+                ? new ArrayList<>(config.getManualOrder())
+                : marketService.getConfiguredTransferOrderForLeague(leagueId, nextGameweek.getId());
+        validateTwoRoundOrder(league, order);
+        marketService.openSupplementalDraftWindow(leagueId, nextGameweek.getId(), order);
+    }
+
+    private void configureImmediateDraft(long leagueId,
+                                         DraftOrderSource requestedOrderSource,
+                                         List<Integer> requestedManualOrder) {
+        LeagueEntity league = requireLeague(leagueId);
+        DraftType draftType = league.getStatus() == LeagueStatus.ACTIVE
+                ? DraftType.SUPPLEMENTAL
+                : DraftType.INITIAL;
+        DraftOrderSource orderSource = requestedOrderSource == null
+                ? DraftOrderSource.TRANSFER_ORDER
+                : requestedOrderSource;
+        List<Integer> manualOrder = requestedManualOrder == null
+                ? List.of()
+                : List.copyOf(requestedManualOrder);
+        if (draftType == DraftType.SUPPLEMENTAL) {
+            requireSupplementalPool(leagueId);
+            if (orderSource == DraftOrderSource.MANUAL) {
+                validateTwoRoundOrder(league, manualOrder);
+            }
+        }
+
+        DraftConfig config = draftConfigRepo.findByLeague_Id(leagueId).orElseGet(() -> {
+            DraftConfig created = new DraftConfig();
+            created.setLeague(league);
+            return created;
         });
+        config.setScheduledTime(null);
+        config.setProcessed(false);
+        config.setDraftType(draftType);
+        config.setOrderSource(orderSource);
+        config.setManualOrder(orderSource == DraftOrderSource.MANUAL ? manualOrder : List.of());
+        draftConfigRepo.save(config);
+    }
+
+    private void markProcessed(DraftConfig config) {
+        if (config == null) return;
+        config.setProcessed(true);
+        draftConfigRepo.save(config);
+    }
+
+    private void requireSupplementalPool(long leagueId) {
+        if (supplementalDraftPoolService.playerIds(leagueId).isEmpty()) {
+            throw new IllegalStateException("No newly discovered players are waiting for a supplemental draft");
+        }
+    }
+
+    private void validateTwoRoundOrder(LeagueEntity league, List<Integer> order) {
+        Set<Integer> leagueUserIds = league.getUsers().stream()
+                .map(user -> user.getId())
+                .collect(java.util.stream.Collectors.toSet());
+        if (order == null || order.size() != leagueUserIds.size() * 2) {
+            throw new IllegalArgumentException("Supplemental draft order must contain exactly two picks per manager");
+        }
+        Map<Integer, Long> counts = order.stream()
+                .collect(java.util.stream.Collectors.groupingBy(id -> id, java.util.stream.Collectors.counting()));
+        if (!counts.keySet().equals(leagueUserIds)
+                || counts.values().stream().anyMatch(count -> count != 2)) {
+            throw new IllegalArgumentException("Every league manager must appear exactly twice in the supplemental draft order");
+        }
     }
 
     @Scheduled(fixedDelayString = "${app.draft.schedule-poll-millis:1000}")

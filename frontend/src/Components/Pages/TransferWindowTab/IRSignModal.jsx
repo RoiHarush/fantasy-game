@@ -1,3 +1,4 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../Styles/IRSignModal.module.css";
 import { useSignIrPlayer } from "../../../features/transfer-window/useTransferWindow";
 
@@ -9,24 +10,27 @@ export default function IRSignModal({ player, user, onClose }) {
     });
 
     return (
-        <div className={Style.overlay}>
-            <div className={Style.modal}>
-                <h3>Confirm Signing</h3>
-                <p>
-                    Do you want to sign <strong>{player.viewName}</strong>
+        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+            <Dialog.Overlay className={Style.overlay} />
+            <Dialog.Content className={Style.modal}>
+                <Dialog.Title>Confirm Signing</Dialog.Title>
+                <Dialog.Description>
+                    Do you want to sign <strong>{player.viewName}</strong>{" "}
                     to replace your injured player?
-                </p>
+                </Dialog.Description>
 
                 <div className={Style.actions}>
-                    <button className={Style.confirm} onClick={() => signPlayer.mutate(player.id)} disabled={signPlayer.isPending}>
+                    <button type="button" className={Style.confirm} onClick={() => signPlayer.mutate(player.id)} disabled={signPlayer.isPending}>
                         {signPlayer.isPending ? "Signing…" : "Confirm"}
                     </button>
-                    <button className={Style.cancel} onClick={onClose}>
-                        Cancel
-                    </button>
+                    <Dialog.Close asChild>
+                        <button type="button" className={Style.cancel} disabled={signPlayer.isPending}>Cancel</button>
+                    </Dialog.Close>
                 </div>
                 {signPlayer.error && <p role="alert">{signPlayer.error.message || "Error signing IR player"}</p>}
-            </div>
-        </div>
+            </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

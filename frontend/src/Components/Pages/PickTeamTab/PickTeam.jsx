@@ -6,7 +6,6 @@ import IRManager from "./IR/IRManager";
 import FirstPickManager from "./FirstPickCaptain/FirstPickManager";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
-import { useState } from "react";
 
 function PickTeam({
     user,
@@ -18,22 +17,22 @@ function PickTeam({
     setChips,
     playerData,
     saveTeam,
+    savePending,
+    saveSucceeded,
+    saveError,
     isDirty,
     setIsDirty,
     refreshPlayerData
 }) {
-    const { players } = usePlayers();
-    const [showSavedMessage, setShowSavedMessage] = useState(false);
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
 
     const handleSave = async () => {
-        const success = await saveTeam();
-
-        if (success) {
-            setShowSavedMessage(true);
-            // setTimeout(() => setShowSavedMessage(false), 3000);
-        }
+        await saveTeam().catch(() => undefined);
     };
 
+    if (playersQuery.isPending) return <p role="status">Loading player data…</p>;
+    if (playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
 
     return (
         <div className={Style.pickTeamScreen}>
@@ -49,6 +48,7 @@ function PickTeam({
                     setChips={setChips}
                     transferWindowProcessed={nextGameweek.transferWindowProcessed}
                     refreshPlayerData={refreshPlayerData}
+                    players={players}
                 />
 
                 <FirstPickManager
@@ -58,6 +58,7 @@ function PickTeam({
                     setSquad={setSquad}
                     chips={chips}
                     setChips={setChips}
+                    players={players}
                 />
             </div>
 
@@ -77,6 +78,7 @@ function PickTeam({
                             view="pick"
                             currentGw={nextGameweek.id}
                             playerData={playerData}
+                            players={players}
                             block={
                                 <PickTeamBlock
                                     gameweek={nextGameweek.id}
@@ -89,18 +91,20 @@ function PickTeam({
 
                 <div className={Style.saveContainer}>
                     <button
+                        type="button"
                         className={`${Style.btn} ${Style.saveTeam}`}
                         onClick={handleSave}
-                        disabled={!isDirty}
+                        disabled={!isDirty || savePending}
                     >
-                        Save Team
+                        {savePending ? "Saving…" : "Save Team"}
                     </button>
 
-                    {showSavedMessage && (
-                        <div className={Style.savedMessage}>
+                    {!isDirty && saveSucceeded && (
+                        <div className={Style.savedMessage} role="status">
                             Your team has been saved
                         </div>
                     )}
+                    {saveError && <p role="alert">{saveError.message || "Your team could not be saved."}</p>}
 
                 </div>
 

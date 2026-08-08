@@ -43,6 +43,7 @@ export function useWaiverPlan(gameweekId) {
         saveEntries: mutation.mutateAsync,
         loading: query.isPending && Boolean(gameweekId),
         saving: mutation.isPending,
-        error: query.error ?? mutation.error ?? null,
+        loadError: query.error ?? null,
+        saveError: mutation.error ?? null,
     };
 }

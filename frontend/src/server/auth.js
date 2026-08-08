@@ -5,17 +5,26 @@ import { redirect } from "next/navigation";
 
 import { hasServerSession, ServerApiError, serverApiRequest } from "./api";
 
-export const getCurrentUser = cache(async () => {
-    if (!await hasServerSession()) return null;
+export const getCurrentSession = cache(async () => {
+    if (!await hasServerSession()) {
+        return { user: null, invalidSession: false };
+    }
 
     try {
-        return await serverApiRequest("/api/auth/me");
+        return {
+            user: await serverApiRequest("/api/auth/me"),
+            invalidSession: false,
+        };
     } catch (error) {
-        if (error instanceof ServerApiError && error.status === 401) return null;
+        if (error instanceof ServerApiError && error.status === 401) {
+            return { user: null, invalidSession: true };
+        }
         console.error("Unable to verify the current session:", error);
-        return null;
+        return { user: null, invalidSession: false };
     }
 });
+
+export const getCurrentUser = cache(async () => (await getCurrentSession()).user);
 
 export async function requireAuthenticatedUser() {
     const user = await getCurrentUser();

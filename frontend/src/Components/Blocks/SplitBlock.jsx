@@ -1,13 +1,15 @@
-import Style from "../../Styles/Block.module.css";
+import Image from "next/image";
+
+import styles from "../../Styles/Block.module.css";
 
 function SplitBlock({ items }) {
     return (
-        <div className={Style.splitBlock}>
-            {items.map((item, idx) => (
-                <div key={idx} className={Style.splitItem}>
-                    <div className={Style.splitHeader}>{item.title}</div>
-                    <div className={Style.splitContent}>{item.content}</div>
-                    <img src="/UI/pattern-1_small.png" alt="decoration" className={Style.blockImage} />
+        <div className={styles.splitBlock}>
+            {items.map((item) => (
+                <div key={item.id ?? item.title} className={styles.splitItem}>
+                    <div className={styles.splitHeader}>{item.title}</div>
+                    <div className={styles.splitContent}>{item.content}</div>
+                    <Image src="/UI/pattern-1_small.png" alt="" width={120} height={120} className={styles.blockImage} />
                 </div>
             ))}
         </div>

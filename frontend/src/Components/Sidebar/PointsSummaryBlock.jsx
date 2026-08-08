@@ -21,7 +21,7 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.header}>
                 <div className={styles.userInfo}>
                     <h3 className={styles.username}>{user.name}</h3>
-                    <p className={styles.team}>{user.fantasyTeam}</p>
+                    <p className={styles.team}>{user.fantasyTeamName}</p>
                 </div>
             </div>
 
@@ -30,15 +30,19 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.stats}>
                 <div className={styles.row}>
                     <span>Gameweek Points</span>
-                    <span className={styles.value}>{pointsQuery.data ?? "-"}</span>
+                    <span className={styles.value}>{pointsQuery.isPending ? "…" : pointsQuery.data ?? "-"}</span>
                 </div>
                 <div className={styles.row}>
                     <span>Overall Points</span>
-                    <span className={styles.value}>{totalQuery.data ?? "-"}</span>
+                    <span className={styles.value}>{totalQuery.isPending ? "…" : totalQuery.data ?? "-"}</span>
                 </div>
             </div>
 
-            <button className={styles.history} onClick={() => setShowHistory(true)}>
+            {(pointsQuery.error || totalQuery.error) && (
+                <p role="alert">Some point totals are temporarily unavailable.</p>
+            )}
+
+            <button type="button" className={styles.history} onClick={() => setShowHistory(true)}>
                 View History →
             </button>
 

@@ -4,13 +4,14 @@ import PlayerTable from "../Pages/ScoutTab/PlayersTable";
 import ControlsBar from "./ControlsBar";
 import Style from "../../Styles/ScoutWrapper.module.css";
 import CompareModal from "./CompareModal";
-import Portal from "../../Portal";
 import WaiverPlanPanel from "../Pages/ScoutTab/WaiverPlanPanel";
-import WaiverStyle from "../../Styles/WaiverScout.module.css";
-import { usePlayers } from "../../features/players/usePlayers";
+import WaiverCandidateDialog from "../Pages/ScoutTab/WaiverCandidateDialog";
+import { useWatchlist } from "../../features/watchlist/useWatchlist";
 
 function PlayersWrapper({
     user,
+    players,
+    teams,
     mode = "scout",
     onPlayerSelect,
     currentTurnUserId,
@@ -22,7 +23,8 @@ function PlayersWrapper({
     onWaiverEntriesChange,
     waiverSaving = false,
     waiverMessage = "",
-    waiverGameweekId
+    waiverGameweekId,
+    draftedContent = null
 }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeButton, setActiveButton] = useState("All players");
@@ -34,22 +36,25 @@ function PlayersWrapper({
     const [filterByPosition, setFilterByPosition] = useState(null);
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [waiverCandidate, setWaiverCandidate] = useState(null);
-    const [waiverPlayerOutId, setWaiverPlayerOutId] = useState("");
 
-    const { players } = usePlayers();
-    const playersById = useMemo(() => new Map(players.map(player => [player.id, player])), [players]);
+    const watchlistQuery = useWatchlist();
+    const playersById = useMemo(() => new Map(players.map((player) => [String(player.id), player])), [players]);
     const squadPlayerIds = useMemo(() => [
         ...Object.values(squad?.startingLineup || {}).flat(),
         ...Object.values(squad?.bench || {})
     ].filter(Boolean), [squad]);
     const eligibleOutgoing = waiverCandidate
         ? squadPlayerIds
-            .map(id => playersById.get(id))
+            .map((id) => playersById.get(String(id)))
             .filter(player => player?.position === waiverCandidate.position)
         : [];
     const plannedIncomingIds = useMemo(
         () => new Set(waiverEntries.map(entry => entry.playerInId)),
         [waiverEntries]
+    );
+    const watchedPlayerIds = useMemo(
+        () => new Set(watchlistQuery.watchlist.map(String)),
+        [watchlistQuery.watchlist],
     );
 
     const handleCompare = (player) => {
@@ -58,10 +63,7 @@ function PlayersWrapper({
             setFilterByPosition(player.position);
         }
         else if (comparePlayers.length === 1) {
-            if (player.position !== comparePlayers[0].position) {
-                alert("You can only compare players from the same position.");
-                return;
-            }
+            if (player.position !== comparePlayers[0].position) return;
             setComparePlayers((prev) => [...prev, player]);
             setShowCompareModal(true);
         }
@@ -74,6 +76,8 @@ function PlayersWrapper({
     };
 
     const filteredPlayers = useFilteredPlayers({
+        players,
+        watchlist: watchlistQuery.watchlist,
         activeButton,
         searchQuery,
         viewFilter,
@@ -101,21 +105,24 @@ function PlayersWrapper({
                 setShowAvailable={setShowAvailable}
                 filteredCount={visiblePlayers.length}
                 disablePositionOptions={comparePlayers.length === 1}
+                teams={teams}
+                showDrafted={Boolean(draftedContent)}
                 showWaivers={mode === "scout" && Boolean(onWaiverEntriesChange)}
             />
 
+            {watchlistQuery.error && <p role="alert">The watchlist could not be updated.</p>}
 
             {comparePlayers.length === 1 && (
                 <div className={Style.compareBanner}>
                     Select another <strong>{filterByPosition}</strong> to compare with{" "}
                     <strong>{comparePlayers[0].viewName}</strong>.
-                    <button className={Style.cancelCompare} onClick={handleCloseCompare}>
+                    <button type="button" className={Style.cancelCompare} onClick={handleCloseCompare}>
                         Cancel
                     </button>
                 </div>
             )}
 
-            {activeButton === "Waivers" ? (
+            {activeButton === "Drafted" && draftedContent ? draftedContent : activeButton === "Waivers" ? (
                 <WaiverPlanPanel
                     entries={waiverEntries}
                     playersById={playersById}
@@ -134,10 +141,16 @@ function PlayersWrapper({
                     onCompare={handleCompare}
                     comparePlayers={comparePlayers}
                     allTeamFixtures={allTeamFixtures}
+                    teams={teams}
                     disabledPlayerIds={disabledPlayerIds}
+                    watchedPlayerIds={watchedPlayerIds}
+                    onToggleWatch={(playerId) => watchlistQuery.toggleWatch(
+                        playerId,
+                        watchlistQuery.watchlist.some((id) => String(id) === String(playerId)),
+                    )}
+                    watchlistUpdating={watchlistQuery.isUpdating}
                     onWaiverSelect={onWaiverEntriesChange ? player => {
                         setWaiverCandidate(player);
-                        setWaiverPlayerOutId("");
                     } : undefined}
                     plannedIncomingIds={plannedIncomingIds}
                 />
@@ -148,37 +161,14 @@ function PlayersWrapper({
             )}
 
             {waiverCandidate && (
-                <Portal>
-                    <div className={WaiverStyle.modalBackdrop} onClick={() => setWaiverCandidate(null)}>
-                        <div className={WaiverStyle.modal} onClick={event => event.stopPropagation()}>
-                            <h3>Add {waiverCandidate.viewName} to waivers</h3>
-                            <p>Choose the {waiverCandidate.position} player who should leave your squad.</p>
-                            <select value={waiverPlayerOutId} onChange={event => setWaiverPlayerOutId(event.target.value)}>
-                                <option value="">Choose outgoing player</option>
-                                {eligibleOutgoing.map(player => (
-                                    <option key={player.id} value={player.id}>{player.viewName}</option>
-                                ))}
-                            </select>
-                            <div className={WaiverStyle.modalActions}>
-                                <button type="button" onClick={() => setWaiverCandidate(null)}>Cancel</button>
-                                <button
-                                    type="button"
-                                    disabled={!waiverPlayerOutId || waiverSaving}
-                                    onClick={async () => {
-                                        const entry = {
-                                            playerInId: waiverCandidate.id,
-                                            playerOutId: Number(waiverPlayerOutId)
-                                        };
-                                        if (!waiverEntries.some(item => item.playerInId === entry.playerInId && item.playerOutId === entry.playerOutId)) {
-                                            await onWaiverEntriesChange([...waiverEntries, entry]);
-                                        }
-                                        setWaiverCandidate(null);
-                                    }}
-                                >Add priority</button>
-                            </div>
-                        </div>
-                    </div>
-                </Portal>
+                <WaiverCandidateDialog
+                    candidate={waiverCandidate}
+                    eligibleOutgoing={eligibleOutgoing}
+                    entries={waiverEntries}
+                    onChange={onWaiverEntriesChange}
+                    saving={waiverSaving}
+                    onClose={() => setWaiverCandidate(null)}
+                />
             )}
         </div>
     );

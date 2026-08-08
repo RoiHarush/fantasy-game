@@ -72,4 +72,18 @@ describe("pick-team squad model", () => {
         expect(assignCaptain(squad, 8)).toMatchObject({ captainId: 8, viceCaptainId: 6 });
         expect(assignViceCaptain(squad, 6)).toMatchObject({ captainId: 8, viceCaptainId: 6 });
     });
+
+    it("normalizes ids received as strings without changing the stored id type", () => {
+        const squad = createSquad();
+        const updated = applySquadSwap(squad, "6", "14", players);
+
+        expect(updated.startingLineup.DEF).toEqual([3, 4, 5]);
+        expect(updated.startingLineup.MID).toEqual([8, 9, 10, "14"]);
+        expect(updated.bench.second).toBe("6");
+        expect(updated.captainId).toBe("14");
+    });
+
+    it("returns no swap targets when player data is unavailable", () => {
+        expect(getAllowedSwapIds(createSquad(), 999, players, false)).toEqual([]);
+    });
 });

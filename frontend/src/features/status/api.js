@@ -1,5 +1,9 @@
 import { apiRequest } from "../../services/apiClient";
 
+export function getDailyStatus(gameweekId, { signal } = {}) {
+    return apiRequest(`/api/gameweeks/${gameweekId}/daily-status`, { signal });
+}
+
 export function getIrStatuses({ signal } = {}) {
     return apiRequest("/api/teams/ir-status", { signal });
 }

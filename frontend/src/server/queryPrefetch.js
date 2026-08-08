@@ -22,7 +22,7 @@ export async function buildInitialQueryState(user) {
         defaultOptions: { queries: { staleTime: 30_000, retry: false } },
     });
 
-    if (!user?.id) return dehydrate(queryClient);
+    if (!user?.id || user.role === "ROLE_SUPER_ADMIN") return dehydrate(queryClient);
 
     const prefetches = [
         queryClient.prefetchQuery({

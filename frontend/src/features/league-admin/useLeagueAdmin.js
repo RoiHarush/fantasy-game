@@ -7,12 +7,13 @@ import { AdminService } from "../../services/adminService";
 import { usePlayers } from "../players/usePlayers";
 
 function updateStatList(current, updatedPlayer, valueField) {
-    const exists = current.some((player) => player.playerId === updatedPlayer.playerId);
+    const isUpdatedPlayer = (player) => String(player.playerId) === String(updatedPlayer.playerId);
+    const exists = current.some(isUpdatedPlayer);
     if (updatedPlayer[valueField] === 0) {
-        return current.filter((player) => player.playerId !== updatedPlayer.playerId);
+        return current.filter((player) => !isUpdatedPlayer(player));
     }
     return exists
-        ? current.map((player) => player.playerId === updatedPlayer.playerId ? updatedPlayer : player)
+        ? current.map((player) => isUpdatedPlayer(player) ? updatedPlayer : player)
         : [...current, updatedPlayer];
 }
 
@@ -66,10 +67,14 @@ export function useLockedPlayers(leagueId) {
     });
     const mutation = useMutation({
         mutationFn: ({ player, shouldLock }) => AdminService.togglePlayerLock(player.id, shouldLock, leagueId),
-        onSuccess: (updatedPlayer) => {
-            queryClient.invalidateQueries({ queryKey });
+        onSuccess: (updatedPlayer, { shouldLock }) => {
+            queryClient.setQueryData(queryKey, (current = []) => (
+                shouldLock
+                    ? [...current.filter((player) => String(player.id) !== String(updatedPlayer.id)), updatedPlayer]
+                    : current.filter((player) => String(player.id) !== String(updatedPlayer.id))
+            ));
             setPlayers((current) => current.map((player) => (
-                player.id === updatedPlayer.id ? updatedPlayer : player
+                String(player.id) === String(updatedPlayer.id) ? updatedPlayer : player
             )));
         },
     });
@@ -84,7 +89,7 @@ export function useUpdatePlayerPosition(leagueId) {
         mutationFn: ({ playerId, positionId }) => AdminService.updatePlayerPosition(playerId, positionId, leagueId),
         onSuccess: (_result, { playerId, positionCode }) => {
             setPlayers((current) => current.map((player) => (
-                player.id === playerId ? { ...player, position: positionCode } : player
+                String(player.id) === String(playerId) ? { ...player, position: positionCode } : player
             )));
         },
     });

@@ -156,6 +156,9 @@
     margin-right: 4px;
     cursor: pointer;
     transition: transform 0.15s ease;
+    padding: 0;
+    border: 0;
+    background: transparent;
 }
 
 .infoIconWrapper:hover {

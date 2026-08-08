@@ -1,24 +1,24 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
 import { useQueryClient } from "@tanstack/react-query";
-import {
-    apiRequest,
-} from "../services/apiClient";
+import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+
+import { endSession, getCurrentUser } from "../features/auth/api";
 import { getPostLoginRoute } from "../Utils/routing";
 
 const AuthContext = createContext(null);
 const SESSION_EXPIRED_MESSAGE = "Your session expired. Please sign in again.";
 
-export const AuthProvider = ({ children, initialUser = null }) => {
+export const AuthProvider = ({ children, initialUser = null, invalidSession = false }) => {
     const [user, setUser] = useState(initialUser);
     const [sessionMessage, setSessionMessage] = useState("");
     const router = useRouter();
     const queryClient = useQueryClient();
+    const invalidSessionCleanupStarted = useRef(false);
 
     const refreshCurrentUser = useCallback(async () => {
-        const currentUser = await apiRequest("/api/auth/me");
+        const currentUser = await getCurrentUser();
         setUser(currentUser);
         return currentUser;
     }, []);
@@ -33,6 +33,21 @@ export const AuthProvider = ({ children, initialUser = null }) => {
         window.localStorage.removeItem("token");
         window.localStorage.removeItem("loggedUser");
     }, []);
+
+    useEffect(() => {
+        if (!invalidSession || invalidSessionCleanupStarted.current) return;
+
+        invalidSessionCleanupStarted.current = true;
+        endSession()
+            .catch((error) => {
+                console.warn("Unable to clear the expired server session.", error);
+            })
+            .finally(() => {
+                resetSession();
+                setSessionMessage(SESSION_EXPIRED_MESSAGE);
+                router.refresh();
+            });
+    }, [invalidSession, resetSession, router]);
 
     useEffect(() => {
         if (typeof window === "undefined") return undefined;
@@ -62,7 +77,7 @@ export const AuthProvider = ({ children, initialUser = null }) => {
     const logout = useCallback(async (options = {}) => {
         const { redirect = true, message = "" } = options;
         try {
-            await apiRequest("/api/auth/logout", { method: "POST", auth: false });
+            await endSession();
         } catch (error) {
             console.warn("The server logout request failed; clearing the local UI session.", error);
         } finally {
@@ -82,22 +97,39 @@ export const AuthProvider = ({ children, initialUser = null }) => {
         });
     }, []);
 
+    const clearSessionMessage = useCallback(() => {
+        setSessionMessage("");
+    }, []);
+
+    const value = useMemo(() => ({
+        user,
+        login,
+        logout,
+        updateUser,
+        refreshCurrentUser,
+        sessionMessage,
+        clearSessionMessage,
+    }), [
+        clearSessionMessage,
+        login,
+        logout,
+        refreshCurrentUser,
+        sessionMessage,
+        updateUser,
+        user,
+    ]);
+
     return (
-        <AuthContext.Provider value={{
-            user,
-            loading: false,
-            login,
-            logout,
-            updateUser,
-            refreshCurrentUser,
-            sessionMessage,
-            clearSessionMessage: () => setSessionMessage(""),
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
 
 export const useAuth = () => {
-    return useContext(AuthContext);
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error("useAuth must be used inside AuthProvider");
+    }
+    return context;
 };

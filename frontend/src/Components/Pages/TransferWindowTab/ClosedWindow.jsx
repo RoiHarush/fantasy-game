@@ -4,29 +4,19 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { useAuth } from "../../../Context/AuthContext";
-import { useGameweek } from "../../../features/gameweeks/useGameweek";
-import { useLeagueUsers } from "../../../features/league/useLeague";
 import {
     useOpenTransferWindow,
     useTransferOrder,
 } from "../../../features/transfer-window/useTransferWindow";
+import { formatAppDateTime } from "../../../lib/dateTime";
 import { Button } from "../../../shared/ui/Button";
 import Style from "../../../Styles/ClosedWindow.module.css";
 import TurnOrderModal from "./TurnOrderModal";
 
-function parseDateArray(dateArray) {
-    if (!Array.isArray(dateArray) || dateArray.length < 5) return null;
-    return new Date(dateArray[0], dateArray[1] - 1, dateArray[2], dateArray[3], dateArray[4]);
-}
-
-function ClosedWindow() {
-    const { nextGameweek } = useGameweek();
-    const { user } = useAuth();
+function ClosedWindow({ user, users, nextGameweek }) {
     const router = useRouter();
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const usersQuery = useLeagueUsers(user?.leagueId);
     const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
     const openWindow = useOpenTransferWindow(user?.leagueId, nextGameweek?.id, {
         onSuccess: () => {
@@ -34,17 +24,15 @@ function ClosedWindow() {
         },
     });
 
-    const users = usersQuery.data ?? [];
-    const usersById = new Map(users.map(item => [item.id, item]));
-    const currentOrder = (orderQuery.data ?? []).map(id => usersById.get(id)?.name ?? `User ${id}`);
+    const currentOrder = (orderQuery.data ?? []).map((id) => (
+        users.find((item) => String(item.id) === String(id))?.name ?? `User ${id}`
+    ));
     const useTwoOrderColumns = currentOrder.length > 7;
     const orderSplitIndex = useTwoOrderColumns ? Math.ceil(currentOrder.length / 2) : currentOrder.length;
     const orderColumns = useTwoOrderColumns
         ? [currentOrder.slice(0, orderSplitIndex), currentOrder.slice(orderSplitIndex)]
         : [currentOrder];
-    const transferWindowOpens = nextGameweek?.transferOpenTime
-        ? parseDateArray(nextGameweek.transferOpenTime)
-        : new Date();
+    const transferWindowOpens = formatAppDateTime(nextGameweek?.transferOpenTime);
 
     return (
         <div className={Style.closedWindow}>
@@ -54,7 +42,7 @@ function ClosedWindow() {
             {nextGameweek && (
                 <>
                     <p className={Style.message}>The window will open in:</p>
-                    <span>{formatDateTime(transferWindowOpens)}</span>
+                    <p>{transferWindowOpens || "Schedule not available"}</p>
                 </>
             )}
 
@@ -62,8 +50,10 @@ function ClosedWindow() {
                 <h3 className="mb-4 border-b border-white/10 pb-2 text-center text-lg font-bold text-brand-cyan">
                     Upcoming Transfer Order (GW {nextGameweek?.id})
                 </h3>
-                {orderQuery.isPending || usersQuery.isPending ? (
+                {orderQuery.isPending ? (
                     <p className="p-3 text-center text-sm text-slate-400" role="status">Loading transfer order…</p>
+                ) : orderQuery.error ? (
+                    <p className="p-3 text-center text-sm text-red-300" role="alert">Transfer order could not be loaded.</p>
                 ) : currentOrder.length > 0 ? (
                     <div className={`mt-3 grid gap-3 ${useTwoOrderColumns ? "sm:grid-cols-2" : "grid-cols-1"}`}>
                         {orderColumns.map((column, columnIndex) => {
@@ -116,22 +106,6 @@ function ClosedWindow() {
             </Dialog.Root>
         </div>
     );
-}
-
-function formatDateTime(date) {
-    if (!date) return "";
-    const dateStr = date.toLocaleDateString("en-GB", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-    }).replace(/,/g, "");
-    const timeStr = date.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-        timeZone: "Asia/Jerusalem",
-    });
-    return <p>{dateStr} {timeStr}</p>;
 }
 
 export default ClosedWindow;

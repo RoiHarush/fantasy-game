@@ -36,6 +36,8 @@ public class PlayerEntity {
 
     private String photo;
 
+    private LocalDateTime firstSeenAt;
+
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -75,4 +77,6 @@ public class PlayerEntity {
 
     public String getPhoto() { return photo; }
     public void setPhoto(String photo) { this.photo = photo; }
+    public LocalDateTime getFirstSeenAt() { return firstSeenAt; }
+    public void setFirstSeenAt(LocalDateTime firstSeenAt) { this.firstSeenAt = firstSeenAt; }
 }

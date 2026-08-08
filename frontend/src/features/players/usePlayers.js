@@ -7,7 +7,7 @@ import { useAuth } from "../../Context/AuthContext";
 import { queryKeys } from "../../lib/query/keys";
 import { getPlayers } from "./api";
 
-export function usePlayers() {
+export function usePlayers(options = {}) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const queryKey = useMemo(
@@ -17,7 +17,7 @@ export function usePlayers() {
     const query = useQuery({
         queryKey,
         queryFn: ({ signal }) => getPlayers({ signal }),
-        enabled: Boolean(user?.id),
+        enabled: Boolean(user?.id && (options.enabled ?? true)),
         staleTime: 60_000,
     });
     const setPlayers = useCallback((updater) => {

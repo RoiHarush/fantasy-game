@@ -6,8 +6,10 @@ import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useAdminPenalties } from "../../../features/league-admin/useLeagueAdmin";
 
 const PenaltyManager = ({ maintenanceLeagueId = null }) => {
-    const { players } = usePlayers();
-    const { currentGameweek } = useGameweek();
+    const playersQuery = usePlayers();
+    const { players } = playersQuery;
+    const gameweekState = useGameweek();
+    const { currentGameweek } = gameweekState;
     const [selectedGameweek, setSelectedGameweek] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const gameweek = selectedGameweek ?? currentGameweek?.id;
@@ -22,17 +24,12 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
         return findPlayers(players, searchTerm);
     }, [players, searchTerm]);
 
-    const handlePunish = async (playerId, action) => {
-        if (!canEdit) {
-            alert("Cannot edit penalties: Gameweek is locked/not calculated yet.");
-            return;
-        }
-        try {
-            await updatePenalty.mutateAsync({ playerId, action });
-            setSearchTerm("");
-        } catch {
-            alert("Failed to update penalty");
-        }
+    const handlePunish = (playerId, action) => {
+        if (!canEdit) return;
+        updatePenalty.mutate(
+            { playerId, action },
+            { onSuccess: () => setSearchTerm("") },
+        );
     };
 
     const styles = {
@@ -76,7 +73,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
                 <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginTop: '4px' }}>
                     Record penalties for Gameweek {gameweek}
                 </div>
-                <select style={styles.select} value={gameweek || ''} onChange={(e) => setSelectedGameweek(Number(e.target.value))}>
+                <select aria-label="Penalties gameweek" style={styles.select} value={gameweek || ''} onChange={(e) => setSelectedGameweek(Number(e.target.value))}>
                     {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, i) => (
                         <option key={i + 1} value={i + 1}>Gameweek {i + 1}</option>
                     ))}
@@ -89,6 +86,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
                 </svg>
                 <input
                     type="text"
+                    aria-label="Search player for penalty adjustment"
                     placeholder={canEdit ? "Search player to punish..." : "Gameweek is locked"}
                     style={{ ...styles.searchInput, opacity: canEdit ? 1 : 0.6, cursor: canEdit ? 'text' : 'not-allowed' }}
                     value={searchTerm}
@@ -104,6 +102,7 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
                                     <span style={{ fontWeight: '600' }}>{player.viewName}</span>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={() => handlePunish(player.id, "ADD")}
                                     style={{ ...styles.addBtn, opacity: canEdit ? 1 : 0.5, cursor: canEdit ? 'pointer' : 'not-allowed' }}
                                     disabled={!canEdit}
@@ -117,8 +116,14 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
             </div>
 
             <div>
+                {(playersQuery.error || penaltiesQuery.error || updatePenalty.error || gameweekState.error) && (
+                    <p role="alert">
+                        {playersQuery.error?.message || penaltiesQuery.error?.message || updatePenalty.error?.message || gameweekState.error}
+                    </p>
+                )}
+                {(playersQuery.isPending || penaltiesQuery.isPending || gameweekState.loading) && <p role="status">Loading penalties…</p>}
                 {punishedPlayers.map((item) => {
-                    const realPlayer = players.find(p => p.id === item.playerId);
+                    const realPlayer = players.find((player) => String(player.id) === String(item.playerId));
                     const position = realPlayer ? realPlayer.position : "MID";
 
                     return (
@@ -138,11 +143,15 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
+                                    type="button"
+                                    aria-label={`Remove one penalty conceded from ${item.viewName}`}
                                     onClick={() => handlePunish(item.playerId, "REMOVE")}
                                     disabled={!canEdit}
                                     style={{ ...styles.roundBtn, backgroundColor: 'white', color: '#ef4444', border: '1px solid #fecaca', opacity: canEdit ? 1 : 0.5 }}
                                 >-</button>
                                 <button
+                                    type="button"
+                                    aria-label={`Add one penalty conceded to ${item.viewName}`}
                                     onClick={() => handlePunish(item.playerId, "ADD")}
                                     disabled={!canEdit}
                                     style={{ ...styles.roundBtn, backgroundColor: '#ef4444', color: 'white', opacity: canEdit ? 1 : 0.5 }}

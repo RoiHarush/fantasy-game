@@ -10,6 +10,11 @@
 }
 
 .modal {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 3001;
+    transform: translate(-50%, -50%);
     background: #f4f4f4;
     width: 100%;
     max-width: 800px;
@@ -19,7 +24,6 @@
 
     border-radius: 12px;
     overflow: hidden;
-    position: relative;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;

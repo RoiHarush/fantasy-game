@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useAuth } from "../../../Context/AuthContext";
 import { usePlayers } from "../../../features/players/usePlayers";
+import { groupTransferActions } from "../../../features/status/model";
 import { useTransferHistory } from "../../../features/transfer-window/useTransferWindow";
 import styles from "../../../Styles/TransferActivityList.module.css";
 
@@ -19,19 +20,18 @@ function TransferActivityList({ gameWeekId }) {
         () => new Map(players.map(player => [player.id, player])),
         [players]
     );
-    const grouped = useMemo(() => actions.reduce((result, action) => {
-        const key = action.userId;
-        if (!result.has(key)) result.set(key, { name: action.userName, actions: [] });
-        result.get(key).actions.push(action);
-        return result;
-    }, new Map()), [actions]);
+    const grouped = useMemo(() => groupTransferActions(actions), [actions]);
 
     const playerName = id => playersById.get(id)?.viewName || `Player #${id}`;
 
     return (
         <section className={styles.section}>
-            <h3>Gameweek {gameWeekId} transfers</h3>
-            {actions.length === 0 ? (
+            <h3>{gameWeekId ? `Gameweek ${gameWeekId} transfers` : "Gameweek transfers"}</h3>
+            {historyQuery.isPending ? (
+                <p className={styles.empty} role="status">Loading transfers…</p>
+            ) : historyQuery.error ? (
+                <p className={styles.empty} role="alert">Transfer history is temporarily unavailable.</p>
+            ) : actions.length === 0 ? (
                 <p className={styles.empty}>No transfers have been completed for this gameweek.</p>
             ) : (
                 <div className={styles.users}>

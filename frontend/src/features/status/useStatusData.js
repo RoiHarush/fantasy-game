@@ -3,13 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "../../lib/query/keys";
-import { fetchDailyStatus } from "../../services/gameweekService";
-import { getDreamTeam, getIrStatuses, getPlayersOfTheWeek } from "./api";
+import { getDailyStatus, getDreamTeam, getIrStatuses, getPlayersOfTheWeek } from "./api";
 
 export function useDailyStatus(gameweekId, enabled = true) {
     return useQuery({
         queryKey: queryKeys.dailyStatus(gameweekId),
-        queryFn: () => fetchDailyStatus(gameweekId),
+        queryFn: ({ signal }) => getDailyStatus(gameweekId, { signal }),
         enabled: Boolean(enabled && gameweekId),
     });
 }

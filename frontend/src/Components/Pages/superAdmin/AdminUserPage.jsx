@@ -18,14 +18,15 @@ export default function AdminUsersPage() {
             <h1 className="mb-5 text-3xl font-bold">Users Management</h1>
             <div className="overflow-x-auto rounded-xl bg-white shadow-md">
                 <table className="w-full border-collapse text-left">
+                    <caption className="sr-only">Registered fantasy game users</caption>
                     <thead className="bg-slate-100">
                         <tr>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">User ID</th>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">Username</th>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">Role</th>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">Fantasy Team</th>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">Total Points</th>
-                            <th className="border-b-2 border-slate-200 px-4 py-3">Actions</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">User ID</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">Username</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">Role</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">Fantasy Team</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">Total Points</th>
+                            <th scope="col" className="border-b-2 border-slate-200 px-4 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,6 +42,9 @@ export default function AdminUsersPage() {
                                 </td>
                             </tr>
                         ))}
+                        {(usersQuery.data ?? []).length === 0 && (
+                            <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-500">No users found.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>

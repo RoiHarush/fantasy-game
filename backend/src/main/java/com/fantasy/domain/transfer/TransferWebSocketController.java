@@ -6,6 +6,7 @@ import org.springframework.stereotype.Controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 @Controller
 public class TransferWebSocketController {
@@ -21,7 +22,8 @@ public class TransferWebSocketController {
                                       List<Integer> initialOrder,
                                       List<Integer> turnOrder,
                                       Map<Integer, Integer> turnsUsed,
-                                      Map<Integer, Integer> totalTurns) {
+                                      Map<Integer, Integer> totalTurns,
+                                      TransferWindowType windowType) {
         Map<String, Object> event = new HashMap<>();
         event.put("event", "window_opened");
         event.put("leagueId", leagueId);
@@ -30,6 +32,12 @@ public class TransferWebSocketController {
         event.put("turnOrder", turnOrder);
         event.put("turnsUsed", turnsUsed);
         event.put("totalTurns", totalTurns);
+        event.put("isDraftMode", windowType != TransferWindowType.TRANSFER);
+        event.put("draftType", windowType == TransferWindowType.DRAFT
+                ? DraftType.INITIAL.name()
+                : windowType == TransferWindowType.SUPPLEMENTAL
+                    ? DraftType.SUPPLEMENTAL.name()
+                    : null);
         send(leagueId, event);
     }
 
@@ -100,6 +108,25 @@ public class TransferWebSocketController {
 
     public void sendWindowClosedEvent(long leagueId) {
         send(leagueId, new TransferEvent("window_closed", leagueId, null, null, null, null));
+    }
+
+    public void sendDraftScheduledEvent(long leagueId,
+                                        LocalDateTime scheduledTime,
+                                        DraftType draftType) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("event", "draft_scheduled");
+        event.put("leagueId", leagueId);
+        event.put("scheduledTime", scheduledTime);
+        event.put("draftType", draftType.name());
+        send(leagueId, event);
+    }
+
+    public void sendDraftCancelledEvent(long leagueId, DraftType draftType) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("event", "draft_cancelled");
+        event.put("leagueId", leagueId);
+        event.put("draftType", draftType.name());
+        send(leagueId, event);
     }
 
     public void sendInfoMessage(long leagueId, int userId, String message) {

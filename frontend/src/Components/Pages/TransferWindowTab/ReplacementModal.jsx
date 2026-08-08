@@ -3,25 +3,24 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMemo } from "react";
 
-import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useSquad } from "../../../features/squad/useSquad";
-import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
 import { useTransferPlayer } from "../../../features/transfer-window/useTransferWindow";
 import Style from "../../../Styles/TransferModal.module.css";
 import TeamShortNames from "../../../Utils/teamNameMap";
 import PlayerKit from "../../General/PlayerKit";
 
-function ReplacementModal({ playerIn, user, onClose, players }) {
-    const { nextGameweek } = useGameweek();
+function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, nextGameweek }) {
     const squadQuery = useSquad(user?.id, nextGameweek?.id);
     const squad = squadQuery.data;
-    const allFixtures = useAllTeamFixtures() ?? {};
     const samePositionPlayers = useMemo(() => {
         if (!playerIn) return [];
         const lineupIds = Object.values(squad?.startingLineup || {}).flat();
         const benchIds = Object.values(squad?.bench || {});
         const squadIds = [...lineupIds, ...benchIds];
-        return players.filter(player => squadIds.includes(player.id) && player.position === playerIn.position);
+        return players.filter((player) => (
+            squadIds.some((id) => String(id) === String(player.id))
+            && player.position === playerIn.position
+        ));
     }, [playerIn, players, squad]);
     const transfer = useTransferPlayer({
         leagueId: user?.leagueId,
@@ -33,7 +32,7 @@ function ReplacementModal({ playerIn, user, onClose, players }) {
 
     function renderFixtureCell(teamId, offsetGameweek) {
         const gameweekId = (nextGameweek?.id || 0) + offsetGameweek;
-        const fixture = allFixtures[teamId]?.[gameweekId];
+        const fixture = fixturesByTeam[teamId]?.[gameweekId];
         if (!fixture) return <td key={offsetGameweek} className={Style.hideOnMobile}>-</td>;
         const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
         const fullName = match ? match[1].trim() : fixture.opponent;
@@ -51,7 +50,7 @@ function ReplacementModal({ playerIn, user, onClose, players }) {
                     {squadQuery.isPending ? <p role="status">Loading squad data…</p> : squadQuery.error || !squad ? (
                         <>
                             <p role="alert">{squadQuery.error?.message || "Could not load squad for this user."}</p>
-                            <Dialog.Close asChild><button className={Style.closeBtn}>Close</button></Dialog.Close>
+                            <Dialog.Close asChild><button type="button" className={Style.closeBtn}>Close</button></Dialog.Close>
                         </>
                     ) : (
                         <>
@@ -64,7 +63,7 @@ function ReplacementModal({ playerIn, user, onClose, players }) {
                                             <td className={Style.playerCell}><PlayerKit teamId={playerIn.teamId} type={playerIn.position === "GK" ? "gk" : "field"} className={Style["player-shirt"]} /><span>{playerIn.viewName}</span></td>
                                             <td>{playerIn.points}</td>
                                             {renderFixtureCell(playerIn.teamId, 0)}{renderFixtureCell(playerIn.teamId, 1)}{renderFixtureCell(playerIn.teamId, 2)}
-                                            <td><Dialog.Close asChild><button className={Style.cancelBtnSmall}>Cancel</button></Dialog.Close></td>
+                                            <td><Dialog.Close asChild><button type="button" className={Style.cancelBtnSmall}>Cancel</button></Dialog.Close></td>
                                         </tr></tbody>
                                     </table>
                                 </div>
@@ -82,14 +81,14 @@ function ReplacementModal({ playerIn, user, onClose, players }) {
                                                     <td className={Style.playerCell}><PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={Style["player-shirt"]} /><span>{player.viewName}</span></td>
                                                     <td>{player.points}</td>
                                                     {renderFixtureCell(player.teamId, 0)}{renderFixtureCell(player.teamId, 1)}{renderFixtureCell(player.teamId, 2)}
-                                                    <td><button className={Style.replaceBtn} onClick={() => transfer.mutate(player.id)} disabled={transfer.isPending}>{transfer.isPending ? "Saving…" : "Replace"}</button></td>
+                                                    <td><button type="button" className={Style.replaceBtn} onClick={() => transfer.mutate(player.id)} disabled={transfer.isPending}>{transfer.isPending ? "Saving…" : "Replace"}</button></td>
                                                 </tr>
                                             )) : <tr><td colSpan="6" className="text-center text-slate-400">No players in this position.</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <Dialog.Close asChild><button className={Style.closeBtn}>Close</button></Dialog.Close>
+                            <Dialog.Close asChild><button type="button" className={Style.closeBtn}>Close</button></Dialog.Close>
                         </>
                     )}
                 </Dialog.Content>

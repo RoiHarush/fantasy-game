@@ -31,7 +31,12 @@ public class LeagueAdminDraftController {
     @PostMapping("/schedule")
     public ResponseEntity<String> schedule(@RequestBody DraftScheduleRequest request,
                                            Authentication authentication) {
-        draftService.scheduleDraft(userId(authentication), request.scheduledTime());
+        draftService.scheduleDraft(
+                userId(authentication),
+                request.scheduledTime(),
+                request.orderSource(),
+                request.order()
+        );
         return ResponseEntity.ok("Draft scheduled");
     }
 
@@ -42,8 +47,14 @@ public class LeagueAdminDraftController {
     }
 
     @PostMapping("/open-now")
-    public ResponseEntity<String> openNow(Authentication authentication) {
-        draftService.runSnakeDraftForUser(userId(authentication));
+    public ResponseEntity<String> openNow(
+            @RequestBody(required = false) DraftOpenRequest request,
+            Authentication authentication) {
+        draftService.runDraftForUser(
+                userId(authentication),
+                request == null ? DraftOrderSource.TRANSFER_ORDER : request.orderSource(),
+                request == null ? java.util.List.of() : request.order()
+        );
         return ResponseEntity.ok("Draft started now!");
     }
 
@@ -51,5 +62,10 @@ public class LeagueAdminDraftController {
         return Integer.parseInt(authentication.getName());
     }
 
-    public record DraftScheduleRequest(LocalDateTime scheduledTime) {}
+    public record DraftScheduleRequest(LocalDateTime scheduledTime,
+                                       DraftOrderSource orderSource,
+                                       java.util.List<Integer> order) {}
+
+    public record DraftOpenRequest(DraftOrderSource orderSource,
+                                   java.util.List<Integer> order) {}
 }

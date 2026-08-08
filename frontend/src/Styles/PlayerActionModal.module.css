@@ -12,6 +12,11 @@
 }
 
 .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 3001;
+    transform: translate(-50%, -50%);
     background: #fff;
     border-radius: 12px;
     width: 100%;
@@ -25,12 +30,12 @@
 
 @keyframes fadeIn {
     from {
-        transform: scale(0.95);
+        transform: translate(-50%, -50%) scale(0.95);
         opacity: 0;
     }
 
     to {
-        transform: scale(1);
+        transform: translate(-50%, -50%) scale(1);
         opacity: 1;
     }
 }

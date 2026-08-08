@@ -6,7 +6,7 @@ function UserSidebar({ user }) {
     return (
         <SidebarContainer>
             <UserClubBlock
-                title={user.fantasyTeam}
+                title={user.fantasyTeamName}
                 logoPath={user.logoPath}
             />
             <PointsSummaryBlock user={user} />

@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { useAuth } from "../../../Context/AuthContext";
 import { useDraftConfig } from "../../../features/draft/useDraft";
 import DraftCountdown from "../DraftRoomTab/DraftCountdown";
 
 export default function PreDraftStatus({ league }) {
-    const { user } = useAuth();
-    const configQuery = useDraftConfig(user?.leagueId, { retry: false });
+    const leagueId = league?.id ?? league?.leagueId;
+    const configQuery = useDraftConfig(leagueId, { retry: false });
     const config = configQuery.data;
 
     const scheduledTime = config?.scheduledTime || config?.scheduled_time;
@@ -19,7 +18,13 @@ export default function PreDraftStatus({ league }) {
             </p>
             <div style={{ padding: "1.5rem", margin: "1.5rem 0", borderRadius: 14, background: "#f4f1ff", textAlign: "center" }}>
                 <p style={{ marginTop: 0 }}>Initial draft countdown</p>
-                <strong style={{ fontSize: "2rem" }}><DraftCountdown value={scheduledTime} /></strong>
+                {configQuery.isPending ? (
+                    <p role="status">Loading draft schedule…</p>
+                ) : configQuery.error ? (
+                    <p role="alert">The draft schedule is temporarily unavailable.</p>
+                ) : (
+                    <strong style={{ fontSize: "2rem" }}><DraftCountdown value={scheduledTime} /></strong>
+                )}
             </div>
             <p>
                 The game screens will unlock automatically after every manager has drafted a complete 15-player squad.

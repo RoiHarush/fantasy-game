@@ -19,7 +19,7 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(8, flyway.migrate().migrationsExecuted);
+        assertEquals(9, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
@@ -28,6 +28,11 @@ class DatabaseMigrationTest {
             assertTrue(hasColumn(metadata, "TEAMS", "CODE"));
             assertTrue(hasColumn(metadata, "TEAMS", "ASSET_CODE"));
             assertTrue(hasColumn(metadata, "LEAGUE_TRANSFER_ACTIONS", "PLAYER_IN_ID"));
+            assertTrue(hasColumn(metadata, "PLAYERS", "FIRST_SEEN_AT"));
+            assertTrue(hasColumn(metadata, "LEAGUE_DRAFT_CONFIG", "DRAFT_TYPE"));
+            assertTrue(hasColumn(metadata, "LEAGUE_DRAFT_CONFIG", "ORDER_SOURCE"));
+            assertTrue(hasTable(metadata, "LEAGUE_DRAFT_CONFIG_ORDER"));
+            assertTrue(hasTable(metadata, "LEAGUE_SUPPLEMENTAL_DRAFT_POOL"));
             assertFalse(hasColumn(metadata, "PLAYERS", "OWNER_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "STATE"));
 
@@ -49,6 +54,13 @@ class DatabaseMigrationTest {
                               String column) throws Exception {
         try (var columns = metadata.getColumns(null, "PUBLIC", table, column)) {
             return columns.next();
+        }
+    }
+
+    private boolean hasTable(java.sql.DatabaseMetaData metadata,
+                             String table) throws Exception {
+        try (var tables = metadata.getTables(null, "PUBLIC", table, new String[] {"TABLE"})) {
+            return tables.next();
         }
     }
 }

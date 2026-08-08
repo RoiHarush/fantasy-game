@@ -75,22 +75,32 @@ export const AdminService = {
         return true;
     },
 
-    scheduleDraft: async (time, leagueId = null) => {
+    scheduleDraft: async (time, leagueId = null, options = {}) => {
         const endpoint = leagueId
             ? `/api/admin/leagues/${leagueId}/draft/schedule`
             : `/api/league-admin/draft/schedule`;
         await apiRequest(endpoint, {
             method: "POST",
-            body: { scheduledTime: time },
+            body: {
+                scheduledTime: time,
+                orderSource: options.orderSource,
+                order: options.order,
+            },
         });
         return true;
     },
 
-    openDraftNow: async (leagueId = null) => {
+    openDraftNow: async (leagueId = null, options = {}) => {
         const endpoint = leagueId
             ? `/api/admin/leagues/${leagueId}/draft/open-now`
             : `/api/league-admin/draft/open-now`;
-        await apiRequest(endpoint, { method: "POST" });
+        await apiRequest(endpoint, {
+            method: "POST",
+            body: {
+                orderSource: options.orderSource,
+                order: options.order,
+            },
+        });
         return true;
     }
 };

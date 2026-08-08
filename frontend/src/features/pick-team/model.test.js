@@ -26,4 +26,12 @@ describe("pick-team model", () => {
         expect(isFirstPickStarting(squad)).toBe(true);
         expect(isFirstPickStarting({ ...squad, firstPickId: 13 })).toBe(false);
     });
+
+    it("does not count a duplicated player as an additional squad member", () => {
+        const duplicated = {
+            ...squad,
+            bench: { ...squad.bench, third: 14 },
+        };
+        expect(countSquadPlayers(duplicated)).toBe(14);
+    });
 });

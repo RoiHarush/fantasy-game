@@ -1,173 +1,128 @@
-import { useGameweek } from "../../features/gameweeks/useGameweek";
+import Image from "next/image";
+
+import { buildPlayerStatRow, buildPlayerStatTotals } from "../../features/players/statsModel";
+import { formatAppDateTime } from "../../lib/dateTime";
 import Style from "../../Styles/PlayerInfoContent.module.css";
 
-function PlayerInfoContent({ player, tab, teamFixtures, matchStats }) {
-    const { currentGameweek, nextGameweek } = useGameweek();
-    const fixtureBoundary = currentGameweek?.id ?? Math.max(0, (nextGameweek?.id ?? 1) - 1);
+const STAT_COLUMNS = [
+    ["points", "/Icons/total.svg", "PTS", "Total points"],
+    ["minutes", "/Icons/stopwatch.svg", "MP", "Minutes"],
+    ["goals", "/Icons/goal.svg", "GS", "Goals"],
+    ["assists", "/Icons/assist.svg", "A", "Assists"],
+    ["cleanSheets", "/Icons/clean-sheets.svg", "CS", "Clean sheets"],
+    ["goalsConceded", "/Icons/goal-conceded.svg", "GC", "Goals conceded"],
+    ["ownGoals", "/Icons/own-goal.svg", "OG", "Own goals"],
+    ["penaltiesSaved", "/Icons/penalty-saved.svg", "PS", "Penalties saved"],
+    ["penaltiesMissed", "/Icons/penalty-missed.svg", "PM", "Penalties missed"],
+    ["penaltiesConceded", "/Icons/penalty-conceded.svg", "PC", "Penalties conceded"],
+    ["yellowCards", "/Icons/yellow-card.svg", "YC", "Yellow cards"],
+    ["redCards", "/Icons/red-card.svg", "RC", "Red cards"],
+];
 
-    const getFdrColor = (difficulty) => {
-        switch (difficulty) {
-            case 1: return "#00FF87";
-            case 2: return "#00D36D";
-            case 3: return "#EDEDED";
-            case 4: return "#FF2670";
-            case 5: return "#7B004D";
-            default: return "#ccc";
-        }
-    };
+function PlayerInfoContent({ tab, teamFixtures, matchStats, fixtureBoundary = 0 }) {
+    if (tab === "fixtures") {
+        const fixtures = Object.entries(teamFixtures ?? {})
+            .sort(([firstGameweek], [secondGameweek]) => Number(firstGameweek) - Number(secondGameweek))
+            .filter(([gameweek]) => Number(gameweek) > fixtureBoundary);
 
-    if (!player) return null;
+        return (
+            <div className={Style.tableWrapper}>
+                <table className={Style.table}>
+                    <caption className="sr-only">Upcoming player fixtures</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col" className={Style.hideOnMobile}>Date</th>
+                            <th scope="col" className={Style.gwColumn}>GW</th>
+                            <th scope="col">Opponent</th>
+                            <th scope="col">FDR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {fixtures.map(([gameweek, fixture]) => {
+                            const difficulty = fixture.difficulty || 3;
+                            return (
+                                <tr key={gameweek}>
+                                    <td className={`${Style.dateCell} ${Style.hideOnMobile}`}>
+                                        {formatAppDateTime(fixture.kickoffTime) || "-"}
+                                    </td>
+                                    <td className={Style.gwColumn}>{gameweek}</td>
+                                    <td>{fixture.opponent || "Unknown"}</td>
+                                    <td>
+                                        <span
+                                            className={`${Style.fdrBox} ${difficulty <= 3 ? Style.lightFdr : Style.darkFdr}`}
+                                            style={{ backgroundColor: getFdrColor(difficulty) }}
+                                        >
+                                            {difficulty}
+                                        </span>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {fixtures.length === 0 && (
+                            <tr><td colSpan="4">No upcoming fixtures.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        );
+    }
+
+    const rows = [...(matchStats ?? [])]
+        .sort((first, second) => first.gameweekId - second.gameweekId)
+        .map((match) => buildPlayerStatRow(match, teamFixtures));
+    const totals = buildPlayerStatTotals(rows);
 
     return (
         <div className={Style.tableWrapper}>
-            {tab === "fixtures" ? (
-                <table className={Style.table}>
-                    <thead>
-                        <tr>
-                            <th className={Style.hideOnMobile}>Date</th>
-                            <th className={Style.gwColumn}>GW</th>
-                            <th>Opponent</th>
-                            <th>FDR</th>
+            <table className={Style.statsTable}>
+                <caption className="sr-only">Player statistics by gameweek</caption>
+                <thead>
+                    <tr className={Style.iconRow} aria-hidden="true">
+                        <th /><th />
+                        {STAT_COLUMNS.map(([field, icon, , label]) => (
+                            <th key={field}><Image src={icon} alt="" width={24} height={24} title={label} /></th>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th scope="col" className={Style.gwColumn}>GW</th>
+                        <th scope="col">OPP</th>
+                        {STAT_COLUMNS.map(([field, , abbreviation, label]) => (
+                            <th scope="col" key={field}><abbr title={label}>{abbreviation}</abbr></th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row) => (
+                        <tr key={row.key}>
+                            <td className={Style.gwColumn}><strong>{row.gameweek}</strong></td>
+                            <td>{row.opponent}</td>
+                            {STAT_COLUMNS.map(([field]) => (
+                                <td key={field} className={field === "points" ? Style.pointsCell : undefined}>
+                                    {field === "points" ? <strong>{row[field]}</strong> : row[field]}
+                                </td>
+                            ))}
                         </tr>
-                    </thead>
-                    <tbody>
-                        {Object.entries(teamFixtures || {})
-                            .sort(([gwA], [gwB]) => Number(gwA) - Number(gwB))
-                            .filter(([gw]) => Number(gw) > fixtureBoundary)
-                            .map(([gw, fixture]) => {
-                                const opponent = fixture.opponent || "Unknown";
-                                const difficulty = fixture.difficulty || 3;
-
-                                const date = fixture.kickoffTime
-                                    ? new Date(fixture.kickoffTime).toLocaleString("en-GB", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        hour12: false
-                                    }).replace(",", "")
-                                    : "-";
-
-                                return (
-                                    <tr key={gw}>
-                                        <td className={`${Style.dateCell} ${Style.hideOnMobile}`}>{date}</td>
-                                        <td className={Style.gwColumn}>{gw}</td>
-                                        <td>{opponent}</td>
-                                        <td>
-                                            <span
-                                                className={`${Style.fdrBox} ${difficulty <= 3 ? Style.lightFdr : Style.darkFdr}`}
-                                                style={{ backgroundColor: getFdrColor(difficulty) }}
-                                            >
-                                                {difficulty}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                    </tbody>
-                </table>
-            ) : (
-                <table className={Style.statsTable}>
-                    <thead>
-                        <tr className={Style.iconRow}>
-                            <th></th>
-                            <th></th>
-
-                            <th><img src="/Icons/total.svg" alt="Total" /></th>
-                            <th><img src="/Icons/stopwatch.svg" alt="Minutes" /></th>
-                            <th><img src="/Icons/goal.svg" alt="Goals" /></th>
-                            <th><img src="/Icons/assist.svg" alt="Assists" /></th>
-                            <th><img src="/Icons/clean-sheets.svg" alt="Clean Sheets" /></th>
-                            <th><img src="/Icons/goal-conceded.svg" alt="Goals Conceded" /></th>
-                            <th><img src="/Icons/own-goal.svg" alt="Own Goal" /></th>
-                            <th><img src="/Icons/penalty-saved.svg" alt="Penalty Saved" /></th>
-                            <th><img src="/Icons/penalty-missed.svg" alt="Penalty Missed" /></th>
-                            <th><img src="/Icons/penalty-conceded.svg" alt="Penalty Conceded" /></th>
-                            <th><img src="/Icons/yellow-card.svg" alt="Yellow Card" /></th>
-                            <th><img src="/Icons/red-card.svg" alt="Red Card" /></th>
-                        </tr>
-
-                        <tr>
-                            <th className={Style.gwColumn}>GW</th>
-                            <th>OPP</th>
-                            <th>PTS</th>
-                            <th>MP</th>
-                            <th>GS</th>
-                            <th>A</th>
-                            <th>CS</th>
-                            <th>GC</th>
-                            <th>OG</th>
-                            <th>PS</th>
-                            <th>PM</th>
-                            <th>PC</th>
-                            <th>YC</th>
-                            <th>RC</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {matchStats
-                            .sort((a, b) => a.gameweekId - b.gameweekId)
-                            .map((stat, idx) => {
-                                const gw = stat.gameweekId;
-                                const fixture = teamFixtures?.[gw] || teamFixtures?.[String(gw)];
-                                const opponent = fixture?.opponent || "Unknown";
-
-                                const totalRow = stat.stats.find(s => s.name === "Total");
-                                const minutes = stat.stats.find(s => s.name === "Minutes played")?.value || "0";
-                                const goals = stat.stats.find(s => s.name === "Goals")?.value || "0";
-                                const assists = stat.stats.find(s => s.name === "Assists")?.value || "0";
-                                const cs = stat.stats.find(s => s.name === "Clean sheets") ? 1 : 0;
-                                const gc = stat.stats.find(s => s.name === "Goals conceded")?.value || "0";
-                                const yc = stat.stats.find(s => s.name === "Yellow cards")?.value || "0";
-                                const rc = stat.stats.find(s => s.name === "Red cards")?.value || "0";
-                                const pm = stat.stats.find(s => s.name === "Penalties missed")?.value || "0";
-                                const og = stat.stats.find(s => s.name === "Own goals")?.value || "0";
-                                const ps = stat.stats.find(s => s.name === "Penalties saved")?.value || "0";
-                                const pc = stat.stats.find(s => s.name === "Penalties conceded")?.value || "0";
-
-                                return (
-                                    <tr key={idx}>
-                                        <td className={Style.gwColumn}><strong>{gw}</strong></td>
-                                        <td>{opponent}</td>
-
-                                        <td className={Style.pointsCell}><strong>{totalRow?.points || 0}</strong></td>
-                                        <td>{minutes}</td>
-                                        <td>{goals}</td>
-                                        <td>{assists}</td>
-                                        <td>{cs}</td>
-                                        <td>{gc}</td>
-                                        <td>{og}</td>
-                                        <td>{ps}</td>
-                                        <td>{pm}</td>
-                                        <td>{pc}</td>
-                                        <td>{yc}</td>
-                                        <td>{rc}</td>
-                                    </tr>
-                                );
-                            })}
-
-                        <tr className={Style.totalRow}>
-                            <td></td>
-                            <td><strong>Total</strong></td>
-
-                            <td><strong>{matchStats.reduce((a, b) => a + (b.stats.find(s => s.name === "Total")?.points || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Minutes played")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Goals")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Assists")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.filter(m => m.stats.find(s => s.name === "Clean sheets")).length}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Goals conceded")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Own goals")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties saved")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties missed")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Penalties conceded")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Yellow cards")?.value || 0), 0)}</strong></td>
-                            <td><strong>{matchStats.reduce((a, b) => a + parseInt(b.stats.find(s => s.name === "Red cards")?.value || 0), 0)}</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
-            )}
+                    ))}
+                    {rows.length === 0 && <tr><td colSpan="14">No match statistics yet.</td></tr>}
+                    <tr className={Style.totalRow}>
+                        <td /><td><strong>Total</strong></td>
+                        {STAT_COLUMNS.map(([field]) => <td key={field}><strong>{totals[field]}</strong></td>)}
+                    </tr>
+                </tbody>
+            </table>
         </div>
     );
+}
+
+function getFdrColor(difficulty) {
+    const colors = {
+        1: "#00FF87",
+        2: "#00D36D",
+        3: "#EDEDED",
+        4: "#FF2670",
+        5: "#7B004D",
+    };
+    return colors[difficulty] ?? "#ccc";
 }
 
 export default PlayerInfoContent;

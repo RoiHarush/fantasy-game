@@ -39,6 +39,40 @@ export default function RealtimeTransferSync() {
                 (previous) => updateTransferNotice(previous, event),
             );
 
+            if (event.event === "draft_scheduled") {
+                const supplementalDraft = event.draftType === "SUPPLEMENTAL";
+                queryClient.setQueryData(queryKeys.draftConfig(leagueId), (current) => ({
+                    ...current,
+                    scheduledTime: event.scheduledTime,
+                    processed: false,
+                    draftType: event.draftType,
+                }));
+                queryClient.setQueryData(queryKeys.currentLeague(leagueId), (current) => (
+                    current ? {
+                        ...current,
+                        status: supplementalDraft ? "ACTIVE" : "DRAFT_SCHEDULED",
+                    } : current
+                ));
+                updateUser({
+                    leagueStatus: supplementalDraft ? "ACTIVE" : "DRAFT_SCHEDULED",
+                });
+                queryClient.invalidateQueries({ queryKey: queryKeys.draftConfig(leagueId) });
+            }
+
+            if (event.event === "draft_cancelled") {
+                const supplementalDraft = event.draftType === "SUPPLEMENTAL";
+                queryClient.setQueryData(queryKeys.draftConfig(leagueId), null);
+                queryClient.setQueryData(queryKeys.currentLeague(leagueId), (current) => (
+                    current ? {
+                        ...current,
+                        status: supplementalDraft ? "ACTIVE" : "WAITING_FOR_DRAFT",
+                    } : current
+                ));
+                updateUser({
+                    leagueStatus: supplementalDraft ? "ACTIVE" : "WAITING_FOR_DRAFT",
+                });
+            }
+
             if (event.event === "window_opened") {
                 queryClient.invalidateQueries({ queryKey: windowKey });
             }
@@ -68,6 +102,9 @@ export default function RealtimeTransferSync() {
                         queryKey: queryKeys.squad(user.id, gameweekId),
                     });
                 }
+                queryClient.invalidateQueries({ queryKey: queryKeys.gameweeks });
+                queryClient.invalidateQueries({ queryKey: queryKeys.leagueStandings(leagueId) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.players(leagueId) });
                 updateUser({ leagueStatus: "ACTIVE" });
             }
         });

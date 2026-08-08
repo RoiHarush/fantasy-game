@@ -30,7 +30,9 @@ public class SeasonResetService {
             "league_player_assist_adjustments",
             "league_locked_players",
             "league_player_positions",
+            "league_supplemental_draft_pool",
             "league_transfer_windows",
+            "league_draft_config_order",
             "league_draft_config",
             "league_scoring_rules",
             "user_squads",
@@ -59,6 +61,7 @@ public class SeasonResetService {
             "gameweek_transfer_order",
             "league_transfer_windows",
             "league_transfer_actions",
+            "league_supplemental_draft_pool",
             "league_draft_config",
             "waiver_preferences"
     );

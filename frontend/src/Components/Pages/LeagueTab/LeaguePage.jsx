@@ -14,15 +14,15 @@ function LeaguePage() {
     const league = leagueQuery.data;
 
     if (leagueQuery.isPending) {
-        return <LoadingPage />
+        return <LoadingPage />;
     }
 
     if (leagueQuery.error) {
-        return <div role="alert">Failed to load league: {leagueQuery.error.message}</div>;
+        return <p role="alert">Failed to load league: {leagueQuery.error.message}</p>;
     }
 
     if (!league) {
-        return <div role="status">League data is not available.</div>;
+        return <p role="status">League data is not available.</p>;
     }
 
     return (

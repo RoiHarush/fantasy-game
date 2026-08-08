@@ -1,6 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 
-import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
 import styles from "../../../Styles/PlayerOfTheWeekBlock.module.css";
@@ -53,7 +52,7 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
 
     return (
         <div className={styles.carouselWrapper}>
-            <button className={styles.arrow} onClick={() => move(-1)} aria-label="Previous gameweek">‹</button>
+            <button type="button" className={styles.arrow} onClick={() => move(-1)} aria-label="Previous gameweek">‹</button>
             <div className={styles.viewport}>
                 <div
                     className={styles.track}
@@ -75,36 +74,40 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                     ))}
                 </div>
             </div>
-            <button className={styles.arrow} onClick={() => move(1)} aria-label="Next gameweek">›</button>
+            <button type="button" className={styles.arrow} onClick={() => move(1)} aria-label="Next gameweek">›</button>
         </div>
     );
 }
 
-function PlayerOfTheWeekBlock() {
-    const { currentGameweek } = useGameweek();
+function PlayerOfTheWeekBlock({ gameweekId }) {
     const { players } = usePlayers();
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const mobile = useSyncExternalStore(subscribeToMobileViewport, getMobileSnapshot, () => false);
     const playersOfWeekQuery = usePlayersOfTheWeek();
     const records = playersOfWeekQuery.data?.playersOfTheWeek ?? [];
+    const selectedPlayerDetails = selectedPlayer
+        ? getPlayerById(players, selectedPlayer.id)
+        : null;
 
     return (
         <div className={styles.block}>
-            <div className={styles.header}><span className={styles.icon}>★</span>2025/26 Player of the Week</div>
+            <div className={styles.header}><span className={styles.icon}>★</span>Player of the Week</div>
             {playersOfWeekQuery.isPending ? (
                 <p role="status">Loading players of the week…</p>
+            ) : playersOfWeekQuery.error ? (
+                <p role="alert">Players of the week are temporarily unavailable.</p>
             ) : (
                 <PlayerCarousel
-                    key={`${mobile}-${currentGameweek?.id}-${playersOfWeekQuery.dataUpdatedAt}`}
+                    key={`${mobile}-${gameweekId}-${playersOfWeekQuery.dataUpdatedAt}`}
                     records={records}
-                    gameweekId={currentGameweek?.id}
+                    gameweekId={gameweekId}
                     mobile={mobile}
                     onSelect={setSelectedPlayer}
                 />
             )}
-            {selectedPlayer && (
+            {selectedPlayerDetails && (
                 <PlayerInfoModal
-                    player={getPlayerById(players, selectedPlayer.id)}
+                    player={selectedPlayerDetails}
                     onClose={() => setSelectedPlayer(null)}
                 />
             )}

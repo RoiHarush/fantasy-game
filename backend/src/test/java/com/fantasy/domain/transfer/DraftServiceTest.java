@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -85,6 +86,51 @@ class DraftServiceTest {
         assertEquals(true, config.isProcessed());
     }
 
+    @Test
+    void schedulingDraftPublishesTheCountdownImmediately() {
+        Fixture fixture = fixture(2, List.of(manager(10), manager(20)));
+        LocalDateTime scheduledTime = LocalDateTime.now().plusMinutes(10);
+
+        fixture.service.scheduleDraftForLeague(7L, scheduledTime);
+
+        verify(fixture.webSocketController).sendDraftScheduledEvent(
+                7L,
+                scheduledTime,
+                DraftType.INITIAL
+        );
+        assertEquals(LeagueStatus.DRAFT_SCHEDULED, fixture.league.getStatus());
+    }
+
+    @Test
+    void activeLeagueOpensATwoRoundSupplementalDraftWithoutResettingSquads() {
+        Fixture fixture = fixture(2, List.of(manager(10), manager(20)));
+        fixture.league.setStatus(LeagueStatus.ACTIVE);
+        when(fixture.poolService.playerIds(7L)).thenReturn(Set.of(501));
+        when(fixture.gameWeekService.getNextGameweek())
+                .thenReturn(new GameWeekDto(20, "Gameweek 20", null, null, "UPCOMING", null, false, false));
+        DraftConfig config = new DraftConfig();
+        config.setLeague(fixture.league);
+        config.setDraftType(DraftType.SUPPLEMENTAL);
+        config.setOrderSource(DraftOrderSource.MANUAL);
+        config.setManualOrder(List.of(10, 20, 20, 10));
+        when(fixture.configRepo.findByLeague_Id(7L)).thenReturn(Optional.of(config));
+
+        fixture.service.runSnakeDraft(7L);
+
+        verify(fixture.marketService).openSupplementalDraftWindow(
+                7L,
+                20,
+                List.of(10, 20, 20, 10)
+        );
+        verify(fixture.marketService, never()).openDraftWindow(
+                eq(7L),
+                eq(20),
+                org.mockito.ArgumentMatchers.anyList()
+        );
+        assertEquals(LeagueStatus.ACTIVE, fixture.league.getStatus());
+        assertEquals(true, config.isProcessed());
+    }
+
     private static Fixture fixture(int capacity, List<UserGameDataEntity> managers) {
         UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
         TransferMarketService marketService = mock(TransferMarketService.class);
@@ -93,6 +139,8 @@ class DraftServiceTest {
         LeagueRepository leagueRepo = mock(LeagueRepository.class);
         LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
         UserSquadRepository squadRepo = mock(UserSquadRepository.class);
+        TransferWebSocketController webSocketController = mock(TransferWebSocketController.class);
+        SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
 
         LeagueEntity league = new LeagueEntity();
         league.setId(7L);
@@ -107,9 +155,11 @@ class DraftServiceTest {
         when(configRepo.findByLeague_Id(7L)).thenReturn(Optional.empty());
 
         DraftService service = new DraftService(
-                gameDataRepo, marketService, gameWeekService, configRepo, leagueRepo, leagueAccess, squadRepo
+                gameDataRepo, marketService, gameWeekService, configRepo, leagueRepo, leagueAccess,
+                squadRepo, webSocketController, poolService
         );
-        return new Fixture(service, marketService, gameWeekService, configRepo, league, managers);
+        return new Fixture(service, marketService, gameWeekService, configRepo, league, managers,
+                webSocketController, poolService);
     }
 
     private static UserGameDataEntity manager(int userId) {
@@ -126,6 +176,8 @@ class DraftServiceTest {
             GameWeekService gameWeekService,
             DraftConfigRepository configRepo,
             LeagueEntity league,
-            List<UserGameDataEntity> managers
+            List<UserGameDataEntity> managers,
+            TransferWebSocketController webSocketController,
+            SupplementalDraftPoolService poolService
     ) {}
 }

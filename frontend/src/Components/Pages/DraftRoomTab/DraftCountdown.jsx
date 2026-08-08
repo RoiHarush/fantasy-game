@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 function toDate(value) {
     if (!value) return null;
@@ -10,9 +10,10 @@ function toDate(value) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export default function DraftCountdown({ value }) {
+export default function DraftCountdown({ value, onElapsed }) {
     const target = useMemo(() => toDate(value), [value]);
     const [now, setNow] = useState(null);
+    const elapsedNotificationSent = useRef(false);
 
     useEffect(() => {
         if (!target) return undefined;
@@ -24,10 +25,22 @@ export default function DraftCountdown({ value }) {
         };
     }, [target]);
 
+    const hasElapsed = Boolean(target && now !== null && target.getTime() <= now);
+
+    useEffect(() => {
+        elapsedNotificationSent.current = false;
+    }, [target]);
+
+    useEffect(() => {
+        if (!hasElapsed || elapsedNotificationSent.current) return;
+        elapsedNotificationSent.current = true;
+        onElapsed?.();
+    }, [hasElapsed, onElapsed]);
+
     if (!target) return <span>Waiting for the league admin to schedule the draft</span>;
     if (now === null) return <span>Loading draft countdown...</span>;
     const remaining = Math.max(0, target.getTime() - now);
-    if (remaining === 0) return <span>Draft is starting…</span>;
+    if (remaining === 0) return <span role="status">Draft is starting…</span>;
 
     const totalSeconds = Math.floor(remaining / 1000);
     const days = Math.floor(totalSeconds / 86400);
@@ -36,7 +49,7 @@ export default function DraftCountdown({ value }) {
     const seconds = totalSeconds % 60;
 
     return (
-        <span aria-live="polite">
+        <span role="timer" aria-live="off">
             {days > 0 ? `${days}d ` : ""}
             {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
         </span>
