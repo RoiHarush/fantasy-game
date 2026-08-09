@@ -72,6 +72,15 @@ public class LeagueTransferWindowEntity {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
+            name = "league_transfer_window_canonical_order",
+            joinColumns = @JoinColumn(name = "window_id")
+    )
+    @OrderColumn(name = "turn_position")
+    @Column(name = "user_id", nullable = false)
+    private List<Integer> canonicalOrder = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
             name = "league_transfer_window_ir_order",
             joinColumns = @JoinColumn(name = "window_id")
     )
@@ -151,6 +160,17 @@ public class LeagueTransferWindowEntity {
         closedAt = LocalDateTime.now();
     }
 
+    public void finishRegularPhase() {
+        if (status != TransferWindowStatus.OPEN || phase != TransferWindowPhase.REGULAR) return;
+        regularCursor = turnOrder.size();
+        if (irOrder.isEmpty()) {
+            close();
+        } else {
+            phase = TransferWindowPhase.IR;
+            turnStartedAt = LocalDateTime.now();
+        }
+    }
+
     public List<Integer> remainingOrder() {
         List<Integer> activeOrder = phase == TransferWindowPhase.IR ? irOrder : turnOrder;
         int cursor = phase == TransferWindowPhase.IR ? irCursor : regularCursor;
@@ -161,6 +181,11 @@ public class LeagueTransferWindowEntity {
 
     public List<Integer> initialOrder() {
         return new ArrayList<>(new LinkedHashSet<>(turnOrder));
+    }
+
+    public List<Integer> canonicalInitialOrder() {
+        List<Integer> source = canonicalOrder.isEmpty() ? turnOrder : canonicalOrder;
+        return new ArrayList<>(new LinkedHashSet<>(source));
     }
 
     public Map<Integer, Integer> turnsUsed() {
@@ -192,6 +217,7 @@ public class LeagueTransferWindowEntity {
     public TransferWindowStatus getStatus() { return status; }
     public TransferWindowPhase getPhase() { return phase; }
     public List<Integer> getTurnOrder() { return turnOrder; }
+    public List<Integer> getCanonicalOrder() { return canonicalOrder; }
     public List<Integer> getIrOrder() { return irOrder; }
     public int getRegularCursor() { return regularCursor; }
     public int getIrCursor() { return irCursor; }
@@ -205,5 +231,8 @@ public class LeagueTransferWindowEntity {
     public void setWindowType(TransferWindowType windowType) { this.windowType = windowType; }
     public void setTurnOrder(List<Integer> turnOrder) {
         this.turnOrder = turnOrder == null ? new ArrayList<>() : new ArrayList<>(turnOrder);
+    }
+    public void setCanonicalOrder(List<Integer> canonicalOrder) {
+        this.canonicalOrder = canonicalOrder == null ? new ArrayList<>() : new ArrayList<>(canonicalOrder);
     }
 }

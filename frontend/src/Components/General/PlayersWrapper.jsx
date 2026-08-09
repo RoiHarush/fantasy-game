@@ -25,6 +25,12 @@ function PlayersWrapper({
     waiverSaving = false,
     waiverMessage = "",
     waiverGameweekId,
+    irWaiverEntries = [],
+    onIrWaiverEntriesChange,
+    onIrWaiverEntriesSave,
+    irWaiverDirty = false,
+    irWaiverSaving = false,
+    irWaiverMessage = "",
     draftedContent = null
 }) {
     const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +43,7 @@ function PlayersWrapper({
     const [filterByPosition, setFilterByPosition] = useState(null);
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [waiverCandidate, setWaiverCandidate] = useState(null);
+    const [waiverPlanType, setWaiverPlanType] = useState("REGULAR");
 
     const watchlistQuery = useWatchlist();
     const playersById = useMemo(() => new Map(players.map((player) => [String(player.id), player])), [players]);
@@ -44,6 +51,7 @@ function PlayersWrapper({
         ...Object.values(squad?.startingLineup || {}).flat(),
         ...Object.values(squad?.bench || {})
     ].filter(Boolean), [squad]);
+    const irPlayer = squad?.irId ? playersById.get(String(squad.irId)) : null;
     const eligibleOutgoing = waiverCandidate
         ? squadPlayerIds
             .map((id) => playersById.get(String(id)))
@@ -125,14 +133,17 @@ function PlayersWrapper({
 
             {activeButton === "Drafted" && draftedContent ? draftedContent : activeButton === "Waivers" ? (
                 <WaiverPlanPanel
-                    entries={waiverEntries}
+                    entries={waiverPlanType === "IR" ? irWaiverEntries : waiverEntries}
                     playersById={playersById}
-                    onChange={onWaiverEntriesChange}
-                    onSave={onWaiverEntriesSave}
-                    hasChanges={waiverDirty}
-                    saving={waiverSaving}
-                    message={waiverMessage}
+                    onChange={waiverPlanType === "IR" ? onIrWaiverEntriesChange : onWaiverEntriesChange}
+                    onSave={waiverPlanType === "IR" ? onIrWaiverEntriesSave : onWaiverEntriesSave}
+                    hasChanges={waiverPlanType === "IR" ? irWaiverDirty : waiverDirty}
+                    saving={waiverPlanType === "IR" ? irWaiverSaving : waiverSaving}
+                    message={waiverPlanType === "IR" ? irWaiverMessage : waiverMessage}
                     gameWeekId={waiverGameweekId}
+                    planType={waiverPlanType}
+                    onPlanTypeChange={setWaiverPlanType}
+                    hasIrPlan={Boolean(onIrWaiverEntriesChange)}
                 />
             ) : (
                 <PlayerTable
@@ -168,7 +179,10 @@ function PlayersWrapper({
                     eligibleOutgoing={eligibleOutgoing}
                     entries={waiverEntries}
                     onChange={onWaiverEntriesChange}
-                    saving={waiverSaving}
+                    irPlayer={irPlayer}
+                    irEntries={irWaiverEntries}
+                    onIrChange={onIrWaiverEntriesChange}
+                    saving={waiverSaving || irWaiverSaving}
                     onClose={() => setWaiverCandidate(null)}
                 />
             )}

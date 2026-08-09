@@ -12,20 +12,34 @@ export default function WaiverCandidateDialog({
     eligibleOutgoing,
     entries,
     onChange,
+    irPlayer,
+    irEntries = [],
+    onIrChange,
     saving,
     onClose,
 }) {
     const [playerOutId, setPlayerOutId] = useState("");
+    const [planType, setPlanType] = useState("REGULAR");
     const isMobile = useMediaQuery("(max-width: 767px)");
+    const canAddToIr = Boolean(
+        irPlayer
+        && onIrChange
+        && candidate.position === irPlayer.position,
+    );
 
     async function addPriority() {
+        if (planType === "IR") {
+            if (!canAddToIr) return;
+            await onIrChange([...irEntries, {
+                playerInId: candidate.id,
+                playerOutId: irPlayer.id,
+            }]);
+            onClose();
+            return;
+        }
         if (!playerOutId) return;
         const entry = { playerInId: candidate.id, playerOutId: Number(playerOutId) };
-        const alreadyPlanned = entries.some(
-            (item) => String(item.playerInId) === String(entry.playerInId)
-                && String(item.playerOutId) === String(entry.playerOutId),
-        );
-        if (!alreadyPlanned) await onChange([...entries, entry]);
+        await onChange([...entries, entry]);
         onClose();
     }
 
@@ -40,9 +54,13 @@ export default function WaiverCandidateDialog({
                         : { maxHeight: "90vh" }}
                 >
                     <header className="relative shrink-0 border-b border-app-border bg-component-gradient px-4 py-3 text-brand-ink sm:px-6 sm:py-5">
-                        <Dialog.Title className="pr-10 text-base font-extrabold sm:pr-12 sm:text-xl">Add waiver</Dialog.Title>
+                        <Dialog.Title className="pr-10 text-base font-extrabold sm:pr-12 sm:text-xl">
+                            {planType === "IR" ? "Add IR priority" : "Add waiver"}
+                        </Dialog.Title>
                         <Dialog.Description className="mt-0.5 pr-9 text-[0.75rem] font-semibold text-brand-ink/70 sm:mt-1 sm:pr-10 sm:text-sm">
-                            Choose the {candidate.position} player leaving your squad.
+                            {planType === "IR"
+                                ? `Prepare a ${candidate.position} replacement for your IR slot.`
+                                : `Choose the ${candidate.position} player leaving your squad.`}
                         </Dialog.Description>
                         <Dialog.Close asChild>
                             <button type="button" className="absolute top-2.5 right-2.5 grid size-8 place-items-center rounded-lg border border-white/40 bg-white/35 transition hover:bg-white/60 focus-visible:outline-2 focus-visible:outline-brand-ink sm:top-4 sm:right-4 sm:size-10" aria-label="Close waiver dialog">
@@ -52,6 +70,26 @@ export default function WaiverCandidateDialog({
                     </header>
 
                     <div className="min-h-0 overflow-y-auto p-3 sm:p-6">
+                        {canAddToIr && (
+                            <div className="mb-3 grid grid-cols-2 rounded-control border border-app-border bg-app-surface-muted p-1 sm:mb-5">
+                                {[
+                                    ["REGULAR", "Transfer waiver"],
+                                    ["IR", "IR replacement"],
+                                ].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        className={`rounded-lg px-2 py-2 text-xs font-extrabold transition sm:text-sm ${planType === value
+                                            ? "bg-app-surface-elevated text-app-accent-foreground shadow-sm"
+                                            : "text-app-muted hover:text-app-foreground"
+                                        }`}
+                                        onClick={() => setPlanType(value)}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 rounded-xl border border-emerald-400/35 bg-emerald-500/10 p-2 sm:gap-3 sm:p-3">
                             <PlayerKit
                                 teamId={candidate.teamId}
@@ -67,7 +105,7 @@ export default function WaiverCandidateDialog({
                             <ArrowLeftRight aria-hidden="true" className="ml-auto text-app-muted" size={21} />
                         </div>
 
-                        <fieldset className="mt-3 sm:mt-5">
+                        {planType === "REGULAR" ? <fieldset className="mt-3 sm:mt-5">
                             <legend className="mb-1.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-app-muted sm:mb-2 sm:text-xs">Outgoing player</legend>
                             <div className="grid gap-2">
                                 {eligibleOutgoing.map((player) => {
@@ -104,15 +142,19 @@ export default function WaiverCandidateDialog({
                                     Your squad has no eligible {candidate.position} replacement.
                                 </p>
                             )}
-                        </fieldset>
+                        </fieldset> : (
+                            <div className="mt-3 rounded-xl border border-app-accent-border bg-app-accent-surface p-3 text-xs text-app-accent-foreground sm:mt-5 sm:text-sm">
+                                If every saved IR priority is unavailable, the server signs the highest-scoring legal {candidate.position} automatically.
+                            </div>
+                        )}
                     </div>
 
                     <footer className="flex shrink-0 gap-2 border-t border-app-border bg-app-surface px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
                         <Dialog.Close asChild>
                             <button type="button" className="h-9 flex-1 whitespace-nowrap rounded-control border border-app-border bg-app-surface-muted px-3 text-xs font-bold text-app-foreground transition hover:bg-app-accent-hover sm:h-11 sm:flex-none sm:px-4 sm:text-sm">Cancel</button>
                         </Dialog.Close>
-                        <button type="button" className="h-9 flex-1 whitespace-nowrap rounded-control bg-component-gradient px-3 text-xs font-extrabold text-brand-ink shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:flex-none sm:px-5 sm:text-sm" disabled={!playerOutId || saving} onClick={addPriority}>
-                            {saving ? "Saving..." : "Add waiver"}
+                        <button type="button" className="h-9 flex-1 whitespace-nowrap rounded-control bg-component-gradient px-3 text-xs font-extrabold text-brand-ink shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:flex-none sm:px-5 sm:text-sm" disabled={(planType === "REGULAR" && !playerOutId) || saving} onClick={addPriority}>
+                            {saving ? "Saving..." : planType === "IR" ? "Add IR priority" : "Add waiver"}
                         </button>
                     </footer>
                 </Dialog.Content>

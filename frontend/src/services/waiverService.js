@@ -15,3 +15,19 @@ export async function saveWaiverPlan(gameWeekId, entries) {
         }
     });
 }
+
+export async function fetchIrWaiverPlan(gameWeekId) {
+    return apiRequest(`/api/waivers/${gameWeekId}/ir`);
+}
+
+export async function saveIrWaiverPlan(gameWeekId, entries) {
+    return apiRequest(`/api/waivers/${gameWeekId}/ir`, {
+        method: "PUT",
+        body: {
+            entries: entries.map(entry => ({
+                playerInId: entry.playerInId,
+                playerOutId: entry.playerOutId ?? null,
+            })),
+        },
+    });
+}

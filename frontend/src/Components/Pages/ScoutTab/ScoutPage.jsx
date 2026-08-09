@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useAuth } from "../../../Context/AuthContext";
 import { useSquad } from "../../../features/squad/useSquad";
-import { useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
+import { useIrWaiverPlan, useWaiverPlan } from "../../../features/waivers/useWaiverPlan";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { useTeams } from "../../../features/teams/useTeams";
 import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
@@ -23,10 +23,19 @@ function ScoutPage() {
         dirty: false,
         message: "",
     });
+    const [irWaiverEditState, setIrWaiverEditState] = useState({
+        gameweekId: null,
+        dirty: false,
+        message: "",
+    });
     const hasUpcomingSquad = Boolean(user?.leagueId && nextGameweek?.id);
     const waiversEnabled = hasUpcomingSquad && user?.leagueStatus === "ACTIVE";
     const squadQuery = useSquad(user?.id, nextGameweek?.id, { enabled: hasUpcomingSquad });
     const waiverPlan = useWaiverPlan(waiversEnabled ? nextGameweek?.id : null);
+    const hasActiveIrPlayer = Boolean(squadQuery.data?.irId);
+    const irWaiverPlan = useIrWaiverPlan(
+        waiversEnabled && hasActiveIrPlayer ? nextGameweek?.id : null,
+    );
     const playersQuery = usePlayers();
     const teamsQuery = useTeams();
     const fixturesQuery = useAllTeamFixtures(teamsQuery.teams);
@@ -35,6 +44,11 @@ function ScoutPage() {
         && waiverEditState.dirty;
     const waiverMessage = waiverEditState.gameweekId === nextGameweek?.id
         ? waiverEditState.message
+        : "";
+    const irWaiverDirty = irWaiverEditState.gameweekId === nextGameweek?.id
+        && irWaiverEditState.dirty;
+    const irWaiverMessage = irWaiverEditState.gameweekId === nextGameweek?.id
+        ? irWaiverEditState.message
         : "";
 
     function updateWaiverEntries(nextEntries) {
@@ -66,15 +80,46 @@ function ScoutPage() {
         }
     }
 
+    function updateIrWaiverEntries(nextEntries) {
+        if (!nextGameweek?.id || !hasActiveIrPlayer) return;
+        irWaiverPlan.setEntries(nextEntries);
+        setIrWaiverEditState({
+            gameweekId: nextGameweek.id,
+            dirty: true,
+            message: "",
+        });
+    }
+
+    async function saveIrWaiverEntries() {
+        if (!nextGameweek?.id || !hasActiveIrPlayer) return;
+        setIrWaiverEditState((current) => ({ ...current, message: "" }));
+        try {
+            await irWaiverPlan.saveEntries(irWaiverPlan.entries);
+            setIrWaiverEditState({
+                gameweekId: nextGameweek.id,
+                dirty: false,
+                message: "",
+            });
+        } catch (saveError) {
+            setIrWaiverEditState({
+                gameweekId: nextGameweek.id,
+                dirty: true,
+                message: saveError.message || "The IR waiver plan could not be saved.",
+            });
+        }
+    }
+
     const loading = gameweeksLoading
         || playersQuery.isPending
         || teamsQuery.isPending
         || fixturesQuery.isPending
         || (hasUpcomingSquad && squadQuery.isPending)
-        || (waiversEnabled && waiverPlan.loading);
+        || (waiversEnabled && waiverPlan.loading)
+        || (waiversEnabled && hasActiveIrPlayer && irWaiverPlan.loading);
     const error = gameweeksError
         || squadQuery.error?.message
         || waiverPlan.loadError?.message
+        || irWaiverPlan.loadError?.message
         || playersQuery.error?.message
         || teamsQuery.error?.message
         || fixturesQuery.error?.message;
@@ -120,6 +165,12 @@ function ScoutPage() {
                     waiverSaving={waiverPlan.saving}
                     waiverMessage={waiverMessage}
                     waiverGameweekId={nextGameweek?.id}
+                    irWaiverEntries={irWaiverPlan.entries}
+                    onIrWaiverEntriesChange={hasActiveIrPlayer ? updateIrWaiverEntries : undefined}
+                    onIrWaiverEntriesSave={hasActiveIrPlayer ? saveIrWaiverEntries : undefined}
+                    irWaiverDirty={irWaiverDirty}
+                    irWaiverSaving={irWaiverPlan.saving}
+                    irWaiverMessage={irWaiverMessage}
                 />
             }
             right={sidebar}

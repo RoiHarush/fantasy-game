@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, GripVertical, Save, Tras
 
 import PlayerKit from "../../General/PlayerKit";
 
-function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, saving, message, gameWeekId }) {
+function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, saving, message, gameWeekId, planType = "REGULAR", onPlanTypeChange, hasIrPlan = false }) {
     const move = (from, to) => {
         if (to < 0 || to >= entries.length || from === to) return;
         const reordered = [...entries];
@@ -19,9 +19,13 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
             <header className="flex flex-wrap items-start justify-between gap-3 border-b border-app-border pb-4">
                 <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-app-accent-foreground">Gameweek {gameWeekId}</p>
-                    <h2 className="mt-1 text-base font-extrabold text-app-foreground sm:text-xl">Waiver plan</h2>
+                    <h2 className="mt-1 text-base font-extrabold text-app-foreground sm:text-xl">
+                        {planType === "IR" ? "IR replacement plan" : "Waiver plan"}
+                    </h2>
                     <p className="mt-1 hidden max-w-2xl text-sm text-app-muted sm:block">
-                        These moves run only if you are offline when your transfer turn begins.
+                        {planType === "IR"
+                            ? "Your first legal priority is signed while offline; otherwise the highest-scoring legal player is selected."
+                            : "These moves run only if you are offline when your transfer turn begins."}
                     </p>
                 </div>
                 <button
@@ -38,6 +42,27 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                 </button>
             </header>
 
+            {hasIrPlan && (
+                <div className="mt-4 grid grid-cols-2 rounded-control border border-app-border bg-app-surface-muted p-1">
+                    {[
+                        ["REGULAR", "Transfer waivers"],
+                        ["IR", "IR replacements"],
+                    ].map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            className={`rounded-lg px-3 py-2 text-xs font-extrabold transition sm:text-sm ${planType === value
+                                ? "bg-app-surface-elevated text-app-accent-foreground shadow-sm"
+                                : "text-app-muted hover:text-app-foreground"
+                            }`}
+                            onClick={() => onPlanTypeChange?.(value)}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {message && (
                 <p className="mt-3 rounded-control border border-app-danger-border bg-app-danger-surface p-3 text-sm text-app-danger-foreground" role="alert">
                     {message}
@@ -50,7 +75,7 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                     const outgoing = getPlayer(entry.playerOutId);
                     return (
                         <li
-                            key={`${entry.playerInId}-${entry.playerOutId}`}
+                            key={`${entry.playerInId}-${entry.playerOutId}-${index}`}
                             draggable
                             className="grid min-h-12 cursor-grab select-none items-center gap-1 rounded-xl border border-app-border bg-app-surface-elevated p-1.5 shadow-sm transition hover:border-app-accent-border active:cursor-grabbing sm:min-h-16 sm:gap-2 sm:p-2"
                             style={{
@@ -95,17 +120,23 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                                 </div>
                             </div>
 
-                            <div
-                                className="grid min-w-0 items-center gap-0.5 sm:gap-2"
-                                style={{ gridTemplateColumns: "minmax(0, 1fr) 1.65rem minmax(0, 1fr)" }}
-                            >
-                                <WaiverPlayer player={incoming} fallback={playerName(entry.playerInId)} tone="incoming" />
-                                <span className="grid justify-items-center gap-0.5 text-app-muted" aria-label="Player exchange">
-                                    <ArrowLeft aria-hidden="true" size={15} className="text-emerald-500 sm:size-[19px]" strokeWidth={2.5} />
-                                    <ArrowRight aria-hidden="true" size={15} className="text-rose-500 sm:size-[19px]" strokeWidth={2.5} />
-                                </span>
-                                <WaiverPlayer player={outgoing} fallback={playerName(entry.playerOutId)} tone="outgoing" />
-                            </div>
+                            {planType === "IR" ? (
+                                <div className="min-w-0 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2 py-1.5">
+                                    <WaiverPlayer player={incoming} fallback={playerName(entry.playerInId)} tone="incoming" />
+                                </div>
+                            ) : (
+                                <div
+                                    className="grid min-w-0 items-center gap-0.5 sm:gap-2"
+                                    style={{ gridTemplateColumns: "minmax(0, 1fr) 1.65rem minmax(0, 1fr)" }}
+                                >
+                                    <WaiverPlayer player={incoming} fallback={playerName(entry.playerInId)} tone="incoming" />
+                                    <span className="grid justify-items-center gap-0.5 text-app-muted" aria-label="Player exchange">
+                                        <ArrowLeft aria-hidden="true" size={15} className="text-emerald-500 sm:size-[19px]" strokeWidth={2.5} />
+                                        <ArrowRight aria-hidden="true" size={15} className="text-rose-500 sm:size-[19px]" strokeWidth={2.5} />
+                                    </span>
+                                    <WaiverPlayer player={outgoing} fallback={playerName(entry.playerOutId)} tone="outgoing" />
+                                </div>
+                            )}
 
                             <button
                                 type="button"
@@ -122,8 +153,12 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
 
             {entries.length === 0 && (
                 <div className="mt-4 rounded-xl border border-dashed border-app-border bg-app-surface-muted px-4 py-10 text-center">
-                    <p className="font-bold text-app-foreground">No waiver priorities yet</p>
-                    <p className="mt-1 text-sm text-app-muted">Choose Waiver next to a player to prepare your first move.</p>
+                    <p className="font-bold text-app-foreground">No {planType === "IR" ? "IR " : ""}priorities yet</p>
+                    <p className="mt-1 text-sm text-app-muted">
+                        {planType === "IR"
+                            ? "Use Waiver next to a player in your IR position. The highest-scoring legal fallback is always available."
+                            : "Choose Waiver next to a player to prepare your first move."}
+                    </p>
                 </div>
             )}
         </section>

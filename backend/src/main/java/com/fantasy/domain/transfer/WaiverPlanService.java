@@ -16,17 +16,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Service
 public class WaiverPlanService {
 
-    private static final int MAX_PRIORITY_ENTRIES = 30;
-
     private final WaiverPreferenceRepository waiverRepository;
+    private final WaiverPlanProgressRepository progressRepository;
     private final LeagueTransferWindowRepository windowRepository;
     private final LeagueAccessService leagueAccessService;
     private final LeagueRepository leagueRepository;
@@ -36,6 +33,7 @@ public class WaiverPlanService {
     private final PlayerRepository playerRepository;
 
     public WaiverPlanService(WaiverPreferenceRepository waiverRepository,
+                             WaiverPlanProgressRepository progressRepository,
                              LeagueTransferWindowRepository windowRepository,
                              LeagueAccessService leagueAccessService,
                              LeagueRepository leagueRepository,
@@ -44,6 +42,7 @@ public class WaiverPlanService {
                              UserGameDataRepository gameDataRepository,
                              PlayerRepository playerRepository) {
         this.waiverRepository = waiverRepository;
+        this.progressRepository = progressRepository;
         this.windowRepository = windowRepository;
         this.leagueAccessService = leagueAccessService;
         this.leagueRepository = leagueRepository;
@@ -64,6 +63,20 @@ public class WaiverPlanService {
                                                 int userId,
                                                 int gameWeekId,
                                                 SaveWaiverPlanRequest request) {
+        return savePlanForUser(leagueId, userId, gameWeekId, request, WaiverPlanType.REGULAR);
+    }
+
+    @Transactional
+    public List<WaiverEntryDto> saveIrPlan(int userId, int gameWeekId, SaveWaiverPlanRequest request) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(userId);
+        return savePlanForUser(leagueId, userId, gameWeekId, request, WaiverPlanType.IR);
+    }
+
+    private List<WaiverEntryDto> savePlanForUser(long leagueId,
+                                                 int userId,
+                                                 int gameWeekId,
+                                                 SaveWaiverPlanRequest request,
+                                                 WaiverPlanType planType) {
         ensureWindowNotStarted(leagueId, gameWeekId);
         LeagueEntity league = leagueRepository.findById(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
@@ -72,40 +85,43 @@ public class WaiverPlanService {
         ensureLeagueMember(league, userId);
         GameWeekEntity gameWeek = gameWeekRepository.findById(gameWeekId)
                 .orElseThrow(() -> new IllegalArgumentException("GameWeek was not found"));
-        int nextGameWeekId = gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING")
-                .map(GameWeekEntity::getId)
-                .orElseThrow(() -> new IllegalStateException("No upcoming gameweek is available"));
-        if (gameWeek.getId() != nextGameWeekId) {
-            throw new IllegalStateException("Waiver plans can only be prepared for the next gameweek");
-        }
+        ensureNextGameWeek(gameWeek);
 
         List<WaiverEntryRequest> entries = request == null || request.entries() == null
                 ? List.of()
                 : request.entries();
-        if (entries.size() > MAX_PRIORITY_ENTRIES) {
-            throw new IllegalArgumentException("A waiver plan can contain at most 30 priority entries");
+        UserGameDataEntity gameData = gameDataRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User game data was not found"));
+        UserSquadEntity nextSquad = gameData.getNextSquad();
+        if (nextSquad == null) {
+            throw new IllegalArgumentException("Squad for the next gameweek was not found");
         }
-
-        UserSquadEntity nextSquad = gameDataRepository.findByUserId(userId)
-                .map(UserGameDataEntity::getNextSquad)
-                .orElse(null);
-        Set<String> uniquePairs = new HashSet<>();
+        Integer irPlayerId = planType == WaiverPlanType.IR ? requireIrPlayer(gameData, nextSquad) : null;
         List<WaiverPreferenceEntity> preferences = new ArrayList<>();
         for (int index = 0; index < entries.size(); index++) {
             WaiverEntryRequest entry = entries.get(index);
-            validateEntry(entry, league, nextSquad, uniquePairs);
+            int playerOutId = planType == WaiverPlanType.IR
+                    ? irPlayerId
+                    : requireRegularOutgoing(entry);
+            validateEntry(entry, playerOutId, league, nextSquad, planType);
             WaiverPreferenceEntity preference = new WaiverPreferenceEntity();
             preference.setLeague(league);
             preference.setUser(user);
             preference.setGameWeek(gameWeek);
             preference.setPriority(index + 1);
+            preference.setPlanType(planType);
             preference.setPlayerInId(entry.playerInId());
-            preference.setPlayerOutId(entry.playerOutId());
+            preference.setPlayerOutId(playerOutId);
             preferences.add(preference);
         }
 
-        waiverRepository.deleteByLeague_IdAndUser_IdAndGameWeek_Id(leagueId, userId, gameWeekId);
+        waiverRepository.deleteByLeague_IdAndUser_IdAndGameWeek_IdAndPlanType(
+                leagueId, userId, gameWeekId, planType
+        );
         waiverRepository.flush();
+        if (planType == WaiverPlanType.REGULAR) {
+            resetProgress(league, user, gameWeek);
+        }
         return waiverRepository.saveAll(preferences).stream().map(this::toDto).toList();
     }
 
@@ -117,13 +133,27 @@ public class WaiverPlanService {
 
     @Transactional(readOnly = true)
     public List<WaiverEntryDto> getPlanForUser(long leagueId, int userId, int gameWeekId) {
+        return getPlanForUser(leagueId, userId, gameWeekId, WaiverPlanType.REGULAR);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WaiverEntryDto> getIrPlan(int userId, int gameWeekId) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(userId);
+        return getPlanForUser(leagueId, userId, gameWeekId, WaiverPlanType.IR);
+    }
+
+    private List<WaiverEntryDto> getPlanForUser(long leagueId,
+                                                int userId,
+                                                int gameWeekId,
+                                                WaiverPlanType planType) {
         LeagueEntity league = leagueRepository.findById(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
         ensureLeagueMember(league, userId);
-        return waiverRepository.findByLeague_IdAndUser_IdAndGameWeek_IdOrderByPriorityAsc(
+        return waiverRepository.findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                         leagueId,
                         userId,
-                        gameWeekId
+                        gameWeekId,
+                        planType
                 )
                 .stream()
                 .map(this::toDto)
@@ -142,7 +172,22 @@ public class WaiverPlanService {
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
         ensureLeagueMember(league, userId);
         ensureWindowNotStarted(leagueId, gameWeekId);
-        waiverRepository.deleteByLeague_IdAndUser_IdAndGameWeek_Id(leagueId, userId, gameWeekId);
+        waiverRepository.deleteByLeague_IdAndUser_IdAndGameWeek_IdAndPlanType(
+                leagueId, userId, gameWeekId, WaiverPlanType.REGULAR
+        );
+        progressRepository.deleteByLeague_IdAndUser_IdAndGameWeek_Id(leagueId, userId, gameWeekId);
+    }
+
+    @Transactional
+    public void deleteIrPlan(int userId, int gameWeekId) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(userId);
+        LeagueEntity league = leagueRepository.findById(leagueId)
+                .orElseThrow(() -> new IllegalArgumentException("League was not found"));
+        ensureLeagueMember(league, userId);
+        ensureWindowNotStarted(leagueId, gameWeekId);
+        waiverRepository.deleteByLeague_IdAndUser_IdAndGameWeek_IdAndPlanType(
+                leagueId, userId, gameWeekId, WaiverPlanType.IR
+        );
     }
 
     private void ensureLeagueMember(LeagueEntity league, int userId) {
@@ -165,23 +210,20 @@ public class WaiverPlanService {
     }
 
     private void validateEntry(WaiverEntryRequest entry,
+                               int playerOutId,
                                LeagueEntity league,
                                UserSquadEntity nextSquad,
-                               Set<String> uniquePairs) {
-        if (entry == null || entry.playerInId() == null || entry.playerOutId() == null) {
-            throw new IllegalArgumentException("Each waiver entry requires incoming and outgoing players");
+                               WaiverPlanType planType) {
+        if (entry == null || entry.playerInId() == null) {
+            throw new IllegalArgumentException("Each waiver entry requires an incoming player");
         }
-        if (entry.playerInId().equals(entry.playerOutId())) {
+        if (entry.playerInId().equals(playerOutId)) {
             throw new IllegalArgumentException("Incoming and outgoing players must be different");
-        }
-        String pair = entry.playerInId() + ":" + entry.playerOutId();
-        if (!uniquePairs.add(pair)) {
-            throw new IllegalArgumentException("Duplicate waiver preference: " + pair);
         }
 
         PlayerEntity incoming = playerRepository.findById(entry.playerInId())
                 .orElseThrow(() -> new IllegalArgumentException("Incoming player was not found"));
-        PlayerEntity outgoing = playerRepository.findById(entry.playerOutId())
+        PlayerEntity outgoing = playerRepository.findById(playerOutId)
                 .orElseThrow(() -> new IllegalArgumentException("Outgoing player was not found"));
         if (league.isPlayerLocked(incoming.getId())) {
             throw new IllegalArgumentException("Incoming player is locked in this league");
@@ -189,9 +231,43 @@ public class WaiverPlanService {
         if (league.effectivePosition(incoming) != league.effectivePosition(outgoing)) {
             throw new IllegalArgumentException("Waiver players must have the same position");
         }
-        if (nextSquad != null && !containsRosterPlayer(nextSquad, outgoing.getId())) {
+        if (planType == WaiverPlanType.REGULAR && !containsRosterPlayer(nextSquad, outgoing.getId())) {
             throw new IllegalArgumentException("Outgoing player is not in your squad");
         }
+    }
+
+    private int requireRegularOutgoing(WaiverEntryRequest entry) {
+        if (entry == null || entry.playerOutId() == null) {
+            throw new IllegalArgumentException("Each regular waiver entry requires an outgoing player");
+        }
+        return entry.playerOutId();
+    }
+
+    private int requireIrPlayer(UserGameDataEntity gameData, UserSquadEntity squad) {
+        if (!Boolean.TRUE.equals(gameData.getActiveChips().get("IR")) || squad.getIrId() == null) {
+            throw new IllegalStateException("An active IR player is required to prepare an IR waiver plan");
+        }
+        return squad.getIrId();
+    }
+
+    private void ensureNextGameWeek(GameWeekEntity gameWeek) {
+        int nextGameWeekId = gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING")
+                .map(GameWeekEntity::getId)
+                .orElseThrow(() -> new IllegalStateException("No upcoming gameweek is available"));
+        if (gameWeek.getId() != nextGameWeekId) {
+            throw new IllegalStateException("Waiver plans can only be prepared for the next gameweek");
+        }
+    }
+
+    private void resetProgress(LeagueEntity league, UserEntity user, GameWeekEntity gameWeek) {
+        WaiverPlanProgressEntity progress = progressRepository
+                .findByLeague_IdAndUser_IdAndGameWeek_Id(league.getId(), user.getId(), gameWeek.getId())
+                .orElseGet(WaiverPlanProgressEntity::new);
+        progress.setLeague(league);
+        progress.setUser(user);
+        progress.setGameWeek(gameWeek);
+        progress.setNextPriority(1);
+        progressRepository.save(progress);
     }
 
     private boolean containsRosterPlayer(UserSquadEntity squad, int playerId) {

@@ -54,6 +54,7 @@ public class TransferMarketService {
     private final LeagueAccessService leagueAccessService;
     private final LeagueTransferWindowRepository windowRepo;
     private final WaiverPreferenceRepository waiverPreferenceRepo;
+    private final WaiverPlanProgressRepository waiverProgressRepo;
     private final LeagueTransferActionRepository transferActionRepo;
     private final WebSocketPresenceService presenceService;
     private final TransferWebSocketController webSocketController;
@@ -69,6 +70,7 @@ public class TransferMarketService {
                                  LeagueAccessService leagueAccessService,
                                  LeagueTransferWindowRepository windowRepo,
                                  WaiverPreferenceRepository waiverPreferenceRepo,
+                                 WaiverPlanProgressRepository waiverProgressRepo,
                                  LeagueTransferActionRepository transferActionRepo,
                                  WebSocketPresenceService presenceService,
                                  TransferWebSocketController webSocketController,
@@ -83,6 +85,7 @@ public class TransferMarketService {
         this.leagueAccessService = leagueAccessService;
         this.windowRepo = windowRepo;
         this.waiverPreferenceRepo = waiverPreferenceRepo;
+        this.waiverProgressRepo = waiverProgressRepo;
         this.transferActionRepo = transferActionRepo;
         this.presenceService = presenceService;
         this.webSocketController = webSocketController;
@@ -167,8 +170,11 @@ public class TransferMarketService {
         window.setGameWeek(gameWeek);
         window.setWindowType(type);
         window.setTurnOrder(order);
+        if (window.getCanonicalOrder().isEmpty()) {
+            window.setCanonicalOrder(order);
+        }
         List<Integer> eligibleForIr = type == TransferWindowType.TRANSFER
-                ? findUsersEligibleForIr(leagueId, order)
+                ? findUsersEligibleForIr(leagueId, window.getCanonicalOrder())
                 : List.of();
         window.open(eligibleForIr);
         windowRepo.saveAndFlush(window);
@@ -303,7 +309,11 @@ public class TransferMarketService {
             throw new IllegalStateException("Not IR round");
         }
 
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(request.getUserId())
+                .orElseThrow(() -> new FantasyTeamException("User game data was not found"));
+        Integer irPlayerId = requireNextSquad(gameData).getIrId();
         performIrReplacement(window.getLeague().getId(), request.getUserId(), request.getPlayerId());
+        recordAction(window, request.getUserId(), TransferActionSource.IR, request.getPlayerId(), irPlayerId);
 
         long leagueId = window.getLeague().getId();
         String userName = getUserName(request.getUserId());
@@ -356,8 +366,9 @@ public class TransferMarketService {
         }
 
         validateClubLimit(squad, playerOutId, playerIn);
-        replaceRosterPlayer(squad, playerOutId, playerInId);
+        replaceRosterPlayer(gameData, squad, playerOutId, playerInId);
         squadRepo.save(squad);
+        gameDataRepo.save(gameData);
         log.info("Transfer completed in league {}: user {} | {} -> {}", leagueId, userId, playerOutId, playerInId);
     }
 
@@ -386,6 +397,9 @@ public class TransferMarketService {
         PlayerEntity replacement = playerRepo.findById(playerId)
                 .orElseThrow(() -> new FantasyTeamException("Player was not found"));
         LeagueEntity league = requireLeague(leagueId);
+        if (supplementalDraftPoolService.isEligible(leagueId, playerId)) {
+            throw new FantasyTeamException("Player is reserved for the next supplemental draft");
+        }
         if (league.isPlayerLocked(playerId)) {
             throw new FantasyTeamException("Player is locked in this league");
         }
@@ -398,14 +412,19 @@ public class TransferMarketService {
         if (bench.get(slot) != null) {
             throw new FantasyTeamException("Required bench slot is already occupied");
         }
-        validateClubLimit(squad, null, replacement);
+        validateClubLimit(squad, null, replacement, true);
         bench.put(slot, playerId);
         squad.setBenchMap(bench);
         squadRepo.save(squad);
         log.info("IR replacement completed in league {}: user {} signed {}", leagueId, userId, playerId);
     }
 
-    private void replaceRosterPlayer(UserSquadEntity squad, int playerOutId, int playerInId) {
+    private void replaceRosterPlayer(UserGameDataEntity gameData,
+                                     UserSquadEntity squad,
+                                     int playerOutId,
+                                     int playerInId) {
+        boolean forfeitsFirstPickCaptain = Objects.equals(squad.getFirstPickId(), playerOutId)
+                && Boolean.TRUE.equals(gameData.getActiveChips().get("FIRST_PICK_CAPTAIN"));
         List<Integer> lineup = new ArrayList<>(squad.getStartingLineup());
         int lineupIndex = lineup.indexOf(playerOutId);
         if (lineupIndex >= 0) {
@@ -422,18 +441,47 @@ public class TransferMarketService {
             squad.setBenchMap(bench);
         }
 
-        if (Objects.equals(squad.getCaptainId(), playerOutId)) squad.setCaptainId(playerInId);
+        if (forfeitsFirstPickCaptain) {
+            gameData.getActiveChips().put("FIRST_PICK_CAPTAIN", false);
+            gameData.getChips().put("FIRST_PICK_CAPTAIN", 0);
+            squad.setFirstPickId(null);
+            assignRandomCaptain(squad);
+        } else if (Objects.equals(squad.getCaptainId(), playerOutId)) {
+            squad.setCaptainId(playerInId);
+        }
         if (Objects.equals(squad.getViceCaptainId(), playerOutId)) squad.setViceCaptainId(playerInId);
-        if (Objects.equals(squad.getFirstPickId(), playerOutId)) squad.setFirstPickId(null);
+        if (!forfeitsFirstPickCaptain && Objects.equals(squad.getFirstPickId(), playerOutId)) {
+            squad.setFirstPickId(null);
+        }
+    }
+
+    private void assignRandomCaptain(UserSquadEntity squad) {
+        List<Integer> candidates = squad.getStartingLineup().stream()
+                .filter(Objects::nonNull)
+                .filter(playerId -> !Objects.equals(playerId, squad.getViceCaptainId()))
+                .toList();
+        if (candidates.isEmpty()) {
+            throw new FantasyTeamException("No eligible captain remains in the starting lineup");
+        }
+        int selectedIndex = java.util.concurrent.ThreadLocalRandom.current().nextInt(candidates.size());
+        squad.setCaptainId(candidates.get(selectedIndex));
     }
 
     private void validateClubLimit(UserSquadEntity squad,
                                    Integer outgoingPlayerId,
                                    PlayerEntity incomingPlayer) {
+        validateClubLimit(squad, outgoingPlayerId, incomingPlayer, false);
+    }
+
+    private void validateClubLimit(UserSquadEntity squad,
+                                   Integer outgoingPlayerId,
+                                   PlayerEntity incomingPlayer,
+                                   boolean includeIrPlayer) {
         if (incomingPlayer.getTeamId() == null) {
             return;
         }
         Set<Integer> prospectiveRoster = rosterPlayerIds(squad);
+        if (includeIrPlayer && squad.getIrId() != null) prospectiveRoster.add(squad.getIrId());
         if (outgoingPlayerId != null) prospectiveRoster.remove(outgoingPlayerId);
         prospectiveRoster.add(incomingPlayer.getId());
         int playersFromClub = 0;
@@ -500,7 +548,11 @@ public class TransferMarketService {
         if (windows.size() > 1) {
             throw new IllegalStateException("More than one transfer window is open for this league");
         }
-        return windows.getFirst();
+        LeagueTransferWindowEntity window = windows.getFirst();
+        if (window.getWindowType() == TransferWindowType.TRANSFER && isLineupDeadlineReached(window)) {
+            throw new IllegalStateException("The lineup deadline has passed");
+        }
+        return window;
     }
 
     private void validateTurn(LeagueTransferWindowEntity window, int userId) {
@@ -512,25 +564,11 @@ public class TransferMarketService {
 
     private void advanceTurn(LeagueTransferWindowEntity window) {
         long leagueId = window.getLeague().getId();
-        TransferWindowType type = window.getWindowType();
-        int gameWeekId = window.getGameWeek().getId();
         window.advanceTurn();
         windowRepo.saveAndFlush(window);
 
         if (window.getStatus() == TransferWindowStatus.CLOSED) {
-            if (type == TransferWindowType.DRAFT) {
-                LeagueEntity league = window.getLeague();
-                arrangeCompletedInitialDraft(league.getId());
-                league.setStatus(LeagueStatus.ACTIVE);
-                leagueRepo.save(league);
-                prepareFirstTransferOrder(window);
-            } else if (type == TransferWindowType.SUPPLEMENTAL) {
-                supplementalDraftPoolService.releasePool(leagueId);
-            } else if (type == TransferWindowType.TRANSFER) {
-                prepareNextWeekOrder(window);
-            }
-            publishAfterCommit(() -> webSocketController.sendWindowClosedEvent(leagueId));
-            log.info("{} window closed for league {} and GW {}", type, leagueId, gameWeekId);
+            handleWindowClosed(window);
             return;
         }
 
@@ -555,6 +593,25 @@ public class TransferMarketService {
                     turnsUsed
             ));
         }
+    }
+
+    private void handleWindowClosed(LeagueTransferWindowEntity window) {
+        long leagueId = window.getLeague().getId();
+        TransferWindowType type = window.getWindowType();
+        int gameWeekId = window.getGameWeek().getId();
+        if (type == TransferWindowType.DRAFT) {
+            LeagueEntity league = window.getLeague();
+            arrangeCompletedInitialDraft(league.getId());
+            league.setStatus(LeagueStatus.ACTIVE);
+            leagueRepo.save(league);
+            prepareFirstTransferOrder(window);
+        } else if (type == TransferWindowType.SUPPLEMENTAL) {
+            supplementalDraftPoolService.releasePool(leagueId);
+        } else if (type == TransferWindowType.TRANSFER) {
+            prepareNextWeekOrder(window);
+        }
+        publishAfterCommit(() -> webSocketController.sendWindowClosedEvent(leagueId));
+        log.info("{} window closed for league {} and GW {}", type, leagueId, gameWeekId);
     }
 
     @Transactional
@@ -607,7 +664,6 @@ public class TransferMarketService {
         if (order.isEmpty()) {
             throw new IllegalArgumentException("Transfer order cannot be empty");
         }
-        validateOrderBelongsToLeague(league, order, TransferWindowType.TRANSFER);
 
         LeagueTransferWindowEntity window = windowRepo
                 .findConfiguredWindowForUpdate(leagueId, gameWeekId, TransferWindowType.TRANSFER)
@@ -618,9 +674,22 @@ public class TransferMarketService {
         if (window.getStatus() == TransferWindowStatus.CLOSED) {
             throw new IllegalStateException("Cannot change a completed window");
         }
+        List<Integer> canonicalOrder = new ArrayList<>(window.getCanonicalOrder());
+        if (canonicalOrder.isEmpty()) {
+            canonicalOrder = window.getTurnOrder().isEmpty()
+                    ? defaultOrderForLeague(league, gameWeek, TransferWindowType.TRANSFER)
+                    : new ArrayList<>(window.getTurnOrder());
+        }
+        validateOrderBelongsToLeague(league, order, TransferWindowType.TRANSFER);
+        if (order.size() != canonicalOrder.size()) {
+            throw new IllegalArgumentException(
+                    "Trading turns may reassign picks but cannot add or remove transfer picks"
+            );
+        }
         window.setLeague(league);
         window.setGameWeek(gameWeek);
         window.setWindowType(TransferWindowType.TRANSFER);
+        window.setCanonicalOrder(canonicalOrder);
         window.setTurnOrder(order);
         windowRepo.save(window);
     }
@@ -718,8 +787,11 @@ public class TransferMarketService {
 
         LeagueTransferWindowEntity window = windows.getFirst();
         if (window.getWindowType() != TransferWindowType.TRANSFER
-                || window.getPhase() != TransferWindowPhase.REGULAR
                 || window.getTurnStartedAt() == null) {
+            return;
+        }
+        if (isLineupDeadlineReached(window)) {
+            finalizeExpiredWindow(window);
             return;
         }
 
@@ -731,12 +803,25 @@ public class TransferMarketService {
                 : window.getTurnStartedAt();
         if (graceStartedAt.plusSeconds(offlineGraceSeconds).isAfter(LocalDateTime.now())) return;
 
+        if (window.getPhase() == TransferWindowPhase.IR) {
+            processAutomatedIrTurn(window, userId);
+            advanceTurn(window);
+            return;
+        }
+
+        int nextPriority = waiverProgressRepo
+                .findByLeague_IdAndUser_IdAndGameWeek_Id(leagueId, userId, window.getGameWeek().getId())
+                .map(WaiverPlanProgressEntity::getNextPriority)
+                .orElse(1);
         List<WaiverPreferenceEntity> preferences = waiverPreferenceRepo
-                .findByLeague_IdAndUser_IdAndGameWeek_IdOrderByPriorityAsc(
+                .findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                         leagueId,
                         userId,
-                        window.getGameWeek().getId()
-                );
+                        window.getGameWeek().getId(),
+                        WaiverPlanType.REGULAR
+                ).stream()
+                .filter(preference -> preference.getPriority() >= nextPriority)
+                .toList();
         WaiverPreferenceEntity completedPreference = null;
         for (WaiverPreferenceEntity preference : preferences) {
             try {
@@ -763,6 +848,7 @@ public class TransferMarketService {
         if (completedPreference == null) {
             publishAfterCommit(() -> webSocketController.sendPassEvent(leagueId, userId, userName));
         } else {
+            updateWaiverProgress(window, userId, completedPreference.getPriority() + 1);
             int playerOutId = completedPreference.getPlayerOutId();
             int playerInId = completedPreference.getPlayerInId();
             recordAction(
@@ -781,6 +867,118 @@ public class TransferMarketService {
             ));
         }
         advanceTurn(window);
+    }
+
+    @Transactional
+    public void finalizeExpiredWindow(long leagueId) {
+        List<LeagueTransferWindowEntity> windows = windowRepo.findByLeagueAndStatusForUpdate(
+                leagueId,
+                TransferWindowStatus.OPEN
+        );
+        if (windows.size() != 1) return;
+        LeagueTransferWindowEntity window = windows.getFirst();
+        if (window.getWindowType() == TransferWindowType.TRANSFER && isLineupDeadlineReached(window)) {
+            finalizeExpiredWindow(window);
+        }
+    }
+
+    private void finalizeExpiredWindow(LeagueTransferWindowEntity window) {
+        if (window.getPhase() == TransferWindowPhase.REGULAR) {
+            window.finishRegularPhase();
+            windowRepo.saveAndFlush(window);
+            if (window.getStatus() == TransferWindowStatus.CLOSED) {
+                handleWindowClosed(window);
+                return;
+            }
+        }
+
+        while (window.getStatus() == TransferWindowStatus.OPEN
+                && window.getPhase() == TransferWindowPhase.IR) {
+            int irUserId = window.currentUserId().orElse(-1);
+            if (irUserId < 0) {
+                window.close();
+                windowRepo.saveAndFlush(window);
+                handleWindowClosed(window);
+                return;
+            }
+            processAutomatedIrTurn(window, irUserId);
+            advanceTurn(window);
+        }
+    }
+
+    private boolean isLineupDeadlineReached(LeagueTransferWindowEntity window) {
+        LocalDateTime deadline = window.getGameWeek().getFirstKickoffTime();
+        return deadline != null && !LocalDateTime.now().isBefore(deadline);
+    }
+
+    private void updateWaiverProgress(LeagueTransferWindowEntity window, int userId, int nextPriority) {
+        WaiverPlanProgressEntity progress = waiverProgressRepo
+                .findByLeague_IdAndUser_IdAndGameWeek_Id(
+                        window.getLeague().getId(), userId, window.getGameWeek().getId()
+                )
+                .orElseGet(WaiverPlanProgressEntity::new);
+        progress.setLeague(window.getLeague());
+        progress.setGameWeek(window.getGameWeek());
+        progress.setUser(userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User was not found")));
+        progress.setNextPriority(nextPriority);
+        waiverProgressRepo.save(progress);
+    }
+
+    private void processAutomatedIrTurn(LeagueTransferWindowEntity window, int userId) {
+        long leagueId = window.getLeague().getId();
+        int gameWeekId = window.getGameWeek().getId();
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId).orElse(null);
+        Integer irPlayerId = gameData == null || gameData.getNextSquad() == null
+                ? null
+                : gameData.getNextSquad().getIrId();
+        Integer selectedPlayerId = null;
+
+        List<WaiverPreferenceEntity> preferences = waiverPreferenceRepo
+                .findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
+                        leagueId, userId, gameWeekId, WaiverPlanType.IR
+                );
+        for (WaiverPreferenceEntity preference : preferences) {
+            if (tryIrReplacement(leagueId, userId, preference.getPlayerInId())) {
+                selectedPlayerId = preference.getPlayerInId();
+                break;
+            }
+        }
+
+        if (selectedPlayerId == null) {
+            List<PlayerEntity> fallbackPlayers = playerRepo.findAll().stream()
+                    .sorted(Comparator.comparingInt(PlayerEntity::getTotalPoints).reversed()
+                            .thenComparing(PlayerEntity::getId))
+                    .toList();
+            for (PlayerEntity player : fallbackPlayers) {
+                if (tryIrReplacement(leagueId, userId, player.getId())) {
+                    selectedPlayerId = player.getId();
+                    break;
+                }
+            }
+        }
+
+        if (selectedPlayerId == null) {
+            log.warn("No legal IR replacement was available for user {} in league {}", userId, leagueId);
+            return;
+        }
+
+        int completedPlayerId = selectedPlayerId;
+        recordAction(window, userId, TransferActionSource.IR, completedPlayerId, irPlayerId);
+        String userName = getUserName(userId);
+        publishAfterCommit(() -> webSocketController.sendTransferDoneEvent(
+                leagueId, userId, completedPlayerId, userName
+        ));
+    }
+
+    private boolean tryIrReplacement(long leagueId, int userId, int playerId) {
+        try {
+            performIrReplacement(leagueId, userId, playerId);
+            return true;
+        } catch (FantasyTeamException | IllegalStateException rejectedPlayer) {
+            log.debug("Skipping IR candidate {} for user {}: {}", playerId, userId, rejectedPlayer.getMessage());
+            return false;
+        }
     }
 
     private void recordAction(LeagueTransferWindowEntity window,
@@ -876,7 +1074,7 @@ public class TransferMarketService {
             return;
         }
 
-        List<Integer> baseOrder = completedWindow.initialOrder();
+        List<Integer> baseOrder = completedWindow.canonicalInitialOrder();
         if (!baseOrder.isEmpty()) {
             Integer first = baseOrder.removeFirst();
             baseOrder.add(first);
@@ -885,7 +1083,9 @@ public class TransferMarketService {
         nextWindow.setLeague(completedWindow.getLeague());
         nextWindow.setGameWeek(nextGameWeek.get());
         nextWindow.setWindowType(TransferWindowType.TRANSFER);
-        nextWindow.setTurnOrder(snakeOrder(baseOrder));
+        List<Integer> nextOrder = snakeOrder(baseOrder);
+        nextWindow.setTurnOrder(nextOrder);
+        nextWindow.setCanonicalOrder(nextOrder);
         windowRepo.save(nextWindow);
     }
 
@@ -910,7 +1110,9 @@ public class TransferMarketService {
         firstWindow.setLeague(completedDraft.getLeague());
         firstWindow.setGameWeek(completedDraft.getGameWeek());
         firstWindow.setWindowType(TransferWindowType.TRANSFER);
-        firstWindow.setTurnOrder(snakeOrder(baseOrder));
+        List<Integer> firstOrder = snakeOrder(baseOrder);
+        firstWindow.setTurnOrder(firstOrder);
+        firstWindow.setCanonicalOrder(firstOrder);
         windowRepo.save(firstWindow);
     }
 
@@ -1028,7 +1230,7 @@ public class TransferMarketService {
         if (order.isEmpty() || order.stream().anyMatch(userId -> !leagueUsers.contains(userId))) {
             throw new IllegalArgumentException("Transfer order contains a user outside this league");
         }
-        if (type != TransferWindowType.DRAFT) {
+        if (type == TransferWindowType.SUPPLEMENTAL) {
             Map<Integer, Integer> turnsPerUser = new HashMap<>();
             for (Integer userId : order) {
                 if (turnsPerUser.merge(userId, 1, Integer::sum) > 2) {

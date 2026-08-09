@@ -44,7 +44,7 @@ export function getDraftRuleLockedIds(players, squad, isDraftMode) {
         .map((player) => player.id));
 }
 
-export function validateTransferOrder(order, leagueUserIds, roundCount = 2) {
+export function validateTransferOrder(order, leagueUserIds, roundCount = 2, requireEqualDistribution = true) {
     const expectedLength = leagueUserIds.length * roundCount;
     if (order.length !== expectedLength) {
         return `Choose a manager for all ${expectedLength} transfer picks.`;
@@ -55,11 +55,13 @@ export function validateTransferOrder(order, leagueUserIds, roundCount = 2) {
     ));
     if (unknownId !== undefined) return "The transfer order contains an unknown manager.";
 
-    const invalidUserId = leagueUserIds.find((userId) => (
-        order.filter((id) => isSameTransferId(id, userId)).length !== roundCount
-    ));
-    if (invalidUserId !== undefined) {
-        return `Each manager must appear exactly ${roundCount} times.`;
+    if (requireEqualDistribution) {
+        const invalidUserId = leagueUserIds.find((userId) => (
+            order.filter((id) => isSameTransferId(id, userId)).length !== roundCount
+        ));
+        if (invalidUserId !== undefined) {
+            return `Each manager must appear exactly ${roundCount} times.`;
+        }
     }
 
     return null;

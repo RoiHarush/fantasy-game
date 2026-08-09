@@ -40,6 +40,8 @@ export default function TurnOrderModal({ onClose, usersList }) {
         const nextValidationError = validateTransferOrder(
             cleanOrder,
             usersList.map((item) => item.id),
+            2,
+            false,
         );
         if (nextValidationError) {
             setValidationError(nextValidationError);
@@ -59,7 +61,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
                             Set Transfer Order (GW {nextGameweek?.id})
                         </Dialog.Title>
                         <Dialog.Description className="mt-2 text-sm text-slate-400">
-                            Two transfer rounds are generated from the current league membership.
+                            Reassign existing picks after trades. The total number of picks stays unchanged.
                         </Dialog.Description>
                     </div>
 

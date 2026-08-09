@@ -4,21 +4,44 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { queryKeys } from "../../lib/query/keys";
-import { fetchWaiverPlan, saveWaiverPlan } from "../../services/waiverService";
+import {
+    fetchIrWaiverPlan,
+    fetchWaiverPlan,
+    saveIrWaiverPlan,
+    saveWaiverPlan,
+} from "../../services/waiverService";
 
 const EMPTY_ENTRIES = [];
 
 export function useWaiverPlan(gameweekId) {
+    return usePlanQuery({
+        gameweekId,
+        queryKeyFactory: queryKeys.waiverPlan,
+        fetchPlan: fetchWaiverPlan,
+        savePlan: saveWaiverPlan,
+    });
+}
+
+export function useIrWaiverPlan(gameweekId) {
+    return usePlanQuery({
+        gameweekId,
+        queryKeyFactory: queryKeys.irWaiverPlan,
+        fetchPlan: fetchIrWaiverPlan,
+        savePlan: saveIrWaiverPlan,
+    });
+}
+
+function usePlanQuery({ gameweekId, queryKeyFactory, fetchPlan, savePlan }) {
     const queryClient = useQueryClient();
-    const queryKey = useMemo(() => queryKeys.waiverPlan(gameweekId), [gameweekId]);
+    const queryKey = useMemo(() => queryKeyFactory(gameweekId), [gameweekId, queryKeyFactory]);
     const query = useQuery({
         queryKey,
-        queryFn: () => fetchWaiverPlan(gameweekId),
+        queryFn: () => fetchPlan(gameweekId),
         enabled: Boolean(gameweekId),
     });
 
     const mutation = useMutation({
-        mutationFn: (entries) => saveWaiverPlan(gameweekId, entries),
+        mutationFn: (entries) => savePlan(gameweekId, entries),
         onMutate: async (entries) => {
             await queryClient.cancelQueries({ queryKey });
             const previous = queryClient.getQueryData(queryKey) ?? [];

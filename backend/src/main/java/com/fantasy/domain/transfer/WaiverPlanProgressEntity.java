@@ -3,7 +3,6 @@ package com.fantasy.domain.transfer;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.user.UserEntity;
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -11,22 +10,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(
-        name = "waiver_preferences",
+        name = "waiver_plan_progress",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_waiver_user_gw_type_priority",
-                columnNames = {"league_id", "user_id", "gameweek_id", "plan_type", "priority"}
+                name = "uk_waiver_progress_user_gw",
+                columnNames = {"league_id", "user_id", "gameweek_id"}
         )
 )
-public class WaiverPreferenceEntity {
+public class WaiverPlanProgressEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,37 +39,16 @@ public class WaiverPreferenceEntity {
     @JoinColumn(name = "gameweek_id", nullable = false)
     private GameWeekEntity gameWeek;
 
-    @Column(nullable = false)
-    private int priority;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plan_type", nullable = false, length = 16)
-    private WaiverPlanType planType = WaiverPlanType.REGULAR;
-
-    @Column(name = "player_in_id", nullable = false)
-    private int playerInId;
-
-    @Column(name = "player_out_id", nullable = false)
-    private int playerOutId;
-
-    @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private int nextPriority = 1;
 
     public Long getId() { return id; }
     public LeagueEntity getLeague() { return league; }
     public UserEntity getUser() { return user; }
     public GameWeekEntity getGameWeek() { return gameWeek; }
-    public int getPriority() { return priority; }
-    public WaiverPlanType getPlanType() { return planType; }
-    public int getPlayerInId() { return playerInId; }
-    public int getPlayerOutId() { return playerOutId; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public int getNextPriority() { return nextPriority; }
 
     public void setLeague(LeagueEntity league) { this.league = league; }
     public void setUser(UserEntity user) { this.user = user; }
     public void setGameWeek(GameWeekEntity gameWeek) { this.gameWeek = gameWeek; }
-    public void setPriority(int priority) { this.priority = priority; }
-    public void setPlanType(WaiverPlanType planType) { this.planType = planType; }
-    public void setPlayerInId(int playerInId) { this.playerInId = playerInId; }
-    public void setPlayerOutId(int playerOutId) { this.playerOutId = playerOutId; }
+    public void setNextPriority(int nextPriority) { this.nextPriority = Math.max(1, nextPriority); }
 }

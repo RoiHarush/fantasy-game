@@ -23,9 +23,11 @@ public class SeasonResetService {
             "user_points",
             "gameweek_transfer_order",
             "league_transfer_window_order",
+            "league_transfer_window_canonical_order",
             "league_transfer_window_ir_order",
             "league_transfer_actions",
             "waiver_preferences",
+            "waiver_plan_progress",
             "league_player_penalty_adjustments",
             "league_player_assist_adjustments",
             "league_locked_players",
@@ -63,7 +65,8 @@ public class SeasonResetService {
             "league_transfer_actions",
             "league_supplemental_draft_pool",
             "league_draft_config",
-            "waiver_preferences"
+            "waiver_preferences",
+            "waiver_plan_progress"
     );
 
     private final JdbcTemplate jdbcTemplate;

@@ -29,6 +29,8 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -53,7 +55,7 @@ class TransferMarketServicePersistenceTest {
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
                 mock(SupplementalDraftPoolService.class), 30
         );
 
@@ -149,6 +151,7 @@ class TransferMarketServicePersistenceTest {
                 leagueAccess,
                 windowRepo,
                 waiverPreferenceRepo,
+                mock(WaiverPlanProgressRepository.class),
                 actionRepo,
                 presenceService,
                 webSocket,
@@ -226,7 +229,7 @@ class TransferMarketServicePersistenceTest {
         SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
                 poolService, 30
         );
 
@@ -301,7 +304,7 @@ class TransferMarketServicePersistenceTest {
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, actionRepo, presenceService, webSocket,
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
                 mock(SupplementalDraftPoolService.class), 30
         );
 
@@ -320,6 +323,168 @@ class TransferMarketServicePersistenceTest {
         )).thenReturn(Optional.of(completedDraft));
 
         assertEquals(List.of(20, 30, 10, 10, 30, 20), service.getCurrentTurnOrder(10, 1));
+    }
+
+    @Test
+    void tradedPicksAllowUnevenOwnershipButKeepTheCanonicalOrderImmutable() {
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class), gameWeekRepo, mock(UserSquadRepository.class),
+                mock(UserGameDataRepository.class), mock(UserRepository.class), leagueRepo,
+                mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
+                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class), 30
+        );
+
+        UserEntity firstUser = new UserEntity();
+        firstUser.setId(10);
+        UserEntity secondUser = new UserEntity();
+        secondUser.setId(20);
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        league.setUsers(List.of(firstUser, secondUser));
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(4);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setWindowType(TransferWindowType.TRANSFER);
+        window.setTurnOrder(List.of(10, 20, 20, 10));
+        window.setCanonicalOrder(List.of(10, 20, 20, 10));
+        TurnOrderDto tradedOrder = new TurnOrderDto();
+        tradedOrder.setOrder(List.of(10, 10, 10, 20));
+
+        when(leagueRepo.findByIdWithLock(7L)).thenReturn(Optional.of(league));
+        when(gameWeekRepo.findById(4)).thenReturn(Optional.of(gameWeek));
+        when(windowRepo.findConfiguredWindowForUpdate(7L, 4, TransferWindowType.TRANSFER))
+                .thenReturn(Optional.of(window));
+
+        service.setManualTurnOrderForLeague(7L, 4, tradedOrder);
+
+        assertEquals(List.of(10, 10, 10, 20), window.getTurnOrder());
+        assertEquals(List.of(10, 20, 20, 10), window.getCanonicalOrder());
+        verify(windowRepo).save(window);
+    }
+
+    @Test
+    void nextGameweekOrderIsDerivedFromCanonicalOrderInsteadOfTradedOrder() {
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class), gameWeekRepo, mock(UserSquadRepository.class),
+                mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
+                mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
+                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class), 30
+        );
+
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        GameWeekEntity currentGameWeek = new GameWeekEntity();
+        currentGameWeek.setId(4);
+        GameWeekEntity nextGameWeek = new GameWeekEntity();
+        nextGameWeek.setId(5);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(currentGameWeek);
+        window.setWindowType(TransferWindowType.TRANSFER);
+        window.setTurnOrder(List.of(10, 10, 10, 20));
+        window.setCanonicalOrder(List.of(10, 20, 20, 10));
+        window.open(List.of());
+
+        when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
+                .thenReturn(List.of(window));
+        when(gameWeekRepo.findById(5)).thenReturn(Optional.of(nextGameWeek));
+        when(windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(7L, 5, TransferWindowType.TRANSFER))
+                .thenReturn(Optional.empty());
+
+        service.closeWindow(7L);
+
+        ArgumentCaptor<LeagueTransferWindowEntity> captor =
+                ArgumentCaptor.forClass(LeagueTransferWindowEntity.class);
+        verify(windowRepo).save(captor.capture());
+        LeagueTransferWindowEntity preparedNextWindow = captor.getValue();
+        assertEquals(5, preparedNextWindow.getGameWeek().getId());
+        assertEquals(List.of(20, 10, 10, 20), preparedNextWindow.getTurnOrder());
+        assertEquals(List.of(20, 10, 10, 20), preparedNextWindow.getCanonicalOrder());
+    }
+
+    @Test
+    void transferringFirstPickCaptainConsumesChipAndChoosesAnotherStarter() {
+        PlayerRepository playerRepo = mock(PlayerRepository.class);
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        UserSquadRepository squadRepo = mock(UserSquadRepository.class);
+        UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        TransferMarketService service = new TransferMarketService(
+                playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
+                leagueAccess, windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
+                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class), 30
+        );
+
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(4);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setTurnOrder(List.of(10));
+        window.setCanonicalOrder(List.of(10));
+        window.open(List.of());
+        UserEntity user = new UserEntity();
+        user.setId(10);
+        user.setName("Manager");
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(List.of(100, 101, 102));
+        squad.setBenchMap(new LinkedHashMap<>());
+        squad.setFirstPickId(100);
+        squad.setCaptainId(100);
+        squad.setViceCaptainId(101);
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setLeague(league);
+        gameData.setUser(user);
+        gameData.setNextSquad(squad);
+        gameData.getActiveChips().put("FIRST_PICK_CAPTAIN", true);
+        gameData.getChips().put("FIRST_PICK_CAPTAIN", 0);
+        PlayerEntity outgoing = player(100, PlayerPosition.DEFENDER, 1);
+        PlayerEntity incoming = player(200, PlayerPosition.DEFENDER, 2);
+        PlayerEntity vice = player(101, PlayerPosition.DEFENDER, 3);
+        PlayerEntity otherStarter = player(102, PlayerPosition.DEFENDER, 4);
+        TransferRequestDto request = new TransferRequestDto();
+        request.setUserId(10);
+        request.setPlayerOutId(100);
+        request.setPlayerInId(200);
+
+        when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
+        when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
+        when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
+                .thenReturn(List.of(window));
+        when(gameDataRepo.findByUserId(10)).thenReturn(Optional.of(gameData));
+        when(gameDataRepo.findAllByLeagueIdWithSquads(7L)).thenReturn(List.of(gameData));
+        when(playerRepo.findById(100)).thenReturn(Optional.of(outgoing));
+        when(playerRepo.findById(200)).thenReturn(Optional.of(incoming));
+        when(playerRepo.findAllById(any())).thenReturn(List.of(incoming, vice, otherStarter));
+        when(userRepo.findById(10)).thenReturn(Optional.of(user));
+        when(gameWeekRepo.findById(5)).thenReturn(Optional.empty());
+
+        service.processTransfer(request);
+
+        assertFalse(gameData.getActiveChips().get("FIRST_PICK_CAPTAIN"));
+        assertEquals(0, gameData.getChips().get("FIRST_PICK_CAPTAIN"));
+        assertNull(squad.getFirstPickId());
+        assertEquals(101, squad.getViceCaptainId());
+        assertTrue(List.of(200, 102).contains(squad.getCaptainId()));
+        verify(gameDataRepo).save(gameData);
     }
 
     private PlayerEntity player(int id, PlayerPosition position, int teamId) {

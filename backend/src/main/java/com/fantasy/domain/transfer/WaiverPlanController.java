@@ -42,6 +42,26 @@ public class WaiverPlanController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{gameWeekId}/ir")
+    public ResponseEntity<List<WaiverEntryDto>> saveIrPlan(@PathVariable int gameWeekId,
+                                                           @RequestBody SaveWaiverPlanRequest request,
+                                                           Authentication authentication) {
+        return ResponseEntity.ok(waiverPlanService.saveIrPlan(userId(authentication), gameWeekId, request));
+    }
+
+    @GetMapping("/{gameWeekId}/ir")
+    public ResponseEntity<List<WaiverEntryDto>> getIrPlan(@PathVariable int gameWeekId,
+                                                          Authentication authentication) {
+        return ResponseEntity.ok(waiverPlanService.getIrPlan(userId(authentication), gameWeekId));
+    }
+
+    @DeleteMapping("/{gameWeekId}/ir")
+    public ResponseEntity<Void> deleteIrPlan(@PathVariable int gameWeekId,
+                                             Authentication authentication) {
+        waiverPlanService.deleteIrPlan(userId(authentication), gameWeekId);
+        return ResponseEntity.noContent().build();
+    }
+
     private int userId(Authentication authentication) {
         return Integer.parseInt(authentication.getName());
     }

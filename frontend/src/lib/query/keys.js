@@ -10,6 +10,7 @@ export const queryKeys = {
     squadPlayerData: (userId, gameweekId) => ["squad-player-data", userId, gameweekId],
     userChips: (userId) => ["user-chips", userId],
     waiverPlan: (gameweekId) => ["waiver-plan", gameweekId],
+    irWaiverPlan: (gameweekId) => ["ir-waiver-plan", gameweekId],
     pointsPage: (userId, gameweekId, live) => ["points-page", userId, gameweekId, live ? "live" : "final"],
     leagueUsers: (leagueId) => ["league-users", leagueId],
     currentLeague: (leagueId) => ["current-league", leagueId],
