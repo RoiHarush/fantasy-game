@@ -1,6 +1,6 @@
 import PlayersWrapper from "../../General/PlayersWrapper";
 
-function Scout({ user, players, teams, fixturesByTeam, squad, waiverEntries, onWaiverEntriesChange, waiverSaving, waiverMessage, waiverGameweekId }) {
+function Scout({ user, players, teams, fixturesByTeam, squad, waiverEntries, onWaiverEntriesChange, onWaiverEntriesSave, waiverDirty, waiverSaving, waiverMessage, waiverGameweekId }) {
     if (players.length === 0) return <p role="status">No players are available.</p>;
 
     return (
@@ -20,6 +20,8 @@ function Scout({ user, players, teams, fixturesByTeam, squad, waiverEntries, onW
                 squad={squad}
                 waiverEntries={waiverEntries}
                 onWaiverEntriesChange={onWaiverEntriesChange}
+                onWaiverEntriesSave={onWaiverEntriesSave}
+                waiverDirty={waiverDirty}
                 waiverSaving={waiverSaving}
                 waiverMessage={waiverMessage}
                 waiverGameweekId={waiverGameweekId}

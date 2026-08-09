@@ -1,11 +1,12 @@
 import { useTeam } from '../../Context/TeamsContext';
 
-function PlayerKit({ teamId, type = "field", className, style }) {
+function PlayerKit({ teamId, type = "field", className, style, ...imageProps }) {
     const team = useTeam(teamId);
 
     if (teamId === 0) {
         return (
             <img
+                {...imageProps}
                 className={className}
                 style={style}
                 src={`/Kits/0.webp`}
@@ -21,6 +22,7 @@ function PlayerKit({ teamId, type = "field", className, style }) {
 
     return (
         <img
+            {...imageProps}
             className={className}
             style={style}
             src={kitUrl}

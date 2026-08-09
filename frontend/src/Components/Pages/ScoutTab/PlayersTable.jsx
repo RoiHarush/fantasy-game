@@ -56,7 +56,6 @@ function PlayerTable({
     onToggleWatch,
     watchlistUpdating,
     onWaiverSelect,
-    plannedIncomingIds,
 }) {
     const isMobile = useMediaQuery("(max-width: 767px)");
     const { currentGameweek, nextGameweek, lastGameweek } = useGameweek();
@@ -74,17 +73,20 @@ function PlayerTable({
     );
 
     if (isMobile) {
+        const hasWaiverAction = Boolean(onWaiverSelect);
         return (
             <div className="min-h-[32rem] w-full max-w-full overflow-hidden bg-app-surface">
                 <div
                     className="grid items-center gap-x-1 border-b-2 border-app-border bg-app-surface-muted px-2 py-1.5 text-[0.52rem] font-extrabold uppercase tracking-wide text-app-muted"
-                    style={{ gridTemplateColumns: getMobilePlayerColumns(mode) }}
+                    style={{ gridTemplateColumns: getMobilePlayerColumns(mode, hasWaiverAction) }}
                 >
                     <span>Player</span>
                     <span className="text-center">Pts</span>
                     <span className="text-center">GW{upcomingGameweeks[0] ?? "-"}</span>
+                    <span className="text-center">Cmp</span>
+                    <span className="text-center">Watch</span>
                     <span className="text-center">{mode === "scout" ? "Owner" : mode === "draft" ? "Pick" : "Sign"}</span>
-                    <span className="sr-only">Actions</span>
+                    {hasWaiverAction && <span className="text-center">Wvr</span>}
                 </div>
                 <Virtuoso
                     style={{
@@ -113,7 +115,6 @@ function PlayerTable({
                             onToggleWatch={() => onToggleWatch(player.id)}
                             watchlistUpdating={watchlistUpdating}
                             onWaiverSelect={onWaiverSelect}
-                            waiverPlanned={plannedIncomingIds?.has(player.id)}
                         />
                     )}
                 />
@@ -182,7 +183,6 @@ function PlayerTable({
                         onToggleWatch={() => onToggleWatch(player.id)}
                         watchlistUpdating={watchlistUpdating}
                         onWaiverSelect={onWaiverSelect}
-                        waiverPlanned={plannedIncomingIds?.has(player.id)}
                     />
                 )}
             />

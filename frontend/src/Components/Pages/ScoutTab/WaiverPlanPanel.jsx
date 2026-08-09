@@ -1,14 +1,14 @@
-import { ArrowLeft, ArrowRight, GripVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, GripVertical, Save, Trash2 } from "lucide-react";
 
 import PlayerKit from "../../General/PlayerKit";
 
-function WaiverPlanPanel({ entries, playersById, onChange, saving, message, gameWeekId }) {
+function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, saving, message, gameWeekId }) {
     const move = (from, to) => {
         if (to < 0 || to >= entries.length || from === to) return;
         const reordered = [...entries];
         const [entry] = reordered.splice(from, 1);
         reordered.splice(to, 0, entry);
-        void onChange(reordered);
+        onChange(reordered);
     };
 
     const getPlayer = (id) => playersById.get(String(id));
@@ -24,13 +24,22 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
                         These moves run only if you are offline when your transfer turn begins.
                     </p>
                 </div>
-                <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                    {saving ? "Saving..." : "Saved automatically"}
-                </span>
+                <button
+                    type="button"
+                    className={`inline-flex min-h-9 min-w-28 items-center justify-center gap-1.5 rounded-control px-3 text-xs font-extrabold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent ${hasChanges
+                        ? "bg-component-gradient text-brand-ink hover:brightness-105"
+                        : "border border-app-border bg-app-surface-muted text-app-muted"
+                    } disabled:cursor-not-allowed disabled:opacity-65`}
+                    disabled={!hasChanges || saving}
+                    onClick={() => void onSave?.()}
+                >
+                    <Save aria-hidden="true" size={15} />
+                    {saving ? "Saving..." : hasChanges ? "Save changes" : "Saved"}
+                </button>
             </header>
 
             {message && (
-                <p className="mt-3 rounded-control border border-app-accent-border bg-app-accent-surface p-3 text-sm text-app-accent-foreground" role="status">
+                <p className="mt-3 rounded-control border border-app-danger-border bg-app-danger-surface p-3 text-sm text-app-danger-foreground" role="alert">
                     {message}
                 </p>
             )}
@@ -43,8 +52,12 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
                         <li
                             key={`${entry.playerInId}-${entry.playerOutId}`}
                             draggable
-                            className="grid min-h-12 cursor-grab items-center gap-1 rounded-xl border border-app-border bg-app-surface-elevated p-1.5 shadow-sm transition hover:border-app-accent-border active:cursor-grabbing sm:min-h-16 sm:gap-2 sm:p-2"
-                            style={{ gridTemplateColumns: "2.2rem minmax(0, 1fr) 2rem" }}
+                            className="grid min-h-12 cursor-grab select-none items-center gap-1 rounded-xl border border-app-border bg-app-surface-elevated p-1.5 shadow-sm transition hover:border-app-accent-border active:cursor-grabbing sm:min-h-16 sm:gap-2 sm:p-2"
+                            style={{
+                                gridTemplateColumns: "5.1rem minmax(0, 1fr) 2rem",
+                                WebkitTouchCallout: "none",
+                            }}
+                            onContextMenu={(event) => event.preventDefault()}
                             onDragStart={(event) => event.dataTransfer.setData("text/plain", String(index))}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => {
@@ -52,19 +65,35 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
                                 move(Number(event.dataTransfer.getData("text/plain")), index);
                             }}
                         >
-                            <label className="grid justify-items-center gap-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-app-muted">
-                                <GripVertical aria-hidden="true" size={15} />
+                            <div className="grid justify-items-center gap-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-app-muted">
+                                <GripVertical aria-hidden="true" size={15} className="hidden sm:block" />
                                 <span className="sr-only">Priority for {playerName(entry.playerInId)}</span>
-                                <input
-                                    aria-label={`Priority for ${playerName(entry.playerInId)}`}
-                                    type="number"
-                                    min="1"
-                                    max={entries.length}
-                                    value={index + 1}
-                                    className="size-7 rounded-lg border border-app-border bg-app-surface text-center text-[0.62rem] font-extrabold text-app-foreground outline-none focus:border-app-accent focus:ring-2 focus:ring-app-accent/20 sm:size-8 sm:text-xs"
-                                    onChange={(event) => move(index, Number(event.target.value) - 1)}
-                                />
-                            </label>
+                                <div className="flex h-12 w-full items-stretch gap-1.5">
+                                    <span className="grid w-9 shrink-0 place-items-center text-xl font-black tabular-nums text-app-accent-foreground" aria-label={`Priority ${index + 1} for ${playerName(entry.playerInId)}`}>
+                                        {index + 1}
+                                    </span>
+                                    <div className="grid min-w-0 flex-1 grid-rows-2 gap-1">
+                                        <button
+                                            type="button"
+                                            className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
+                                            aria-label={`Move ${playerName(entry.playerInId)} up`}
+                                            disabled={index === 0}
+                                            onClick={() => move(index, index - 1)}
+                                        >
+                                            <ChevronUp aria-hidden="true" size={19} strokeWidth={2.7} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
+                                            aria-label={`Move ${playerName(entry.playerInId)} down`}
+                                            disabled={index === entries.length - 1}
+                                            onClick={() => move(index, index + 1)}
+                                        >
+                                            <ChevronDown aria-hidden="true" size={19} strokeWidth={2.7} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div
                                 className="grid min-w-0 items-center gap-0.5 sm:gap-2"
@@ -82,7 +111,7 @@ function WaiverPlanPanel({ entries, playersById, onChange, saving, message, game
                                 type="button"
                                 className="grid size-8 place-items-center rounded-lg text-app-muted transition hover:bg-app-danger-surface hover:text-app-danger-foreground focus-visible:outline-2 focus-visible:outline-app-danger-foreground sm:size-9"
                                 aria-label={`Remove waiver for ${playerName(entry.playerInId)}`}
-                                onClick={() => void onChange(entries.filter((_, itemIndex) => itemIndex !== index))}
+                                onClick={() => onChange(entries.filter((_, itemIndex) => itemIndex !== index))}
                             >
                                 <Trash2 aria-hidden="true" size={17} />
                             </button>
@@ -107,6 +136,8 @@ function WaiverPlayer({ player, fallback, tone }) {
             <PlayerKit
                 teamId={player?.teamId || 0}
                 type={player?.position === "GK" ? "gk" : "field"}
+                draggable={false}
+                onContextMenu={(event) => event.preventDefault()}
                 className="block shrink-0 object-contain"
                 style={{ width: "1.5rem", height: "1.5rem", maxWidth: "1.5rem", maxHeight: "1.5rem" }}
             />

@@ -6,6 +6,8 @@ import { useCallback, useMemo } from "react";
 import { queryKeys } from "../../lib/query/keys";
 import { fetchWaiverPlan, saveWaiverPlan } from "../../services/waiverService";
 
+const EMPTY_ENTRIES = [];
+
 export function useWaiverPlan(gameweekId) {
     const queryClient = useQueryClient();
     const queryKey = useMemo(() => queryKeys.waiverPlan(gameweekId), [gameweekId]);
@@ -38,7 +40,7 @@ export function useWaiverPlan(gameweekId) {
     }, [queryClient, queryKey]);
 
     return {
-        entries: query.data ?? [],
+        entries: query.data ?? EMPTY_ENTRIES,
         setEntries,
         saveEntries: mutation.mutateAsync,
         loading: query.isPending && Boolean(gameweekId),

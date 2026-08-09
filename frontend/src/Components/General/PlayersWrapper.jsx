@@ -20,6 +20,8 @@ function PlayersWrapper({
     squad,
     waiverEntries = [],
     onWaiverEntriesChange,
+    onWaiverEntriesSave,
+    waiverDirty = false,
     waiverSaving = false,
     waiverMessage = "",
     waiverGameweekId,
@@ -47,10 +49,6 @@ function PlayersWrapper({
             .map((id) => playersById.get(String(id)))
             .filter(player => player?.position === waiverCandidate.position)
         : [];
-    const plannedIncomingIds = useMemo(
-        () => new Set(waiverEntries.map(entry => entry.playerInId)),
-        [waiverEntries]
-    );
     const watchedPlayerIds = useMemo(
         () => new Set(watchlistQuery.watchlist.map(String)),
         [watchlistQuery.watchlist],
@@ -116,10 +114,10 @@ function PlayersWrapper({
             )}
 
             {comparePlayers.length === 1 && (
-                <div className="mx-4 mt-4 flex flex-wrap items-center justify-center gap-2 rounded-control border border-app-accent-border bg-app-accent-surface p-3 text-center text-sm text-app-accent-foreground">
+                <div className="mx-2 mt-2 flex flex-wrap items-center justify-center gap-1.5 rounded-control border border-app-accent-border bg-app-accent-surface p-2 text-center text-[0.68rem] leading-snug text-app-accent-foreground sm:mx-4 sm:mt-4 sm:gap-2 sm:p-3 sm:text-sm">
                     Select another <strong>{filterByPosition}</strong> to compare with{" "}
                     <strong>{comparePlayers[0].viewName}</strong>.
-                    <button type="button" className="rounded-full border border-app-accent-border px-3 py-1 font-bold transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent" onClick={handleCloseCompare}>
+                    <button type="button" className="rounded-full border border-app-accent-border px-2 py-0.5 text-[0.65rem] font-bold transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent sm:px-3 sm:py-1 sm:text-sm" onClick={handleCloseCompare}>
                         Cancel
                     </button>
                 </div>
@@ -130,6 +128,8 @@ function PlayersWrapper({
                     entries={waiverEntries}
                     playersById={playersById}
                     onChange={onWaiverEntriesChange}
+                    onSave={onWaiverEntriesSave}
+                    hasChanges={waiverDirty}
                     saving={waiverSaving}
                     message={waiverMessage}
                     gameWeekId={waiverGameweekId}
@@ -155,7 +155,6 @@ function PlayersWrapper({
                     onWaiverSelect={onWaiverEntriesChange ? player => {
                         setWaiverCandidate(player);
                     } : undefined}
-                    plannedIncomingIds={plannedIncomingIds}
                 />
             )}
 

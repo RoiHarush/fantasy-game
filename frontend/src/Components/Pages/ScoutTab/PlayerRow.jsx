@@ -24,7 +24,6 @@ const PlayerRow = memo(function PlayerRow({
     onToggleWatch,
     watchlistUpdating,
     onWaiverSelect,
-    waiverPlanned = false,
 }) {
     const [showInfo, setShowInfo] = useState(false);
     const isMyTurn = String(currentTurnUserId) === String(user?.id);
@@ -92,7 +91,7 @@ const PlayerRow = memo(function PlayerRow({
                 <button
                     type="button"
                     className={`mx-auto inline-flex size-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-app-accent xl:h-9 xl:w-auto xl:px-2.5 ${isSelectedForCompare
-                        ? "border-app-accent bg-app-accent-surface text-app-accent-foreground"
+                        ? "border-app-accent bg-app-accent text-brand-ink ring-2 ring-app-accent/35 ring-offset-1 ring-offset-app-surface"
                         : "border-app-border bg-app-surface-muted text-app-foreground hover:border-app-accent-border hover:bg-app-accent-hover"
                     }`}
                     onClick={(event) => {
@@ -151,7 +150,7 @@ const PlayerRow = memo(function PlayerRow({
                             }}
                         >
                             <ListPlus aria-hidden="true" size={16} />
-                            <span className="hidden xl:inline">{waiverPlanned ? "Planned" : "Waiver"}</span>
+                            <span className="hidden xl:inline">Waiver</span>
                         </button>
                     ) : (
                         <LockKeyhole

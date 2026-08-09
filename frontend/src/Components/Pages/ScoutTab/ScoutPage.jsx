@@ -18,7 +18,11 @@ function ScoutPage() {
     const { user } = useAuth();
     const { nextGameweek, loading: gameweeksLoading, error: gameweeksError } = useGameweek();
 
-    const [waiverMessage, setWaiverMessage] = useState("");
+    const [waiverEditState, setWaiverEditState] = useState({
+        gameweekId: null,
+        dirty: false,
+        message: "",
+    });
     const hasUpcomingSquad = Boolean(user?.leagueId && nextGameweek?.id);
     const waiversEnabled = hasUpcomingSquad && user?.leagueStatus === "ACTIVE";
     const squadQuery = useSquad(user?.id, nextGameweek?.id, { enabled: hasUpcomingSquad });
@@ -27,14 +31,38 @@ function ScoutPage() {
     const teamsQuery = useTeams();
     const fixturesQuery = useAllTeamFixtures(teamsQuery.teams);
 
-    async function updateWaiverEntries(nextEntries) {
+    const waiverDirty = waiverEditState.gameweekId === nextGameweek?.id
+        && waiverEditState.dirty;
+    const waiverMessage = waiverEditState.gameweekId === nextGameweek?.id
+        ? waiverEditState.message
+        : "";
+
+    function updateWaiverEntries(nextEntries) {
         if (!nextGameweek?.id) return;
-        setWaiverMessage("");
+        waiverPlan.setEntries(nextEntries);
+        setWaiverEditState({
+            gameweekId: nextGameweek.id,
+            dirty: true,
+            message: "",
+        });
+    }
+
+    async function saveWaiverEntries() {
+        if (!nextGameweek?.id) return;
+        setWaiverEditState((current) => ({ ...current, message: "" }));
         try {
-            await waiverPlan.saveEntries(nextEntries);
-            setWaiverMessage(`Waiver priorities saved for Gameweek ${nextGameweek.id}.`);
+            await waiverPlan.saveEntries(waiverPlan.entries);
+            setWaiverEditState({
+                gameweekId: nextGameweek.id,
+                dirty: false,
+                message: "",
+            });
         } catch (saveError) {
-            setWaiverMessage(saveError.message);
+            setWaiverEditState({
+                gameweekId: nextGameweek.id,
+                dirty: true,
+                message: saveError.message || "The waiver plan could not be saved.",
+            });
         }
     }
 
@@ -87,6 +115,8 @@ function ScoutPage() {
                     squad={squadQuery.data ?? null}
                     waiverEntries={waiverPlan.entries}
                     onWaiverEntriesChange={waiversEnabled ? updateWaiverEntries : undefined}
+                    onWaiverEntriesSave={waiversEnabled ? saveWaiverEntries : undefined}
+                    waiverDirty={waiverDirty}
                     waiverSaving={waiverPlan.saving}
                     waiverMessage={waiverMessage}
                     waiverGameweekId={nextGameweek?.id}
