@@ -16,7 +16,6 @@ function PitchWrapperBase({
     gwControl
 }) {
     const [activeButton, setActiveButton] = useState("Pitch View");
-    const [isIROpen, setIsIROpen] = useState(false);
     const irPlayer = squad?.irId
         ? players.find((player) => String(player.id) === String(squad.irId))
         : null;
@@ -45,6 +44,34 @@ function PitchWrapperBase({
                     />
                 </div>
 
+                {squad && (
+                    <section className={style.irSlotContainer} aria-label="Injured reserve slot">
+                        <div className={style.irLabel}>IR Slot</div>
+                        {irPlayer ? (
+                            <div className={style.irCard}>
+                                <PlayerKit
+                                    teamId={irPlayer.teamId}
+                                    type={irPlayer.position === "GK" ? "gk" : "field"}
+                                    className={style["player-shirt"]}
+                                />
+                                <span className={style.irName}>{irPlayer.viewName}</span>
+                                <span className={style.irPosition}>{irPlayer.position}</span>
+                            </div>
+                        ) : (
+                            <div className={style.irCardEmpty}>
+                                <Image
+                                    src="/Kits/0.webp"
+                                    alt=""
+                                    width={40}
+                                    height={50}
+                                    className={style.irEmptyImg}
+                                />
+                                <span className={style.irName}>Empty slot</span>
+                            </div>
+                        )}
+                    </section>
+                )}
+
                 {activeButton === "Pitch View" ? (
                     <div className={style.pitchM}>
                         <Pitch
@@ -61,50 +88,6 @@ function PitchWrapperBase({
                     </div>
                 )}
             </div>
-
-            {squad && (
-                <>
-                    <button
-                        type="button"
-                        className={`${style.irToggleBtn} ${isIROpen ? style.hidden : ''}`}
-                        onClick={() => setIsIROpen(true)}
-                    >
-                        IR {irPlayer ? "(!)" : ""}
-                    </button>
-
-                    {isIROpen && (
-                        <button type="button" aria-label="Close IR panel" className={style.backdrop} onClick={() => setIsIROpen(false)} />
-                    )}
-
-                    <div className={`${style.irSlotContainer} ${isIROpen ? style.irSlotOpen : ''}`}>
-
-                        <button type="button" className={style.closeIrBtn} onClick={() => setIsIROpen(false)} aria-label="Close IR panel">✕</button>
-
-                        {irPlayer ? (
-                            <div className={style.irCard}>
-                                <PlayerKit
-                                    teamId={irPlayer.teamId}
-                                    type={irPlayer.position === "GK" ? "gk" : "field"}
-                                    className={style["player-shirt"]}
-                                />
-                                <span className={style.irName}>{irPlayer.viewName}</span>
-                            </div>
-                        ) : (
-                            <div className={style.irCardEmpty}>
-                                <Image
-                                    src="/Kits/0.webp"
-                                    alt="Empty IR slot"
-                                    width={80}
-                                    height={100}
-                                    className={style.irEmptyImg}
-                                />
-                                <span className={style.irName}>Empty</span>
-                            </div>
-                        )}
-                        <div className={style.irLabel}>IR SLOT</div>
-                    </div>
-                </>
-            )}
         </div>
     );
 }

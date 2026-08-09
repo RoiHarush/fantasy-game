@@ -41,12 +41,15 @@ class AuthServiceRegistrationTest {
         );
 
         LoginResponse response = service.register(
-                new RegisterRequest("New User", "New.User", "secure-pass")
+                new RegisterRequest("New", "User", null, "New.User", "secure-pass")
         );
 
         assertEquals("token", response.token);
         assertEquals(42, response.user.getId());
         assertEquals("new.user", response.user.getUsername());
+        assertEquals("New", response.user.getFirstName());
+        assertEquals("User", response.user.getLastName());
+        assertEquals("New User", response.user.getName());
         assertEquals("ROLE_USER", response.user.getRole());
         verify(userRepository).save(any(UserEntity.class));
     }

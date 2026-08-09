@@ -417,8 +417,17 @@ public class Squad implements Draftable {
         if (this.getCaptain().equals(this.getViceCaptain()))
             return false;
 
-        if (!firstPickUsed && this.getCaptain().equals(firstPick))
+        boolean firstPickIsStarting = firstPick != null
+                && this.startingLineup.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(firstPick::equals);
+
+        if (firstPickUsed) {
+            if (!firstPickIsStarting || !this.getCaptain().equals(firstPick))
+                return false;
+        } else if (this.getCaptain().equals(firstPick)) {
             return false;
+        }
 
          return !this.getViceCaptain().equals(firstPick);
     }

@@ -1,14 +1,14 @@
 .transferPage {
-    font-family: Arial, sans-serif;
     width: 100%;
-    max-width: 900px;
+    min-width: 0;
+    color: var(--app-foreground);
 }
 
 .title {
     font-size: 1.6rem;
     font-weight: 700;
     margin-bottom: 20px;
-    color: black;
+    color: var(--app-foreground);
 }
 
 .myTurn {
@@ -132,7 +132,7 @@
 
 .roundSubtitle {
     font-size: 0.85rem;
-    color: #bbb;
+    color: var(--app-muted);
 }
 
 .turnsList {
@@ -144,7 +144,8 @@
 }
 
 .turnCard {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--app-surface-elevated);
+    border: 1px solid var(--app-border);
     border-radius: 10px;
     padding: 6px 10px;
     min-width: 90px;
@@ -155,7 +156,7 @@
 
 .userName {
     font-weight: 600;
-    color: #2e1e82;
+    color: var(--app-foreground);
     font-size: 0.85rem;
     margin-bottom: 3px;
 }
@@ -173,7 +174,7 @@
     position: relative;
     width: 100%;
     height: 6px;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--app-surface-muted);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 4px;
@@ -192,7 +193,7 @@
 
 .turnCount {
     font-size: 0.75rem;
-    color: #ddd;
+    color: var(--app-muted);
     font-weight: 500;
 }
 
@@ -214,7 +215,7 @@
 }
 
 .draftTabs { display: flex; justify-content: center; gap: 0.5rem; margin: 0 0 1rem; }
-.draftTabs button { border: 1px solid #d0c4dd; border-radius: 999px; padding: 0.55rem 1rem; background: white; color: #37003c; font-weight: 700; cursor: pointer; }
-.draftTabs .activeDraftTab { background: #37003c; color: white; border-color: #37003c; }
+.draftTabs button { border: 1px solid var(--app-border); border-radius: 999px; padding: 0.55rem 1rem; background: var(--app-surface); color: var(--app-foreground); font-weight: 700; cursor: pointer; }
+.draftTabs .activeDraftTab { background: var(--app-accent-surface); color: var(--app-accent-foreground); border-color: var(--app-accent); }
 .draftedList { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-.draftedList li { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 0.8rem; align-items: center; padding: 0.8rem 1rem; border-radius: 10px; background: #f7f3fb; border-left: 4px solid #00ff87; color: #24102d; }
+.draftedList li { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 0.8rem; align-items: center; padding: 0.8rem 1rem; border: 1px solid var(--app-border); border-left: 4px solid #00e59b; border-radius: 10px; background: var(--app-surface-elevated); color: var(--app-foreground); }

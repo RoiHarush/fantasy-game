@@ -41,7 +41,8 @@ describe("Login registration mode", () => {
         render(<Login />);
 
         fireEvent.click(screen.getByRole("button", { name: "New here? Create an account" }));
-        fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Test User" } });
+        fireEvent.change(screen.getByLabelText("First name"), { target: { value: "Test" } });
+        fireEvent.change(screen.getByLabelText("Last name"), { target: { value: "User" } });
         fireEvent.change(screen.getByLabelText("Username"), { target: { value: "test.user" } });
         fireEvent.change(screen.getByLabelText("Password"), { target: { value: "valid-password" } });
         fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "valid-password" } });
@@ -49,7 +50,8 @@ describe("Login registration mode", () => {
 
         await waitFor(() => expect(authMocks.mutate).toHaveBeenCalledOnce());
         expect(authMocks.mutate.mock.calls[0][0]).toEqual({
-            name: "Test User",
+            firstName: "Test",
+            lastName: "User",
             username: "test.user",
             password: "valid-password",
             confirmPassword: "valid-password",

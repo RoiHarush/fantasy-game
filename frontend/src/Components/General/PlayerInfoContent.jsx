@@ -5,18 +5,18 @@ import { formatAppDateTime } from "../../lib/dateTime";
 import Style from "../../Styles/PlayerInfoContent.module.css";
 
 const STAT_COLUMNS = [
-    ["points", "/Icons/total.svg", "PTS", "Total points"],
-    ["minutes", "/Icons/stopwatch.svg", "MP", "Minutes"],
-    ["goals", "/Icons/goal.svg", "GS", "Goals"],
-    ["assists", "/Icons/assist.svg", "A", "Assists"],
-    ["cleanSheets", "/Icons/clean-sheets.svg", "CS", "Clean sheets"],
-    ["goalsConceded", "/Icons/goal-conceded.svg", "GC", "Goals conceded"],
-    ["ownGoals", "/Icons/own-goal.svg", "OG", "Own goals"],
-    ["penaltiesSaved", "/Icons/penalty-saved.svg", "PS", "Penalties saved"],
-    ["penaltiesMissed", "/Icons/penalty-missed.svg", "PM", "Penalties missed"],
-    ["penaltiesConceded", "/Icons/penalty-conceded.svg", "PC", "Penalties conceded"],
-    ["yellowCards", "/Icons/yellow-card.svg", "YC", "Yellow cards"],
-    ["redCards", "/Icons/red-card.svg", "RC", "Red cards"],
+    ["points", "/Icons/total.svg", "PTS", "Total points", "monochrome"],
+    ["minutes", "/Icons/stopwatch.svg", "MP", "Minutes", "monochrome"],
+    ["goals", "/Icons/goal.svg", "GS", "Goals", "monochrome"],
+    ["assists", "/Icons/assist.svg", "A", "Assists", "monochrome"],
+    ["cleanSheets", "/Icons/clean-sheets.svg", "CS", "Clean sheets", "monochrome"],
+    ["goalsConceded", "/Icons/goal-conceded.svg", "GC", "Goals conceded", "semantic"],
+    ["ownGoals", "/Icons/own-goal.svg", "OG", "Own goals", "semantic"],
+    ["penaltiesSaved", "/Icons/penalty-saved.svg", "PS", "Penalties saved", "monochrome"],
+    ["penaltiesMissed", "/Icons/penalty-missed.svg", "PM", "Penalties missed", "semantic"],
+    ["penaltiesConceded", "/Icons/penalty-conceded.svg", "PC", "Penalties conceded", "monochrome"],
+    ["yellowCards", "/Icons/yellow-card.svg", "YC", "Yellow cards", "semantic"],
+    ["redCards", "/Icons/red-card.svg", "RC", "Red cards", "semantic"],
 ];
 
 function PlayerInfoContent({ tab, teamFixtures, matchStats, fixtureBoundary = 0 }) {
@@ -79,8 +79,17 @@ function PlayerInfoContent({ tab, teamFixtures, matchStats, fixtureBoundary = 0 
                 <thead>
                     <tr className={Style.iconRow} aria-hidden="true">
                         <th /><th />
-                        {STAT_COLUMNS.map(([field, icon, , label]) => (
-                            <th key={field}><Image src={icon} alt="" width={24} height={24} title={label} /></th>
+                        {STAT_COLUMNS.map(([field, icon, , label, tone]) => (
+                            <th key={field}>
+                                <Image
+                                    src={icon}
+                                    alt=""
+                                    width={24}
+                                    height={24}
+                                    title={label}
+                                    className={`${Style.statIcon} ${tone === "semantic" ? Style.semanticIcon : Style.monochromeIcon}`}
+                                />
+                            </th>
                         ))}
                     </tr>
                     <tr>

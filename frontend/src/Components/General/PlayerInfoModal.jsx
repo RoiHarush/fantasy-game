@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -35,7 +36,9 @@ function PlayerInfoModal({ player, onClose }) {
                 <Dialog.Content className={Style.modal}>
                     <Dialog.Description className="sr-only">Player fixtures, statistics, and availability information.</Dialog.Description>
                     <Dialog.Close asChild>
-                        <button type="button" className={Style.closeBtn} aria-label="Close player information">✕</button>
+                        <button type="button" className={Style.closeBtn} aria-label="Close player information">
+                            <X aria-hidden="true" size={20} />
+                        </button>
                     </Dialog.Close>
 
                     {(player.injured || injuryColor) && (
@@ -72,7 +75,7 @@ function PlayerInfoModal({ player, onClose }) {
 
                         <div className={Style.tabContent}>
                             {activeQuery.isPending ? (
-                                <p role="status">Loading player information…</p>
+                                <p role="status">Loading player information...</p>
                             ) : activeQuery.error ? (
                                 <p role="alert">{activeQuery.error.message || "Player information is temporarily unavailable."}</p>
                             ) : (

@@ -76,9 +76,13 @@ export function getAllowedSwapIds(squad, playerId, players, firstPickUsed) {
     const squadPlayers = getSquadPlayers(squad);
 
     if (!player) return [];
+    if (firstPickUsed && isSameId(squad.firstPickId, playerId)) return [];
 
     if (player.position === "GK") {
-        return squadPlayers.filter((id) => getPlayerById(players, id)?.position === "GK");
+        return squadPlayers.filter((id) => (
+            getPlayerById(players, id)?.position === "GK"
+            && !(firstPickUsed && isSameId(squad.firstPickId, id))
+        ));
     }
 
     if (includesId(squad.startingLineup[player.position] ?? [], playerId)) {
@@ -112,7 +116,14 @@ function findLeadershipFallback(startingIds, excludedIds) {
     return startingIds.find((id) => !includesId(excludedIds, id)) ?? null;
 }
 
-export function applySquadSwap(squad, firstPlayerId, secondPlayerId, players) {
+export function applySquadSwap(squad, firstPlayerId, secondPlayerId, players, firstPickUsed = false) {
+    if (
+        firstPickUsed
+        && (isSameId(squad.firstPickId, firstPlayerId) || isSameId(squad.firstPickId, secondPlayerId))
+    ) {
+        return squad;
+    }
+
     const previousStartingIds = Object.values(squad.startingLineup).flat();
     const updatedSquad = swapPlayersInSquad(squad, firstPlayerId, secondPlayerId, players);
     const startingIds = Object.values(updatedSquad.startingLineup).flat();

@@ -20,6 +20,10 @@ public class UserEntity {
     @Column(nullable = false)
     private String name;
 
+    private String firstName;
+
+    private String lastName;
+
     @Column(nullable = false)
     private LocalDateTime registeredAt;
 
@@ -36,6 +40,16 @@ public class UserEntity {
     public void setPassword(String password) { this.password = password; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getFullName() {
+        String first = firstName == null ? "" : firstName.trim();
+        String last = lastName == null ? "" : lastName.trim();
+        String fullName = (first + " " + last).trim();
+        return fullName.isBlank() ? name : fullName;
+    }
     public LocalDateTime getRegisteredAt() { return registeredAt; }
     public void setRegisteredAt(LocalDateTime registeredAt) { this.registeredAt = registeredAt; }
     public UserRole getRole() { return role; }

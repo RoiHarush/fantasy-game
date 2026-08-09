@@ -1,27 +1,21 @@
 .block {
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    font-family: "Poppins", sans-serif;
     width: 100%;
+    overflow: hidden;
+    color: var(--app-foreground);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(27, 16, 53, 0.1);
+    font-family: "Poppins", "Segoe UI", sans-serif;
 }
 
 .header {
-    background: linear-gradient(135deg, #00e5ff, #a64aff 80%);
-    padding: 14px 16px;
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #fff;
-}
-
-.flag {
-    width: 32px;
-    height: 22px;
-    object-fit: cover;
-    border-radius: 3px;
-    flex-shrink: 0;
+    padding: 14px 16px;
+    color: var(--color-brand-ink);
+    background: var(--component-gradient);
 }
 
 .userInfo {
@@ -31,41 +25,39 @@
 }
 
 .username {
+    overflow-wrap: break-word;
     font-size: 1rem;
     font-weight: 700;
-    text-transform: lowercase;
-    overflow-wrap: break-word;
 }
 
 .team {
-    font-size: 0.85rem;
-    opacity: 0.9;
     margin-top: -2px;
     overflow-wrap: break-word;
+    font-size: 0.85rem;
+    opacity: 0.78;
 }
 
-
 .tab {
-    background: #38003c;
-    color: #00e5ff;
-    font-weight: 600;
+    padding: 7px 0;
+    color: var(--color-brand-cyan);
+    background: var(--color-brand-ink);
+    border-bottom: 1px solid var(--app-border);
+    font-size: 0.82rem;
+    font-weight: 700;
     text-align: center;
-    padding: 6px 0;
-    font-size: 0.85rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .stats {
-    padding: 14px 18px;
-    color: #220030;
+    padding: 12px 16px;
+    color: var(--app-foreground);
 }
 
 .row {
     display: flex;
     justify-content: space-between;
-    padding: 6px 0;
-    font-size: 0.9rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--app-border);
+    font-size: 0.86rem;
 }
 
 .row:last-child {
@@ -73,24 +65,26 @@
 }
 
 .value {
-    font-weight: 700;
-    color: #38003c;
+    color: var(--app-accent-foreground);
+    font-weight: 800;
 }
 
 .history {
     display: block;
     width: 100%;
-    border: 0;
+    padding: 9px 16px 13px;
+    color: var(--app-accent-foreground);
     background: transparent;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
     text-align: right;
-    padding: 10px 18px 14px;
-    color: #38003c;
-    font-weight: 600;
-    font-size: 0.85rem;
     cursor: pointer;
-    transition: color 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.history:hover {
-    color: #00e5ff;
+.history:hover,
+.history:focus-visible {
+    color: var(--app-accent);
+    background: var(--app-accent-surface);
 }

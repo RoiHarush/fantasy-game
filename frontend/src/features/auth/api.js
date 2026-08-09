@@ -7,7 +7,12 @@ export function getCurrentUser() {
 export function authenticateUser(values, registering) {
     const endpoint = registering ? "register" : "login";
     const body = registering
-        ? { name: values.name, username: values.username, password: values.password }
+        ? {
+            firstName: values.firstName,
+            lastName: values.lastName,
+            username: values.username,
+            password: values.password,
+        }
         : { username: values.username, password: values.password };
 
     return apiRequest(`/api/auth/${endpoint}`, {

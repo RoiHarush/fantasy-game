@@ -57,7 +57,7 @@ public class AuthService {
 
     @Transactional
     public LoginResponse register(RegisterRequest request) {
-        String name = requireText(request.name(), "Name", 2, 50);
+        NameParts nameParts = resolveName(request);
         String username = requireText(request.username(), "Username", 3, 30)
                 .toLowerCase(Locale.ROOT);
         String password = requireText(request.password(), "Password", 8, 72);
@@ -72,7 +72,9 @@ public class AuthService {
         }
 
         UserEntity user = new UserEntity();
-        user.setName(name);
+        user.setFirstName(nameParts.firstName());
+        user.setLastName(nameParts.lastName());
+        user.setName(nameParts.fullName());
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setRegisteredAt(LocalDateTime.now());
@@ -87,6 +89,8 @@ public class AuthService {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
         dto.setUsername(user.getUsername());
         dto.setRole(user.getRole().name());
         dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
@@ -122,5 +126,27 @@ public class AuthService {
             );
         }
         return normalized;
+    }
+
+    private NameParts resolveName(RegisterRequest request) {
+        if (request.firstName() != null && !request.firstName().isBlank()
+                && request.lastName() != null && !request.lastName().isBlank()) {
+            String firstName = requireText(request.firstName(), "First name", 1, 50);
+            String lastName = requireText(request.lastName(), "Last name", 1, 50);
+            return new NameParts(firstName, lastName);
+        }
+
+        String legacyName = requireText(request.name(), "Name", 2, 100);
+        int separator = legacyName.indexOf(' ');
+        if (separator < 0) {
+            return new NameParts(legacyName, "");
+        }
+        return new NameParts(legacyName.substring(0, separator), legacyName.substring(separator + 1).trim());
+    }
+
+    private record NameParts(String firstName, String lastName) {
+        private String fullName() {
+            return (firstName + " " + lastName).trim();
+        }
     }
 }

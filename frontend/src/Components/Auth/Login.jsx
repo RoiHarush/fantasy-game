@@ -36,7 +36,8 @@ function AuthenticationForm({ isRegistering, initialUsername, auth, onToggleMode
     } = useForm({
         resolver: zodResolver(schema),
         defaultValues: {
-            name: "",
+            firstName: "",
+            lastName: "",
             username: initialUsername,
             password: "",
             confirmPassword: "",
@@ -66,17 +67,29 @@ function AuthenticationForm({ isRegistering, initialUsername, auth, onToggleMode
         <form className={styles.card} onSubmit={handleSubmit(onSubmit)} noValidate>
             {isRegistering && (
                 <>
-                    <label className={styles.srOnly} htmlFor="display-name">Display name</label>
+                    <label className={styles.srOnly} htmlFor="first-name">First name</label>
                     <input
-                        id="display-name"
-                        {...register("name")}
+                        id="first-name"
+                        {...register("firstName")}
                         className={styles.input}
-                        placeholder="Display name"
-                        autoComplete="name"
-                        aria-invalid={Boolean(errors.name)}
-                        aria-describedby={errors.name ? "name-error" : undefined}
+                        placeholder="First name"
+                        autoComplete="given-name"
+                        aria-invalid={Boolean(errors.firstName)}
+                        aria-describedby={errors.firstName ? "first-name-error" : undefined}
                     />
-                    <FieldError id="name-error" error={errors.name} />
+                    <FieldError id="first-name-error" error={errors.firstName} />
+
+                    <label className={styles.srOnly} htmlFor="last-name">Last name</label>
+                    <input
+                        id="last-name"
+                        {...register("lastName")}
+                        className={styles.input}
+                        placeholder="Last name"
+                        autoComplete="family-name"
+                        aria-invalid={Boolean(errors.lastName)}
+                        aria-describedby={errors.lastName ? "last-name-error" : undefined}
+                    />
+                    <FieldError id="last-name-error" error={errors.lastName} />
                 </>
             )}
 

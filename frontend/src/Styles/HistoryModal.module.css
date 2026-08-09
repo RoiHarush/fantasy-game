@@ -1,85 +1,117 @@
 .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+    padding: 16px;
+    background: rgba(8, 3, 15, 0.68);
+    backdrop-filter: blur(3px);
     animation: fadeIn 0.2s ease-in-out;
 }
 
 .modal {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
+    width: min(100%, 600px);
+    max-height: min(80dvh, 720px);
     overflow-y: auto;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    padding: 22px;
+    color: var(--app-foreground);
+    background: var(--app-surface-elevated);
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(8, 3, 15, 0.35);
 }
 
 .header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--app-border);
 }
 
 .header h2 {
-    color: #37003c;
     margin: 0;
-    font-size: 1.5rem;
+    color: var(--app-foreground);
+    font-size: 1.35rem;
 }
 
 .closeBtn {
-    background: none;
-    border: none;
-    font-size: 2rem;
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    color: var(--app-muted);
+    background: var(--app-surface-muted);
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    font-size: 1.5rem;
+    line-height: 1;
     cursor: pointer;
-    color: #666;
+}
+
+.closeBtn:hover,
+.closeBtn:focus-visible {
+    color: var(--app-accent-foreground);
+    background: var(--app-accent-surface);
+}
+
+.content {
+    min-width: 0;
+    overflow-x: auto;
 }
 
 .table {
     width: 100%;
+    min-width: 420px;
+    margin-top: 4px;
     border-collapse: collapse;
-    margin-top: 10px;
 }
 
 .table th {
+    padding: 11px 10px;
+    color: var(--app-muted);
+    background: var(--app-surface-muted);
+    border-bottom: 1px solid var(--app-border);
+    font-size: 0.78rem;
+    font-weight: 700;
     text-align: left;
-    color: #888;
-    font-weight: normal;
-    padding: 12px 0;
-    border-bottom: 1px solid #eee;
-    font-size: 0.9rem;
+    text-transform: uppercase;
 }
 
 .table td {
-    padding: 15px 0;
-    border-bottom: 1px solid #f5f5f5;
-    font-size: 1rem;
+    padding: 13px 10px;
+    color: var(--app-foreground);
+    border-bottom: 1px solid var(--app-border);
+    font-size: 0.92rem;
     font-weight: 500;
-    color: #37003c;
 }
 
 .points,
 .total {
-    font-weight: bold;
+    color: var(--app-accent-foreground);
+    font-weight: 800;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 520px) {
+    .overlay {
+        align-items: flex-end;
+        padding: 8px;
     }
 
-    to {
-        opacity: 1;
+    .modal {
+        width: 100%;
+        max-height: 86dvh;
+        padding: 16px;
+        border-radius: 16px 16px 10px 10px;
     }
 }

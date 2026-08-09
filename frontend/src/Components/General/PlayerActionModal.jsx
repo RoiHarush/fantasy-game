@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { ArrowRightLeft, Crown, Info, ShieldCheck, X } from "lucide-react";
 import Style from "../../Styles/PlayerActionModal.module.css";
 
 function PlayerActionModal({
@@ -17,7 +18,7 @@ function PlayerActionModal({
     if (!player) return null;
 
     const isLockedFirstPickCaptain =
-        firstPickUsed && isCaptain && String(squad?.firstPickId) === String(player.id);
+        firstPickUsed && String(squad?.firstPickId) === String(player.id);
 
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -25,11 +26,16 @@ function PlayerActionModal({
             <Dialog.Overlay className={Style.overlay} />
             <Dialog.Content className={Style.modal}>
                 <div className={Style.header}>
-                    <Dialog.Title className={Style.playerName}>
-                        {`${player.firstName} ${player.lastName}`}
-                    </Dialog.Title>
+                    <div>
+                        <span className={Style.eyebrow}>Player actions</span>
+                        <Dialog.Title className={Style.playerName}>
+                            {`${player.firstName} ${player.lastName}`}
+                        </Dialog.Title>
+                    </div>
                     <Dialog.Close asChild>
-                        <button type="button" className={Style.closeBtn} aria-label="Close player actions">✕</button>
+                        <button type="button" className={Style.closeBtn} aria-label="Close player actions">
+                            <X aria-hidden="true" size={20} />
+                        </button>
                     </Dialog.Close>
                 </div>
 
@@ -40,31 +46,48 @@ function PlayerActionModal({
                         onClick={() => onSwitch(player.id)}
                         disabled={isLockedFirstPickCaptain}
                     >
-                        Switch Player
+                        <span className={Style.actionIcon}><ArrowRightLeft aria-hidden="true" size={20} /></span>
+                        <span className={Style.actionCopy}>
+                            <strong>Switch player</strong>
+                            <small>Choose a valid squad replacement</small>
+                        </span>
                     </button>
 
-                    <div className={Style.checkboxRow}>
-                        <label className={!canBeCaptain || firstPickUsed ? Style.disabledLabel : ""}>
+                    <div className={Style.roleGrid}>
+                        <label className={`${Style.roleOption} ${isCaptain ? Style.roleSelected : ""} ${!canBeCaptain || firstPickUsed ? Style.disabledLabel : ""}`}>
                             <input
                                 type="checkbox"
+                                className={Style.roleInput}
                                 checked={isCaptain}
                                 onChange={() => onSetCaptain(player.id)}
                                 disabled={!canBeCaptain || firstPickUsed}
-                            /> Captain
+                            />
+                            <Crown aria-hidden="true" size={20} />
+                            <span>
+                                <strong>Captain</strong>
+                                <small>Double points</small>
+                            </span>
                         </label>
 
-                        <label className={!canBeCaptain ? Style.disabledLabel : ""}>
+                        <label className={`${Style.roleOption} ${isVice ? Style.roleSelected : ""} ${!canBeCaptain ? Style.disabledLabel : ""}`}>
                             <input
                                 type="checkbox"
+                                className={Style.roleInput}
                                 checked={isVice}
                                 onChange={() => onSetVice(player.id)}
                                 disabled={!canBeCaptain}
-                            /> Vice
+                            />
+                            <ShieldCheck aria-hidden="true" size={20} />
+                            <span>
+                                <strong>Vice</strong>
+                                <small>Captain backup</small>
+                            </span>
                         </label>
                     </div>
 
                     <button type="button" className={Style.infoBtn} onClick={() => onViewInfo(player)}>
-                        View Information
+                        <Info aria-hidden="true" size={20} />
+                        <span>View player information</span>
                     </button>
 
                 </div>

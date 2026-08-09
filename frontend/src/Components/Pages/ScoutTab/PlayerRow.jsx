@@ -1,12 +1,12 @@
-import { ArrowRightLeft } from "lucide-react";
-import Image from "next/image";
+import { ArrowRightLeft, Info, ListPlus, LockKeyhole } from "lucide-react";
 import { memo, useState } from "react";
 
-import styles from "../../../Styles/PlayerRow.module.css";
+import { getInitials } from "../../../lib/initials";
+import { getPlayerInjuryColor } from "../../../lib/playerStatus";
 import TeamShortNames from "../../../Utils/teamNameMap";
-import WatchButton from "../../General/WatchButton";
-import PlayerKit from "../../General/PlayerKit";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
+import PlayerKit from "../../General/PlayerKit";
+import WatchButton from "../../General/WatchButton";
 
 const PlayerRow = memo(function PlayerRow({
     player,
@@ -24,170 +24,172 @@ const PlayerRow = memo(function PlayerRow({
     onToggleWatch,
     watchlistUpdating,
     onWaiverSelect,
-    waiverPlanned = false
+    waiverPlanned = false,
 }) {
     const [showInfo, setShowInfo] = useState(false);
-
     const isMyTurn = String(currentTurnUserId) === String(user?.id);
-    const teamName = team ? team.shortName : "";
-
-    let injuryColor = null;
-    if (player.chanceOfPlayingNextRound !== null && player.chanceOfPlayingNextRound < 100) {
-        const c = player.chanceOfPlayingNextRound;
-        if (c === 0) injuryColor = "#d81919";
-        else if (c <= 25) injuryColor = "#ff3b1f";
-        else if (c <= 50) injuryColor = "#ff6b4a";
-        else if (c <= 75) injuryColor = "#ff8c80";
-    }
-
-    const ownerLabel = player.available
-        ? "Free"
+    const teamName = team?.shortName ?? "";
+    const injuryColor = getPlayerInjuryColor(player.chanceOfPlayingNextRound);
+    const ownerName = player.available
+        ? "Free agent"
         : String(player.ownerId) === String(user?.id)
-            ? "You"
-            : player.ownerName || "Unknown";
+            ? user?.name || player.ownerName || "You"
+            : player.ownerName || "Unknown manager";
+    const ownerInitials = getInitials(ownerName);
 
     return (
         <>
-            <td className={styles.playerMainCell}>
-                <div className={styles.playerCell}>
+            <td className="min-w-0 px-1.5 py-2 sm:px-3">
+                <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                     <button
                         type="button"
-                        className={styles.infoIconWrapper}
+                        className="grid size-4 shrink-0 place-items-center p-0 transition hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent"
                         aria-label={`View ${player.viewName} information`}
+                        style={{ color: injuryColor || "var(--app-muted)" }}
                         onClick={(event) => {
                             event.stopPropagation();
                             setShowInfo(true);
                         }}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={styles.infoIcon} aria-hidden="true">
-                            <circle cx="12" cy="12" r="10" fill={injuryColor || "#888"} />
-                            <text x="12" y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="white">i</text>
-                        </svg>
+                        <Info aria-hidden="true" size={14} strokeWidth={2.2} />
                     </button>
-                    <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={styles.playerShirt} />
-                    <div className={styles.playerInfo}>
-                        <span className={styles.playerName}>{player.viewName}</span>
-                        <span className={styles.playerSubinfo}>{teamName} • {player.position}</span>
+                    <PlayerKit
+                        teamId={player.teamId}
+                        type={player.position === "GK" ? "gk" : "field"}
+                        className="block h-7 max-h-7 w-7 max-w-7 shrink-0 object-contain"
+                        style={{ width: "1.75rem", height: "1.75rem" }}
+                    />
+                    <div className="min-w-0 leading-tight">
+                        <span className="block truncate text-xs font-bold text-app-foreground sm:text-sm">{player.viewName}</span>
+                        <span className="block truncate text-[0.64rem] font-medium text-app-muted sm:text-[0.7rem]">
+                            {teamName} • {player.position}
+                        </span>
                     </div>
                 </div>
             </td>
 
-            <td>{player.points}</td>
+            <td className="px-1 py-2 text-center font-bold text-app-foreground">{player.points}</td>
 
-            {upcomingGws.map((gw) => {
-                const fixture = teamFixtures?.[String(gw)];
-                if (!fixture) return <td key={gw} className={styles.fixtureCell}>-</td>;
+            {upcomingGws.map((gameweek) => {
+                const fixture = teamFixtures?.[String(gameweek)];
+                if (!fixture) {
+                    return <td key={gameweek} className="px-1 py-2 text-center text-xs font-semibold text-app-muted">-</td>;
+                }
 
                 const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
                 const fullName = match ? match[1].trim() : fixture.opponent;
-                const ha = match ? match[2] : "";
+                const location = match ? match[2] : "";
                 const shortName = TeamShortNames[fullName] || fullName;
 
                 return (
-                    <td key={gw} className={styles.fixtureCell}>
-                        {shortName} ({ha})
+                    <td key={gameweek} className="truncate px-1 py-2 text-center text-[0.7rem] font-semibold text-app-muted" title={`${shortName} (${location})`}>
+                        {shortName} ({location})
                     </td>
                 );
             })}
 
-            <td className={styles.actionCell}>
+            <td className="px-1 py-2 text-center">
                 <button
                     type="button"
-                    className={`${styles.compareBtn} ${isSelectedForCompare ? styles.selectedCompare : ""}`}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        !isSelectedForCompare && onCompare?.(player);
+                    className={`mx-auto inline-flex size-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-app-accent xl:h-9 xl:w-auto xl:px-2.5 ${isSelectedForCompare
+                        ? "border-app-accent bg-app-accent-surface text-app-accent-foreground"
+                        : "border-app-border bg-app-surface-muted text-app-foreground hover:border-app-accent-border hover:bg-app-accent-hover"
+                    }`}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        if (!isSelectedForCompare) onCompare?.(player);
                     }}
                     disabled={isSelectedForCompare}
                 >
-                    <ArrowRightLeft size={18} className={styles.compareIcon} />
-                    <span className={styles.compareText}>
-                        {isSelectedForCompare ? "Selected" : "Compare"}
-                    </span>
+                    <ArrowRightLeft aria-hidden="true" size={17} />
+                    <span className="hidden xl:inline">{isSelectedForCompare ? "Selected" : "Compare"}</span>
                 </button>
             </td>
 
-            <td className={styles.squareBtnCell}>
-                <div className={styles.watchWrapper}>
-                    <WatchButton isWatched={isWatched} onToggle={onToggleWatch} disabled={watchlistUpdating} />
-                </div>
+            <td className="px-1 py-2 text-center">
+                <WatchButton
+                    isWatched={isWatched}
+                    onToggle={onToggleWatch}
+                    disabled={watchlistUpdating}
+                />
             </td>
 
             {mode === "scout" && (
-                <td className={styles.actionCell}>
-                    <span
-                        className={`${styles.ownerBadge} ${player.available
-                            ? styles.ownerFree
-                            : String(player.ownerId) === String(user?.id)
-                                ? styles.ownerMe
-                                : styles.ownerOther
+                <td className="px-1 py-2 text-center">
+                    {player.available ? (
+                        <span
+                            title="Free agent"
+                            aria-label="Owner: Free agent"
+                            className="mx-auto inline-flex h-7 items-center justify-center rounded-full border border-app-border bg-app-surface-muted px-1.5 text-[0.6rem] font-extrabold uppercase tracking-wide text-app-muted"
+                        >
+                            Free
+                        </span>
+                    ) : (
+                        <span
+                            title={ownerName}
+                            aria-label={`Owner: ${ownerName}`}
+                            className={`mx-auto grid size-8 place-items-center rounded-full border text-[0.66rem] font-extrabold tracking-wide ${String(player.ownerId) === String(user?.id)
+                                ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                                : "border-app-accent-border bg-app-accent-surface text-app-accent-foreground"
                             }`}
-                    >
-                        {ownerLabel}
-                    </span>
-                </td >
+                        >
+                            {ownerInitials}
+                        </span>
+                    )}
+                </td>
             )}
 
             {mode === "scout" && onWaiverSelect && (
-                <td className={styles.actionCell}>
+                <td className="px-1 py-2 text-center">
                     {player.available || (player.ownerId != null && String(player.ownerId) !== String(user?.id)) ? (
                         <button
                             type="button"
-                            className={styles.waiverBtn}
-                            onClick={event => {
+                            className="mx-auto inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-app-accent-border bg-app-accent-surface px-2 text-xs font-bold text-app-accent-foreground transition hover:border-app-accent hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent"
+                            onClick={(event) => {
                                 event.stopPropagation();
                                 onWaiverSelect(player);
                             }}
-                        >{waiverPlanned ? "Planned" : "Waiver"}</button>
+                        >
+                            <ListPlus aria-hidden="true" size={16} />
+                            <span className="hidden xl:inline">{waiverPlanned ? "Planned" : "Waiver"}</span>
+                        </button>
                     ) : (
-                        <Image
-                            src="/Icons/lock.svg"
-                            alt="Unavailable"
-                            title={String(player.ownerId) === String(user?.id)
-                                ? "This player is already in your squad"
-                                : "This player is locked by the league manager"}
-                            width={24}
-                            height={24}
-                            className={styles.lockIcon}
+                        <LockKeyhole
+                            aria-label="Unavailable"
+                            title="This player is already in your squad"
+                            className="mx-auto size-5 text-app-muted"
                         />
                     )}
                 </td>
             )}
 
-            {
-                (mode === "transfer" || mode === "draft") && (
-                    <td className={styles.actionCell}>
-                        {player.available && !ruleLocked ? (
-                            <button
-                                type="button"
-                                className={styles.signBtn}
-                                disabled={!isMyTurn}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    isMyTurn && onPlayerSelect?.(player);
-                                }}
-                            >
-                                {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
-                            </button>
-                        ) : (
-                            <Image
-                                src="/Icons/lock.svg"
-                                alt="Locked"
-                                title={ruleLocked ? "This pick would exceed a squad position or three-player club limit" : "Player is unavailable"}
-                                width={24}
-                                height={24}
-                                className={styles.lockIcon}
-                            />
-                        )}
-                    </td>
-                )
-            }
+            {(mode === "transfer" || mode === "draft") && (
+                <td className="px-1 py-2 text-center">
+                    {player.available && !ruleLocked ? (
+                        <button
+                            type="button"
+                            className="mx-auto inline-flex h-9 min-w-0 items-center justify-center rounded-lg bg-component-gradient px-2.5 text-xs font-extrabold text-brand-ink transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                            disabled={!isMyTurn}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                if (isMyTurn) onPlayerSelect?.(player);
+                            }}
+                        >
+                            {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
+                        </button>
+                    ) : (
+                        <LockKeyhole
+                            aria-label="Locked"
+                            title={ruleLocked
+                                ? "This pick would exceed a squad position or three-player club limit"
+                                : "Player is unavailable"}
+                            className="mx-auto size-5 text-app-muted"
+                        />
+                    )}
+                </td>
+            )}
 
-            {
-                showInfo && (
-                    <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />
-                )
-            }
+            {showInfo && <PlayerInfoModal player={player} onClose={() => setShowInfo(false)} />}
         </>
     );
 });

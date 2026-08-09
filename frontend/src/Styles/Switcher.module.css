@@ -1,26 +1,49 @@
 .switcherContainer {
     display: flex;
-    background-color: #f1f4fb;
-    border-radius: 5px;
-    padding: 4px;
     width: fit-content;
+    max-width: 100%;
     margin: 0 auto;
+    padding: 4px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: var(--app-surface-muted);
 }
 
 .switcherButton {
     flex: 1;
-    padding: 6px 30px;
-    border: none;
+    padding: 7px 24px;
+    border: 0;
+    border-radius: 7px;
     background: transparent;
-    font-weight: 600;
-    color: #2c014d;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    color: var(--app-muted);
+    font-weight: 700;
     white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.switcherButton:hover {
+    color: var(--app-foreground);
+}
+
+.switcherButton:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 2px;
 }
 
 .active {
-    background-color: #fff;
-    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.15);
+    background: var(--app-surface-elevated);
+    color: var(--app-foreground);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--app-foreground) 10%, transparent);
+}
+
+@media (max-width: 480px) {
+    .switcherContainer {
+        width: 100%;
+    }
+
+    .switcherButton {
+        min-width: 0;
+        padding-inline: 12px;
+    }
 }

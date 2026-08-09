@@ -112,6 +112,8 @@ public class UserService {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
         dto.setUsername(user.getUsername());
         dto.setRole(user.getRole().name());
         dto.setFantasyTeamName(teamName);

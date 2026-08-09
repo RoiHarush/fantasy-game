@@ -9,7 +9,7 @@ function ConfirmIRModal({ confirmIRPlayer, onConfirm, onCancel, isActive, irPlay
         <Dialog.Root open onOpenChange={open => !open && onCancel()}>
             <Dialog.Portal>
             <Dialog.Overlay className={Style.modalBackdrop} />
-            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3002] -translate-x-1/2 -translate-y-1/2`}>
+            <Dialog.Content className={Style.modal}>
                 <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 
                 <Image

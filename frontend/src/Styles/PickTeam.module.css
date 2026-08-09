@@ -2,26 +2,23 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-width: 0;
 }
 
 .title {
+    margin-bottom: 20px;
+    color: var(--app-foreground);
     font-size: 1.6rem;
     font-weight: 700;
-    margin-bottom: 20px;
-    color: black;
 }
 
 .contentWrapper {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 800px;
-    max-width: 100%;
+    width: 100%;
+    max-width: 1000px;
     gap: 20px;
-}
-
-.pitchWrapper {
-    position: relative;
 }
 
 .pitchWrapper,
@@ -36,114 +33,147 @@
     margin-top: 15px;
 }
 
-
 .saveTeam {
     padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: bold;
-    background: #2c0032;
-    color: white;
-    border: none;
+    color: var(--color-brand-ink);
+    background: var(--component-gradient);
+    border: 1px solid color-mix(in srgb, var(--app-accent) 35%, transparent);
     border-radius: 8px;
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--app-accent) 28%, transparent);
+    font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: filter 0.2s ease, transform 0.2s ease;
 }
 
 .saveTeam:hover:not(:disabled) {
-    background: #2c0032;
+    filter: brightness(1.15);
+    transform: translateY(-1px);
 }
 
 .saveTeam:disabled {
-    background: #b0b0b0;
+    background: var(--app-border);
+    color: var(--app-muted);
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.75;
 }
 
 .chipBar {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.chipCard {
-    background: #24002a;
-    border-radius: 10px;
-    padding: 8px 12px;
-    text-align: center;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 200px;
-    min-height: 95px;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
-}
-
-.chipIcon {
-    width: 26px;
-    height: 26px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-self: center;
+    gap: 10px;
+    width: min(100%, 620px);
     margin-bottom: 4px;
 }
 
+.chipCard {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "icon title button"
+        "message message message";
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 8px 10px;
+    color: var(--app-foreground);
+    background: var(--app-surface);
+    border: 1px solid var(--app-accent-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(27, 16, 53, 0.08);
+}
+
+.chipIcon {
+    grid-area: icon;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+}
+
 .chipTitle {
+    grid-area: title;
+    margin: 0;
+    overflow: hidden;
+    color: var(--app-foreground);
+    font-size: 0.8rem;
     font-weight: 700;
-    font-size: 0.82rem;
-    margin-bottom: 6px;
-    text-align: center;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .chipButton {
-    width: 100%;
-    padding: 5px 0;
-    border-radius: 6px;
-    border: 2px solid #fff;
-    background: transparent;
-    color: #fff;
+    grid-area: button;
+    width: auto;
+    min-height: 34px;
+    padding: 5px 10px;
+    color: var(--app-accent-foreground);
+    background: var(--app-accent-surface);
+    border: 1px solid var(--app-accent-border);
+    border-radius: 8px;
+    font-size: 0.75rem;
     font-weight: 700;
-    font-size: 0.8rem;
     cursor: pointer;
-    transition: all 0.3s ease;
-    width: calc(100% + 4px);
-    margin: 0 -2px;
+    transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .chipButton:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--app-accent-hover);
+    transform: translateY(-1px);
 }
 
 .chipButton.active {
-    border: none;
-    background: linear-gradient(90deg, #00e5ff, #007bff);
-    color: #fff;
+    color: var(--color-brand-ink);
+    background: var(--component-gradient);
+    border-color: transparent;
 }
 
 .chipButton:disabled {
-    opacity: 0.45;
     cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.chipMessage {
+    grid-area: message;
+    margin: 0;
+    color: var(--app-muted);
+    font-size: 0.7rem;
+    line-height: 1.25;
 }
 
 .savedMessage {
-    margin-top: 12px;
-    padding: 12px;
-    text-align: center;
-    background-color: #2a0036;
-    color: #33ff99;
-    font-size: 18px;
-    border-radius: 6px;
-    animation: fadeIn 0.3s ease-out;
-
-    width: 100%;
     display: flex;
+    align-items: center;
     justify-content: center;
-
+    gap: 8px;
+    width: 100%;
     max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 12px auto 0;
+    padding: 12px;
+    color: var(--app-accent-foreground);
+    background: var(--app-surface-elevated);
+    border: 1px solid var(--app-accent-border);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--app-foreground) 10%, transparent);
+    font-size: 1rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
 }
 
+.savedMessage::before {
+    content: "✓";
+    display: inline-grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    color: var(--color-brand-ink);
+    background: var(--component-gradient);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
 
 @keyframes fadeIn {
     from {
@@ -157,43 +187,37 @@
     }
 }
 
-
 @media (max-width: 768px) {
+    .title {
+        margin-bottom: 4px;
+        font-size: 1.3rem;
+        text-align: center;
+    }
+
     .chipBar {
-        flex-wrap: nowrap;
+        grid-template-columns: 1fr;
         gap: 8px;
         width: 100%;
-        padding: 0 10px;
-        box-sizing: border-box;
+        padding: 0;
     }
 
     .chipCard {
-        width: auto;
-        flex: 1;
-        min-width: 0;
-        min-height: auto;
-        padding: 8px 4px;
+        min-height: 52px;
+        padding: 7px 9px;
     }
 
     .chipTitle {
-        font-size: 0.65rem;
-        margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
+        font-size: 0.78rem;
     }
 
     .chipIcon {
-        width: 20px;
-        height: 20px;
-        margin-bottom: 2px;
+        width: 26px;
+        height: 26px;
     }
 
     .chipButton {
-        font-size: 0.65rem;
-        padding: 3px 0;
-        width: 100%;
-        margin: 0;
+        min-height: 32px;
+        padding: 4px 9px;
+        font-size: 0.72rem;
     }
 }

@@ -154,7 +154,7 @@ public class PlayerService {
 
                         PlayerOwnership owner = new PlayerOwnership(
                                 gameData.getUser().getId(),
-                                gameData.getUser().getName()
+                                gameData.getUser().getFullName()
                         );
                         addOwnership(ownership, squad.getStartingLineup(), owner);
                         addOwnership(ownership, squad.getBenchMap().values(), owner);

@@ -14,7 +14,7 @@ function IRModal({ squad, players, onClose, onSelect }) {
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
             <Dialog.Portal>
             <Dialog.Overlay className={Style.modalBackdrop} />
-            <Dialog.Content className={`${Style.modal} fixed left-1/2 top-1/2 z-[3001] -translate-x-1/2 -translate-y-1/2`}>
+            <Dialog.Content className={Style.modal}>
                 <Dialog.Title className="sr-only">Select Player for IR</Dialog.Title>
                 <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
 

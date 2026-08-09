@@ -10,18 +10,26 @@
 }
 
 .modal {
-    background: #24002a;
-    color: #fff;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    background: var(--app-surface-elevated);
+    color: var(--app-foreground);
+    border-left: 1px solid var(--app-border);
     width: 420px;
     max-width: 100%;
-    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     padding: 50px 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
     box-shadow: -4px 0 25px rgba(0, 0, 0, 0.6);
     animation: slideIn 0.3s ease forwards;
-    position: relative;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     box-sizing: border-box;
 }
 
@@ -51,7 +59,7 @@
     right: 18px;
     background: transparent;
     border: none;
-    color: #fff;
+    color: var(--app-foreground);
     font-size: 22px;
     cursor: pointer;
     transition: transform 0.2s ease;
@@ -73,14 +81,14 @@
 
 .message {
     font-size: 1rem;
-    color: #ddd;
+    color: var(--app-muted);
     text-align: center;
     line-height: 1.6;
     margin-bottom: 12px;
 }
 
 .playerName {
-    color: #00e5ff;
+    color: var(--app-accent-foreground);
     font-weight: 700;
 }
 
@@ -98,12 +106,12 @@
 }
 
 .notice {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--app-surface-muted);
+    border: 1px solid var(--app-border);
     border-radius: 8px;
     padding: 12px;
     margin-top: 10px;
-    color: #bbb;
+    color: var(--app-muted);
     font-size: 0.9rem;
     text-align: center;
 }
@@ -159,7 +167,7 @@
 @media (max-width: 600px) {
     .modal {
         width: 100%;
-        height: 100%;
+        height: 100dvh;
         padding: 30px 20px;
     }
 }

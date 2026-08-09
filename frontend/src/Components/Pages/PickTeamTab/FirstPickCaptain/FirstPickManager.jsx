@@ -57,7 +57,7 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
                         : "Play"}
             </button>
 
-            {message && <p role="status">{message}</p>}
+            {message && <p role="status" className={style.chipMessage}>{message}</p>}
 
             {showConfirmModal && (
                 <ConfirmFirstPickCaptainModal

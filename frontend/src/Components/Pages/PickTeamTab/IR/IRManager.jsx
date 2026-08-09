@@ -96,7 +96,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 </button>
             )}
 
-            {message && <p role="status">{message}</p>}
+            {message && <p role="status" className={Style.chipMessage}>{message}</p>}
 
             {showIRModal && (
                 <IRModal

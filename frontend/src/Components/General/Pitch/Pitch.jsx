@@ -68,7 +68,11 @@ function Pitch({
                         (_, index) => playerIds[index] ?? null
                     );
                     return (
-                        <div key={pos} className={Style.row}>
+                        <div
+                            key={pos}
+                            className={Style.row}
+                            style={{ "--player-count": slots.length }}
+                        >
                             {slots.map((id, index) => renderPlayer(id, `${pos}-${index}`))}
                         </div>
                     );

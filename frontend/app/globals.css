@@ -82,6 +82,8 @@ html {
     min-width: 20rem;
     background: var(--app-background);
     overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {

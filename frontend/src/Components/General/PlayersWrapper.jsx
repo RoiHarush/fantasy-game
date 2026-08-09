@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useFilteredPlayers } from "../../hooks/useFilteredPlayers";
 import PlayerTable from "../Pages/ScoutTab/PlayersTable";
 import ControlsBar from "./ControlsBar";
-import Style from "../../Styles/ScoutWrapper.module.css";
 import CompareModal from "./CompareModal";
 import WaiverPlanPanel from "../Pages/ScoutTab/WaiverPlanPanel";
 import WaiverCandidateDialog from "../Pages/ScoutTab/WaiverCandidateDialog";
@@ -91,7 +90,7 @@ function PlayersWrapper({
         : filteredPlayers;
 
     return (
-        <div className={Style.scoutWrapper}>
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-app-border bg-app-surface text-app-foreground shadow-panel">
             <ControlsBar
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -110,13 +109,17 @@ function PlayersWrapper({
                 showWaivers={mode === "scout" && Boolean(onWaiverEntriesChange)}
             />
 
-            {watchlistQuery.error && <p role="alert">The watchlist could not be updated.</p>}
+            {watchlistQuery.error && (
+                <p className="mx-4 mt-4 rounded-control border border-app-danger-border bg-app-danger-surface p-3 text-sm text-app-danger-foreground" role="alert">
+                    The watchlist could not be updated.
+                </p>
+            )}
 
             {comparePlayers.length === 1 && (
-                <div className={Style.compareBanner}>
+                <div className="mx-4 mt-4 flex flex-wrap items-center justify-center gap-2 rounded-control border border-app-accent-border bg-app-accent-surface p-3 text-center text-sm text-app-accent-foreground">
                     Select another <strong>{filterByPosition}</strong> to compare with{" "}
                     <strong>{comparePlayers[0].viewName}</strong>.
-                    <button type="button" className={Style.cancelCompare} onClick={handleCloseCompare}>
+                    <button type="button" className="rounded-full border border-app-accent-border px-3 py-1 font-bold transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent" onClick={handleCloseCompare}>
                         Cancel
                     </button>
                 </div>

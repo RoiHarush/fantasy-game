@@ -26,6 +26,7 @@ export function PlayerInteractionProvider({
     user,          // pick + points
     children
 }) {
+    const firstPickCaptainActive = chips?.active?.FIRST_PICK_CAPTAIN === true;
 
     const [selectedPlayerId, setSelectedPlayerId] = useState(null);
     const [disabledIds, setDisabledIds] = useState([]);
@@ -57,8 +58,23 @@ export function PlayerInteractionProvider({
                 return;
             }
 
+            if (
+                firstPickCaptainActive
+                && (isSameId(selectedPlayerId, squad.firstPickId) || isSameId(playerId, squad.firstPickId))
+            ) {
+                setSelectedPlayerId(null);
+                setDisabledIds([]);
+                return;
+            }
+
             setSquad((previousSquad) => (
-                applySquadSwap(previousSquad, selectedPlayerId, playerId, players)
+                applySquadSwap(
+                    previousSquad,
+                    selectedPlayerId,
+                    playerId,
+                    players,
+                    firstPickCaptainActive,
+                )
             ));
 
             setIsDirty?.(true);
@@ -73,7 +89,7 @@ export function PlayerInteractionProvider({
             setModalType("action");
             setModalPlayer(player);
         }
-    }, [players, selectedPlayerId, setIsDirty, setSquad]);
+    }, [firstPickCaptainActive, players, selectedPlayerId, setIsDirty, setSquad, squad]);
 
     const handlePlayerClick = useCallback((playerId) => {
         if (mode === "points") handlePointsClick(playerId);
@@ -84,36 +100,46 @@ export function PlayerInteractionProvider({
     // ACTIONS FROM PICK TEAM MODAL
     // ============================
     const switchPlayer = useCallback((playerId) => {
+        if (firstPickCaptainActive && isSameId(playerId, squad.firstPickId)) {
+            setModalPlayer(null);
+            setModalType(null);
+            return;
+        }
+
         // Enter switch mode
         setModalPlayer(null);
         setModalType(null);
 
         setSelectedPlayerId(playerId);
 
-        const allowed = getAllowedSwapIds(squad, playerId, players, chips?.active?.FIRST_PICK_CAPTAIN);
+        const allowed = getAllowedSwapIds(squad, playerId, players, firstPickCaptainActive);
         const allIds = Object.values(squad.startingLineup).flat().concat(Object.values(squad.bench));
 
         setDisabledIds(allIds.filter((id) => (
             !isSameId(id, playerId)
             && !allowed.some((allowedId) => isSameId(allowedId, id))
         )));
-    }, [chips?.active?.FIRST_PICK_CAPTAIN, players, squad]);
+    }, [firstPickCaptainActive, players, squad]);
 
     const setCaptain = useCallback((playerId) => {
+        if (firstPickCaptainActive) return;
+
         setSquad((previousSquad) => assignCaptain(previousSquad, playerId));
         setIsDirty?.(true);
 
         setModalType(null);
         setModalPlayer(null);
-    }, [setIsDirty, setSquad]);
+    }, [firstPickCaptainActive, setIsDirty, setSquad]);
 
     const setVice = useCallback((playerId) => {
+        if (firstPickCaptainActive && isSameId(playerId, squad.firstPickId)) return;
+
         setSquad((previousSquad) => assignViceCaptain(previousSquad, playerId));
         setIsDirty?.(true);
 
         setModalType(null);
         setModalPlayer(null);
-    }, [setIsDirty, setSquad]);
+    }, [firstPickCaptainActive, setIsDirty, setSquad, squad]);
 
     const viewInfo = useCallback((player) => {
         setModalType("info");

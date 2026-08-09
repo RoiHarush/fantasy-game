@@ -133,32 +133,36 @@
 
 @media (max-width: 768px) {
     .player-card {
-        width: 13vw;
-        max-width: 85px;
+        width: 100%;
+        max-width: 72px;
+        min-width: 0;
         height: auto;
         margin: 0;
+        justify-self: center;
     }
 
     .empty-card {
-        width: 13vw;
-        max-width: 85px;
+        width: 100%;
+        max-width: 72px;
+        min-width: 0;
         height: auto;
         margin: 0;
+        justify-self: center;
     }
 
     .empty-card .player-shirt {
         filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
-        width: 70%;
+        width: clamp(30px, 9vw, 42px);
         opacity: 0.85;
     }
 
     .player-shirt {
-        width: 60%;
+        width: clamp(30px, 9vw, 42px);
         margin-bottom: 2px;
     }
 
     .player-name {
-        width: 130%;
+        width: 100%;
         padding: 2px 0;
         display: flex;
         align-items: center;
@@ -166,6 +170,7 @@
         min-width: 0;
         white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
         font-size: clamp(7px, 2.2vw, 10px);
     }
 
@@ -173,7 +178,11 @@
     .player-points {
         font-size: 9px;
         padding: 2px 0;
-        width: 130%;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .captain-badge,

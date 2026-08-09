@@ -86,4 +86,25 @@ describe("pick-team squad model", () => {
     it("returns no swap targets when player data is unavailable", () => {
         expect(getAllowedSwapIds(createSquad(), 999, players, false)).toEqual([]);
     });
+
+    it("locks the first-pick captain as both a swap source and target while the chip is active", () => {
+        const squad = createSquad();
+
+        expect(getAllowedSwapIds(squad, squad.firstPickId, players, true)).toEqual([]);
+        expect(getAllowedSwapIds(squad, 7, players, true)).not.toContain(squad.firstPickId);
+        expect(applySquadSwap(squad, squad.firstPickId, 7, players, true)).toBe(squad);
+        expect(applySquadSwap(squad, 7, squad.firstPickId, players, true)).toBe(squad);
+    });
+
+    it("also protects a first-pick goalkeeper from goalkeeper swaps", () => {
+        const squad = {
+            ...createSquad(),
+            firstPickId: 1,
+            captainId: 1,
+        };
+
+        expect(getAllowedSwapIds(squad, 1, players, true)).toEqual([]);
+        expect(getAllowedSwapIds(squad, 2, players, true)).not.toContain(1);
+        expect(applySquadSwap(squad, 1, 2, players, true)).toBe(squad);
+    });
 });

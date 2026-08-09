@@ -56,10 +56,10 @@ function ScoutPage() {
     if (error) return <p role="alert">Error loading squad: {error}</p>;
 
     const sidebar = !user.leagueId ? (
-        <aside>
-            <h2>Ready to draft?</h2>
-            <p>Create or join a league to see your squad alongside the scout.</p>
-            <Link href="/onboarding">Create or join a league</Link>
+        <aside className="rounded-2xl border border-app-border bg-app-surface p-5 text-app-foreground shadow-panel">
+            <h2 className="text-lg font-extrabold">Ready to draft?</h2>
+            <p className="mt-2 text-sm text-app-muted">Create or join a league to see your squad alongside the scout.</p>
+            <Link className="mt-4 inline-flex rounded-control bg-component-gradient px-4 py-2 text-sm font-extrabold text-brand-ink" href="/onboarding">Create or join a league</Link>
         </aside>
     ) : nextGameweek ? (
         <UserSquadSidebar
@@ -70,9 +70,9 @@ function ScoutPage() {
             nextGameweek={nextGameweek}
         />
     ) : (
-        <aside>
-            <h2>No upcoming gameweek</h2>
-            <p>{gameweeksError || "Squad data will appear when an upcoming gameweek is available."}</p>
+        <aside className="rounded-2xl border border-app-border bg-app-surface p-5 text-app-foreground shadow-panel">
+            <h2 className="text-lg font-extrabold">No upcoming gameweek</h2>
+            <p className="mt-2 text-sm text-app-muted">{gameweeksError || "Squad data will appear when an upcoming gameweek is available."}</p>
         </aside>
     );
 
