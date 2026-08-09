@@ -14,6 +14,7 @@ import com.fantasy.domain.player.PlayerGameweekStatsRepository;
 import com.fantasy.domain.team.SquadMapper;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.team.ChipNames;
 import com.fantasy.domain.user.UserMapper;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +100,9 @@ public class GameweekManager {
                 gameDataEntity.setCurrentSquad(preparedSquad);
                 gameDataEntity.setNextSquad(newNextSquadEntity);
                 if (gameDataEntity.getActiveChips() != null) {
-                    gameDataEntity.getActiveChips().put("FIRST_PICK_CAPTAIN", false);
+                    gameDataEntity.getActiveChips().put(ChipNames.FIRST_PICK_CAPTAIN, false);
+                    gameDataEntity.getActiveChips().put(ChipNames.TRIPLE_CAPTAIN, false);
+                    gameDataEntity.getActiveChips().put(ChipNames.BENCH_BOOST, false);
                 }
 
                 gameDataRepository.save(gameDataEntity);
@@ -204,6 +207,8 @@ public class GameweekManager {
         target.setFirstPickId(source.getFirstPickId());
         target.setIrId(source.getIrId());
         target.setAutoSubsApplied(false);
+        target.setTripleCaptainActive(false);
+        target.setBenchBoostActive(false);
     }
 
     private boolean updateGameweeksStatus(int newGwId) {

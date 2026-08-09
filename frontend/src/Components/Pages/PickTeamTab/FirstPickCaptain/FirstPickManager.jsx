@@ -11,6 +11,7 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
 
     const isActive = chips.active?.FIRST_PICK_CAPTAIN === true;
     const isUsedUp = chips.remaining?.FIRST_PICK_CAPTAIN <= 0;
+    const tripleCaptainActive = chips.active?.TRIPLE_CAPTAIN === true;
 
     const isFirstPickInStarting = isFirstPickStarting(squad);
 
@@ -36,7 +37,7 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
     return (
         <div className={style.chipCard}>
             <Image
-                src="/Icons/captain-chip.svg"
+                src="/Icons/fpcaptain-chip.svg"
                 alt="Captain Chip Icon"
                 width={64}
                 height={64}
@@ -48,16 +49,24 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
                 type="button"
                 className={`${style.chipButton} ${isActive ? style.active : ""}`}
                 onClick={handleToggle}
-                disabled={(!isFirstPickInStarting && !isActive) || (isUsedUp && !isActive)}
+                disabled={
+                    (!isFirstPickInStarting && !isActive)
+                    || (isUsedUp && !isActive)
+                    || (tripleCaptainActive && !isActive)
+                }
             >
                 {isActive
                     ? "Active"
-                    : !isFirstPickInStarting
+                    : tripleCaptainActive || !isFirstPickInStarting
                         ? "Unavailable"
                         : "Play"}
             </button>
 
-            {message && <p role="status" className={style.chipMessage}>{message}</p>}
+            {(message || (!isActive && tripleCaptainActive)) && (
+                <p role="status" className={style.chipMessage}>
+                    {message || "Unavailable while Triple Captain is active."}
+                </p>
+            )}
 
             {showConfirmModal && (
                 <ConfirmFirstPickCaptainModal

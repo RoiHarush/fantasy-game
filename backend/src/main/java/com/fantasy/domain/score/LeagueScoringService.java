@@ -25,7 +25,18 @@ public class LeagueScoringService {
             PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
             if (stats == null) continue;
             int playerPoints = calculatePlayerPoints(stats, league);
-            total += Objects.equals(squad.getCaptainId(), playerId) ? playerPoints * 2 : playerPoints;
+            int captainMultiplier = squad.isTripleCaptainActive() ? 3 : 2;
+            total += Objects.equals(squad.getCaptainId(), playerId)
+                    ? playerPoints * captainMultiplier
+                    : playerPoints;
+        }
+
+        if (squad.isBenchBoostActive()) {
+            for (Integer playerId : squad.getBenchMap().values()) {
+                if (playerId == null) continue;
+                PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
+                if (stats != null) total += calculatePlayerPoints(stats, league);
+            }
         }
         return total;
     }

@@ -55,6 +55,8 @@ public class SquadMapper {
             squad.setIR(allPlayers.get(e.getIrId()));
 
         squad.setAutoSubsApplied(e.isAutoSubsApplied());
+        squad.setTripleCaptainActive(e.isTripleCaptainActive());
+        squad.setBenchBoostActive(e.isBenchBoostActive());
 
         return squad;
     }
@@ -94,6 +96,8 @@ public class SquadMapper {
         e.setIrId(squad.getIR() != null ? squad.getIR().getId() : null);
 
         e.setAutoSubsApplied(squad.isAutoSubsApplied());
+        e.setTripleCaptainActive(squad.isTripleCaptainActive());
+        e.setBenchBoostActive(squad.isBenchBoostActive());
 
         return e;
     }
@@ -142,6 +146,8 @@ public class SquadMapper {
 
         dto.setFirstPickId(squad.getFirstPick() != null ? squad.getFirstPick().getId() : null);
         dto.setIrId(squad.getIR() != null ? squad.getIR().getId() : null);
+        dto.setTripleCaptainActive(squad.isTripleCaptainActive());
+        dto.setBenchBoostActive(squad.isBenchBoostActive());
 
         return dto;
     }

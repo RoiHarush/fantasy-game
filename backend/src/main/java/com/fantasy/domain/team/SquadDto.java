@@ -11,6 +11,8 @@ public class SquadDto {
     private Integer viceCaptainId;
     private Integer irId;
     private Integer firstPickId;
+    private boolean tripleCaptainActive;
+    private boolean benchBoostActive;
 
     public Map<String, List<Integer>> getStartingLineup() { return startingLineup; }
     public void setStartingLineup(Map<String, List<Integer>> startingLineup) { this.startingLineup = startingLineup; }
@@ -39,6 +41,16 @@ public class SquadDto {
     }
     public void setFirstPickId(Integer firstPickId) {
         this.firstPickId = firstPickId;
+    }
+
+    public boolean isTripleCaptainActive() { return tripleCaptainActive; }
+    public void setTripleCaptainActive(boolean tripleCaptainActive) {
+        this.tripleCaptainActive = tripleCaptainActive;
+    }
+
+    public boolean isBenchBoostActive() { return benchBoostActive; }
+    public void setBenchBoostActive(boolean benchBoostActive) {
+        this.benchBoostActive = benchBoostActive;
     }
 }
 

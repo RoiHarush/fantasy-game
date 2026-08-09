@@ -31,3 +31,10 @@ export function toggleFirstPickCaptain(userId, active) {
         : `/api/teams/${userId}/chips/first-pick-captain`;
     return runChipAction(userId, endpoint);
 }
+
+export function toggleGameweekChip(userId, chipSlug, active) {
+    const endpoint = active
+        ? `/api/teams/${userId}/chips/${chipSlug}/release`
+        : `/api/teams/${userId}/chips/${chipSlug}`;
+    return runChipAction(userId, endpoint);
+}

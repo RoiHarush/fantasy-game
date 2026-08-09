@@ -48,6 +48,7 @@ function Pitch({
                 view={view}
                 captain={String(squad.captainId) === String(id)}
                 viceCaptain={String(squad.viceCaptainId) === String(id)}
+                captainMultiplier={squad.tripleCaptainActive ? 3 : 2}
                 currentGw={currentGw}
                 points={points}
                 nextFixture={nextFixture}

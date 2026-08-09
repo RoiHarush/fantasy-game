@@ -20,6 +20,8 @@ public class Squad implements Draftable {
     private final Map<PlayerPosition, Integer> minPlayersInPosition = new HashMap<>();
     private final Map<PlayerPosition, Integer> maxPlayersInPosition = new HashMap<>();
     private boolean autoSubsApplied;
+    private boolean tripleCaptainActive;
+    private boolean benchBoostActive;
 
     public Squad() {
         setStartingLineup(new HashMap<>());
@@ -97,6 +99,16 @@ public class Squad implements Draftable {
 
     public boolean isAutoSubsApplied() {
         return autoSubsApplied;
+    }
+
+    public boolean isTripleCaptainActive() { return tripleCaptainActive; }
+    public void setTripleCaptainActive(boolean tripleCaptainActive) {
+        this.tripleCaptainActive = tripleCaptainActive;
+    }
+
+    public boolean isBenchBoostActive() { return benchBoostActive; }
+    public void setBenchBoostActive(boolean benchBoostActive) {
+        this.benchBoostActive = benchBoostActive;
     }
 
     public void setMinPlayersInPosition() {

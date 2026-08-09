@@ -41,6 +41,51 @@ class LeagueScoringServiceTest {
     }
 
     @Test
+    void tripleCaptainUsesAThreeTimesMultiplier() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+
+        PlayerGameweekStatsEntity captainStats = stats(9, PlayerPosition.FORWARD);
+        captainStats.setMinutesPlayed(90);
+        captainStats.setStarted(true);
+        captainStats.setGoals(1);
+
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(new ArrayList<>(List.of(9)));
+        squad.setCaptainId(9);
+        squad.setTripleCaptainActive(true);
+
+        assertEquals(18, scoringService.calculateSquadPoints(league, squad, Map.of(9, captainStats)));
+    }
+
+    @Test
+    void benchBoostAddsEveryBenchPlayersPoints() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+
+        PlayerGameweekStatsEntity starter = stats(1, PlayerPosition.FORWARD);
+        starter.setMinutesPlayed(90);
+        starter.setStarted(true);
+
+        Map<Integer, PlayerGameweekStatsEntity> stats = new HashMap<>();
+        stats.put(1, starter);
+        Map<String, Integer> bench = new HashMap<>();
+        for (int playerId = 2; playerId <= 5; playerId++) {
+            PlayerGameweekStatsEntity substitute = stats(playerId, PlayerPosition.MIDFIELDER);
+            substitute.setMinutesPlayed(30);
+            bench.put("S" + playerId, playerId);
+            stats.put(playerId, substitute);
+        }
+
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(new ArrayList<>(List.of(1)));
+        squad.setBenchMap(bench);
+        squad.setBenchBoostActive(true);
+
+        assertEquals(6, scoringService.calculateSquadPoints(league, squad, stats));
+    }
+
+    @Test
     void keepsCleanSheetTiersModular() {
         LeagueEntity league = new LeagueEntity();
         Map<String, Integer> rules = new HashMap<>(LeagueScoringRules.defaults());

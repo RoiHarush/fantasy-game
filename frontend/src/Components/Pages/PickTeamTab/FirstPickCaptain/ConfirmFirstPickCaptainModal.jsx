@@ -13,7 +13,7 @@ function ConfirmFirstPickCaptainModal({ player, onConfirm, onCancel, isActive, p
                 <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close captain chip dialog">✕</button></Dialog.Close>
 
                 <Image
-                    src="/Icons/captain-chip.svg"
+                    src="/Icons/fpcaptain-chip.svg"
                     alt="Captain Chip"
                     width={70}
                     height={70}

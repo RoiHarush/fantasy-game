@@ -52,6 +52,12 @@ public class UserSquadEntity {
     @Column(name = "auto_subs_applied")
     private boolean autoSubsApplied = false;
 
+    @Column(name = "triple_captain_active", nullable = false)
+    private boolean tripleCaptainActive = false;
+
+    @Column(name = "bench_boost_active", nullable = false)
+    private boolean benchBoostActive = false;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -95,5 +101,15 @@ public class UserSquadEntity {
     }
     public void setAutoSubsApplied(boolean autoSubsApplied) {
         this.autoSubsApplied = autoSubsApplied;
+    }
+
+    public boolean isTripleCaptainActive() { return tripleCaptainActive; }
+    public void setTripleCaptainActive(boolean tripleCaptainActive) {
+        this.tripleCaptainActive = tripleCaptainActive;
+    }
+
+    public boolean isBenchBoostActive() { return benchBoostActive; }
+    public void setBenchBoostActive(boolean benchBoostActive) {
+        this.benchBoostActive = benchBoostActive;
     }
 }

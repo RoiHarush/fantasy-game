@@ -71,7 +71,11 @@ public class FantasyTeamService {
         Squad squad = SquadMapper.fromDto(dto, leaguePlayers);
 
         try {
-            boolean firstPickUsed = Boolean.TRUE.equals(userDomain.getActiveChips().get("FIRST_PICK_CAPTAIN"));
+            boolean firstPickUsed = Boolean.TRUE.equals(
+                    userDomain.getActiveChips().get(ChipNames.FIRST_PICK_CAPTAIN)
+            );
+            squad.setTripleCaptainActive(gameDataEntity.getNextSquad().isTripleCaptainActive());
+            squad.setBenchBoostActive(gameDataEntity.getNextSquad().isBenchBoostActive());
             team.saveSquad(squad, firstPickUsed);
         } catch (FantasyTeamException e) {
             log.warn("Invalid squad for user {}: {}", userId, e.getMessage());
@@ -124,7 +128,7 @@ public class FantasyTeamService {
         UserGameData domain = UserMapper.toDomainGameData(entity, leaguePlayers);
         FantasyTeam team = domain.getNextFantasyTeam();
 
-        domain.useChip("IR");
+        domain.useChip(ChipNames.IR);
 
         Player player = leaguePlayers.get(playerId);
         if (player == null) throw new PlayerNotFoundException("Player not found: " + playerId);
@@ -146,7 +150,7 @@ public class FantasyTeamService {
         UserGameData domain = UserMapper.toDomainGameData(entity, leaguePlayers);
         FantasyTeam team = domain.getNextFantasyTeam();
 
-        domain.deactivateChip("IR");
+        domain.deactivateChip(ChipNames.IR);
 
         Player playerOut = leaguePlayers.get(playerOutId);
         if (playerOut == null) throw new PlayerNotFoundException("Player not found");
@@ -165,7 +169,11 @@ public class FantasyTeamService {
         UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
         FantasyTeam team = domain.getNextFantasyTeam();
 
-        domain.useChip("FIRST_PICK_CAPTAIN");
+        if (Boolean.TRUE.equals(domain.getActiveChips().get(ChipNames.TRIPLE_CAPTAIN))) {
+            throw new IllegalStateException("Triple Captain and First Pick Captain cannot be active together");
+        }
+
+        domain.useChip(ChipNames.FIRST_PICK_CAPTAIN);
         team.setFirstPickCaptain();
 
         saveGameDataChips(entity, domain);
@@ -180,13 +188,72 @@ public class FantasyTeamService {
         UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
         FantasyTeam team = domain.getNextFantasyTeam();
 
-        domain.deactivateChip("FIRST_PICK_CAPTAIN");
+        domain.deactivateChip(ChipNames.FIRST_PICK_CAPTAIN);
         team.releaseFirstPickCaptain();
 
         saveGameDataChips(entity, domain);
         saveSquadToDb(entity, team);
 
         return SquadMapper.toDto(team.getSquad());
+    }
+
+    @Transactional
+    public SquadDto assignTripleCaptain(int userId) {
+        UserGameDataEntity entity = getGameDataEntity(userId);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
+        Squad squad = requireNextSquad(domain);
+
+        if (Boolean.TRUE.equals(domain.getActiveChips().get(ChipNames.FIRST_PICK_CAPTAIN))
+                || samePlayer(squad.getCaptain(), squad.getFirstPick())) {
+            throw new IllegalStateException(
+                    "Triple Captain cannot be used while the first-pick player is captain"
+            );
+        }
+
+        domain.useChip(ChipNames.TRIPLE_CAPTAIN);
+        squad.setTripleCaptainActive(true);
+        saveGameDataChips(entity, domain);
+        saveSquadToDb(entity, domain.getNextFantasyTeam());
+        return SquadMapper.toDto(squad);
+    }
+
+    @Transactional
+    public SquadDto releaseTripleCaptain(int userId) {
+        UserGameDataEntity entity = getGameDataEntity(userId);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
+        Squad squad = requireNextSquad(domain);
+
+        domain.deactivateChip(ChipNames.TRIPLE_CAPTAIN);
+        squad.setTripleCaptainActive(false);
+        saveGameDataChips(entity, domain);
+        saveSquadToDb(entity, domain.getNextFantasyTeam());
+        return SquadMapper.toDto(squad);
+    }
+
+    @Transactional
+    public SquadDto assignBenchBoost(int userId) {
+        UserGameDataEntity entity = getGameDataEntity(userId);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
+        Squad squad = requireNextSquad(domain);
+
+        domain.useChip(ChipNames.BENCH_BOOST);
+        squad.setBenchBoostActive(true);
+        saveGameDataChips(entity, domain);
+        saveSquadToDb(entity, domain.getNextFantasyTeam());
+        return SquadMapper.toDto(squad);
+    }
+
+    @Transactional
+    public SquadDto releaseBenchBoost(int userId) {
+        UserGameDataEntity entity = getGameDataEntity(userId);
+        UserGameData domain = UserMapper.toDomainGameData(entity, catalogFor(entity));
+        Squad squad = requireNextSquad(domain);
+
+        domain.deactivateChip(ChipNames.BENCH_BOOST);
+        squad.setBenchBoostActive(false);
+        saveGameDataChips(entity, domain);
+        saveSquadToDb(entity, domain.getNextFantasyTeam());
+        return SquadMapper.toDto(squad);
     }
 
 
@@ -241,6 +308,17 @@ public class FantasyTeamService {
 
     private Map<Integer, Player> catalogFor(UserGameDataEntity gameData) {
         return leaguePlayerCatalog.load(gameData.getLeague());
+    }
+
+    private Squad requireNextSquad(UserGameData domain) {
+        if (domain.getNextFantasyTeam() == null || domain.getNextFantasyTeam().getSquad() == null) {
+            throw new IllegalStateException("There is no upcoming squad to apply this chip to");
+        }
+        return domain.getNextFantasyTeam().getSquad();
+    }
+
+    private boolean samePlayer(Player first, Player second) {
+        return first != null && second != null && first.getId() == second.getId();
     }
 
     private void saveSquadToDb(UserGameDataEntity gameDataEntity, FantasyTeam team) {

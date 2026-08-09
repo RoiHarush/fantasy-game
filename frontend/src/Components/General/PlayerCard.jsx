@@ -8,6 +8,7 @@ function PlayerCard({
     view,
     captain = false,
     viceCaptain = false,
+    captainMultiplier = 2,
     points = null,
     nextFixture = null
 }) {
@@ -39,7 +40,7 @@ function PlayerCard({
     }
 
     const hasPoints = points !== null && points !== undefined;
-    const shownValue = hasPoints ? (captain ? points * 2 : points) : (nextFixture ?? "-");
+    const shownValue = hasPoints ? (captain ? points * captainMultiplier : points) : (nextFixture ?? "-");
     const shownClass =
         view === "pick"
             ? Style["player-nextMatch"]

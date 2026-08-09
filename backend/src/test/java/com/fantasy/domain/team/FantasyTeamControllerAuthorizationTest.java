@@ -47,4 +47,21 @@ class FantasyTeamControllerAuthorizationTest {
 
         verify(service).assignFirstPickCaptain(42);
     }
+
+    @Test
+    void newChipMutationsUseAuthenticatedUserInsteadOfPathUser() {
+        FantasyTeamService service = mock(FantasyTeamService.class);
+        FantasyTeamController controller = new FantasyTeamController(
+                service,
+                mock(UserRepository.class),
+                mock(LeagueAccessService.class)
+        );
+        var authentication = new UsernamePasswordAuthenticationToken("42", null);
+
+        controller.assignTripleCaptain(999, authentication);
+        controller.assignBenchBoost(999, authentication);
+
+        verify(service).assignTripleCaptain(42);
+        verify(service).assignBenchBoost(42);
+    }
 }

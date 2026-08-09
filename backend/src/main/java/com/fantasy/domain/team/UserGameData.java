@@ -27,10 +27,11 @@ public class UserGameData {
                         List<Integer> watchedPlayers) {
         this.id = id;
         this.fantasyTeamName = fantasyTeamName;
-        this.chips = chips;
-        this.activeChips = activeChips;
+        this.chips = chips != null ? chips : new HashMap<>();
+        this.activeChips = activeChips != null ? activeChips : new HashMap<>();
         this.pointsByGameweek = points;
         this.watchedPlayers = watchedPlayers;
+        initializeDefaultChips();
     }
 
     public int getId() { return id; }
@@ -61,10 +62,14 @@ public class UserGameData {
     }
 
     public void initializeDefaultChips() {
-        chips.put("FIRST_PICK_CAPTAIN", 1);
-        chips.put("IR", 2);
-        activeChips.put("FIRST_PICK_CAPTAIN", false);
-        activeChips.put("IR", false);
+        chips.putIfAbsent(ChipNames.FIRST_PICK_CAPTAIN, 1);
+        chips.putIfAbsent(ChipNames.TRIPLE_CAPTAIN, 1);
+        chips.putIfAbsent(ChipNames.BENCH_BOOST, 1);
+        chips.putIfAbsent(ChipNames.IR, 2);
+        activeChips.putIfAbsent(ChipNames.FIRST_PICK_CAPTAIN, false);
+        activeChips.putIfAbsent(ChipNames.TRIPLE_CAPTAIN, false);
+        activeChips.putIfAbsent(ChipNames.BENCH_BOOST, false);
+        activeChips.putIfAbsent(ChipNames.IR, false);
     }
 
     public int getChipCount(String chip) {
@@ -74,18 +79,18 @@ public class UserGameData {
     public void useChip(String chip) {
         int count = getChipCount(chip);
         if (count <= 0)
-            throw new RuntimeException("No remaining uses for chip: " + chip);
-        if (activeChips.get(chip))
-            throw new RuntimeException("This chip currently active: " + chip);
+            throw new IllegalStateException("No remaining uses for chip: " + chip);
+        if (Boolean.TRUE.equals(activeChips.get(chip)))
+            throw new IllegalStateException("This chip is already active: " + chip);
         chips.put(chip, count - 1);
         activeChips.put(chip, true);
     }
 
     public void deactivateChip(String chip){
-        if (!activeChips.get(chip))
-            throw new RuntimeException("This chip currently not active: " + chip);
+        if (!Boolean.TRUE.equals(activeChips.get(chip)))
+            throw new IllegalStateException("This chip is not active: " + chip);
 
-        if (chip.equals("FIRST_PICK_CAPTAIN")){
+        if (!chip.equals(ChipNames.IR)) {
             int count = getChipCount(chip);
             this.chips.put(chip, count + 1);
         }

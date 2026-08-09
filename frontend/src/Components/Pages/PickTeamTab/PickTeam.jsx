@@ -4,6 +4,7 @@ import PickTeamBlock from "../../Blocks/PickTeamBlock";
 import { usePlayers } from "../../../features/players/usePlayers";
 import IRManager from "./IR/IRManager";
 import FirstPickManager from "./FirstPickCaptain/FirstPickManager";
+import GameweekChipManager from "./GameweekChip/GameweekChipManager";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
 
@@ -26,6 +27,9 @@ function PickTeam({
 }) {
     const playersQuery = usePlayers();
     const { players } = playersQuery;
+    const captainIsFirstPick = squad.captainId != null
+        && squad.firstPickId != null
+        && String(squad.captainId) === String(squad.firstPickId);
 
     const handleSave = async () => {
         await saveTeam().catch(() => undefined);
@@ -59,6 +63,39 @@ function PickTeam({
                     chips={chips}
                     setChips={setChips}
                     players={players}
+                />
+
+                <GameweekChipManager
+                    userId={user.id}
+                    gameweekId={nextGameweek.id}
+                    squad={squad}
+                    setSquad={setSquad}
+                    chips={chips}
+                    setChips={setChips}
+                    chipName="TRIPLE_CAPTAIN"
+                    chipSlug="triple-captain"
+                    title="Triple Captain"
+                    icon="/Icons/tcaptain-chip.svg"
+                    description="Your captain will score triple points in the upcoming Gameweek instead of double."
+                    disabledReason={
+                        (chips.active?.FIRST_PICK_CAPTAIN || captainIsFirstPick)
+                            ? "Unavailable while your first-pick player is captain."
+                            : ""
+                    }
+                />
+
+                <GameweekChipManager
+                    userId={user.id}
+                    gameweekId={nextGameweek.id}
+                    squad={squad}
+                    setSquad={setSquad}
+                    chips={chips}
+                    setChips={setChips}
+                    chipName="BENCH_BOOST"
+                    chipSlug="bench-boost"
+                    title="Bench Boost"
+                    icon="/Icons/bboost-chip.svg"
+                    description="All four bench players will be included in your score for the upcoming Gameweek."
                 />
             </div>
 

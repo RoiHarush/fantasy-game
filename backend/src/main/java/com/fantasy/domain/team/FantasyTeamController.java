@@ -97,6 +97,26 @@ public class FantasyTeamController {
         return ResponseEntity.ok(fantasyTeamService.releaseFirstPickCaptain(authenticatedUserId(authentication)));
     }
 
+    @PostMapping("/{userId}/chips/triple-captain")
+    public ResponseEntity<?> assignTripleCaptain(@PathVariable int userId, Authentication authentication) {
+        return ResponseEntity.ok(fantasyTeamService.assignTripleCaptain(authenticatedUserId(authentication)));
+    }
+
+    @PostMapping("/{userId}/chips/triple-captain/release")
+    public ResponseEntity<?> releaseTripleCaptain(@PathVariable int userId, Authentication authentication) {
+        return ResponseEntity.ok(fantasyTeamService.releaseTripleCaptain(authenticatedUserId(authentication)));
+    }
+
+    @PostMapping("/{userId}/chips/bench-boost")
+    public ResponseEntity<?> assignBenchBoost(@PathVariable int userId, Authentication authentication) {
+        return ResponseEntity.ok(fantasyTeamService.assignBenchBoost(authenticatedUserId(authentication)));
+    }
+
+    @PostMapping("/{userId}/chips/bench-boost/release")
+    public ResponseEntity<?> releaseBenchBoost(@PathVariable int userId, Authentication authentication) {
+        return ResponseEntity.ok(fantasyTeamService.releaseBenchBoost(authenticatedUserId(authentication)));
+    }
+
     @GetMapping("/ir-status")
     public ResponseEntity<List<IrStatusDto>> getIrStatus(Authentication authentication) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(authenticatedUserId(authentication));

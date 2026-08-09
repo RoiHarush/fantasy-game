@@ -5,6 +5,7 @@ import com.fantasy.domain.team.Squad;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.team.UserGameData;
+import com.fantasy.domain.team.ChipNames;
 
 import java.util.*;
 
@@ -39,7 +40,9 @@ public class GameweekRollover {
 
         Map<String, Boolean> activeChips = user.getActiveChips();
         if (activeChips != null) {
-            activeChips.put("FIRST_PICK_CAPTAIN", false);
+            activeChips.put(ChipNames.FIRST_PICK_CAPTAIN, false);
+            activeChips.put(ChipNames.TRIPLE_CAPTAIN, false);
+            activeChips.put(ChipNames.BENCH_BOOST, false);
             user.setActiveChips(activeChips);
         }
 

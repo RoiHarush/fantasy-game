@@ -1,6 +1,7 @@
 package com.fantasy.domain.league;
 
 import com.fantasy.domain.team.UserGameDataEntity;
+import com.fantasy.domain.team.ChipNames;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.user.UserEntity;
 import com.fantasy.domain.user.UserRepository;
@@ -208,10 +209,20 @@ public class LeagueManagementService {
         gameData.setLeague(league);
         gameData.setFantasyTeamName(teamName);
         if (gameData.getChips().isEmpty()) {
-            gameData.setChips(new HashMap<>(Map.of("FIRST_PICK_CAPTAIN", 1, "IR", 2)));
+            gameData.setChips(new HashMap<>(Map.of(
+                    ChipNames.FIRST_PICK_CAPTAIN, 1,
+                    ChipNames.TRIPLE_CAPTAIN, 1,
+                    ChipNames.BENCH_BOOST, 1,
+                    ChipNames.IR, 2
+            )));
         }
         if (gameData.getActiveChips().isEmpty()) {
-            gameData.setActiveChips(new HashMap<>(Map.of("FIRST_PICK_CAPTAIN", false, "IR", false)));
+            gameData.setActiveChips(new HashMap<>(Map.of(
+                    ChipNames.FIRST_PICK_CAPTAIN, false,
+                    ChipNames.TRIPLE_CAPTAIN, false,
+                    ChipNames.BENCH_BOOST, false,
+                    ChipNames.IR, false
+            )));
         }
         gameDataRepository.save(gameData);
     }

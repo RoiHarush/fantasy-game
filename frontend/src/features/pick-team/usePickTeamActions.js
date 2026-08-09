@@ -7,6 +7,7 @@ import {
     assignIrPlayer,
     releaseIrPlayer,
     saveTeamRequest,
+    toggleGameweekChip,
     toggleFirstPickCaptain,
 } from "../../services/pickTeamService";
 import { buildSaveTeamDto } from "./model";
@@ -50,6 +51,28 @@ export function useFirstPickCaptain({ userId, gameweekId, active, onSuccess, onE
 
     return useMutation({
         mutationFn: () => toggleFirstPickCaptain(userId, active),
+        onSuccess: (result) => {
+            cacheChipResult(queryClient, userId, gameweekId, result);
+            onSuccess?.(result);
+        },
+        onError,
+        onSettled,
+    });
+}
+
+export function useGameweekChip({
+    userId,
+    gameweekId,
+    chipSlug,
+    active,
+    onSuccess,
+    onError,
+    onSettled,
+}) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => toggleGameweekChip(userId, chipSlug, active),
         onSuccess: (result) => {
             cacheChipResult(queryClient, userId, gameweekId, result);
             onSuccess?.(result);
