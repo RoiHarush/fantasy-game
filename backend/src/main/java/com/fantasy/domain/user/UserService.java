@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,8 +63,31 @@ public class UserService {
 
         boolean changed = false;
 
-        if (request.getName() != null && !request.getName().isBlank() && !request.getName().equals(user.getName())) {
-            user.setName(request.getName());
+        boolean profileNameChanged = false;
+        if (request.getFirstName() != null) {
+            String firstName = requireProfileName(request.getFirstName(), "First name");
+            if (!Objects.equals(firstName, user.getFirstName())) {
+                user.setFirstName(firstName);
+                profileNameChanged = true;
+            }
+        }
+        if (request.getLastName() != null) {
+            String lastName = requireProfileName(request.getLastName(), "Last name");
+            if (!Objects.equals(lastName, user.getLastName())) {
+                user.setLastName(lastName);
+                profileNameChanged = true;
+            }
+        }
+        if (profileNameChanged) {
+            user.setName(user.getFullName());
+            changed = true;
+        } else if (request.getName() != null && !request.getName().isBlank() && !request.getName().equals(user.getName())) {
+            // Backwards compatibility for older clients that still submit one full-name field.
+            String legacyName = request.getName().trim();
+            String[] parts = legacyName.split("\\s+", 2);
+            user.setFirstName(requireProfileName(parts[0], "First name"));
+            user.setLastName(parts.length > 1 ? requireProfileName(parts[1], "Last name") : "");
+            user.setName(user.getFullName());
             changed = true;
         }
 
@@ -111,7 +135,7 @@ public class UserService {
 
         UserDto dto = new UserDto();
         dto.setId(user.getId());
-        dto.setName(user.getName());
+        dto.setName(user.getFullName());
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
         dto.setUsername(user.getUsername());
@@ -124,5 +148,16 @@ public class UserService {
             dto.setLeagueStatus(league.getStatus().name());
         }
         return dto;
+    }
+
+    private String requireProfileName(String value, String label) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException(label + " is required");
+        }
+        if (normalized.length() > 50) {
+            throw new IllegalArgumentException(label + " may contain at most 50 characters");
+        }
+        return normalized;
     }
 }

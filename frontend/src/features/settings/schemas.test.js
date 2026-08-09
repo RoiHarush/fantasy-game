@@ -5,7 +5,8 @@ import { buildSettingsPayload } from "./model";
 
 const validSettings = {
     teamName: "Query United",
-    name: "Test Manager",
+    firstName: "Test",
+    lastName: "Manager",
     username: "test.manager",
     currentPassword: "",
     newPassword: "",
@@ -29,24 +30,27 @@ describe("settingsSchema", () => {
 
 describe("buildSettingsPayload", () => {
     const user = {
-        name: "Old Name",
+        firstName: "Old",
+        lastName: "Name",
         username: "old.username",
         fantasyTeamName: "Old Team",
     };
 
     it("sends only changed profile fields", () => {
         expect(buildSettingsPayload({
-            name: "New Name",
+            firstName: "New",
+            lastName: "Manager",
             username: user.username,
             teamName: user.fantasyTeamName,
             currentPassword: "",
             newPassword: "",
-        }, user)).toEqual({ name: "New Name" });
+        }, user)).toEqual({ firstName: "New", lastName: "Manager" });
     });
 
     it("includes both passwords only for a password change", () => {
         expect(buildSettingsPayload({
-            name: user.name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             username: user.username,
             teamName: user.fantasyTeamName,
             currentPassword: "old-password",

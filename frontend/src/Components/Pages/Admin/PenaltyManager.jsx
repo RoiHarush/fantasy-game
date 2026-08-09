@@ -1,11 +1,15 @@
+import { LockKeyhole, Minus, Plus, Search, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import PlayerKit from '../../General/PlayerKit';
-import { usePlayers } from '../../../features/players/usePlayers';
-import { useGameweek } from '../../../features/gameweeks/useGameweek';
+
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useAdminPenalties } from "../../../features/league-admin/useLeagueAdmin";
+import { usePlayers } from "../../../features/players/usePlayers";
+import PlayerKit from "../../General/PlayerKit";
 
-const PenaltyManager = ({ maintenanceLeagueId = null }) => {
+const fieldClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface disabled:cursor-not-allowed disabled:opacity-55";
+
+function PenaltyManager({ maintenanceLeagueId = null }) {
     const playersQuery = usePlayers();
     const { players } = playersQuery;
     const gameweekState = useGameweek();
@@ -15,154 +19,110 @@ const PenaltyManager = ({ maintenanceLeagueId = null }) => {
     const gameweek = selectedGameweek ?? currentGameweek?.id;
     const { query: penaltiesQuery, mutation: updatePenalty } = useAdminPenalties(maintenanceLeagueId, gameweek);
     const punishedPlayers = penaltiesQuery.data ?? [];
-
     const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
     const isPastGW = currentGameweek && gameweek < currentGameweek.id;
     const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
+    const searchResults = useMemo(() => findPlayers(players, searchTerm), [players, searchTerm]);
+    const error = playersQuery.error?.message
+        || penaltiesQuery.error?.message
+        || updatePenalty.error?.message
+        || gameweekState.error;
 
-    const searchResults = useMemo(() => {
-        return findPlayers(players, searchTerm);
-    }, [players, searchTerm]);
-
-    const handlePunish = (playerId, action) => {
+    function handlePunish(playerId, action) {
         if (!canEdit) return;
         updatePenalty.mutate(
             { playerId, action },
             { onSuccess: () => setSearchTerm("") },
         );
-    };
-
-    const styles = {
-        headerCard: {
-            backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', marginBottom: '1.5rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', borderLeft: '5px solid #ef4444', textAlign: 'center', position: 'relative'
-        },
-        lockedBadge: {
-            display: 'inline-block', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.75rem', fontWeight: 'bold',
-            padding: '4px 12px', borderRadius: '20px', marginBottom: '8px', border: '1px solid #fecaca'
-        },
-        select: {
-            marginTop: '10px', width: '100%', padding: '12px', borderRadius: '10px',
-            border: '1px solid #e5e7eb', fontSize: '1rem', backgroundColor: '#fff5f5'
-        },
-        searchContainer: { marginBottom: '1.5rem', position: 'relative' },
-        searchInput: {
-            width: '100%', padding: '14px 16px 14px 45px', borderRadius: '12px', border: 'none',
-            fontSize: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', outline: 'none',
-        },
-        card: {
-            backgroundColor: 'white', borderRadius: '16px', padding: '1rem', marginBottom: '10px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.03)', border: '1px solid #fee2e2'
-        },
-        roundBtn: {
-            width: '32px', height: '32px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.2rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        },
-        dropdown: { position: 'absolute', top: '110%', left: 0, right: 0, backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 50 },
-        dropdownItem: { display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #f3f4f6' },
-        addBtn: { backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }
-    };
+    }
 
     return (
-        <div aria-busy={penaltiesQuery.isPending || updatePenalty.isPending}>
-            <div style={styles.headerCard}>
-                {!canEdit && <div style={styles.lockedBadge}>🔒 LOCKED</div>}
-
-                <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#991b1b' }}>Penalty Conceded</h2>
-                <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginTop: '4px' }}>
-                    Record penalties for Gameweek {gameweek}
+        <div className="space-y-4" aria-busy={playersQuery.isPending || penaltiesQuery.isPending || updatePenalty.isPending}>
+            <section className="overflow-hidden rounded-2xl border border-app-border bg-app-surface-elevated">
+                <header className="flex items-start gap-3 border-b border-app-border bg-app-surface-muted px-4 py-4 sm:px-5">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-app-danger-border bg-app-danger-surface text-app-danger-foreground">
+                        <ShieldAlert className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-base font-black text-app-foreground sm:text-xl">Penalty conceded</h2>
+                            {!canEdit && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-app-danger-border bg-app-danger-surface px-2 py-0.5 text-[0.62rem] font-extrabold uppercase tracking-wider text-app-danger-foreground">
+                                    <LockKeyhole className="size-3" aria-hidden="true" /> Locked
+                                </span>
+                            )}
+                        </div>
+                        <p className="mt-0.5 text-xs leading-5 text-app-muted sm:text-sm">Record penalties conceded after a gameweek has been calculated.</p>
+                    </div>
+                </header>
+                <div className="p-4 sm:p-5">
+                    <label className="grid gap-1.5 text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted">
+                        Gameweek
+                        <select className={fieldClassName} aria-label="Penalties gameweek" value={gameweek || ""} onChange={(event) => setSelectedGameweek(Number(event.target.value))}>
+                            {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, index) => (
+                                <option key={index + 1} value={index + 1}>Gameweek {index + 1}</option>
+                            ))}
+                        </select>
+                    </label>
                 </div>
-                <select aria-label="Penalties gameweek" style={styles.select} value={gameweek || ''} onChange={(e) => setSelectedGameweek(Number(e.target.value))}>
-                    {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>Gameweek {i + 1}</option>
-                    ))}
-                </select>
-            </div>
+            </section>
 
-            <div style={styles.searchContainer}>
-                <svg style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#ef4444' }} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                    type="text"
-                    aria-label="Search player for penalty adjustment"
-                    placeholder={canEdit ? "Search player to punish..." : "Gameweek is locked"}
-                    style={{ ...styles.searchInput, opacity: canEdit ? 1 : 0.6, cursor: canEdit ? 'text' : 'not-allowed' }}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    disabled={!canEdit}
-                />
+            <section className="rounded-2xl border border-app-border bg-app-surface-elevated p-3 sm:p-4">
+                <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-app-danger-foreground" aria-hidden="true" />
+                    <input type="search" aria-label="Search player for penalty adjustment" placeholder={canEdit ? "Search player to record a penalty…" : "This gameweek is locked"} className={`${fieldClassName} pl-10`} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} disabled={!canEdit} />
+                </div>
                 {searchResults.length > 0 && (
-                    <div style={styles.dropdown}>
-                        {searchResults.map(player => (
-                            <div key={player.id} style={styles.dropdownItem}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} style={{ width: '35px', height: '35px' }} />
-                                    <span style={{ fontWeight: '600' }}>{player.viewName}</span>
+                    <div className="mt-2 max-h-72 divide-y divide-app-border overflow-y-auto overscroll-contain rounded-xl border border-app-border bg-app-surface shadow-xl">
+                        {searchResults.map((player) => (
+                            <div key={player.id} className="flex items-center gap-3 px-3 py-2.5">
+                                <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className="h-10 w-8 shrink-0 object-contain" draggable={false} />
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-extrabold text-app-foreground">{player.viewName}</p>
+                                    <p className="text-xs text-app-muted">{player.position}</p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePunish(player.id, "ADD")}
-                                    style={{ ...styles.addBtn, opacity: canEdit ? 1 : 0.5, cursor: canEdit ? 'pointer' : 'not-allowed' }}
-                                    disabled={!canEdit}
-                                >
-                                    Concede
+                                <button type="button" onClick={() => handlePunish(player.id, "ADD")} className="inline-flex h-9 items-center gap-1 rounded-lg bg-red-500 px-3 text-xs font-extrabold text-white transition hover:bg-red-600 disabled:opacity-50" disabled={!canEdit || updatePenalty.isPending}>
+                                    <Plus className="size-3.5" aria-hidden="true" /> Record
                                 </button>
                             </div>
                         ))}
                     </div>
                 )}
-            </div>
+            </section>
 
-            <div>
-                {(playersQuery.error || penaltiesQuery.error || updatePenalty.error || gameweekState.error) && (
-                    <p role="alert">
-                        {playersQuery.error?.message || penaltiesQuery.error?.message || updatePenalty.error?.message || gameweekState.error}
-                    </p>
-                )}
-                {(playersQuery.isPending || penaltiesQuery.isPending || gameweekState.loading) && <p role="status">Loading penalties…</p>}
+            {error && <p className="rounded-xl border border-app-danger-border bg-app-danger-surface p-3 text-sm font-semibold text-app-danger-foreground" role="alert">{error}</p>}
+            {(playersQuery.isPending || penaltiesQuery.isPending || gameweekState.loading) && <p className="rounded-2xl border border-app-border bg-app-surface-muted p-8 text-center text-sm font-semibold text-app-muted" role="status">Loading penalties…</p>}
+
+            {!playersQuery.isPending && !penaltiesQuery.isPending && punishedPlayers.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-app-border bg-app-surface-muted px-5 py-10 text-center">
+                    <ShieldAlert className="mx-auto size-7 text-app-muted" aria-hidden="true" />
+                    <p className="mt-3 text-sm font-extrabold text-app-foreground">No penalties recorded</p>
+                    <p className="mt-1 text-xs text-app-muted">Any manual corrections will appear here.</p>
+                </div>
+            )}
+
+            <div className="space-y-2">
                 {punishedPlayers.map((item) => {
                     const realPlayer = players.find((player) => String(player.id) === String(item.playerId));
-                    const position = realPlayer ? realPlayer.position : "MID";
-
+                    const position = realPlayer?.position || "MID";
                     return (
-                        <div key={item.playerId} style={styles.card}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <PlayerKit
-                                    teamId={item.teamId}
-                                    type={position === "GK" ? "gk" : "field"}
-                                    style={{ width: '45px', height: '45px' }}
-                                />
-                                <div>
-                                    <div style={{ fontWeight: '700', fontSize: '1rem' }}>{item.viewName}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 'bold' }}>
-                                        {item.penaltiesConceded} Penalty ({item.penaltiesConceded * -2} pts)
-                                    </div>
-                                </div>
+                        <article key={item.playerId} className="flex items-center gap-3 rounded-2xl border border-app-danger-border bg-app-surface-elevated px-3 py-3 shadow-sm sm:px-4">
+                            <PlayerKit teamId={item.teamId} type={position === "GK" ? "gk" : "field"} className="h-12 w-9 shrink-0 object-contain" draggable={false} />
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-extrabold text-app-foreground sm:text-base">{item.viewName}</p>
+                                <p className="text-xs font-bold text-app-danger-foreground">{item.penaltiesConceded} conceded · {item.penaltiesConceded * -2} pts</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    type="button"
-                                    aria-label={`Remove one penalty conceded from ${item.viewName}`}
-                                    onClick={() => handlePunish(item.playerId, "REMOVE")}
-                                    disabled={!canEdit}
-                                    style={{ ...styles.roundBtn, backgroundColor: 'white', color: '#ef4444', border: '1px solid #fecaca', opacity: canEdit ? 1 : 0.5 }}
-                                >-</button>
-                                <button
-                                    type="button"
-                                    aria-label={`Add one penalty conceded to ${item.viewName}`}
-                                    onClick={() => handlePunish(item.playerId, "ADD")}
-                                    disabled={!canEdit}
-                                    style={{ ...styles.roundBtn, backgroundColor: '#ef4444', color: 'white', opacity: canEdit ? 1 : 0.5 }}
-                                >+</button>
+                            <div className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface-muted p-1">
+                                <button type="button" aria-label={`Remove one penalty conceded from ${item.viewName}`} onClick={() => handlePunish(item.playerId, "REMOVE")} disabled={!canEdit || updatePenalty.isPending} className="grid size-9 place-items-center rounded-lg bg-app-surface text-app-danger-foreground transition hover:bg-app-danger-surface disabled:opacity-45"><Minus className="size-4" aria-hidden="true" /></button>
+                                <strong className="min-w-7 text-center text-base tabular-nums text-app-foreground">{item.penaltiesConceded}</strong>
+                                <button type="button" aria-label={`Add one penalty conceded to ${item.viewName}`} onClick={() => handlePunish(item.playerId, "ADD")} disabled={!canEdit || updatePenalty.isPending} className="grid size-9 place-items-center rounded-lg bg-red-500 text-white transition hover:bg-red-600 disabled:opacity-45"><Plus className="size-4" aria-hidden="true" /></button>
                             </div>
-                        </div>
+                        </article>
                     );
                 })}
             </div>
         </div>
     );
-};
+}
 
 export default PenaltyManager;

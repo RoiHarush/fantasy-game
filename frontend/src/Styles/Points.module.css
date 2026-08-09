@@ -25,23 +25,6 @@
     width: 100%;
 }
 
-.preSeasonState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 310px;
-    padding: 4rem 1.5rem;
-    gap: 10px;
-    color: var(--app-foreground);
-    text-align: center;
-}
-
-.preSeasonState h1,
-.preSeasonState p {
-    margin: 0;
-}
-
 @media (max-width: 768px) {
     .contentWrapper {
         width: 100%;

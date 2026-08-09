@@ -7,7 +7,8 @@ const optionalPassword = z.union([
 
 export const settingsSchema = z.object({
     teamName: z.string().trim().min(2, "Team name must contain at least 2 characters").max(50),
-    name: z.string().trim().min(2, "Display name must contain at least 2 characters").max(50),
+    firstName: z.string().trim().min(1, "First name is required").max(50),
+    lastName: z.string().trim().min(1, "Last name is required").max(50),
     username: z.string()
         .trim()
         .min(3, "Username must contain at least 3 characters")

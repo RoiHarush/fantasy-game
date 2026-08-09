@@ -1,6 +1,7 @@
 export function buildSettingsPayload(values, user) {
     const payload = {};
-    if (values.name !== user.name) payload.name = values.name;
+    if (values.firstName !== user.firstName) payload.firstName = values.firstName;
+    if (values.lastName !== user.lastName) payload.lastName = values.lastName;
     if (values.username !== user.username) payload.username = values.username;
     if (values.teamName !== user.fantasyTeamName) payload.teamName = values.teamName;
     if (values.newPassword) {

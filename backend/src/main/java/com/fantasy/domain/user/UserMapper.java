@@ -46,7 +46,9 @@ public class UserMapper {
     public static UserDto toDto(UserEntity userEntity, UserGameData userGameData) {
         UserDto dto = new UserDto();
         dto.setId(userEntity.getId());
-        dto.setName(userEntity.getName());
+        dto.setName(userEntity.getFullName());
+        dto.setFirstName(userEntity.getFirstName());
+        dto.setLastName(userEntity.getLastName());
         dto.setUsername(userEntity.getUsername());
 
         if (userGameData != null) {
@@ -64,7 +66,9 @@ public class UserMapper {
     public static UserDto toDto(UserEntity userEntity) {
         UserDto dto = new UserDto();
         dto.setId(userEntity.getId());
-        dto.setName(userEntity.getName());
+        dto.setName(userEntity.getFullName());
+        dto.setFirstName(userEntity.getFirstName());
+        dto.setLastName(userEntity.getLastName());
         dto.setUsername(userEntity.getUsername());
         dto.setLogoPath("/user_logo/" + userEntity.getId() + "_logo.png");
         dto.setRole(userEntity.getRole().name());
