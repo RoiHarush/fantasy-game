@@ -5,6 +5,7 @@ import {
     ArrowRightLeft,
     CalendarClock,
     Clock3,
+    Bot,
     Play,
     Settings2,
     ShieldCheck,
@@ -18,6 +19,8 @@ import {
 } from "../../../features/status/model";
 import {
     useOpenTransferWindow,
+    useSaveTransferAttendance,
+    useTransferAttendance,
     useTransferOrder,
 } from "../../../features/transfer-window/useTransferWindow";
 import { formatAppDateTime, toAppTimestamp } from "../../../lib/dateTime";
@@ -28,6 +31,16 @@ function ClosedWindow({ user, users, nextGameweek }) {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
+    const attendanceQuery = useTransferAttendance(
+        user?.leagueId,
+        nextGameweek?.id,
+        user?.id,
+    );
+    const saveAttendance = useSaveTransferAttendance(
+        user?.leagueId,
+        nextGameweek?.id,
+        user?.id,
+    );
     const openWindow = useOpenTransferWindow(user?.leagueId, nextGameweek?.id, {
         onSuccess: () => {
             setIsConfirmOpen(false);
@@ -43,6 +56,7 @@ function ClosedWindow({ user, users, nextGameweek }) {
         ? [currentOrder.slice(0, orderSplitIndex), currentOrder.slice(orderSplitIndex)]
         : [currentOrder];
     const transferWindowOpens = formatAppDateTime(nextGameweek?.transferOpenTime);
+    const automaticAttendance = Boolean(attendanceQuery.data?.automatic);
 
     return (
         <main className="mx-auto w-full max-w-5xl space-y-6 px-3 py-5 text-app-foreground sm:space-y-7 sm:px-6 sm:py-9 lg:py-12">
@@ -76,6 +90,43 @@ function ClosedWindow({ user, users, nextGameweek }) {
                     </div>
                 </div>
             </section>
+
+            {nextGameweek?.id && (
+                <section className="mx-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-app-border bg-app-surface px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div className="flex min-w-0 items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground">
+                            <Bot aria-hidden="true" size={20} />
+                        </span>
+                        <div className="min-w-0 text-left">
+                            <p className="text-sm font-extrabold text-app-foreground">Can’t attend this window?</p>
+                            <p className="mt-0.5 text-xs leading-5 text-app-muted">
+                                Let the server use your waiver plan automatically, or pass if no move succeeds.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={automaticAttendance}
+                        disabled={attendanceQuery.isPending || saveAttendance.isPending}
+                        onClick={() => saveAttendance.mutate(!automaticAttendance)}
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-60 ${automaticAttendance
+                            ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            : "border-app-border bg-app-surface-muted text-app-foreground hover:border-app-accent-border hover:bg-app-accent-hover"
+                        }`}
+                    >
+                        <span className={`relative h-6 w-11 rounded-full transition ${automaticAttendance ? "bg-emerald-500" : "bg-app-border"}`} aria-hidden="true">
+                            <span className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${automaticAttendance ? "translate-x-6" : "translate-x-1"}`} />
+                        </span>
+                        {automaticAttendance ? "Not attending · Auto waivers" : "Mark as not attending"}
+                    </button>
+                    {(attendanceQuery.error || saveAttendance.error) && (
+                        <p className="text-xs font-semibold text-app-danger-foreground" role="alert">
+                            {(attendanceQuery.error || saveAttendance.error).message}
+                        </p>
+                    )}
+                </section>
+            )}
 
             <section className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-panel sm:rounded-3xl">
                 <header className="flex items-start gap-3 border-b border-app-border bg-app-surface-muted px-4 py-4 sm:px-7 sm:py-5">

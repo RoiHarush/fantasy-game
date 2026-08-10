@@ -102,19 +102,58 @@ textarea {
     font: inherit;
 }
 
-@keyframes chip-spark {
+@keyframes triple-captain-rise {
     0% {
         opacity: 0;
-        transform: translate3d(0, 0, 0);
+        bottom: 4%;
+        transform: translate3d(0, 0, 0) scale(0.72);
     }
 
-    18% {
+    16% {
         opacity: 1;
+    }
+
+    68% {
+        opacity: 0.92;
     }
 
     100% {
         opacity: 0;
-        transform: translate3d(var(--spark-x), var(--spark-y), 0);
+        bottom: 56%;
+        transform: translate3d(var(--x3-drift), 0, 0) scale(1.08);
+    }
+}
+
+@keyframes first-pick-aura-rise {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 7px, 0) scaleY(0.55);
+    }
+
+    18% {
+        opacity: 0.88;
+    }
+
+    68% {
+        opacity: 0.52;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--aura-drift), -40px, 0) scaleY(1.2);
+    }
+}
+
+@keyframes first-pick-aura-pulse {
+    0%,
+    100% {
+        opacity: 0.48;
+        transform: scale(0.9);
+    }
+
+    50% {
+        opacity: 0.92;
+        transform: scale(1.14);
     }
 }
 
@@ -131,15 +170,16 @@ textarea {
 
 @keyframes bench-electric-cycle {
     0%,
-    69% {
+    65% {
         opacity: 0;
     }
 
-    71%,
-    91% {
+    66%,
+    93% {
         opacity: 1;
     }
 
+    94%,
     100% {
         opacity: 0;
     }
@@ -147,51 +187,154 @@ textarea {
 
 @keyframes bench-electric-run {
     0%,
-    69% {
-        stroke-dashoffset: 118;
+    65% {
+        stroke-dashoffset: 100;
     }
 
     93%,
     100% {
-        stroke-dashoffset: -12;
+        stroke-dashoffset: 0;
     }
 }
 
-@keyframes bench-electric-flicker {
+@keyframes bench-electric-bolt-flicker {
     0%,
     100% {
-        stroke-opacity: 0.65;
-    }
-
-    35% {
         stroke-opacity: 1;
     }
 
-    62% {
-        stroke-opacity: 0.78;
+    11% {
+        stroke-opacity: 0.36;
     }
 
-    80% {
+    18% {
         stroke-opacity: 1;
+    }
+
+    42% {
+        stroke-opacity: 0.12;
+    }
+
+    48%,
+    73% {
+        stroke-opacity: 1;
+    }
+
+    82% {
+        stroke-opacity: 0.42;
     }
 }
 
 .bench-electric-cycle {
-    animation: bench-electric-cycle 4.4s linear infinite;
+    animation: bench-electric-cycle var(--bench-cycle-duration, 4.6s) linear infinite;
 }
 
-.bench-electric-line {
+.bench-electric-bolt {
+    will-change: stroke-dashoffset, stroke-opacity;
     animation:
-        bench-electric-run 4.4s linear infinite,
-        bench-electric-flicker 0.075s steps(2, jump-none) infinite;
+        bench-electric-run var(--bench-cycle-duration, 4.6s) linear infinite,
+        bench-electric-bolt-flicker 0.13s steps(1, end) infinite;
 }
 
-.bench-electric-core {
-    animation-delay: 0.07s, 0s;
+@keyframes bench-player-shock {
+    0%,
+    65.9% {
+        opacity: 0;
+        transform: scaleY(0.2);
+    }
+
+    66.1% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+
+    68.2% {
+        opacity: 0.16;
+    }
+
+    69.4% {
+        opacity: 1;
+    }
+
+    71.2% {
+        opacity: 0.68;
+        transform: scaleY(0.98);
+    }
+
+    72.5%,
+    100% {
+        opacity: 0;
+        transform: scaleY(0.88);
+    }
 }
 
-.bench-electric-flash {
-    animation-delay: 0.13s, 0.04s;
+@keyframes bench-player-impact {
+    0%,
+    65.9%,
+    72.6%,
+    100% {
+        filter: brightness(1) drop-shadow(0 0 0 transparent);
+        transform: scale(1);
+    }
+
+    66.1% {
+        filter: brightness(1.72) drop-shadow(0 0 8px rgb(103 232 249 / 0.95));
+        transform: scale(1.035);
+    }
+
+    68.2% {
+        filter: brightness(1.08) drop-shadow(0 0 2px rgb(103 232 249 / 0.35));
+        transform: scale(1.008);
+    }
+
+    69.4% {
+        filter: brightness(1.55) drop-shadow(0 0 6px rgb(236 254 255 / 0.9));
+        transform: scale(1.025);
+    }
+
+    71.2% {
+        filter: brightness(1.22) drop-shadow(0 0 4px rgb(103 232 249 / 0.55));
+        transform: scale(1.012);
+    }
+}
+
+.bench-player-shock {
+    transform-origin: top center;
+    animation: bench-player-shock var(--bench-cycle-duration, 4.6s) linear infinite;
+    animation-delay: var(--bench-impact-delay, 0s);
+    will-change: opacity, transform;
+}
+
+.bench-player-impact .player-kit-stage {
+    transform-origin: center 38%;
+    animation: bench-player-impact var(--bench-cycle-duration, 4.6s) linear infinite;
+    animation-delay: var(--bench-impact-delay, 0s);
+    will-change: filter, transform;
+}
+
+.bench-shock-glow,
+.bench-shock-core {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.bench-shock-glow {
+    stroke: rgb(34 211 238 / 0.64);
+    stroke-width: 3.6;
+    filter: blur(1.05px) drop-shadow(0 0 4px rgb(34 211 238 / 0.88));
+}
+
+.bench-shock-core {
+    stroke: rgb(236 254 255);
+    stroke-width: 0.85;
+    filter: drop-shadow(0 0 2px rgb(255 255 255 / 0.95));
+}
+
+.bench-shock-impact-point {
+    fill: rgb(236 254 255 / 0.68);
+    filter: blur(0.7px) drop-shadow(0 0 3px rgb(34 211 238 / 0.92));
 }
 
 @keyframes ir-containment-scan {

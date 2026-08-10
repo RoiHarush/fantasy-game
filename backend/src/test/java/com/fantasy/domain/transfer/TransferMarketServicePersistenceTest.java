@@ -1,7 +1,6 @@
 package com.fantasy.domain.transfer;
 
 import com.fantasy.domain.game.GameWeekEntity;
-import com.fantasy.config.WebSocketPresenceService;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
@@ -51,12 +50,11 @@ class TransferMarketServicePersistenceTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverPreferenceRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presenceService = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
-                mock(SupplementalDraftPoolService.class), 30
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -138,7 +136,6 @@ class TransferMarketServicePersistenceTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverPreferenceRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presenceService = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
 
         TransferMarketService service = new TransferMarketService(
@@ -153,10 +150,8 @@ class TransferMarketServicePersistenceTest {
                 waiverPreferenceRepo,
                 mock(WaiverPlanProgressRepository.class),
                 actionRepo,
-                presenceService,
                 webSocket,
-                mock(SupplementalDraftPoolService.class),
-                30
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -224,13 +219,12 @@ class TransferMarketServicePersistenceTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverPreferenceRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presenceService = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
-                poolService, 30
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
+                poolService
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -300,12 +294,11 @@ class TransferMarketServicePersistenceTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverPreferenceRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presenceService = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
-                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, presenceService, webSocket,
-                mock(SupplementalDraftPoolService.class), 30
+                leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueTransferWindowEntity completedDraft = new LeagueTransferWindowEntity();
@@ -335,8 +328,8 @@ class TransferMarketServicePersistenceTest {
                 mock(UserGameDataRepository.class), mock(UserRepository.class), leagueRepo,
                 mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
-                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class), 30
+                mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class)
         );
 
         UserEntity firstUser = new UserEntity();
@@ -378,8 +371,8 @@ class TransferMarketServicePersistenceTest {
                 mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
                 mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
-                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class), 30
+                mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -427,8 +420,8 @@ class TransferMarketServicePersistenceTest {
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
                 leagueAccess, windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
-                mock(WebSocketPresenceService.class), mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class), 30
+                mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();

@@ -18,7 +18,7 @@ vi.mock("sonner", () => ({
     },
 }));
 
-import CookieConsentToast, { COOKIE_PREFERENCE_KEY } from "./CookieConsentToast";
+import CookieConsentToast, { COOKIE_PREFERENCE_KEY, CookieConsentContent } from "./CookieConsentToast";
 
 describe("CookieConsentToast", () => {
     beforeEach(() => {
@@ -65,5 +65,15 @@ describe("CookieConsentToast", () => {
 
         expect(sonner.custom).toHaveBeenCalled();
         expect(sonner.dismiss).not.toHaveBeenCalled();
+    });
+
+    it("supports a preview handler without storing a real preference", () => {
+        const onPreference = vi.fn();
+        render(<CookieConsentContent onPreference={onPreference} />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+
+        expect(onPreference).toHaveBeenCalledWith("accepted");
+        expect(window.localStorage.getItem(COOKIE_PREFERENCE_KEY)).toBeNull();
     });
 });

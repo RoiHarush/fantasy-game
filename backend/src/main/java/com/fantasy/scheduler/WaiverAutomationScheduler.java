@@ -20,12 +20,12 @@ public class WaiverAutomationScheduler {
     }
 
     @Scheduled(fixedDelayString = "${app.waivers.poll-millis:5000}")
-    public void processOfflineTurns() {
+    public void processAutomaticTurns() {
         for (Long leagueId : transferMarketService.getOpenLeagueIds()) {
             try {
-                transferMarketService.processOfflineTurn(leagueId);
+                transferMarketService.processAutomaticTurn(leagueId);
             } catch (RuntimeException exception) {
-                log.error("Failed to process offline waiver turn for league {}", leagueId, exception);
+                log.error("Failed to process automatic waiver turn for league {}", leagueId, exception);
             }
         }
     }

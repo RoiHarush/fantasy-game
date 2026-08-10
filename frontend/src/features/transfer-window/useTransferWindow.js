@@ -5,13 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query/keys";
 import {
     fetchTransferHistory,
+    fetchTransferAttendance,
     fetchTransferOrder,
     fetchTransferWindowState,
     makeDraftPick,
     openTransferWindow,
     passTurn,
+    saveTransferAttendance,
     saveTransferOrder,
     signIrPlayer,
+    skipCurrentTurn,
     transferPlayer,
 } from "../../services/transferWindowService";
 
@@ -110,6 +113,35 @@ export function useSignIrPlayer({ leagueId, userId, onSuccess }) {
 
 export function usePassTransferTurn(userId) {
     return useMutation({ mutationFn: () => passTurn(userId) });
+}
+
+export function useSkipCurrentTransferTurn(leagueId) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: skipCurrentTurn,
+        onSuccess: () => queryClient.invalidateQueries({
+            queryKey: queryKeys.transferWindow(leagueId),
+        }),
+    });
+}
+
+export function useTransferAttendance(leagueId, gameweekId, userId) {
+    return useQuery({
+        queryKey: queryKeys.transferAttendance(leagueId, gameweekId, userId),
+        queryFn: ({ signal }) => fetchTransferAttendance(gameweekId, { signal }),
+        enabled: Boolean(leagueId && gameweekId && userId),
+    });
+}
+
+export function useSaveTransferAttendance(leagueId, gameweekId, userId) {
+    const queryClient = useQueryClient();
+    const queryKey = queryKeys.transferAttendance(leagueId, gameweekId, userId);
+
+    return useMutation({
+        mutationFn: (automatic) => saveTransferAttendance(gameweekId, automatic),
+        onSuccess: (response) => queryClient.setQueryData(queryKey, response),
+    });
 }
 
 export function useDraftPlayer({ leagueId, userId, gameweekId, onSuccess }) {

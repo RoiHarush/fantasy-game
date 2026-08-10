@@ -25,6 +25,7 @@ public class SeasonResetService {
             "league_transfer_window_order",
             "league_transfer_window_canonical_order",
             "league_transfer_window_ir_order",
+            "league_transfer_window_auto_users",
             "league_transfer_actions",
             "waiver_preferences",
             "waiver_plan_progress",

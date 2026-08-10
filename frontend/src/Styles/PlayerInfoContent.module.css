@@ -71,15 +71,15 @@
 }
 
 .semanticIcon {
-    filter: saturate(1.2) brightness(1.04) contrast(1.12) drop-shadow(0 1px 1px rgb(8 3 15 / 18%));
+    filter: saturate(1.2) brightness(1.04) contrast(1.12);
 }
 
 :global(.dark) .monochromeIcon {
-    filter: invert(1) brightness(0.96) contrast(1.12) drop-shadow(0 0 3px rgb(255 255 255 / 18%));
+    filter: invert(1) brightness(1.35) contrast(1.08);
 }
 
 :global(.dark) .semanticIcon {
-    filter: saturate(1.35) brightness(1.18) contrast(1.12) drop-shadow(0 0 1px rgb(255 255 255 / 55%)) drop-shadow(0 0 4px rgb(255 255 255 / 12%));
+    filter: saturate(1.25) brightness(1.12) contrast(1.08);
 }
 
 .pointsCell {

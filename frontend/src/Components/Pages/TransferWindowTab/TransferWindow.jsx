@@ -3,6 +3,7 @@ import {
     useDraftPlayer,
     useLatestTransferEvent,
     usePassTransferTurn,
+    useSkipCurrentTransferTurn,
     useTransferHistory,
 } from "../../../features/transfer-window/useTransferWindow";
 import {
@@ -49,6 +50,7 @@ function TransferWindow({
         : nextGameweek?.id;
     const draftSquadQuery = useSquad(user?.id, draftGameweekId, { enabled: isDraftMode });
     const passMutation = usePassTransferTurn(user?.id);
+    const skipTurnMutation = useSkipCurrentTransferTurn(user?.leagueId);
     const draftPlayerMutation = useDraftPlayer({
         leagueId: user?.leagueId,
         userId: user?.id,
@@ -171,9 +173,22 @@ function TransferWindow({
                             )}
                         </>
                     ) : (
-                        <span className={Style.otherTurn}>
-                            Waiting for <strong>{getUserNameById(currentTurnUserId)}</strong>...
-                        </span>
+                        <>
+                            <span className={Style.otherTurn}>
+                                {windowState.currentUserAutomatic ? "Auto waivers are running for " : "Waiting for "}
+                                <strong>{getUserNameById(currentTurnUserId)}</strong>...
+                            </span>
+                            {user?.leagueAdmin && (
+                                <button
+                                    type="button"
+                                    className={Style.passButton}
+                                    onClick={() => skipTurnMutation.mutate()}
+                                    disabled={skipTurnMutation.isPending}
+                                >
+                                    {skipTurnMutation.isPending ? "Skipping…" : isIrRound ? "Resolve & skip" : "Skip turn"}
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -187,9 +202,9 @@ function TransferWindow({
             {lastTransferMessage && (
                 <div className={Style.transferMessage}>{lastTransferMessage}</div>
             )}
-            {(passMutation.error || draftPlayerMutation.error) && (
+            {(passMutation.error || skipTurnMutation.error || draftPlayerMutation.error) && (
                 <div className={Style.transferMessage} role="alert">
-                    {(passMutation.error || draftPlayerMutation.error).message}
+                    {(passMutation.error || skipTurnMutation.error || draftPlayerMutation.error).message}
                 </div>
             )}
 

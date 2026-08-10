@@ -1,6 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { RotateCcw, X } from "lucide-react";
 import Image from "next/image";
-import Style from "../../../../Styles/IRReleaseModal.module.css";
+
+import { Button } from "../../../../shared/ui/Button";
+import { ResponsiveDialogSurface } from "../../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../../General/PlayerKit";
 
 function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
@@ -16,64 +19,78 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
             && String(player.id) !== String(irPlayer.id)
         ));
 
+    function selectOutgoing(player) {
+        onConfirm?.(player);
+        onClose();
+    }
+
     return (
-        <Dialog.Root open onOpenChange={open => !open && onClose()}>
-        <Dialog.Portal>
-            <Dialog.Overlay className={Style.modalBackdrop} />
-            <Dialog.Content className={Style.modal}>
-                <Dialog.Title className="sr-only">Release IR Player</Dialog.Title>
-                <Dialog.Close asChild><button type="button" className={Style.closeBtn} aria-label="Close">✕</button></Dialog.Close>
+        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+            <ResponsiveDialogSurface className="flex flex-col sm:w-[min(calc(100vw-2rem),34rem)]">
+                <div className="flex max-h-[calc(92dvh-0.375rem)] min-h-0 flex-col">
+                    <header className="relative shrink-0 border-b border-app-border bg-app-surface-muted px-5 py-5 pr-16 sm:px-6 sm:py-6 sm:pr-16">
+                        <Dialog.Close asChild>
+                            <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground" aria-label="Close IR release selection">
+                                <X className="size-5" aria-hidden="true" />
+                            </Button>
+                        </Dialog.Close>
+                        <div className="flex items-center gap-3">
+                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface">
+                                <Image src="/Icons/ir-chip.svg" alt="" width={30} height={30} className="size-7 object-contain" />
+                            </span>
+                            <div className="min-w-0">
+                                <Dialog.Title className="text-lg font-black tracking-tight text-app-foreground sm:text-2xl">Release IR player</Dialog.Title>
+                                <Dialog.Description className="mt-0.5 text-xs leading-5 text-app-muted sm:text-sm">
+                                    Choose a {irPlayer.position} to release so {irPlayer.viewName} can return to your squad.
+                                </Dialog.Description>
+                            </div>
+                        </div>
+                    </header>
 
-                <Image
-                    src="/Icons/ir-chip.svg"
-                    alt="IR Chip"
-                    width={70}
-                    height={70}
-                    className={Style.chipIconLarge}
-                />
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5">
+                        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-app-accent-border bg-app-accent-surface px-3 py-3 text-app-accent-foreground">
+                            <RotateCcw className="size-5 shrink-0" aria-hidden="true" />
+                            <p className="min-w-0 text-xs leading-5 sm:text-sm">
+                                Returning <strong>{irPlayer.viewName}</strong> from IR
+                            </p>
+                        </div>
 
-                <h2 className={Style.title}>Release IR Player</h2>
-
-                <p className={Style.message}>
-                    Select a player <strong>to remove</strong> from your squad in order to return{" "}
-                    <strong>{irPlayer.viewName}</strong> from IR.
-                </p>
-
-                {samePositionPlayers.length === 0 ? (
-                    <p className={Style.notice}>No available players of the same position.</p>
-                ) : (
-                    <div className={Style.playerList}>
-                        {samePositionPlayers.map(p => (
-                            <button
-                                type="button"
-                                key={p.id}
-                                className={Style.playerButton}
-                                onClick={() => {
-                                    onConfirm?.(p);
-                                    onClose();
-                                }}
-                            >
-                                <div className={Style.playerInfo}>
-                                    <PlayerKit
-                                        teamId={p.teamId}
-                                        type={p.position === "GK" ? "gk" : "field"}
-                                        className={Style.playerShirt}
-                                    />
-                                    <span className={Style.playerName}>{p.viewName}</span>
-                                </div>
-                                <span className={Style.playerTeam}>{p.teamName}</span>
-                            </button>
-                        ))}
+                        {samePositionPlayers.length === 0 ? (
+                            <p className="rounded-2xl border border-dashed border-app-border bg-app-surface-muted px-5 py-10 text-center text-sm font-bold text-app-muted">
+                                No available players of the same position.
+                            </p>
+                        ) : (
+                            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                                {samePositionPlayers.map((player) => (
+                                    <button
+                                        type="button"
+                                        key={player.id}
+                                        onClick={() => selectOutgoing(player)}
+                                        className="flex min-w-0 items-center gap-3 rounded-2xl border border-app-border bg-app-surface px-3 py-3 text-left transition hover:border-red-400/50 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-red-500"
+                                    >
+                                        <PlayerKit
+                                            teamId={player.teamId}
+                                            type={player.position === "GK" ? "gk" : "field"}
+                                            className="h-12 w-9 shrink-0 object-contain"
+                                            draggable={false}
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <strong className="block truncate text-sm text-app-foreground">{player.viewName}</strong>
+                                            <span className="mt-0.5 block truncate text-[0.68rem] font-bold uppercase tracking-wide text-app-muted">{player.teamName || player.position}</span>
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                )}
 
-                <div className={Style.modalButtons}>
-                    <button type="button" className={Style.cancelButton} onClick={onClose}>
-                        Cancel
-                    </button>
+                    <footer className="shrink-0 border-t border-app-border bg-app-surface px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-4">
+                        <Dialog.Close asChild>
+                            <Button variant="secondary" className="w-full border-app-border bg-app-surface-muted text-app-foreground hover:bg-app-accent-hover">Cancel</Button>
+                        </Dialog.Close>
+                    </footer>
                 </div>
-            </Dialog.Content>
-        </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

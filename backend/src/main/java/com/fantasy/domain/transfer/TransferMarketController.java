@@ -46,6 +46,36 @@ public class TransferMarketController {
         }
     }
 
+    @PostMapping("/admin/skip-current-turn")
+    public ResponseEntity<String> skipCurrentTurn(Authentication authentication) {
+        try {
+            marketService.skipCurrentTurn(authenticatedUserId(authentication));
+            return ResponseEntity.ok("Current turn skipped");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/attendance/{gwId}")
+    public ResponseEntity<Map<String, Object>> getAttendance(@PathVariable int gwId,
+                                                              Authentication authentication) {
+        return ResponseEntity.ok(marketService.getAttendancePreference(
+                authenticatedUserId(authentication),
+                gwId
+        ));
+    }
+
+    @PutMapping("/attendance/{gwId}")
+    public ResponseEntity<Map<String, Object>> setAttendance(@PathVariable int gwId,
+                                                              @RequestBody TransferAttendanceRequest request,
+                                                              Authentication authentication) {
+        return ResponseEntity.ok(marketService.setAttendancePreference(
+                authenticatedUserId(authentication),
+                gwId,
+                request.automatic()
+        ));
+    }
+
     @PostMapping("/ir-sign")
     public ResponseEntity<String> signIR(@RequestBody IRSignRequestDto request, Authentication authentication) {
         try {

@@ -36,14 +36,14 @@ class SeasonResetServiceTest {
 
         var summary = new SeasonResetService(jdbc).resetAllData();
 
-        assertEquals(36, summary.clearedTables());
+        assertEquals(37, summary.clearedTables());
         assertEquals(0, count(jdbc, "teams"));
         assertEquals(0, count(jdbc, "players"));
         assertEquals(0, count(jdbc, "fixtures"));
         assertEquals(0, count(jdbc, "gameweeks"));
         assertEquals(0, count(jdbc, "users"));
         assertEquals(0, count(jdbc, "leagues"));
-        assertEquals(14, jdbc.queryForObject(
+        assertEquals(15, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL",
                 Integer.class
         ));

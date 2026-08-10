@@ -3,7 +3,7 @@ import { useId } from "react";
 const BORDER_PATH = "M 5 2 H 95 Q 98 2 98 5 V 95 Q 98 98 95 98 H 5 Q 2 98 2 95 V 5 Q 2 2 5 2 Z";
 
 function BenchBoostEffect() {
-    const filterId = `bench-electric-${useId().replaceAll(":", "")}`;
+    const filterId = `bench-bolt-${useId().replaceAll(":", "")}`;
 
     return (
         <svg
@@ -13,33 +13,42 @@ function BenchBoostEffect() {
             preserveAspectRatio="none"
         >
             <defs>
-                <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
+                <filter id={filterId} x="-24%" y="-24%" width="148%" height="148%" colorInterpolationFilters="sRGB">
                     <feTurbulence
                         type="fractalNoise"
-                        baseFrequency="0.04 0.18"
+                        baseFrequency="0.15 0.58"
                         numOctaves="3"
-                        seed="7"
+                        seed="11"
                         result="electricNoise"
                     >
                         <animate
                             attributeName="baseFrequency"
-                            dur="0.16s"
+                            dur="0.11s"
                             repeatCount="indefinite"
-                            values="0.04 0.18;0.065 0.26;0.03 0.14;0.055 0.22;0.04 0.18"
+                            values="0.15 0.58;0.19 0.72;0.13 0.64;0.21 0.76;0.15 0.58"
                         />
                     </feTurbulence>
                     <feDisplacementMap
                         in="SourceGraphic"
                         in2="electricNoise"
-                        scale="5.5"
+                        scale="2.8"
                         xChannelSelector="R"
                         yChannelSelector="B"
-                        result="displacedLine"
+                        result="displacedBolt"
                     />
-                    <feGaussianBlur in="displacedLine" stdDeviation="2.8" result="electricGlow" />
+
+                    <feGaussianBlur in="displacedBolt" stdDeviation="3.1" result="wideBlur" />
+                    <feFlood floodColor="rgb(34 211 238)" floodOpacity="0.48" result="wideGlowColor" />
+                    <feComposite in="wideGlowColor" in2="wideBlur" operator="in" result="wideGlow" />
+
+                    <feGaussianBlur in="displacedBolt" stdDeviation="0.75" result="tightBlur" />
+                    <feFlood floodColor="rgb(103 232 249)" floodOpacity="0.9" result="tightGlowColor" />
+                    <feComposite in="tightGlowColor" in2="tightBlur" operator="in" result="tightGlow" />
+
                     <feMerge>
-                        <feMergeNode in="electricGlow" />
-                        <feMergeNode in="displacedLine" />
+                        <feMergeNode in="wideGlow" />
+                        <feMergeNode in="tightGlow" />
+                        <feMergeNode in="displacedBolt" />
                     </feMerge>
                 </filter>
             </defs>
@@ -48,40 +57,14 @@ function BenchBoostEffect() {
                 d={BORDER_PATH}
                 pathLength="100"
                 fill="none"
-                stroke="rgb(6 182 212)"
-                strokeWidth="5.8"
-                strokeDasharray="24 76"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-                filter={`url(#${filterId})`}
-                className="bench-electric-line bench-electric-glow"
-            />
-            <path
-                d={BORDER_PATH}
-                pathLength="100"
-                fill="none"
-                stroke="rgb(34 211 238)"
-                strokeWidth="3.2"
-                strokeDasharray="18 82"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-                filter={`url(#${filterId})`}
-                className="bench-electric-line bench-electric-core"
-            />
-            <path
-                d={BORDER_PATH}
-                pathLength="100"
-                fill="none"
                 stroke="rgb(236 254 255)"
-                strokeWidth="1.35"
-                strokeDasharray="7 93"
+                strokeWidth="1.2"
+                strokeDasharray="12 88"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
                 filter={`url(#${filterId})`}
-                className="bench-electric-line bench-electric-flash"
+                className="bench-electric-bolt"
             />
         </svg>
     );

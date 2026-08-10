@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowLeftRight, Check, X } from "lucide-react";
 import { useState } from "react";
 
-import { useMediaQuery } from "../../../hooks/useMediaQuery";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../General/PlayerKit";
 
 export default function WaiverCandidateDialog({
@@ -20,7 +20,6 @@ export default function WaiverCandidateDialog({
 }) {
     const [playerOutId, setPlayerOutId] = useState("");
     const [planType, setPlanType] = useState("REGULAR");
-    const isMobile = useMediaQuery("(max-width: 767px)");
     const canAddToIr = Boolean(
         irPlayer
         && onIrChange
@@ -45,14 +44,7 @@ export default function WaiverCandidateDialog({
 
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[5000] bg-[#08030f]/75 backdrop-blur-sm" />
-                <Dialog.Content
-                    className="fixed top-1/2 left-1/2 z-[5001] flex w-[calc(100%-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:w-[calc(100%-2rem)]"
-                    style={isMobile
-                        ? { height: "min(30rem, calc(100vh - 1rem))", maxHeight: "calc(100vh - 1rem)" }
-                        : { maxHeight: "90vh" }}
-                >
+            <ResponsiveDialogSurface className="flex flex-col sm:w-[min(calc(100vw-2rem),32rem)]">
                     <header className="relative shrink-0 border-b border-app-border bg-component-gradient px-4 py-3 text-brand-ink sm:px-6 sm:py-5">
                         <Dialog.Title className="pr-10 text-base font-extrabold sm:pr-12 sm:text-xl">
                             {planType === "IR" ? "Add IR priority" : "Add waiver"}
@@ -157,8 +149,7 @@ export default function WaiverCandidateDialog({
                             {saving ? "Saving..." : planType === "IR" ? "Add IR priority" : "Add waiver"}
                         </button>
                     </footer>
-                </Dialog.Content>
-            </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

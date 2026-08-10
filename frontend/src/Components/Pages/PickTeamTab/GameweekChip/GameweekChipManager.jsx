@@ -48,6 +48,8 @@ function GameweekChipManager({
                 active={isActive}
                 actionTitle={disabledReason || undefined}
                 message={message || (!isActive ? disabledReason : "")}
+                remaining={chips.remaining?.[chipName] ?? 0}
+                total={1}
             />
 
             {showConfirmModal && (

@@ -2,6 +2,9 @@ import PlayerCard from "../PlayerCard";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import { cn } from "../../../lib/cn";
 import BenchBoostEffect from "./BenchBoostEffect";
+import BenchPlayerShock from "./BenchPlayerShock";
+import { BENCH_BOOST_CYCLE_SECONDS, getBenchImpactDelay } from "./benchBoostTiming";
+import { getLeadingPlayerId } from "./model";
 
 function Pitch({
     squad,
@@ -14,11 +17,14 @@ function Pitch({
     const playerDataById = new Map(
         (playerData ?? []).map((player) => [String(player.playerId), player]),
     );
+    const leadingPlayerId = getLeadingPlayerId(squad, playerData);
     const firstPickCaptainIsGoalkeeper = !squad.tripleCaptainActive
         && squad.captainId != null
         && squad.firstPickId != null
         && String(squad.captainId) === String(squad.firstPickId)
         && (squad.startingLineup?.GK ?? []).some((id) => String(id) === String(squad.captainId));
+    const leaderIsGoalkeeper = leadingPlayerId != null
+        && (squad.startingLineup?.GK ?? []).some((id) => String(id) === String(leadingPlayerId));
 
     const renderPlayer = (id, index) => {
         const player = id ? getPlayerById(players, id) : null;
@@ -61,6 +67,7 @@ function Pitch({
                 captain={isCaptain}
                 viceCaptain={String(squad.viceCaptainId) === String(id)}
                 captainMultiplier={squad.tripleCaptainActive ? 3 : 2}
+                pointsLeader={leadingPlayerId != null && String(leadingPlayerId) === String(id)}
                 chipEffect={
                     squad.tripleCaptainActive && isCaptain
                         ? "triple-captain"
@@ -92,7 +99,7 @@ function Pitch({
                             key={pos}
                             className={cn(
                                 "col-span-full m-0 flex items-start justify-center gap-[6.6%] max-md:grid max-md:w-full max-md:gap-[clamp(4px,1.5vw,10px)] max-md:px-[3%]",
-                                pos === "GK" && firstPickCaptainIsGoalkeeper && "pt-5 max-md:pt-4",
+                                pos === "GK" && (firstPickCaptainIsGoalkeeper || leaderIsGoalkeeper) && "pt-5 max-md:pt-4",
                             )}
                             style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }}
                         >
@@ -101,7 +108,10 @@ function Pitch({
                     );
                 })}
 
-                <div className="relative isolate col-span-full row-start-5 grid w-[78%] grid-cols-4 items-center gap-5 self-end justify-self-center rounded-t-sm bg-white/40 p-2.5 max-md:w-[95%] max-md:gap-1 max-md:rounded-t-lg max-md:p-1.5">
+                <div
+                    className="relative isolate col-span-full row-start-5 grid w-[78%] grid-cols-4 items-center gap-5 self-end justify-self-center rounded-t-sm bg-white/40 p-2.5 max-md:w-[95%] max-md:gap-1 max-md:rounded-t-lg max-md:p-1.5"
+                    style={{ "--bench-cycle-duration": `${BENCH_BOOST_CYCLE_SECONDS}s` }}
+                >
                     {squad.benchBoostActive && <BenchBoostEffect />}
 
                     {["GK", "S1", "S2", "S3"].map((slot, index) => {
@@ -109,7 +119,17 @@ function Pitch({
                         const label = slot === "GK" ? "GK" : slot.replace("S", "");
 
                         return (
-                            <div key={slot} className="relative z-[1] flex flex-col items-center justify-start">
+                            <div
+                                key={slot}
+                                className={cn(
+                                    "relative z-[1] flex flex-col items-center justify-start",
+                                    squad.benchBoostActive && "bench-player-impact",
+                                )}
+                                style={squad.benchBoostActive
+                                    ? { "--bench-impact-delay": `${getBenchImpactDelay(index, 4)}s` }
+                                    : undefined}
+                            >
+                                {squad.benchBoostActive && <BenchPlayerShock index={index} />}
                                 {renderPlayer(playerId, `bench-${index}`)}
                                 <div className="mt-0.5 text-[13px] font-bold tracking-[0.5px] text-[#333] max-md:text-[6px]">
                                     {label}

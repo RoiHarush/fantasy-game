@@ -36,4 +36,28 @@ class TransferMarketControllerAuthorizationTest {
 
         verify(service).passTurn(42);
     }
+
+    @Test
+    void adminSkipUsesAuthenticatedUser() {
+        TransferMarketService service = mock(TransferMarketService.class);
+        TransferMarketController controller = new TransferMarketController(service);
+
+        controller.skipCurrentTurn(new UsernamePasswordAuthenticationToken("42", null));
+
+        verify(service).skipCurrentTurn(42);
+    }
+
+    @Test
+    void attendancePreferenceBelongsToAuthenticatedUser() {
+        TransferMarketService service = mock(TransferMarketService.class);
+        TransferMarketController controller = new TransferMarketController(service);
+
+        controller.setAttendance(
+                6,
+                new TransferAttendanceRequest(true),
+                new UsernamePasswordAuthenticationToken("42", null)
+        );
+
+        verify(service).setAttendancePreference(42, 6, true);
+    }
 }

@@ -54,6 +54,8 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
                 message={message || (!isActive && tripleCaptainActive
                     ? "Unavailable while Triple Captain is active."
                     : "")}
+                remaining={chips.remaining?.FIRST_PICK_CAPTAIN ?? 0}
+                total={1}
             />
 
             {showConfirmModal && (

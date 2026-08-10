@@ -2,7 +2,8 @@ import PlayerKit from "./PlayerKit";
 import { Crown } from "lucide-react";
 import { usePlayerInteraction } from "../../Context/PlayerInteractionProvider";
 import { cn } from "../../lib/cn";
-import ChipSparkles from "./Pitch/ChipSparkles";
+import FirstPickAura from "./Pitch/FirstPickAura";
+import TripleCaptainEffect from "./Pitch/TripleCaptainEffect";
 
 
 function PlayerCard({
@@ -12,6 +13,7 @@ function PlayerCard({
     viceCaptain = false,
     captainMultiplier = 2,
     chipEffect = null,
+    pointsLeader = false,
     points = null,
     nextFixture = null
 }) {
@@ -84,9 +86,10 @@ function PlayerCard({
                 </div>
             )}
 
-            <span className="relative z-[1] mb-2 flex w-full justify-center max-md:mb-0.5">
-                {chipEffect === "triple-captain" && <ChipSparkles />}
-                {chipEffect === "first-pick-captain" && (
+            <span className="player-kit-stage relative z-[1] mb-2 flex w-full justify-center max-md:mb-0.5">
+                {chipEffect === "triple-captain" && <TripleCaptainEffect />}
+                {chipEffect === "first-pick-captain" && <FirstPickAura />}
+                {pointsLeader && (
                     <Crown
                         aria-hidden="true"
                         className="pointer-events-none absolute -top-5 left-1/2 z-[4] size-7 fill-amber-300 text-amber-500 [animation:chip-crown-float_2.2s_ease-in-out_infinite] [filter:drop-shadow(0_2px_4px_rgb(0_0_0/0.35))_drop-shadow(0_0_5px_rgb(251_191_36/0.65))] motion-reduce:animate-none max-md:-top-3.5 max-md:size-5"

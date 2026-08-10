@@ -1,6 +1,5 @@
 package com.fantasy.domain.transfer;
 
-import com.fantasy.config.WebSocketPresenceService;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueAccessService;
@@ -34,10 +33,9 @@ import static org.mockito.Mockito.when;
 class WaiverAutomationTest {
 
     @Test
-    void connectedUserKeepsManualControlAndWaiversAreNotExecuted() {
+    void manualAttendanceKeepsControlRegardlessOfWebSocketPresence() {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverRepo = mock(WaiverPreferenceRepository.class);
-        WebSocketPresenceService presence = mock(WebSocketPresenceService.class);
         LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
         LeagueEntity league = new LeagueEntity();
         league.setId(7L);
@@ -52,14 +50,12 @@ class WaiverAutomationTest {
                 mock(PlayerRepository.class), mock(GameWeekRepository.class), mock(UserSquadRepository.class),
                 mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
                 mock(LeagueAccessService.class), windowRepo, waiverRepo, mock(WaiverPlanProgressRepository.class),
-                mock(LeagueTransferActionRepository.class), presence, mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class), 0
+                mock(LeagueTransferActionRepository.class), mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class)
         );
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
-        when(presence.isOnline(10)).thenReturn(true);
-
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
 
         assertEquals(10, window.currentUserId().orElseThrow());
         verify(waiverRepo, never()).findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
@@ -68,7 +64,7 @@ class WaiverAutomationTest {
     }
 
     @Test
-    void offlineTurnSkipsUnavailableFirstChoiceAndExecutesNextPreference() {
+    void automaticTurnSkipsUnavailableFirstChoiceAndExecutesNextPreference() {
         PlayerRepository playerRepo = mock(PlayerRepository.class);
         GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
         UserSquadRepository squadRepo = mock(UserSquadRepository.class);
@@ -80,7 +76,6 @@ class WaiverAutomationTest {
         WaiverPreferenceRepository waiverRepo = mock(WaiverPreferenceRepository.class);
         WaiverPlanProgressRepository progressRepo = mock(WaiverPlanProgressRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presence = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
 
         TransferMarketService service = new TransferMarketService(
@@ -95,10 +90,8 @@ class WaiverAutomationTest {
                 waiverRepo,
                 progressRepo,
                 actionRepo,
-                presence,
                 webSocket,
-                mock(SupplementalDraftPoolService.class),
-                0
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -110,6 +103,7 @@ class WaiverAutomationTest {
         window.setGameWeek(gameWeek);
         window.setTurnOrder(List.of(10, 10));
         window.open(List.of());
+        window.setAutomaticForUser(10, true);
 
         UserEntity user = user(10, "Offline Manager");
         UserGameDataEntity userData = gameData(league, user, squad(100));
@@ -126,7 +120,6 @@ class WaiverAutomationTest {
         when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
-        when(presence.isOnline(10)).thenReturn(false);
         when(waiverRepo.findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                 7L, 10, 4, WaiverPlanType.REGULAR
         ))
@@ -141,7 +134,7 @@ class WaiverAutomationTest {
         when(playerRepo.findAllById(any())).thenReturn(List.of(secondChoice));
         when(userRepo.findById(10)).thenReturn(Optional.of(user));
 
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
 
         assertEquals(List.of(200), userData.getNextSquad().getStartingLineup());
         assertEquals(1, window.getRegularCursor());
@@ -154,11 +147,10 @@ class WaiverAutomationTest {
     }
 
     @Test
-    void offlineTurnWithoutValidPreferencesPassesAutomatically() {
+    void automaticTurnWithoutValidPreferencesPassesAutomatically() {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverRepo = mock(WaiverPreferenceRepository.class);
         WaiverPlanProgressRepository progressRepo = mock(WaiverPlanProgressRepository.class);
-        WebSocketPresenceService presence = mock(WebSocketPresenceService.class);
         UserRepository userRepo = mock(UserRepository.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
         TransferMarketService service = new TransferMarketService(
@@ -173,10 +165,8 @@ class WaiverAutomationTest {
                 waiverRepo,
                 progressRepo,
                 mock(LeagueTransferActionRepository.class),
-                presence,
                 webSocket,
-                mock(SupplementalDraftPoolService.class),
-                0
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -188,26 +178,30 @@ class WaiverAutomationTest {
         window.setGameWeek(gameWeek);
         window.setTurnOrder(List.of(10, 11));
         window.open(List.of());
+        window.setAutomaticForUser(10, true);
         UserEntity user = user(10, "Offline Manager");
         WaiverPlanProgressEntity progress = new WaiverPlanProgressEntity();
         progress.setNextPriority(6);
+        WaiverPreferenceEntity rejected = preference(league, user, gameWeek, 6, 200, 100);
 
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
-        when(presence.isOnline(10)).thenReturn(false);
         when(waiverRepo.findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                 7L, 10, 4, WaiverPlanType.REGULAR
         ))
-                .thenReturn(List.of());
+                .thenReturn(List.of(rejected));
         when(progressRepo.findByLeague_IdAndUser_IdAndGameWeek_Id(7L, 10, 4))
                 .thenReturn(Optional.of(progress));
         when(userRepo.findById(10)).thenReturn(Optional.of(user));
 
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
 
         assertEquals(11, window.currentUserId().orElseThrow());
         verify(webSocket).sendPassEvent(7L, 10, "Offline Manager");
-        verify(progressRepo, never()).save(any(WaiverPlanProgressEntity.class));
+        ArgumentCaptor<WaiverPlanProgressEntity> progressCaptor =
+                ArgumentCaptor.forClass(WaiverPlanProgressEntity.class);
+        verify(progressRepo).save(progressCaptor.capture());
+        assertEquals(7, progressCaptor.getValue().getNextPriority());
     }
 
     @Test
@@ -220,13 +214,12 @@ class WaiverAutomationTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presence = mock(WebSocketPresenceService.class);
 
         TransferMarketService service = new TransferMarketService(
                 playerRepo, mock(GameWeekRepository.class), squadRepo, gameDataRepo, userRepo, leagueRepo,
                 mock(LeagueAccessService.class), windowRepo, waiverRepo,
-                mock(WaiverPlanProgressRepository.class), actionRepo, presence,
-                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class), 0
+                mock(WaiverPlanProgressRepository.class), actionRepo,
+                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -255,7 +248,6 @@ class WaiverAutomationTest {
 
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
-        when(presence.isOnline(10)).thenReturn(true);
         when(waiverRepo.findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                 7L, 10, 4, WaiverPlanType.IR
         )).thenReturn(List.of());
@@ -269,7 +261,7 @@ class WaiverAutomationTest {
         when(playerRepo.findAllById(any())).thenReturn(List.of());
         when(userRepo.findById(10)).thenReturn(Optional.of(user));
 
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
 
         assertEquals(TransferWindowStatus.CLOSED, window.getStatus());
         assertEquals(2, window.getRegularCursor());
@@ -292,7 +284,6 @@ class WaiverAutomationTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         WaiverPreferenceRepository waiverRepo = mock(WaiverPreferenceRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
-        WebSocketPresenceService presence = mock(WebSocketPresenceService.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
 
         TransferMarketService service = new TransferMarketService(
@@ -307,10 +298,8 @@ class WaiverAutomationTest {
                 waiverRepo,
                 mock(WaiverPlanProgressRepository.class),
                 actionRepo,
-                presence,
                 webSocket,
-                mock(SupplementalDraftPoolService.class),
-                0
+                mock(SupplementalDraftPoolService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -322,6 +311,8 @@ class WaiverAutomationTest {
         window.setGameWeek(gameWeek);
         window.setTurnOrder(List.of(11, 10));
         window.open(List.of());
+        window.setAutomaticForUser(11, true);
+        window.setAutomaticForUser(10, true);
 
         UserEntity firstUser = user(11, "First Manager");
         UserEntity laterUser = user(10, "Later Manager");
@@ -337,8 +328,6 @@ class WaiverAutomationTest {
         when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
-        when(presence.isOnline(11)).thenReturn(false);
-        when(presence.isOnline(10)).thenReturn(false);
         when(waiverRepo.findByLeague_IdAndUser_IdAndGameWeek_IdAndPlanTypeOrderByPriorityAsc(
                 7L, 11, 4, WaiverPlanType.REGULAR
         ))
@@ -366,10 +355,10 @@ class WaiverAutomationTest {
         when(userRepo.findById(11)).thenReturn(Optional.of(firstUser));
         when(userRepo.findById(10)).thenReturn(Optional.of(laterUser));
 
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
         assertEquals(List.of(200), firstData.getNextSquad().getStartingLineup());
 
-        service.processOfflineTurn(7L);
+        service.processAutomaticTurn(7L);
         assertEquals(List.of(300), laterData.getNextSquad().getStartingLineup());
         verify(webSocket).sendTransferDoneEvent(7L, 10, 100, 300, "Later Manager");
     }

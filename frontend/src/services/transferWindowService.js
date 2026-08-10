@@ -14,6 +14,23 @@ export async function passTurn(userId) {
     });
 }
 
+export async function skipCurrentTurn() {
+    await apiRequest("/api/market/admin/skip-current-turn", {
+        method: "POST",
+    });
+}
+
+export async function fetchTransferAttendance(gameweekId, { signal } = {}) {
+    return apiRequest(`/api/market/attendance/${gameweekId}`, { signal });
+}
+
+export async function saveTransferAttendance(gameweekId, automatic) {
+    return apiRequest(`/api/market/attendance/${gameweekId}`, {
+        method: "PUT",
+        body: { automatic },
+    });
+}
+
 export async function makeDraftPick(playerId) {
     await apiRequest(`/api/market/draft-pick/${playerId}`, {
         method: "POST",

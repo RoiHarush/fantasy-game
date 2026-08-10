@@ -20,6 +20,7 @@ export const queryKeys = {
     transferEvent: (leagueId) => ["transfer-event", leagueId],
     transferHistory: (leagueId, gameweekId) => ["transfer-history", leagueId, gameweekId],
     transferOrder: (leagueId, gameweekId) => ["transfer-order", leagueId, gameweekId],
+    transferAttendance: (leagueId, gameweekId, userId) => ["transfer-attendance", leagueId, gameweekId, userId],
     draftConfig: (leagueId) => ["draft-config", leagueId],
     userGameweekPoints: (userId, gameweekId) => ["user-points", userId, gameweekId],
     userTotalPoints: (userId) => ["user-total-points", userId],

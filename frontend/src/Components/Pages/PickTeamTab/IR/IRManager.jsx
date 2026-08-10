@@ -74,6 +74,8 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 active={isActive}
                 actionTitle={isActive ? getReleaseTitle() : getPlayTitle()}
                 message={message}
+                remaining={chips.remaining?.IR ?? 0}
+                total={2}
             />
 
             {showIRModal && (

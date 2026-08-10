@@ -8,7 +8,7 @@ import { getFixtureItems } from "../../features/fixtures/model";
 import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { usePlayerStats } from "../../features/players/usePlayerDetails";
 import { buildPlayerStatRow, buildPlayerStatTotals } from "../../features/players/statsModel";
-import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { ResponsiveDialogSurface } from "../../shared/ui/ResponsiveDialog";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
@@ -16,7 +16,6 @@ import ImageWithFallback from "../../shared/ui/ImageWithFallback";
 
 function CompareModal({ players, onClose }) {
     const [tab, setTab] = useState("fixtures");
-    const isMobile = useMediaQuery("(max-width: 767px)");
     const [left, right] = players;
     const leftFixturesQuery = useTeamFixtures(left?.teamId);
     const rightFixturesQuery = useTeamFixtures(right?.teamId);
@@ -36,14 +35,7 @@ function CompareModal({ players, onClose }) {
 
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[3000] bg-black/70 backdrop-blur-sm" />
-                <Dialog.Content
-                    className="fixed top-1/2 left-1/2 z-[3001] flex w-[calc(100%-0.75rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:w-[calc(100%-2rem)] sm:rounded-3xl"
-                    style={isMobile
-                        ? { height: "min(30rem, calc(100vh - 1rem))", maxHeight: "calc(100vh - 1rem)" }
-                        : { maxHeight: "92vh" }}
-                >
+            <ResponsiveDialogSurface className="flex h-[min(92dvh,48rem)] flex-col sm:h-[min(90vh,56rem)] sm:w-[min(calc(100vw-2rem),64rem)]">
                     <Dialog.Title className="sr-only">Compare {left.viewName} and {right.viewName}</Dialog.Title>
                     <Dialog.Description className="sr-only">Side-by-side fixtures and statistics for two players.</Dialog.Description>
 
@@ -78,27 +70,21 @@ function CompareModal({ players, onClose }) {
                             <p className="rounded-xl border border-app-danger-border bg-app-danger-surface p-4 text-sm text-app-danger-foreground" role="alert">
                                 {error.message || "The comparison is temporarily unavailable."}
                             </p>
-                        ) : isMobile ? (
-                            <MobileComparison
-                                tab={tab}
-                                left={left}
-                                right={right}
-                                leftFixtures={leftFixturesQuery.data ?? {}}
-                                rightFixtures={rightFixturesQuery.data ?? {}}
-                                leftStats={leftStatsQuery.data ?? []}
-                                rightStats={rightStatsQuery.data ?? []}
-                                fixtureBoundary={fixtureBoundary}
-                            />
                         ) : (
-                            <div
-                                className="min-w-0 gap-2 overflow-hidden sm:gap-4"
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-                                    width: "100%",
-                                    maxWidth: "100%",
-                                }}
-                            >
+                            <>
+                                <div className="md:hidden">
+                                    <MobileComparison
+                                        tab={tab}
+                                        left={left}
+                                        right={right}
+                                        leftFixtures={leftFixturesQuery.data ?? {}}
+                                        rightFixtures={rightFixturesQuery.data ?? {}}
+                                        leftStats={leftStatsQuery.data ?? []}
+                                        rightStats={rightStatsQuery.data ?? []}
+                                        fixtureBoundary={fixtureBoundary}
+                                    />
+                                </div>
+                                <div className="hidden min-w-0 grid-cols-2 gap-4 overflow-hidden md:grid">
                                 <ComparisonSide
                                     tab={tab}
                                     teamFixtures={leftFixturesQuery.data ?? {}}
@@ -113,11 +99,11 @@ function CompareModal({ players, onClose }) {
                                     fixtureBoundary={fixtureBoundary}
                                     playerName={right.viewName}
                                 />
-                            </div>
+                                </div>
+                            </>
                         )}
                     </div>
-                </Dialog.Content>
-            </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

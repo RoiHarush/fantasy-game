@@ -2,7 +2,6 @@ package com.fantasy.domain.transfer;
 
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
-import com.fantasy.config.WebSocketPresenceService;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
@@ -21,7 +20,6 @@ import com.fantasy.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -56,10 +54,8 @@ public class TransferMarketService {
     private final WaiverPreferenceRepository waiverPreferenceRepo;
     private final WaiverPlanProgressRepository waiverProgressRepo;
     private final LeagueTransferActionRepository transferActionRepo;
-    private final WebSocketPresenceService presenceService;
     private final TransferWebSocketController webSocketController;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
-    private final long offlineGraceSeconds;
 
     public TransferMarketService(PlayerRepository playerRepo,
                                  GameWeekRepository gameWeekRepo,
@@ -72,10 +68,8 @@ public class TransferMarketService {
                                  WaiverPreferenceRepository waiverPreferenceRepo,
                                  WaiverPlanProgressRepository waiverProgressRepo,
                                  LeagueTransferActionRepository transferActionRepo,
-                                 WebSocketPresenceService presenceService,
                                  TransferWebSocketController webSocketController,
-                                 SupplementalDraftPoolService supplementalDraftPoolService,
-                                 @Value("${app.waivers.offline-grace-seconds:30}") long offlineGraceSeconds) {
+                                 SupplementalDraftPoolService supplementalDraftPoolService) {
         this.playerRepo = playerRepo;
         this.gameWeekRepo = gameWeekRepo;
         this.squadRepo = squadRepo;
@@ -87,10 +81,8 @@ public class TransferMarketService {
         this.waiverPreferenceRepo = waiverPreferenceRepo;
         this.waiverProgressRepo = waiverProgressRepo;
         this.transferActionRepo = transferActionRepo;
-        this.presenceService = presenceService;
         this.webSocketController = webSocketController;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
-        this.offlineGraceSeconds = Math.max(0, offlineGraceSeconds);
     }
 
     @Transactional
@@ -212,6 +204,92 @@ public class TransferMarketService {
         String userName = getUserName(userId);
         advanceTurn(window);
         publishAfterCommit(() -> webSocketController.sendPassEvent(leagueId, userId, userName));
+    }
+
+    @Transactional
+    public void skipCurrentTurn(int actingUserId) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(actingUserId);
+        leagueAccessService.requireLeagueAdmin(actingUserId, leagueId);
+
+        List<LeagueTransferWindowEntity> windows = windowRepo.findByLeagueAndStatusForUpdate(
+                leagueId,
+                TransferWindowStatus.OPEN
+        );
+        if (windows.size() != 1) {
+            throw new IllegalStateException("There is no active transfer window to skip");
+        }
+
+        LeagueTransferWindowEntity window = windows.getFirst();
+        if (window.getWindowType() != TransferWindowType.TRANSFER) {
+            throw new IllegalStateException("Draft turns cannot be skipped by the league admin");
+        }
+        if (isLineupDeadlineReached(window)) {
+            throw new IllegalStateException("The lineup deadline has passed");
+        }
+
+        int skippedUserId = window.currentUserId()
+                .orElseThrow(() -> new IllegalStateException("There is no active turn to skip"));
+        if (window.getPhase() == TransferWindowPhase.IR) {
+            processAutomatedIrTurn(window, skippedUserId);
+        } else {
+            String userName = getUserName(skippedUserId);
+            publishAfterCommit(() -> webSocketController.sendPassEvent(
+                    leagueId,
+                    skippedUserId,
+                    userName
+            ));
+        }
+        advanceTurn(window);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAttendancePreference(int requestingUserId, int gameWeekId) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        boolean automatic = windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
+                        leagueId,
+                        gameWeekId,
+                        TransferWindowType.TRANSFER
+                )
+                .map(window -> window.isAutomaticForUser(requestingUserId))
+                .orElse(false);
+        return Map.of(
+                "gameWeekId", gameWeekId,
+                "automatic", automatic
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> setAttendancePreference(int requestingUserId,
+                                                       int gameWeekId,
+                                                       boolean automatic) {
+        long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
+                .orElseThrow(() -> new IllegalArgumentException("League was not found"));
+        GameWeekEntity gameWeek = gameWeekRepo.findById(gameWeekId)
+                .orElseThrow(() -> new IllegalArgumentException("GameWeek not found: " + gameWeekId));
+
+        LeagueTransferWindowEntity window = windowRepo
+                .findConfiguredWindowForUpdate(leagueId, gameWeekId, TransferWindowType.TRANSFER)
+                .orElseGet(() -> {
+                    LeagueTransferWindowEntity created = new LeagueTransferWindowEntity();
+                    List<Integer> order = defaultOrderForLeague(league, gameWeek, TransferWindowType.TRANSFER);
+                    created.setLeague(league);
+                    created.setGameWeek(gameWeek);
+                    created.setWindowType(TransferWindowType.TRANSFER);
+                    created.setTurnOrder(order);
+                    created.setCanonicalOrder(order);
+                    return created;
+                });
+
+        if (window.getStatus() != TransferWindowStatus.READY) {
+            throw new IllegalStateException("Attendance can be changed only before the window opens");
+        }
+        window.setAutomaticForUser(requestingUserId, automatic);
+        windowRepo.saveAndFlush(window);
+        return Map.of(
+                "gameWeekId", gameWeekId,
+                "automatic", automatic
+        );
     }
 
     @Transactional
@@ -749,6 +827,7 @@ public class TransferMarketService {
             state.put("initialOrder", null);
             state.put("turnsUsed", null);
             state.put("totalTurns", null);
+            state.put("automaticUserIds", List.of());
             return state;
         }
 
@@ -766,6 +845,11 @@ public class TransferMarketService {
         state.put("initialOrder", window.initialOrder());
         state.put("turnsUsed", window.turnsUsed());
         state.put("totalTurns", window.totalTurns());
+        state.put("automaticUserIds", window.getAutomaticUserIds());
+        state.put("requestingUserAutomatic", window.isAutomaticForUser(requestingUserId));
+        state.put("currentUserAutomatic", window.currentUserId()
+                .map(window::isAutomaticForUser)
+                .orElse(false));
         return state;
     }
 
@@ -778,7 +862,7 @@ public class TransferMarketService {
     }
 
     @Transactional
-    public void processOfflineTurn(long leagueId) {
+    public void processAutomaticTurn(long leagueId) {
         List<LeagueTransferWindowEntity> windows = windowRepo.findByLeagueAndStatusForUpdate(
                 leagueId,
                 TransferWindowStatus.OPEN
@@ -796,12 +880,7 @@ public class TransferMarketService {
         }
 
         int userId = window.currentUserId().orElse(-1);
-        if (userId < 0 || presenceService.isOnline(userId)) return;
-        LocalDateTime offlineSince = presenceService.offlineSince(userId).orElse(window.getTurnStartedAt());
-        LocalDateTime graceStartedAt = offlineSince.isAfter(window.getTurnStartedAt())
-                ? offlineSince
-                : window.getTurnStartedAt();
-        if (graceStartedAt.plusSeconds(offlineGraceSeconds).isAfter(LocalDateTime.now())) return;
+        if (userId < 0 || !window.isAutomaticForUser(userId)) return;
 
         if (window.getPhase() == TransferWindowPhase.IR) {
             processAutomatedIrTurn(window, userId);
@@ -823,7 +902,9 @@ public class TransferMarketService {
                 .filter(preference -> preference.getPriority() >= nextPriority)
                 .toList();
         WaiverPreferenceEntity completedPreference = null;
+        int nextPriorityAfterAttempts = nextPriority;
         for (WaiverPreferenceEntity preference : preferences) {
+            nextPriorityAfterAttempts = Math.max(nextPriorityAfterAttempts, preference.getPriority() + 1);
             try {
                 performTransfer(
                         leagueId,
@@ -846,6 +927,9 @@ public class TransferMarketService {
 
         String userName = getUserName(userId);
         if (completedPreference == null) {
+            if (!preferences.isEmpty()) {
+                updateWaiverProgress(window, userId, nextPriorityAfterAttempts);
+            }
             publishAfterCommit(() -> webSocketController.sendPassEvent(leagueId, userId, userName));
         } else {
             updateWaiverProgress(window, userId, completedPreference.getPriority() + 1);
@@ -867,6 +951,16 @@ public class TransferMarketService {
             ));
         }
         advanceTurn(window);
+    }
+
+    /**
+     * Kept temporarily as a compatibility entry point for simulations and older callers.
+     * Automation is now driven exclusively by the user's persisted per-window preference,
+     * never by WebSocket presence.
+     */
+    @Transactional
+    public void processOfflineTurn(long leagueId) {
+        processAutomaticTurn(leagueId);
     }
 
     @Transactional

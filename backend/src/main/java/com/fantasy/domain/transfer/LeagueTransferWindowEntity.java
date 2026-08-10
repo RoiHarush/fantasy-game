@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -87,6 +88,14 @@ public class LeagueTransferWindowEntity {
     @OrderColumn(name = "turn_position")
     @Column(name = "user_id", nullable = false)
     private List<Integer> irOrder = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "league_transfer_window_auto_users",
+            joinColumns = @JoinColumn(name = "window_id")
+    )
+    @Column(name = "user_id", nullable = false)
+    private Set<Integer> automaticUserIds = new LinkedHashSet<>();
 
     @Column(nullable = false)
     private int regularCursor;
@@ -210,6 +219,18 @@ public class LeagueTransferWindowEntity {
         return result;
     }
 
+    public boolean isAutomaticForUser(int userId) {
+        return automaticUserIds.contains(userId);
+    }
+
+    public void setAutomaticForUser(int userId, boolean automatic) {
+        if (automatic) {
+            automaticUserIds.add(userId);
+        } else {
+            automaticUserIds.remove(userId);
+        }
+    }
+
     public Long getId() { return id; }
     public LeagueEntity getLeague() { return league; }
     public GameWeekEntity getGameWeek() { return gameWeek; }
@@ -219,6 +240,7 @@ public class LeagueTransferWindowEntity {
     public List<Integer> getTurnOrder() { return turnOrder; }
     public List<Integer> getCanonicalOrder() { return canonicalOrder; }
     public List<Integer> getIrOrder() { return irOrder; }
+    public Set<Integer> getAutomaticUserIds() { return new LinkedHashSet<>(automaticUserIds); }
     public int getRegularCursor() { return regularCursor; }
     public int getIrCursor() { return irCursor; }
     public LocalDateTime getOpenedAt() { return openedAt; }

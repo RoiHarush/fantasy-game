@@ -13,6 +13,8 @@ function ChipCard({
     active = false,
     actionTitle,
     message = "",
+    remaining,
+    total,
 }) {
     return (
         <section className="grid min-h-15 min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-[var(--app-accent-border)] bg-[var(--app-surface)] px-2.5 py-2 text-[var(--app-foreground)] shadow-[0_4px_14px_rgba(27,16,53,0.08)] sm:min-h-16 sm:px-3">
@@ -24,9 +26,14 @@ function ChipCard({
                 className="size-7 object-contain sm:size-8"
             />
 
-            <h4 className="truncate text-left text-xs font-bold sm:text-sm">
-                {title}
-            </h4>
+            <div className="min-w-0 text-left">
+                <h4 className="truncate text-xs font-bold sm:text-sm">{title}</h4>
+                {Number.isFinite(remaining) && Number.isFinite(total) && (
+                    <span className="mt-0.5 inline-flex rounded-full border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-1.5 py-0.5 text-[0.58rem] font-bold leading-none text-[var(--app-muted)] sm:text-[0.64rem]">
+                        {remaining}/{total} left
+                    </span>
+                )}
+            </div>
 
             <Button
                 type="button"
