@@ -13,15 +13,19 @@ import {
 import { validateTransferOrder } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
 
-export default function TurnOrderModal({ onClose, usersList }) {
+export default function TurnOrderModal({ onClose, usersList, previewMode = false }) {
     const { nextGameweek } = useGameweek();
     const { user } = useAuth();
     const pickCount = usersList.length * 2;
     const [editedPicks, setEditedPicks] = useState(null);
     const [validationError, setValidationError] = useState("");
     const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
+    const previewOrder = Array.from({ length: pickCount }, (_, index) => (
+        String(usersList[index % usersList.length]?.id ?? "")
+    ));
+    const orderData = previewMode ? previewOrder : (orderQuery.data ?? []);
     const initialPicks = Array.from({ length: pickCount }, (_, index) => (
-        index < (orderQuery.data?.length ?? 0) ? String(orderQuery.data[index]) : ""
+        index < orderData.length ? String(orderData[index]) : ""
     ));
     const picks = editedPicks ?? initialPicks;
     const saveOrder = useSaveTransferOrder(user?.leagueId, nextGameweek?.id, {
@@ -36,6 +40,10 @@ export default function TurnOrderModal({ onClose, usersList }) {
     };
 
     const handleSave = () => {
+        if (previewMode) {
+            onClose();
+            return;
+        }
         const cleanOrder = picks.filter(Boolean).map(Number);
         const nextValidationError = validateTransferOrder(
             cleanOrder,
@@ -87,7 +95,7 @@ export default function TurnOrderModal({ onClose, usersList }) {
                     </Dialog.Close>
 
                     <div className="min-h-20 flex-1 space-y-2 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
-                        {orderQuery.isPending ? (
+                        {!previewMode && orderQuery.isPending ? (
                             <p className="py-8 text-center text-app-muted" role="status">Loading transfer order…</p>
                         ) : picks.length === 0 ? (
                             <p className="py-8 text-center text-app-muted">No league members are available.</p>
@@ -110,18 +118,18 @@ export default function TurnOrderModal({ onClose, usersList }) {
                         ))}
                     </div>
 
-                    {(validationError || orderQuery.error || saveOrder.error) && (
+                    {(validationError || (!previewMode && orderQuery.error) || saveOrder.error) && (
                         <p className="mx-4 mb-3 rounded-xl border border-app-danger-border bg-app-danger-surface p-3 text-xs font-semibold text-app-danger-foreground sm:mx-6 sm:text-sm" role="alert">
-                            {validationError || orderQuery.error?.message || saveOrder.error?.message}
+                            {validationError || (!previewMode && orderQuery.error?.message) || saveOrder.error?.message}
                         </p>
                     )}
                     <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-app-border bg-app-surface-muted px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
                         <Dialog.Close asChild>
                             <Button variant="secondary" className="border-app-border bg-app-surface text-app-foreground hover:bg-app-accent-hover" disabled={saveOrder.isPending}>Cancel</Button>
                         </Dialog.Close>
-                        <Button type="submit" disabled={orderQuery.isPending || saveOrder.isPending || picks.length === 0}>
+                        <Button type="submit" disabled={(!previewMode && orderQuery.isPending) || saveOrder.isPending || picks.length === 0}>
                             <Save aria-hidden="true" size={16} />
-                            {saveOrder.isPending ? "Saving…" : "Save order"}
+                            {saveOrder.isPending ? "Saving…" : previewMode ? "Close preview" : "Save order"}
                         </Button>
                     </div>
                     </form>

@@ -8,6 +8,7 @@ public class UserDto {
     private String username;
     private String fantasyTeamName;
     private String logoPath;
+    private long logoVersion;
     private String role;
     private Long leagueId;
     private boolean leagueAdmin;
@@ -39,6 +40,8 @@ public class UserDto {
     public void setLogoPath(String logoPath) {
         this.logoPath = logoPath;
     }
+    public long getLogoVersion() { return logoVersion; }
+    public void setLogoVersion(long logoVersion) { this.logoVersion = logoVersion; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

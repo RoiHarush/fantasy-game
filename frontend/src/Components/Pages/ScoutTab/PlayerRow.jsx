@@ -3,7 +3,7 @@ import { memo, useState } from "react";
 
 import { getInitials } from "../../../lib/initials";
 import { getPlayerInjuryColor } from "../../../lib/playerStatus";
-import TeamShortNames from "../../../Utils/teamNameMap";
+import { getFixtureItems } from "../../../features/fixtures/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
 import WatchButton from "../../General/WatchButton";
@@ -70,19 +70,16 @@ const PlayerRow = memo(function PlayerRow({
             <td className="px-1 py-2 text-center font-bold text-app-foreground">{player.points}</td>
 
             {upcomingGws.map((gameweek) => {
-                const fixture = teamFixtures?.[String(gameweek)];
-                if (!fixture) {
+                const fixtures = getFixtureItems(teamFixtures?.[String(gameweek)]);
+                if (fixtures.length === 0) {
                     return <td key={gameweek} className="px-1 py-2 text-center text-xs font-semibold text-app-muted">-</td>;
                 }
 
-                const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
-                const fullName = match ? match[1].trim() : fixture.opponent;
-                const location = match ? match[2] : "";
-                const shortName = TeamShortNames[fullName] || fullName;
+                const label = fixtures.map((fixture) => fixture.opponent).join(" • ");
 
                 return (
-                    <td key={gameweek} className="truncate px-1 py-2 text-center text-[0.7rem] font-semibold text-app-muted" title={`${shortName} (${location})`}>
-                        {shortName} ({location})
+                    <td key={gameweek} className="truncate px-1 py-2 text-center text-[0.7rem] font-semibold text-app-muted" title={label}>
+                        {label}
                     </td>
                 );
             })}

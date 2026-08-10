@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 140" role="img" aria-labelledby="title">
+  <title id="title">Player image unavailable</title>
+  <defs>
+    <linearGradient id="player-bg" x1="8" y1="8" x2="102" y2="132" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#9333ea" stop-opacity=".24"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="102" height="132" rx="24" fill="url(#player-bg)" stroke="#8b5cf6" stroke-opacity=".42" stroke-width="2"/>
+  <circle cx="55" cy="45" r="18" fill="#94a3b8"/>
+  <path d="M22 121c1-30 14-47 33-47s32 17 33 47" fill="#94a3b8"/>
+  <path d="M39 77 55 91l16-14 10 12-8 43H37l-8-43Z" fill="#cbd5e1" fill-opacity=".68"/>
+</svg>

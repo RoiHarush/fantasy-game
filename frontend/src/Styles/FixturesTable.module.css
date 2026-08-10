@@ -165,15 +165,6 @@
     text-align: left;
 }
 
-.team-logo {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    object-fit: contain;
-}
-
 .score {
     color: var(--app-foreground);
     font-size: 1.1rem;
@@ -231,11 +222,6 @@
 
     .away-team {
         padding-left: 12px;
-    }
-
-    .team-logo {
-        width: 36px;
-        height: 36px;
     }
 
     .score {

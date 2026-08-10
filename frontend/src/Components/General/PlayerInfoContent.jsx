@@ -2,6 +2,7 @@ import Image from "next/image";
 
 import { buildPlayerStatRow, buildPlayerStatTotals } from "../../features/players/statsModel";
 import { formatAppDateTime } from "../../lib/dateTime";
+import { getFixtureItems } from "../../features/fixtures/model";
 import Style from "../../Styles/PlayerInfoContent.module.css";
 
 const STAT_COLUMNS = [
@@ -23,7 +24,12 @@ function PlayerInfoContent({ tab, teamFixtures, matchStats, fixtureBoundary = 0 
     if (tab === "fixtures") {
         const fixtures = Object.entries(teamFixtures ?? {})
             .sort(([firstGameweek], [secondGameweek]) => Number(firstGameweek) - Number(secondGameweek))
-            .filter(([gameweek]) => Number(gameweek) > fixtureBoundary);
+            .filter(([gameweek]) => Number(gameweek) > fixtureBoundary)
+            .flatMap(([gameweek, fixtureGroup]) => getFixtureItems(fixtureGroup).map((fixture, index) => ({
+                gameweek,
+                fixture,
+                key: `${gameweek}-${fixture.kickoffTime || index}`,
+            })));
 
         return (
             <div className={Style.tableWrapper}>
@@ -38,10 +44,10 @@ function PlayerInfoContent({ tab, teamFixtures, matchStats, fixtureBoundary = 0 
                         </tr>
                     </thead>
                     <tbody>
-                        {fixtures.map(([gameweek, fixture]) => {
+                        {fixtures.map(({ gameweek, fixture, key }) => {
                             const difficulty = fixture.difficulty || 3;
                             return (
-                                <tr key={gameweek}>
+                                <tr key={key}>
                                     <td className={`${Style.dateCell} ${Style.hideOnMobile}`}>
                                         {formatAppDateTime(fixture.kickoffTime) || "-"}
                                     </td>

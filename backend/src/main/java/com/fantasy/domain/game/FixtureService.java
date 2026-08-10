@@ -227,14 +227,15 @@ public class FixtureService {
         return count;
     }
 
-    public Map<Integer, FixtureSummaryDto> getFixturesForTeam(int teamId) {
+    public Map<Integer, List<FixtureSummaryDto>> getFixturesForTeam(int teamId) {
         log.debug("Building fixture list for team {}", teamId);
 
-        Map<Integer, FixtureSummaryDto> fixturesMap = new LinkedHashMap<>();
+        Map<Integer, List<FixtureSummaryDto>> fixturesMap = new LinkedHashMap<>();
 
         List<FixtureEntity> fixtures = fixtureRepo.findAll().stream()
                 .filter(f -> f.getHomeTeamId() == teamId || f.getAwayTeamId() == teamId)
-                .sorted(Comparator.comparingInt(FixtureEntity::getGameweekId))
+                .sorted(Comparator.comparingInt(FixtureEntity::getGameweekId)
+                        .thenComparing(FixtureEntity::getKickoffTime, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 
         log.debug("Found {} fixtures for team {}", fixtures.size(), teamId);
@@ -249,21 +250,19 @@ public class FixtureService {
                         .map(TeamEntity::getShortName)
                         .orElse("UNK");
                 homeOrAway = "(H)";
-                difficulty = f.getHomeDifficulty();
+                difficulty = f.getHomeDifficulty() == null ? 3 : f.getHomeDifficulty();
             } else {
                 opponentShortName = teamRepo.findById(f.getHomeTeamId())
                         .map(TeamEntity::getShortName)
                         .orElse("UNK");
                 homeOrAway = "(A)";
-                difficulty = f.getAwayDifficulty();
+                difficulty = f.getAwayDifficulty() == null ? 3 : f.getAwayDifficulty();
             }
 
             String kickoff = f.getKickoffTime() != null ? f.getKickoffTime().toString() : null;
 
-            fixturesMap.put(
-                    f.getGameweekId(),
-                    new FixtureSummaryDto(opponentShortName + " " + homeOrAway, difficulty, kickoff)
-            );
+            fixturesMap.computeIfAbsent(f.getGameweekId(), ignored -> new ArrayList<>())
+                    .add(new FixtureSummaryDto(opponentShortName + " " + homeOrAway, difficulty, kickoff));
         }
 
         log.debug("Built {} fixture rows for team {}", fixturesMap.size(), teamId);

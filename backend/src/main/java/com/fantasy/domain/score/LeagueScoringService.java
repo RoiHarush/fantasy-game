@@ -3,12 +3,15 @@ package com.fantasy.domain.score;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueScoringRules;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
+import com.fantasy.domain.player.PlayerFixtureStatsEntity;
 import com.fantasy.domain.player.PlayerPosition;
+import com.fantasy.domain.player.ScorablePlayerStats;
 import com.fantasy.domain.team.UserSquadEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,12 +22,23 @@ public class LeagueScoringService {
     public int calculateSquadPoints(LeagueEntity league,
                                     UserSquadEntity squad,
                                     Map<Integer, PlayerGameweekStatsEntity> statsByPlayer) {
+        return calculateSquadPoints(league, squad, statsByPlayer, Map.of());
+    }
+
+    public int calculateSquadPoints(LeagueEntity league,
+                                    UserSquadEntity squad,
+                                    Map<Integer, PlayerGameweekStatsEntity> statsByPlayer,
+                                    Map<Integer, List<PlayerFixtureStatsEntity>> fixtureStatsByPlayer) {
         int total = 0;
         for (Integer playerId : squad.getStartingLineup()) {
             if (playerId == null) continue;
             PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
             if (stats == null) continue;
-            int playerPoints = calculatePlayerPoints(stats, league);
+            int playerPoints = calculatePlayerGameweekPoints(
+                    stats,
+                    fixtureStatsByPlayer.getOrDefault(playerId, List.of()),
+                    league
+            );
             int captainMultiplier = squad.isTripleCaptainActive() ? 3 : 2;
             total += Objects.equals(squad.getCaptainId(), playerId)
                     ? playerPoints * captainMultiplier
@@ -35,18 +49,70 @@ public class LeagueScoringService {
             for (Integer playerId : squad.getBenchMap().values()) {
                 if (playerId == null) continue;
                 PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
-                if (stats != null) total += calculatePlayerPoints(stats, league);
+                if (stats != null) {
+                    total += calculatePlayerGameweekPoints(
+                            stats,
+                            fixtureStatsByPlayer.getOrDefault(playerId, List.of()),
+                            league
+                    );
+                }
             }
         }
         return total;
     }
 
-    public int calculatePlayerPoints(PlayerGameweekStatsEntity stats, LeagueEntity league) {
+    public int calculatePlayerPoints(ScorablePlayerStats stats, LeagueEntity league) {
         return calculatePlayerScore(stats, league).totalPoints();
     }
 
-    public PlayerScoreBreakdown calculatePlayerScore(PlayerGameweekStatsEntity stats,
+    public PlayerScoreBreakdown calculatePlayerScore(ScorablePlayerStats stats,
                                                      LeagueEntity league) {
+        return calculatePlayerScore(stats, league, true);
+    }
+
+    public PlayerScoreBreakdown calculateFixturePlayerScore(ScorablePlayerStats stats,
+                                                            LeagueEntity league) {
+        return calculatePlayerScore(stats, league, false);
+    }
+
+    public int calculatePlayerGameweekPoints(PlayerGameweekStatsEntity aggregateStats,
+                                             List<PlayerFixtureStatsEntity> fixtureStats,
+                                             LeagueEntity league) {
+        return calculatePlayerGameweekScore(aggregateStats, fixtureStats, league).totalPoints();
+    }
+
+    public PlayerScoreBreakdown calculatePlayerGameweekScore(PlayerGameweekStatsEntity aggregateStats,
+                                                             List<PlayerFixtureStatsEntity> fixtureStats,
+                                                             LeagueEntity league) {
+        if (fixtureStats == null || fixtureStats.isEmpty()) {
+            return calculatePlayerScore(aggregateStats, league);
+        }
+
+        Map<String, int[]> totalsByLabel = new LinkedHashMap<>();
+        fixtureStats.stream()
+                .map(stats -> calculateFixturePlayerScore(stats, league))
+                .flatMap(score -> score.lines().stream())
+                .forEach(line -> {
+                    int[] totals = totalsByLabel.computeIfAbsent(line.label(), ignored -> new int[2]);
+                    totals[0] += line.count();
+                    totals[1] += line.points();
+                });
+
+        List<PlayerScoreBreakdown.Line> lines = new ArrayList<>();
+        totalsByLabel.forEach((label, totals) -> lines.add(
+                new PlayerScoreBreakdown.Line(label, totals[0], totals[1])
+        ));
+        int correctionPoints = calculateGameweekCorrectionPoints(aggregateStats, league);
+        if (correctionPoints != 0) {
+            lines.add(new PlayerScoreBreakdown.Line("League adjustments", 1, correctionPoints));
+        }
+        int total = lines.stream().mapToInt(PlayerScoreBreakdown.Line::points).sum();
+        return new PlayerScoreBreakdown(total, lines);
+    }
+
+    private PlayerScoreBreakdown calculatePlayerScore(ScorablePlayerStats stats,
+                                                      LeagueEntity league,
+                                                      boolean applyGameweekCorrections) {
         Objects.requireNonNull(stats, "Player stats are required");
         Objects.requireNonNull(stats.getPlayer(), "Player stats must reference a player");
 
@@ -75,7 +141,7 @@ public class LeagueScoringService {
             );
         }
 
-        int assists = league == null
+        int assists = league == null || !applyGameweekCorrections
                 ? stats.getAssists()
                 : league.effectiveAssists(stats.getPlayer().getId(), stats.getGameweek(), stats.getAssists());
         addCountedLine(lines, "Assists", assists, rule(rules, "ASSIST", position));
@@ -102,7 +168,7 @@ public class LeagueScoringService {
         addCountedLine(lines, "Penalties saved", stats.getPenaltiesSaved(), rule(rules, "PENALTY_SAVE", position));
         addCountedLine(lines, "Penalties missed", stats.getPenaltiesMissed(), rule(rules, "PENALTY_MISS", position));
 
-        int penaltiesConceded = league == null
+        int penaltiesConceded = league == null || !applyGameweekCorrections
                 ? stats.getPenaltiesConceded()
                 : league.effectivePenaltiesConceded(
                         stats.getPlayer().getId(),
@@ -120,6 +186,28 @@ public class LeagueScoringService {
         return new PlayerScoreBreakdown(total, lines);
     }
 
+    private int calculateGameweekCorrectionPoints(PlayerGameweekStatsEntity aggregateStats,
+                                                  LeagueEntity league) {
+        if (league == null) return 0;
+
+        Map<String, Integer> rules = effectiveRules(league);
+        PlayerPosition position = league.effectivePosition(aggregateStats.getPlayer());
+        int effectiveAssists = league.effectiveAssists(
+                aggregateStats.getPlayer().getId(),
+                aggregateStats.getGameweek(),
+                aggregateStats.getAssists()
+        );
+        int effectivePenalties = league.effectivePenaltiesConceded(
+                aggregateStats.getPlayer().getId(),
+                aggregateStats.getGameweek(),
+                aggregateStats.getPenaltiesConceded()
+        );
+
+        return (effectiveAssists - aggregateStats.getAssists()) * rule(rules, "ASSIST", position)
+                + (effectivePenalties - aggregateStats.getPenaltiesConceded())
+                * rule(rules, "PENALTY_CONCEDED", position);
+    }
+
     private void addCountedLine(List<PlayerScoreBreakdown.Line> lines,
                                 String label,
                                 int count,
@@ -134,11 +222,11 @@ public class LeagueScoringService {
         lines.add(new PlayerScoreBreakdown.Line(label, count, points));
     }
 
-    private boolean isCleanSheetEligible(PlayerGameweekStatsEntity stats) {
+    private boolean isCleanSheetEligible(ScorablePlayerStats stats) {
         return stats.getGoalsConceded() == 0 && stats.getMinutesPlayed() >= 30;
     }
 
-    private int cleanSheetPoints(PlayerGameweekStatsEntity stats,
+    private int cleanSheetPoints(ScorablePlayerStats stats,
                                  PlayerPosition position,
                                  Map<String, Integer> rules) {
         if (!isCleanSheetEligible(stats)) return 0;

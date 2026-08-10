@@ -4,7 +4,6 @@ import { settingsSchema } from "./schemas";
 import { buildSettingsPayload } from "./model";
 
 const validSettings = {
-    teamName: "Query United",
     firstName: "Test",
     lastName: "Manager",
     username: "test.manager",
@@ -33,7 +32,6 @@ describe("buildSettingsPayload", () => {
         firstName: "Old",
         lastName: "Name",
         username: "old.username",
-        fantasyTeamName: "Old Team",
     };
 
     it("sends only changed profile fields", () => {
@@ -41,7 +39,6 @@ describe("buildSettingsPayload", () => {
             firstName: "New",
             lastName: "Manager",
             username: user.username,
-            teamName: user.fantasyTeamName,
             currentPassword: "",
             newPassword: "",
         }, user)).toEqual({ firstName: "New", lastName: "Manager" });
@@ -52,7 +49,6 @@ describe("buildSettingsPayload", () => {
             firstName: user.firstName,
             lastName: user.lastName,
             username: user.username,
-            teamName: user.fantasyTeamName,
             currentPassword: "old-password",
             newPassword: "new-password",
         }, user)).toEqual({

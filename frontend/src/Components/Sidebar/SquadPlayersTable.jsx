@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { getFixtureItems } from "../../features/fixtures/model";
 
 import SquadPlayerRow from "./SquadPlayerRow";
 
@@ -26,11 +27,8 @@ function SquadPlayersTable({
 
     const getNextFixtureText = (player) => {
         if (!nextGameweek) return "-";
-        const fixture = fixturesByTeam[player.teamId]?.[nextGameweek.id];
-        if (!fixture) return "-";
-        const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
-        const fullName = match ? match[1].trim() : fixture.opponent;
-        return `${fullName} (${match ? match[2] : ""})`;
+        const fixtures = getFixtureItems(fixturesByTeam[player.teamId]?.[nextGameweek.id]);
+        return fixtures.length === 0 ? "-" : fixtures.map((fixture) => fixture.opponent).join(" • ");
     };
 
     const getPlayersByPosition = (position) => {

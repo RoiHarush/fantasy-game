@@ -1,24 +1,16 @@
-import styles from "../../../Styles/FixturesTable.module.css";
+import ImageWithFallback from "../../../shared/ui/ImageWithFallback";
 
 function TeamLogo({ team }) {
-    const localFallback = `/Logos/${team?.id ?? 0}_logo.svg`;
-    const badgeUrl = team?.badgeUrl || localFallback;
-
-    function useFallback(event) {
-        if (event.currentTarget.dataset.fallbackApplied === "true") return;
-        event.currentTarget.dataset.fallbackApplied = "true";
-        event.currentTarget.src = localFallback;
-    }
+    const badgeUrl = team?.badgeUrl || `/Logos/${team?.id ?? 0}_logo.svg`;
 
     return (
-        <img
+        <ImageWithFallback
             src={badgeUrl}
+            fallbackSrc="/UI/club-placeholder.svg"
             alt={`${team?.name || "Unknown team"} logo`}
-            width="48"
-            height="48"
-            loading="lazy"
-            className={styles["team-logo"]}
-            onError={useFallback}
+            width={48}
+            height={48}
+            className="size-[30px] max-h-full max-w-full object-contain md:size-9"
         />
     );
 }

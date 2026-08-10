@@ -93,18 +93,23 @@ public class AuthService {
         dto.setLastName(user.getLastName());
         dto.setUsername(user.getUsername());
         dto.setRole(user.getRole().name());
-        dto.setLogoPath("/user_logo/" + user.getId() + "_logo.png");
+        dto.setLogoPath("/UI/team-placeholder.svg");
 
         if (user.getRole() == UserRole.ROLE_SUPER_ADMIN) {
             dto.setFantasyTeamName("N/A");
             return dto;
         }
 
-        String teamName = userGameDataRepo.findByUserId(user.getId())
-                .map(UserGameDataEntity::getFantasyTeamName)
-                .orElse("No Team");
+        UserGameDataEntity gameData = userGameDataRepo.findByUserId(user.getId()).orElse(null);
+        String teamName = gameData == null ? "No Team" : gameData.getFantasyTeamName();
 
         dto.setFantasyTeamName(teamName);
+        if (gameData != null && gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0) {
+            dto.setLogoVersion(gameData.getTeamLogoVersion());
+            dto.setLogoPath("/api/users/" + user.getId() + "/team-logo?v=" + gameData.getTeamLogoVersion());
+        } else {
+            dto.setLogoPath("/UI/team-placeholder.svg");
+        }
 
         leagueRepository.findFirstByUsers_Id(user.getId()).ifPresent(league -> {
             dto.setLeagueId(league.getId());

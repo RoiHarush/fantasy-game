@@ -10,7 +10,6 @@ import {
     Save,
     Settings2,
     ShieldCheck,
-    Shirt,
     TriangleAlert,
     UserRound,
 } from "lucide-react";
@@ -94,7 +93,6 @@ function SettingsForm({ user, updateUser }) {
     const form = useForm({
         resolver: zodResolver(settingsSchema),
         defaultValues: {
-            teamName: user.fantasyTeamName || "",
             firstName: user.firstName || "",
             lastName: user.lastName || "",
             username: user.username || "",
@@ -106,7 +104,6 @@ function SettingsForm({ user, updateUser }) {
         onSuccess: (updatedUser) => {
             updateUser(updatedUser);
             form.reset({
-                teamName: updatedUser.fantasyTeamName || "",
                 firstName: updatedUser.firstName || "",
                 lastName: updatedUser.lastName || "",
                 username: updatedUser.username || "",
@@ -152,15 +149,6 @@ function SettingsForm({ user, updateUser }) {
                     {message && <div className="px-4 pt-4 sm:px-7 sm:pt-6"><Feedback message={message} /></div>}
 
                     <section className="grid gap-4 px-4 py-6 sm:px-7 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
-                        <SectionHeader icon={Shirt} title="Fantasy team" description="This is the team name other managers see around the league." />
-                        <div className="max-w-lg">
-                            <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor="teamName">Team name</label>
-                            <input id="teamName" className={inputClassName} aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
-                            <FieldError error={form.formState.errors.teamName} />
-                        </div>
-                    </section>
-
-                    <section className="grid gap-4 border-t border-app-border px-4 py-6 sm:px-7 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
                         <SectionHeader icon={UserRound} title="Personal information" description="Update your name and the username used to sign in." />
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>

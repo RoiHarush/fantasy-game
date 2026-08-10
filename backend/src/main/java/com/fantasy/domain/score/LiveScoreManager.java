@@ -23,6 +23,7 @@ public class LiveScoreManager {
     private static final String LIVE_API_URL = "https://fantasy.premierleague.com/api/event/{event_id}/live/";
 
     private final PlayerGameweekStatsRepository statsRepository;
+    private final PlayerFixtureStatsRepository fixtureStatsRepository;
     private final PlayerPointsRepository pointsRepository;
     private final PlayerRepository playerRepository;
     private final PlayerStatsUpdater statsUpdater;
@@ -31,6 +32,7 @@ public class LiveScoreManager {
     private final FixtureRepository fixtureRepository;
 
     public LiveScoreManager(PlayerGameweekStatsRepository statsRepository,
+                            PlayerFixtureStatsRepository fixtureStatsRepository,
                             PlayerPointsRepository pointsRepository,
                             PlayerRepository playerRepository,
                             PlayerStatsUpdater statsUpdater,
@@ -38,6 +40,7 @@ public class LiveScoreManager {
                             ObjectMapper mapper,
                             FixtureRepository fixtureRepository) {
         this.statsRepository = statsRepository;
+        this.fixtureStatsRepository = fixtureStatsRepository;
         this.pointsRepository = pointsRepository;
         this.playerRepository = playerRepository;
         this.statsUpdater = statsUpdater;
@@ -50,6 +53,8 @@ public class LiveScoreManager {
     public void updateLiveScores(int gameweekId) {
         log.debug("Starting live score update for GW {}", gameweekId);
             List<FixtureEntity> fixtures = fixtureRepository.findByGameweekId(gameweekId);
+            Map<Integer, FixtureEntity> fixturesById = fixtures.stream()
+                    .collect(Collectors.toMap(FixtureEntity::getId, Function.identity()));
             Map<Integer, Integer> teamToOpponentMap = new HashMap<>();
             Map<Integer, Boolean> teamToWasHomeMap = new HashMap<>();
 
@@ -75,11 +80,16 @@ public class LiveScoreManager {
                     allDbStats.stream().collect(Collectors.toMap(s -> s.getPlayer().getId(), Function.identity()));
             Map<Integer, PlayerEntity> playersById = playerRepository.findAll().stream()
                     .collect(Collectors.toMap(PlayerEntity::getId, Function.identity()));
+            Map<String, PlayerFixtureStatsEntity> fixtureStatsMap = fixtureStatsRepository.findByGameweek(gameweekId)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            stats -> fixtureStatsKey(stats.getPlayer().getId(), stats.getFixture().getId()),
+                            Function.identity()
+                    ));
 
             List<PlayerGameweekStatsEntity> statsToUpdate = new ArrayList<>();
+            List<PlayerFixtureStatsEntity> fixtureStatsToUpdate = new ArrayList<>();
             List<PlayerPointsEntity> pointsToUpdate = new ArrayList<>();
-            List<Integer> updatedPlayerIds = new ArrayList<>();
-
             for (JsonNode apiPlayer : elements) {
                 int playerId = apiPlayer.get("id").asInt();
                 JsonNode apiStats = apiPlayer.get("stats");
@@ -89,6 +99,35 @@ public class LiveScoreManager {
                 Player domainPlayer = PlayerMapper.toDomain(playerEntity, null);
 
                 RawGameStats rawStats = parseRawStats(apiStats);
+                List<PlayerFixtureStatsEntity> currentPlayerFixtureStats = new ArrayList<>();
+
+                JsonNode explanations = apiPlayer.get("explain");
+                if (explanations != null && explanations.isArray()) {
+                    for (JsonNode explanation : explanations) {
+                        int fixtureId = explanation.path("fixture").asInt(0);
+                        FixtureEntity fixture = fixturesById.get(fixtureId);
+                        if (fixture == null) continue;
+
+                        String key = fixtureStatsKey(playerId, fixtureId);
+                        PlayerFixtureStatsEntity fixtureStats = fixtureStatsMap.get(key);
+                        if (fixtureStats == null) {
+                            fixtureStats = new PlayerFixtureStatsEntity();
+                            fixtureStats.setPlayer(playerEntity);
+                            fixtureStats.setFixture(fixture);
+                            fixtureStats.setGameweek(gameweekId);
+                            fixtureStatsMap.put(key, fixtureStats);
+                        }
+
+                        RawGameStats fixtureRawStats = parseFixtureRawStats(
+                                explanation.path("stats"),
+                                playerEntity.getTeamId(),
+                                fixture
+                        );
+                        statsUpdater.update(fixtureStats, fixtureRawStats);
+                        currentPlayerFixtureStats.add(fixtureStats);
+                        fixtureStatsToUpdate.add(fixtureStats);
+                    }
+                }
 
                 PlayerGameweekStatsEntity dbStats = statsMap.get(playerId);
                 boolean isNewRecord = false;
@@ -111,7 +150,8 @@ public class LiveScoreManager {
                     isNewRecord = true;
                 }
 
-                if (isNewRecord || hasStatsChanged(dbStats, rawStats)) {
+                boolean aggregateChanged = isNewRecord || hasStatsChanged(dbStats, rawStats);
+                if (aggregateChanged) {
                     statsUpdater.update(dbStats, rawStats);
 
                     // אופציונלי: לוודא שגם בעדכון קיים היריבה מעודכנת (למקרה שהיה 0 קודם)
@@ -120,8 +160,20 @@ public class LiveScoreManager {
                         dbStats.setWasHome(teamToWasHomeMap.get(domainPlayer.getTeamId()));
                     }
 
-                    statsToUpdate.add(dbStats);
+                }
 
+                if (!currentPlayerFixtureStats.isEmpty()) {
+                    int perFixtureTotal = currentPlayerFixtureStats.stream()
+                            .mapToInt(PlayerFixtureStatsEntity::getTotalPoints)
+                            .sum();
+                    if (dbStats.getTotalPoints() != perFixtureTotal) {
+                        dbStats.setTotalPoints(perFixtureTotal);
+                        aggregateChanged = true;
+                    }
+                }
+
+                if (aggregateChanged) {
+                    statsToUpdate.add(dbStats);
                     domainPlayer.getPointsByGameweek().put(gameweekId, dbStats.getTotalPoints());
 
                     PlayerPointsEntity pointEntity = pointsRepository
@@ -136,7 +188,6 @@ public class LiveScoreManager {
                     pointEntity.setPoints(dbStats.getTotalPoints());
                     pointsToUpdate.add(pointEntity);
 
-                    updatedPlayerIds.add(playerId);
                 }
             }
 
@@ -144,6 +195,10 @@ public class LiveScoreManager {
                 statsRepository.saveAll(statsToUpdate);
                 pointsRepository.saveAll(pointsToUpdate);
                 log.info("Live update: Updated {} players.", statsToUpdate.size());
+            }
+            if (!fixtureStatsToUpdate.isEmpty()) {
+                fixtureStatsRepository.saveAll(fixtureStatsToUpdate);
+                log.debug("Live update: Updated {} player fixture rows.", fixtureStatsToUpdate.size());
             }
 
     }
@@ -160,10 +215,44 @@ public class LiveScoreManager {
                 api.get("penalties_saved").asInt(),
                 api.get("penalties_missed").asInt(),
                 api.get("own_goals").asInt(),
-                starts == 1,
+                starts > 0,
                 0,
                 false
         );
+    }
+
+    private RawGameStats parseFixtureRawStats(JsonNode stats,
+                                              int playerTeamId,
+                                              FixtureEntity fixture) {
+        Map<String, Integer> values = new HashMap<>();
+        if (stats != null && stats.isArray()) {
+            for (JsonNode stat : stats) {
+                String identifier = stat.path("identifier").asText("");
+                if (!identifier.isBlank()) values.put(identifier, stat.path("value").asInt(0));
+            }
+        }
+
+        boolean wasHome = fixture.getHomeTeamId() == playerTeamId;
+        int opponentTeamId = wasHome ? fixture.getAwayTeamId() : fixture.getHomeTeamId();
+        int minutes = values.getOrDefault("minutes", 0);
+        return new RawGameStats(
+                minutes,
+                values.getOrDefault("goals_scored", 0),
+                values.getOrDefault("assists", 0),
+                values.getOrDefault("goals_conceded", 0),
+                values.getOrDefault("yellow_cards", 0),
+                values.getOrDefault("red_cards", 0),
+                values.getOrDefault("penalties_saved", 0),
+                values.getOrDefault("penalties_missed", 0),
+                values.getOrDefault("own_goals", 0),
+                values.getOrDefault("starts", minutes > 0 ? 1 : 0) > 0,
+                opponentTeamId,
+                wasHome
+        );
+    }
+
+    private String fixtureStatsKey(int playerId, int fixtureId) {
+        return playerId + ":" + fixtureId;
     }
 
     private boolean hasStatsChanged(PlayerGameweekStatsEntity db, RawGameStats raw) {

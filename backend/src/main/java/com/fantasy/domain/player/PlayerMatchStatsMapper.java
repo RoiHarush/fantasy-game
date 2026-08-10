@@ -11,7 +11,7 @@ public final class PlayerMatchStatsMapper {
     private PlayerMatchStatsMapper() {}
 
     public static PlayerMatchStatsDto toDto(Player player,
-                                            PlayerGameweekStatsEntity statsEntity,
+                                            ScorablePlayerStats statsEntity,
                                             TeamEntity homeTeam,
                                             TeamEntity awayTeam,
                                             Integer homeScore,

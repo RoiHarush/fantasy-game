@@ -14,6 +14,9 @@ export default function NavButtons() {
     const pathname = usePathname();
     const [isLoggingOut, startLogout] = useTransition();
     const navigationItems = getSiteNavigation(user);
+    if (process.env.NODE_ENV === "development") {
+        navigationItems.push({ href: "/ui-lab", label: "UI Lab", kind: "admin" });
+    }
 
     function handleLogout() {
         startLogout(async () => {

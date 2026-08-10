@@ -2,7 +2,9 @@ package com.fantasy.domain.score;
 
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueScoringRules;
+import com.fantasy.domain.game.FixtureEntity;
 import com.fantasy.domain.player.PlayerEntity;
+import com.fantasy.domain.player.PlayerFixtureStatsEntity;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.team.UserSquadEntity;
@@ -56,6 +58,71 @@ class LeagueScoringServiceTest {
         squad.setTripleCaptainActive(true);
 
         assertEquals(18, scoringService.calculateSquadPoints(league, squad, Map.of(9, captainStats)));
+    }
+
+    @Test
+    void tripleCaptainMultipliesTheSumOfEveryDoubleGameweekFixtureExactlyOnce() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+
+        PlayerGameweekStatsEntity aggregate = stats(9, PlayerPosition.FORWARD);
+        aggregate.setGameweek(4);
+        aggregate.setMinutesPlayed(180);
+        aggregate.setStarted(true);
+        aggregate.setGoals(1);
+
+        PlayerFixtureStatsEntity firstMatch = fixtureStats(aggregate.getPlayer(), 401, 4);
+        firstMatch.setMinutesPlayed(90);
+        firstMatch.setStarted(true);
+
+        PlayerFixtureStatsEntity secondMatch = fixtureStats(aggregate.getPlayer(), 402, 4);
+        secondMatch.setMinutesPlayed(90);
+        secondMatch.setStarted(true);
+        secondMatch.setGoals(1);
+
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(new ArrayList<>(List.of(9)));
+        squad.setCaptainId(9);
+        squad.setTripleCaptainActive(true);
+
+        int points = scoringService.calculateSquadPoints(
+                league,
+                squad,
+                Map.of(9, aggregate),
+                Map.of(9, List.of(firstMatch, secondMatch))
+        );
+
+        assertEquals(24, points); // (2 points + 6 points) * 3, with no second aggregation pass
+    }
+
+    @Test
+    void doubleGameweekCleanSheetsAreScoredPerFixtureInsteadOfFromAggregatedStats() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+
+        PlayerGameweekStatsEntity aggregate = stats(4, PlayerPosition.DEFENDER);
+        aggregate.setGameweek(7);
+        aggregate.setMinutesPlayed(180);
+        aggregate.setStarted(true);
+        aggregate.setGoalsConceded(1);
+
+        PlayerFixtureStatsEntity cleanSheet = fixtureStats(aggregate.getPlayer(), 701, 7);
+        cleanSheet.setMinutesPlayed(90);
+        cleanSheet.setStarted(true);
+
+        PlayerFixtureStatsEntity conceded = fixtureStats(aggregate.getPlayer(), 702, 7);
+        conceded.setMinutesPlayed(90);
+        conceded.setStarted(true);
+        conceded.setGoalsConceded(1);
+
+        assertEquals(
+                8,
+                scoringService.calculatePlayerGameweekPoints(
+                        aggregate,
+                        List.of(cleanSheet, conceded),
+                        league
+                )
+        ); // 6 in the clean sheet fixture + 2 in the other fixture
     }
 
     @Test
@@ -162,6 +229,17 @@ class LeagueScoringServiceTest {
         player.setPosition(position);
         PlayerGameweekStatsEntity stats = new PlayerGameweekStatsEntity();
         stats.setPlayer(player);
+        return stats;
+    }
+
+    private PlayerFixtureStatsEntity fixtureStats(PlayerEntity player, int fixtureId, int gameweek) {
+        FixtureEntity fixture = new FixtureEntity();
+        fixture.setId(fixtureId);
+        fixture.setGameweekId(gameweek);
+        PlayerFixtureStatsEntity stats = new PlayerFixtureStatsEntity();
+        stats.setPlayer(player);
+        stats.setFixture(fixture);
+        stats.setGameweek(gameweek);
         return stats;
     }
 }

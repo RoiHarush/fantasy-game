@@ -20,6 +20,15 @@ public class UserGameDataEntity {
     private String fantasyTeamName;
     private int totalPoints;
 
+    @Column(name = "team_logo_bytes", columnDefinition = "BYTEA")
+    private byte[] teamLogoBytes;
+
+    @Column(name = "team_logo_content_type", length = 50)
+    private String teamLogoContentType;
+
+    @Column(name = "team_logo_version", nullable = false)
+    private long teamLogoVersion;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "user_watched_players", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "player_id")
@@ -63,6 +72,12 @@ public class UserGameDataEntity {
     public void setFantasyTeamName(String fantasyTeamName) { this.fantasyTeamName = fantasyTeamName; }
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
+    public byte[] getTeamLogoBytes() { return teamLogoBytes; }
+    public void setTeamLogoBytes(byte[] teamLogoBytes) { this.teamLogoBytes = teamLogoBytes; }
+    public String getTeamLogoContentType() { return teamLogoContentType; }
+    public void setTeamLogoContentType(String teamLogoContentType) { this.teamLogoContentType = teamLogoContentType; }
+    public long getTeamLogoVersion() { return teamLogoVersion; }
+    public void setTeamLogoVersion(long teamLogoVersion) { this.teamLogoVersion = teamLogoVersion; }
     public List<Integer> getWatchedPlayers() { return watchedPlayers; }
     public void setWatchedPlayers(List<Integer> watchedPlayers) { this.watchedPlayers = watchedPlayers; }
     public Map<String, Integer> getChips() { return chips; }

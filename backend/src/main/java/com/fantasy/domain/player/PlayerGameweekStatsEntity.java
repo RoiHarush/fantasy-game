@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "player_gameweek_stats",
         uniqueConstraints = @UniqueConstraint(columnNames = {"player_id", "gameweek"}))
-public class PlayerGameweekStatsEntity {
+public class PlayerGameweekStatsEntity implements ScorablePlayerStats {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

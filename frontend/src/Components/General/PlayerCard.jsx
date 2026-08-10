@@ -1,6 +1,8 @@
 import PlayerKit from "./PlayerKit";
-import Style from "../../Styles/PlayerCard.module.css";
+import { Crown } from "lucide-react";
 import { usePlayerInteraction } from "../../Context/PlayerInteractionProvider";
+import { cn } from "../../lib/cn";
+import ChipSparkles from "./Pitch/ChipSparkles";
 
 
 function PlayerCard({
@@ -9,6 +11,7 @@ function PlayerCard({
     captain = false,
     viceCaptain = false,
     captainMultiplier = 2,
+    chipEffect = null,
     points = null,
     nextFixture = null
 }) {
@@ -16,8 +19,12 @@ function PlayerCard({
 
     if (!player) {
         return (
-            <div className={`${Style["player-card"]} ${Style["empty-card"]}`}>
-                <PlayerKit teamId={0} type="" className={Style["player-shirt"]} />
+            <div className="relative m-1.5 flex h-full w-20 cursor-default flex-col items-center justify-center bg-transparent p-0 text-center max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center">
+                <PlayerKit
+                    teamId={0}
+                    type=""
+                    className="relative z-[1] h-auto w-[50px] opacity-85 drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)] max-md:w-[clamp(30px,9vw,42px)]"
+                />
             </div>
         );
     }
@@ -41,49 +48,70 @@ function PlayerCard({
 
     const hasPoints = points !== null && points !== undefined;
     const shownValue = hasPoints ? (captain ? points * captainMultiplier : points) : (nextFixture ?? "-");
-    const shownClass =
-        view === "pick"
-            ? Style["player-nextMatch"]
-            : Style["player-points"];
-
     return (
         <button
             type="button"
-            className={`${Style["player-card"]} 
-                ${isSelected ? Style["selected"] : ""} 
-                ${isDisabled ? Style["disabled"] : ""}`}
+            className={cn(
+                "relative isolate m-1.5 flex h-full w-20 cursor-pointer flex-col items-center border-0 bg-transparent p-0 text-center font-[inherit] text-inherit transition-[transform,opacity] duration-150 hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#00ff87] max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center",
+                isDisabled && "pointer-events-none opacity-40",
+            )}
             onClick={handleClick}
             disabled={isDisabled}
             aria-pressed={isSelected}
             aria-label={`${player.viewName}${captain ? ", captain" : viceCaptain ? ", vice-captain" : ""}`}
         >
             {(player.injured || injuryColor) && (
-                <div className={Style["injury-icon"]} style={{ backgroundColor: injuryColor || "#d81919" }}>
+                <div
+                    className="absolute top-1 right-1 z-[4] flex size-4 items-center justify-center rounded-full text-xs font-black text-white shadow-[0_0_4px_rgba(0,0,0,0.3)] max-md:top-0.5 max-md:right-0.5 max-md:size-2.5 max-md:text-[8px]"
+                    style={{ backgroundColor: injuryColor || "#d81919" }}
+                >
                     !
                 </div>
             )}
 
             {(captain || viceCaptain) && (
-                <div className={Style["captain-badge-container"]}>
-                    {captain && <div className={Style["captain-badge"]}>C</div>}
-                    {viceCaptain && !captain && <div className={Style["vice-badge"]}>V</div>}
+                <div className="absolute top-1.5 -left-2.5 z-[3] max-md:-left-0.5">
+                    {captain && (
+                        <div className="flex size-[18px] items-center justify-center rounded-full bg-[#3c1053] text-[11px] font-bold text-white shadow-[0_2px_4px_rgba(0,0,0,0.25)] max-md:size-3 max-md:text-[9px]">
+                            C
+                        </div>
+                    )}
+                    {viceCaptain && !captain && (
+                        <div className="flex size-[18px] items-center justify-center rounded-full bg-[#3c1053] text-[11px] font-bold text-white shadow-[0_2px_4px_rgba(0,0,0,0.25)] max-md:size-3 max-md:text-[9px]">
+                            V
+                        </div>
+                    )}
                 </div>
             )}
 
-            <PlayerKit
-                teamId={player.teamId}
-                type={player.position === "GK" ? "gk" : "field"}
-                className={Style["player-shirt"]}
-            />
+            <span className="relative z-[1] mb-2 flex w-full justify-center max-md:mb-0.5">
+                {chipEffect === "triple-captain" && <ChipSparkles />}
+                {chipEffect === "first-pick-captain" && (
+                    <Crown
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-5 left-1/2 z-[4] size-7 fill-amber-300 text-amber-500 [animation:chip-crown-float_2.2s_ease-in-out_infinite] [filter:drop-shadow(0_2px_4px_rgb(0_0_0/0.35))_drop-shadow(0_0_5px_rgb(251_191_36/0.65))] motion-reduce:animate-none max-md:-top-3.5 max-md:size-5"
+                    />
+                )}
+                <PlayerKit
+                    teamId={player.teamId}
+                    type={player.position === "GK" ? "gk" : "field"}
+                    className={cn(
+                        "relative z-[1] h-auto w-3/5 drop-shadow-[0_3px_3px_rgba(0,0,0,0.25)] max-md:w-[clamp(30px,9vw,42px)]",
+                        isSelected && "drop-shadow-[0_0_10px_#00ff87]",
+                    )}
+                />
+            </span>
 
             <div
-                className={Style["player-name"]}
+                className="relative z-[1] mb-0 w-[130%] rounded-t-[3px] bg-[#37003c] px-0 py-0.5 text-center text-xs font-bold tracking-[0.3px] text-white max-md:flex max-md:w-full max-md:min-w-0 max-md:items-center max-md:justify-center max-md:truncate max-md:text-[clamp(7px,2.2vw,10px)]"
                 style={injuryColor ? { backgroundColor: injuryColor } : {}}
             >
                 {player.viewName}
             </div>
 
-            <div className={shownClass}>{shownValue}</div>
+            <div className="relative z-[1] w-[130%] rounded-b-[3px] bg-white/30 px-0 py-0.5 text-center text-[11px] font-semibold text-[#111] max-md:w-full max-md:min-w-0 max-md:truncate max-md:text-[9px]">
+                {shownValue}
+            </div>
         </button>
     );
 }

@@ -3,6 +3,8 @@ package com.fantasy.domain.score;
 import com.fantasy.domain.team.*;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
 import com.fantasy.domain.player.PlayerGameweekStatsRepository;
+import com.fantasy.domain.player.PlayerFixtureStatsEntity;
+import com.fantasy.domain.player.PlayerFixtureStatsRepository;
 import com.fantasy.domain.game.GameweekHistoryDto;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -27,17 +29,20 @@ public class PointsService {
     private final UserSquadRepository userSquadRepo;
     private final UserPointsRepository userPointsRepo;
     private final PlayerGameweekStatsRepository statsRepo;
+    private final PlayerFixtureStatsRepository fixtureStatsRepo;
     private final LeagueScoringService leagueScoringService;
 
     public PointsService(UserGameDataRepository gameDataRepo,
                          UserSquadRepository userSquadRepo,
                          UserPointsRepository userPointsRepo,
                          PlayerGameweekStatsRepository statsRepo,
+                         PlayerFixtureStatsRepository fixtureStatsRepo,
                          LeagueScoringService leagueScoringService) {
         this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
         this.userPointsRepo = userPointsRepo;
         this.statsRepo = statsRepo;
+        this.fixtureStatsRepo = fixtureStatsRepo;
         this.leagueScoringService = leagueScoringService;
     }
 
@@ -161,6 +166,14 @@ public class PointsService {
                         Function.identity(),
                         (first, second) -> second
                 ));
-        return leagueScoringService.calculateSquadPoints(gameData.getLeague(), squad, statsByPlayer);
+        Map<Integer, List<PlayerFixtureStatsEntity>> fixtureStatsByPlayer = fixtureStatsRepo.findByGameweek(gameweek)
+                .stream()
+                .collect(Collectors.groupingBy(stats -> stats.getPlayer().getId()));
+        return leagueScoringService.calculateSquadPoints(
+                gameData.getLeague(),
+                squad,
+                statsByPlayer,
+                fixtureStatsByPlayer
+        );
     }
 }

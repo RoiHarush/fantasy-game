@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Style from "../../../Styles/IRSignModal.module.css";
 import { useSignIrPlayer } from "../../../features/transfer-window/useTransferWindow";
 
-export default function IRSignModal({ player, user, onClose }) {
+export default function IRSignModal({ player, user, onClose, previewMode = false }) {
     const signPlayer = useSignIrPlayer({
         leagueId: user?.leagueId,
         userId: user?.id,
@@ -21,8 +21,8 @@ export default function IRSignModal({ player, user, onClose }) {
                 </Dialog.Description>
 
                 <div className={Style.actions}>
-                    <button type="button" className={Style.confirm} onClick={() => signPlayer.mutate(player.id)} disabled={signPlayer.isPending}>
-                        {signPlayer.isPending ? "Signing…" : "Confirm"}
+                    <button type="button" className={Style.confirm} onClick={() => previewMode ? onClose() : signPlayer.mutate(player.id)} disabled={signPlayer.isPending}>
+                        {signPlayer.isPending ? "Signing…" : previewMode ? "Close preview" : "Confirm"}
                     </button>
                     <Dialog.Close asChild>
                         <button type="button" className={Style.cancel} disabled={signPlayer.isPending}>Cancel</button>

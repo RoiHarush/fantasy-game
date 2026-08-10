@@ -4,11 +4,14 @@ import com.fantasy.domain.realWorldData.TeamEntity;
 
 import java.util.Collections;
 import java.util.List;
+import java.time.LocalDateTime;
 
 public class PlayerMatchStatsDto {
 
     private int playerId;
     private int gameweekId;
+    private Integer fixtureId;
+    private LocalDateTime kickoffTime;
     private String playerName;
 
     private Integer homeTeamId;
@@ -22,6 +25,8 @@ public class PlayerMatchStatsDto {
 
     private List<StatLine> stats;
     private boolean isCaptain;
+    private int captainMultiplier = 1;
+    private List<PlayerMatchStatsDto> fixtures = Collections.emptyList();
 
     public static class StatLine {
         private String name;
@@ -69,6 +74,10 @@ public class PlayerMatchStatsDto {
 
     public int getGameweekId() { return gameweekId; }
     public void setGameweekId(int gameweekId) { this.gameweekId = gameweekId; }
+    public Integer getFixtureId() { return fixtureId; }
+    public void setFixtureId(Integer fixtureId) { this.fixtureId = fixtureId; }
+    public LocalDateTime getKickoffTime() { return kickoffTime; }
+    public void setKickoffTime(LocalDateTime kickoffTime) { this.kickoffTime = kickoffTime; }
 
     public String getPlayerName() { return playerName; }
     public void setPlayerName(String playerName) { this.playerName = playerName; }
@@ -96,4 +105,10 @@ public class PlayerMatchStatsDto {
 
     public boolean isCaptain() { return isCaptain; }
     public void setCaptain(boolean captain) { isCaptain = captain; }
+    public int getCaptainMultiplier() { return captainMultiplier; }
+    public void setCaptainMultiplier(int captainMultiplier) { this.captainMultiplier = captainMultiplier; }
+    public List<PlayerMatchStatsDto> getFixtures() { return fixtures; }
+    public void setFixtures(List<PlayerMatchStatsDto> fixtures) {
+        this.fixtures = fixtures == null ? Collections.emptyList() : fixtures;
+    }
 }

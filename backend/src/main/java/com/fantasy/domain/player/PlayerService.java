@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +30,7 @@ public class PlayerService {
     private final PlayerRepository playerRepo;
     private final PlayerPointsRepository pointsRepo;
     private final PlayerGameweekStatsRepository statsRepo;
+    private final PlayerFixtureStatsRepository fixtureStatsRepo;
     private final TeamRepository teamRepo;
     private final FixtureRepository fixtureRepo;
     private final UserSquadRepository userSquadRepo;
@@ -42,6 +44,7 @@ public class PlayerService {
     public PlayerService(PlayerRepository playerRepo,
                          PlayerPointsRepository pointsRepo,
                          PlayerGameweekStatsRepository statsRepo,
+                         PlayerFixtureStatsRepository fixtureStatsRepo,
                          TeamRepository teamRepo,
                          FixtureRepository fixtureRepo,
                          UserSquadRepository userSquadRepo,
@@ -54,6 +57,7 @@ public class PlayerService {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
+        this.fixtureStatsRepo = fixtureStatsRepo;
         this.teamRepo = teamRepo;
         this.fixtureRepo = fixtureRepo;
         this.userSquadRepo = userSquadRepo;
@@ -264,7 +268,11 @@ public class PlayerService {
         List<PlayerMatchStatsDto> results = new ArrayList<>();
 
         for (var e : allStats) {
-            results.add(buildMatchStatsDto(player, e, playerTeam, e.getGameweek(), null, null));
+            var fixtureStats = fixtureStatsRepo.findByPlayer_IdAndGameweekOrderByFixture_KickoffTime(
+                    playerId,
+                    e.getGameweek()
+            );
+            results.add(buildMatchStatsDto(player, e, fixtureStats, playerTeam, e.getGameweek(), 1, null));
         }
         return results;
     }
@@ -278,7 +286,7 @@ public class PlayerService {
 
         var statsOpt = statsRepo.findByPlayer_IdAndGameweek(playerId, gw);
 
-        boolean isCaptain = false;
+        int captainMultiplier = 1;
         LeagueEntity scoringLeague = null;
         if (userId != null) {
             UserGameDataEntity gameData = gameDataRepo.findByUserId(userId).orElse(null);
@@ -289,13 +297,22 @@ public class PlayerService {
             if (squadOpt.isPresent()) {
                 Integer captainId = squadOpt.get().getCaptainId();
                 if (captainId != null && captainId == playerId) {
-                    isCaptain = true;
+                    captainMultiplier = squadOpt.get().isTripleCaptainActive() ? 3 : 2;
                 }
             }
         }
 
         if (statsOpt.isPresent()) {
-            return buildMatchStatsDto(player, statsOpt.get(), playerTeam, gw, isCaptain, scoringLeague);
+            var fixtureStats = fixtureStatsRepo.findByPlayer_IdAndGameweekOrderByFixture_KickoffTime(playerId, gw);
+            return buildMatchStatsDto(
+                    player,
+                    statsOpt.get(),
+                    fixtureStats,
+                    playerTeam,
+                    gw,
+                    captainMultiplier,
+                    scoringLeague
+            );
         }
 
         return buildEmptyMatchStats(player, gw, playerTeam);
@@ -303,9 +320,10 @@ public class PlayerService {
 
     private PlayerMatchStatsDto buildMatchStatsDto(Player player,
                                                     PlayerGameweekStatsEntity stats,
+                                                    List<PlayerFixtureStatsEntity> fixtureStats,
                                                     TeamEntity playerTeam,
                                                     int gw,
-                                                    Boolean isCaptain,
+                                                    int captainMultiplier,
                                                     LeagueEntity scoringLeague) {
         TeamEntity opponent = teamRepo.findById(stats.getOpponentTeamId()).orElse(null);
         boolean wasHome = stats.isWasHome();
@@ -327,7 +345,7 @@ public class PlayerService {
             awayScore = fixture.getAwayTeamScore();
         }
 
-        var scoreBreakdown = leagueScoringService.calculatePlayerScore(stats, scoringLeague);
+        var scoreBreakdown = leagueScoringService.calculatePlayerGameweekScore(stats, fixtureStats, scoringLeague);
         Player effectivePlayer = player;
         if (scoringLeague != null) {
             PlayerPosition effectivePosition = scoringLeague.getPlayerPositionOverrides()
@@ -348,9 +366,37 @@ public class PlayerService {
                 awayTeam,
                 homeScore,
                 awayScore,
-                Boolean.TRUE.equals(isCaptain),
+                captainMultiplier > 1,
                 scoreBreakdown
         );
+        dto.setCaptainMultiplier(captainMultiplier);
+        Player renderedPlayer = effectivePlayer;
+        Map<Integer, PlayerFixtureStatsEntity> statsByFixture = fixtureStats.stream()
+                .collect(Collectors.toMap(
+                        fixtureStat -> fixtureStat.getFixture().getId(),
+                        Function.identity(),
+                        (left, right) -> right
+                ));
+        List<FixtureEntity> scheduledFixtures = fixtureRepo.findAllByGameweekAndTeam(gw, player.getTeamId());
+        if (scheduledFixtures.isEmpty()) {
+            dto.setFixtures(fixtureStats.stream()
+                    .map(fixtureStat -> buildFixtureMatchStatsDto(
+                            renderedPlayer,
+                            fixtureStat,
+                            playerTeam,
+                            scoringLeague
+                    ))
+                    .toList());
+        } else {
+            dto.setFixtures(scheduledFixtures.stream()
+                    .map(fixture -> {
+                        PlayerFixtureStatsEntity fixtureStat = statsByFixture.get(fixture.getId());
+                        return fixtureStat == null
+                                ? buildEmptyFixtureMatchStatsDto(renderedPlayer, fixture)
+                                : buildFixtureMatchStatsDto(renderedPlayer, fixtureStat, playerTeam, scoringLeague);
+                    })
+                    .toList());
+        }
 
         if (homeTeam != null) {
             dto.setHomeTeamId(homeTeam.getId());
@@ -364,11 +410,49 @@ public class PlayerService {
         return dto;
     }
 
-    private PlayerMatchStatsDto buildEmptyMatchStats(Player player, int gw, TeamEntity playerTeam) {
-        var fixtureOpt = fixtureRepo.findByGameweekAndTeam(gw, player.getTeamId());
+    private PlayerMatchStatsDto buildFixtureMatchStatsDto(Player player,
+                                                          PlayerFixtureStatsEntity stats,
+                                                          TeamEntity playerTeam,
+                                                          LeagueEntity scoringLeague) {
+        FixtureEntity fixture = stats.getFixture();
+        TeamEntity homeTeam = teamRepo.findById(fixture.getHomeTeamId()).orElse(null);
+        TeamEntity awayTeam = teamRepo.findById(fixture.getAwayTeamId()).orElse(null);
+        PlayerMatchStatsDto dto = PlayerMatchStatsMapper.toDto(
+                player,
+                stats,
+                homeTeam,
+                awayTeam,
+                fixture.getHomeTeamScore(),
+                fixture.getAwayTeamScore(),
+                false,
+                leagueScoringService.calculateFixturePlayerScore(stats, scoringLeague)
+        );
+        dto.setFixtureId(fixture.getId());
+        dto.setKickoffTime(fixture.getKickoffTime());
+        return dto;
+    }
 
-        if (fixtureOpt.isPresent()) {
-            var f = fixtureOpt.get();
+    private PlayerMatchStatsDto buildEmptyFixtureMatchStatsDto(Player player, FixtureEntity fixture) {
+        TeamEntity homeTeam = teamRepo.findById(fixture.getHomeTeamId()).orElse(null);
+        TeamEntity awayTeam = teamRepo.findById(fixture.getAwayTeamId()).orElse(null);
+        PlayerMatchStatsDto dto = PlayerMatchStatsDto.empty(
+                player,
+                homeTeam,
+                awayTeam,
+                fixture.getHomeTeamScore(),
+                fixture.getAwayTeamScore()
+        );
+        dto.setGameweekId(fixture.getGameweekId());
+        dto.setFixtureId(fixture.getId());
+        dto.setKickoffTime(fixture.getKickoffTime());
+        return dto;
+    }
+
+    private PlayerMatchStatsDto buildEmptyMatchStats(Player player, int gw, TeamEntity playerTeam) {
+        var fixtures = fixtureRepo.findAllByGameweekAndTeam(gw, player.getTeamId());
+
+        if (!fixtures.isEmpty()) {
+            var f = fixtures.getFirst();
             TeamEntity opponent;
             boolean wasHome;
 
@@ -406,6 +490,28 @@ public class PlayerService {
                 zeroStats.add(new PlayerMatchStatsDto.StatLine("Total", "0", 0));
                 dto.setStats(zeroStats);
             }
+
+            dto.setFixtures(fixtures.stream().map(fixture -> {
+                TeamEntity fixtureHome = teamRepo.findById(fixture.getHomeTeamId()).orElse(null);
+                TeamEntity fixtureAway = teamRepo.findById(fixture.getAwayTeamId()).orElse(null);
+                PlayerMatchStatsDto emptyFixture = PlayerMatchStatsDto.empty(
+                        player,
+                        fixtureHome,
+                        fixtureAway,
+                        fixture.getHomeTeamScore(),
+                        fixture.getAwayTeamScore()
+                );
+                emptyFixture.setGameweekId(gw);
+                emptyFixture.setFixtureId(fixture.getId());
+                emptyFixture.setKickoffTime(fixture.getKickoffTime());
+                if (fixture.getHomeTeamScore() != null) {
+                    emptyFixture.setStats(List.of(
+                            new PlayerMatchStatsDto.StatLine("Minutes played", "0", 0),
+                            new PlayerMatchStatsDto.StatLine("Total", "0", 0)
+                    ));
+                }
+                return emptyFixture;
+            }).toList());
 
             return dto;
         }

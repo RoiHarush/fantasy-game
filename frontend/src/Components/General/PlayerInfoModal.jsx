@@ -1,6 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 
 import { useTeamFixtures } from "../../features/fixtures/useFixtures";
@@ -9,6 +8,7 @@ import { usePlayerStats } from "../../features/players/usePlayerDetails";
 import Style from "../../Styles/PlayerInfoModal.module.css";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
+import ImageWithFallback from "../../shared/ui/ImageWithFallback";
 
 const POSITION_NAMES = {
     GK: "Goalkeeper",
@@ -49,15 +49,14 @@ function PlayerInfoModal({ player, onClose }) {
 
                     <div className={Style.header}>
                         <div className={Style.left}>
-                            {player.photo && (
-                                <Image
-                                    src={`https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo}.png`}
-                                    alt={player.viewName}
-                                    width={110}
-                                    height={140}
-                                    className={Style.playerImage}
-                                />
-                            )}
+                            <ImageWithFallback
+                                src={player.photo ? `https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo}.png` : null}
+                                fallbackSrc="/UI/player-placeholder.svg"
+                                alt={player.viewName}
+                                width={110}
+                                height={140}
+                                className={Style.playerImage}
+                            />
                         </div>
                         <div className={Style.right}>
                             <div className={Style.positionTag}>{POSITION_NAMES[player.position] ?? player.position}</div>

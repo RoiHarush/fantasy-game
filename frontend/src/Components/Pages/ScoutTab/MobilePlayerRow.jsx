@@ -3,7 +3,7 @@ import { memo, useState } from "react";
 
 import { getInitials } from "../../../lib/initials";
 import { getPlayerInjuryColor } from "../../../lib/playerStatus";
-import TeamShortNames from "../../../Utils/teamNameMap";
+import { getFixtureItems } from "../../../features/fixtures/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
 
@@ -156,12 +156,8 @@ function MobileActionButton({ label, active = false, disabled = false, onClick, 
 }
 
 function getFixtureLabel(fixture) {
-    if (!fixture) return "-";
-    const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
-    const fullName = match ? match[1].trim() : fixture.opponent;
-    const location = match ? match[2] : "";
-    const shortName = TeamShortNames[fullName] || fullName;
-    return `${shortName}${location ? ` (${location})` : ""}`;
+    const fixtures = getFixtureItems(fixture);
+    return fixtures.length === 0 ? "-" : fixtures.map((item) => item.opponent).join(" • ");
 }
 
 export default MobilePlayerRow;

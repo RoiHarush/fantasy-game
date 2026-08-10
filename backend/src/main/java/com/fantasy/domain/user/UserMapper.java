@@ -57,7 +57,7 @@ public class UserMapper {
             dto.setFantasyTeamName("N/A");
         }
 
-        dto.setLogoPath("/user_logo/" + userEntity.getId() + "_logo.png");
+        dto.setLogoPath("/UI/team-placeholder.svg");
         dto.setRole(userEntity.getRole().name());
 
         return dto;
@@ -70,7 +70,7 @@ public class UserMapper {
         dto.setFirstName(userEntity.getFirstName());
         dto.setLastName(userEntity.getLastName());
         dto.setUsername(userEntity.getUsername());
-        dto.setLogoPath("/user_logo/" + userEntity.getId() + "_logo.png");
+        dto.setLogoPath("/UI/team-placeholder.svg");
         dto.setRole(userEntity.getRole().name());
         dto.setFantasyTeamName("N/A");
 

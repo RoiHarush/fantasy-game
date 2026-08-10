@@ -11,6 +11,11 @@ function PlayerKit({ teamId, type = "field", className, style, ...imageProps }) 
                 style={style}
                 src={`/Kits/0.webp`}
                 alt={`Team ${teamId} Kit`}
+                onError={event => {
+                    if (event.currentTarget.dataset.fallbackStage === "placeholder") return;
+                    event.currentTarget.dataset.fallbackStage = "placeholder";
+                    event.currentTarget.src = "/UI/player-placeholder.svg";
+                }}
             />
         )
     }
@@ -28,8 +33,15 @@ function PlayerKit({ teamId, type = "field", className, style, ...imageProps }) 
             src={kitUrl}
             alt={`${team?.name || `Team ${teamId}`} ${type === "gk" ? "goalkeeper" : "outfield"} kit`}
             onError={event => {
-                if (!event.currentTarget.src.endsWith(localFallback)) {
-                    event.currentTarget.src = localFallback;
+                const image = event.currentTarget;
+                if (image.dataset.fallbackStage !== "local" && !image.src.endsWith(localFallback)) {
+                    image.dataset.fallbackStage = "local";
+                    image.src = localFallback;
+                    return;
+                }
+                if (image.dataset.fallbackStage !== "placeholder") {
+                    image.dataset.fallbackStage = "placeholder";
+                    image.src = "/UI/player-placeholder.svg";
                 }
             }}
         />

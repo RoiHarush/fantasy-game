@@ -1,11 +1,10 @@
-import Image from "next/image";
 import { useState } from "react";
 import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
-import Style from "../../../../Styles/PickTeam.module.css";
 import { countSquadPlayers } from "../../../../features/pick-team/model";
 import { useIrChip } from "../../../../features/pick-team/usePickTeamActions";
+import ChipCard from "../ChipCard";
 
 function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData, players }) {
     const [showIRModal, setShowIRModal] = useState(false);
@@ -64,39 +63,18 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
     const handleConfirmRelease = (player) => irMutation.mutate({ mode: "release", playerId: player.id });
 
     return (
-        <div className={Style.chipCard}>
-            <Image
-                src="/Icons/ir-chip.svg"
-                alt="IR Chip Icon"
-                width={64}
-                height={64}
-                className={Style.chipIcon}
+        <>
+            <ChipCard
+                icon="/Icons/ir-chip.svg"
+                iconAlt="IR chip"
+                title="IR Chip"
+                actionLabel={isActive ? "Release" : isUsedUp ? "Unavailable" : "Play"}
+                onAction={isActive ? openReleaseModal : openIRModal}
+                disabled={isActive ? isReleaseDisabled : isPlayDisabled}
+                active={isActive}
+                actionTitle={isActive ? getReleaseTitle() : getPlayTitle()}
+                message={message}
             />
-            <div className={Style.chipTitle}>IR Chip</div>
-
-            {isActive ? (
-                <button
-                    type="button"
-                    className={`${Style.chipButton} ${Style.active}`}
-                    onClick={openReleaseModal}
-                    disabled={isReleaseDisabled}
-                    title={getReleaseTitle()}
-                >
-                    Release
-                </button>
-            ) : (
-                <button
-                    type="button"
-                    className={Style.chipButton}
-                    onClick={openIRModal}
-                    disabled={isPlayDisabled}
-                    title={getPlayTitle()}
-                >
-                    {isUsedUp ? "Unavailable" : "Play"}
-                </button>
-            )}
-
-            {message && <p role="status" className={Style.chipMessage}>{message}</p>}
 
             {showIRModal && (
                 <IRModal
@@ -141,7 +119,7 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                     pending={irMutation.isPending}
                 />
             )}
-        </div>
+        </>
     );
 }
 

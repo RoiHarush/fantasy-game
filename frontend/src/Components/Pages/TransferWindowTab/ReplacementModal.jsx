@@ -5,13 +5,13 @@ import { useMemo } from "react";
 
 import { useSquad } from "../../../features/squad/useSquad";
 import { useTransferPlayer } from "../../../features/transfer-window/useTransferWindow";
+import { getFixtureItems } from "../../../features/fixtures/model";
 import Style from "../../../Styles/TransferModal.module.css";
-import TeamShortNames from "../../../Utils/teamNameMap";
 import PlayerKit from "../../General/PlayerKit";
 
-function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, nextGameweek }) {
+function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, nextGameweek, previewMode = false, previewSquad = null }) {
     const squadQuery = useSquad(user?.id, nextGameweek?.id);
-    const squad = squadQuery.data;
+    const squad = previewSquad ?? squadQuery.data;
     const samePositionPlayers = useMemo(() => {
         if (!playerIn) return [];
         const lineupIds = Object.values(squad?.startingLineup || {}).flat();
@@ -32,12 +32,9 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
 
     function renderFixtureCell(teamId, offsetGameweek) {
         const gameweekId = (nextGameweek?.id || 0) + offsetGameweek;
-        const fixture = fixturesByTeam[teamId]?.[gameweekId];
-        if (!fixture) return <td key={offsetGameweek} className={Style.hideOnMobile}>-</td>;
-        const match = fixture.opponent.match(/^(.*)\s\((H|A)\)$/);
-        const fullName = match ? match[1].trim() : fixture.opponent;
-        const location = match ? match[2] : "";
-        return <td key={offsetGameweek} className={Style.hideOnMobile}>{TeamShortNames[fullName] || fullName} ({location})</td>;
+        const fixtures = getFixtureItems(fixturesByTeam[teamId]?.[gameweekId]);
+        if (fixtures.length === 0) return <td key={offsetGameweek} className={Style.hideOnMobile}>-</td>;
+        return <td key={offsetGameweek} className={Style.hideOnMobile}>{fixtures.map((fixture) => fixture.opponent).join(" • ")}</td>;
     }
 
     if (!playerIn) return null;
@@ -47,7 +44,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
             <Dialog.Portal>
                 <Dialog.Overlay className={Style.overlay} />
                 <Dialog.Content className={Style.modal} aria-label="Select player to replace">
-                    {squadQuery.isPending ? <p role="status">Loading squad data…</p> : squadQuery.error || !squad ? (
+                    {!previewMode && squadQuery.isPending ? <p role="status">Loading squad data…</p> : (!previewMode && squadQuery.error) || !squad ? (
                         <>
                             <p role="alert">{squadQuery.error?.message || "Could not load squad for this user."}</p>
                             <Dialog.Close asChild><button type="button" className={Style.closeBtn}>Close</button></Dialog.Close>
@@ -81,7 +78,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                                                     <td className={Style.playerCell}><PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className={Style["player-shirt"]} /><span>{player.viewName}</span></td>
                                                     <td>{player.points}</td>
                                                     {renderFixtureCell(player.teamId, 0)}{renderFixtureCell(player.teamId, 1)}{renderFixtureCell(player.teamId, 2)}
-                                                    <td><button type="button" className={Style.replaceBtn} onClick={() => transfer.mutate(player.id)} disabled={transfer.isPending}>{transfer.isPending ? "Saving…" : "Replace"}</button></td>
+                                                    <td><button type="button" className={Style.replaceBtn} onClick={() => previewMode ? onClose() : transfer.mutate(player.id)} disabled={transfer.isPending}>{transfer.isPending ? "Saving…" : previewMode ? "Preview" : "Replace"}</button></td>
                                                 </tr>
                                             )) : <tr><td colSpan="6" className="text-center text-slate-400">No players in this position.</td></tr>}
                                         </tbody>

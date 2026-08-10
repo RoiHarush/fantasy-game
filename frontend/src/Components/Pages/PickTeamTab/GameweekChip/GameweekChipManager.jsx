@@ -1,8 +1,7 @@
-import Image from "next/image";
 import { useState } from "react";
 
 import { useGameweekChip } from "../../../../features/pick-team/usePickTeamActions";
-import style from "../../../../Styles/PickTeam.module.css";
+import ChipCard from "../ChipCard";
 import ConfirmGameweekChipModal from "./ConfirmGameweekChipModal";
 
 function GameweekChipManager({
@@ -39,23 +38,17 @@ function GameweekChipManager({
     });
 
     return (
-        <div className={style.chipCard}>
-            <Image src={icon} alt="" width={64} height={64} className={style.chipIcon} />
-            <div className={style.chipTitle}>{title}</div>
-
-            <button
-                type="button"
-                className={`${style.chipButton} ${isActive ? style.active : ""}`}
-                onClick={() => setShowConfirmModal(true)}
+        <>
+            <ChipCard
+                icon={icon}
+                title={title}
+                actionLabel={isActive ? "Active" : isBlocked ? "Unavailable" : "Play"}
+                onAction={() => setShowConfirmModal(true)}
                 disabled={isBlocked}
-                title={disabledReason || undefined}
-            >
-                {isActive ? "Active" : isBlocked ? "Unavailable" : "Play"}
-            </button>
-
-            {(message || (!isActive && disabledReason)) && (
-                <p role="status" className={style.chipMessage}>{message || disabledReason}</p>
-            )}
+                active={isActive}
+                actionTitle={disabledReason || undefined}
+                message={message || (!isActive ? disabledReason : "")}
+            />
 
             {showConfirmModal && (
                 <ConfirmGameweekChipModal
@@ -68,7 +61,7 @@ function GameweekChipManager({
                     onCancel={() => setShowConfirmModal(false)}
                 />
             )}
-        </div>
+        </>
     );
 }
 

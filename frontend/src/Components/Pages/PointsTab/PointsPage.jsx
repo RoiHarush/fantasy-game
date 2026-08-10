@@ -85,7 +85,7 @@ function PointsPage({ displayedUser }) {
                     onSelectGameweek={setSelectedGameweekId}
                 />
             }
-            right={<UserSidebar user={targetUser} />}
+            right={<UserSidebar user={targetUser} editable={targetUser?.id === loggedUser?.id} />}
         />
     );
 }

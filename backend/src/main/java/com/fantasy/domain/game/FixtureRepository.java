@@ -29,6 +29,17 @@ public interface FixtureRepository extends JpaRepository<FixtureEntity, Integer>
             @Param("teamId") int teamId
     );
 
+    @Query("""
+    SELECT f FROM FixtureEntity f
+    WHERE f.gameweekId = :gameweekId
+      AND (f.homeTeamId = :teamId OR f.awayTeamId = :teamId)
+    ORDER BY f.kickoffTime
+""")
+    List<FixtureEntity> findAllByGameweekAndTeam(
+            @Param("gameweekId") int gameweekId,
+            @Param("teamId") int teamId
+    );
+
     @Query("SELECT COUNT(f) > 0 FROM FixtureEntity f WHERE f.kickoffTime <= :now AND f.kickoffTime >= :startTimeLimit")
     boolean hasActiveFixtures(@Param("now") LocalDateTime now, @Param("startTimeLimit") LocalDateTime startTimeLimit);
 

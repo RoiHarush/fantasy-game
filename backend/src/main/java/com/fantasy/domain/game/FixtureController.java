@@ -23,7 +23,7 @@ public class FixtureController {
     }
 
     @GetMapping("/team/{teamId}")
-    public Map<Integer, FixtureSummaryDto> getFixturesForTeam(@PathVariable int teamId) {
+    public Map<Integer, List<FixtureSummaryDto>> getFixturesForTeam(@PathVariable int teamId) {
         return fixtureService.getFixturesForTeam(teamId);
     }
 

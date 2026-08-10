@@ -1,10 +1,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 
 import { useTeamsContext } from "../../Context/TeamsContext";
 import { useTeamFixtures } from "../../features/fixtures/useFixtures";
+import { getFixtureItems } from "../../features/fixtures/model";
 import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { usePlayerStats } from "../../features/players/usePlayerDetails";
 import { buildPlayerStatRow, buildPlayerStatTotals } from "../../features/players/statsModel";
@@ -12,6 +12,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
+import ImageWithFallback from "../../shared/ui/ImageWithFallback";
 
 function CompareModal({ players, onClose }) {
     const [tab, setTab] = useState("fixtures");
@@ -219,12 +220,19 @@ function ComparisonHeader({ left, middle, right, wideMiddle = false }) {
 }
 
 function MobileFixture({ fixture, reverse = false }) {
-    if (!fixture) return <span className="px-2 py-2 text-center text-xs text-app-muted">-</span>;
-    const difficulty = fixture.difficulty || 3;
+    const fixtures = getFixtureItems(fixture);
+    if (fixtures.length === 0) return <span className="px-2 py-2 text-center text-xs text-app-muted">-</span>;
     return (
-        <div className={`flex min-w-0 items-center gap-1 px-1 py-1.5 ${reverse ? "flex-row-reverse text-right" : ""}`}>
-            <span className={`grid size-[1.15rem] shrink-0 place-items-center rounded text-[0.55rem] font-extrabold ${getDifficultyTone(difficulty)}`}>{difficulty}</span>
-            <span className="min-w-0 truncate text-[0.6rem] font-semibold text-app-foreground">{fixture.opponent || "Unknown"}</span>
+        <div className="grid min-w-0 gap-0.5 py-1">
+            {fixtures.map((item, index) => {
+                const difficulty = item.difficulty || 3;
+                return (
+                    <div key={`${item.kickoffTime || item.opponent}-${index}`} className={`flex min-w-0 items-center gap-1 px-1 ${reverse ? "flex-row-reverse text-right" : ""}`}>
+                        <span className={`grid size-[1.15rem] shrink-0 place-items-center rounded text-[0.55rem] font-extrabold ${getDifficultyTone(difficulty)}`}>{difficulty}</span>
+                        <span className="min-w-0 truncate text-[0.6rem] font-semibold text-app-foreground">{item.opponent || "Unknown"}</span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -239,15 +247,14 @@ function PlayerComparisonHeader({ player, team, reverse = false }) {
     return (
         <div className={`flex min-w-0 items-end gap-1.5 sm:gap-4 ${reverse ? "flex-row-reverse text-right" : "text-left"}`}>
             <div className="relative h-22 w-14 shrink-0 sm:h-40 sm:w-28">
-                {player.photo && (
-                    <Image
-                        src={`https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo}.png`}
-                        alt={player.viewName}
-                        fill
-                        sizes="(max-width: 640px) 48px, 112px"
-                        className="object-contain object-bottom drop-shadow-lg"
-                    />
-                )}
+                <ImageWithFallback
+                    src={player.photo ? `https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo}.png` : null}
+                    fallbackSrc="/UI/player-placeholder.svg"
+                    alt={player.viewName}
+                    fill
+                    sizes="(max-width: 640px) 48px, 112px"
+                    className="object-contain object-bottom drop-shadow-lg"
+                />
             </div>
             <div className={`mb-3 min-w-0 sm:mb-7 ${reverse ? "items-end" : "items-start"} flex flex-col`}>
                 <span className="rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[0.64rem] font-extrabold uppercase tracking-wide sm:text-xs">

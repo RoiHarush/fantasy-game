@@ -46,7 +46,7 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
                     refreshPlayerData={refreshPlayerData}
                 />
             }
-            right={<UserSidebar user={user} />}
+            right={<UserSidebar user={user} editable />}
         />
     );
 }

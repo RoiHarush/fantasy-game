@@ -14,12 +14,13 @@ export function getStatValue(stats, name) {
 export function buildPlayerStatRow(match, teamFixtures = {}) {
     const stats = match.stats ?? [];
     const gameweek = match.gameweekId;
-    const fixture = teamFixtures[gameweek] ?? teamFixtures[String(gameweek)];
+    const fixtureGroup = teamFixtures[gameweek] ?? teamFixtures[String(gameweek)];
+    const opponents = getFixtureItems(fixtureGroup).map((fixture) => fixture.opponent);
 
     return {
         key: match.id ?? gameweek,
         gameweek,
-        opponent: fixture?.opponent ?? "Unknown",
+        opponent: opponents.length > 0 ? opponents.join(" • ") : "Unknown",
         points: toNumber(getStatLine(stats, "Total")?.points),
         minutes: getStatValue(stats, "Minutes played"),
         goals: getStatValue(stats, "Goals"),
@@ -56,3 +57,4 @@ export function buildPlayerStatTotals(rows) {
         rows.reduce((total, row) => total + row[field], 0),
     ]));
 }
+import { getFixtureItems } from "../fixtures/model";
