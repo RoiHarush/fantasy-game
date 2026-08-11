@@ -8,11 +8,17 @@ import {
 import styles from "../../Styles/PointsSummaryBlock.module.css";
 import HistoryModal from "../General/HistoryModal";
 
-function PointsSummaryBlock({ user }) {
+function PointsSummaryBlock({ user, previewPoints }) {
     const [showHistory, setShowHistory] = useState(false);
     const { currentGameweek } = useGameweek();
-    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id);
-    const totalQuery = useUserTotalPoints(user?.id);
+    const preview = previewPoints != null;
+    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id, !preview);
+    const totalQuery = useUserTotalPoints(user?.id, !preview);
+    const gameweekPoints = preview ? previewPoints.gameweekPoints : pointsQuery.data;
+    const totalPoints = preview ? previewPoints.totalPoints : totalQuery.data;
+    const pointsPending = !preview && pointsQuery.isPending;
+    const totalPending = !preview && totalQuery.isPending;
+    const error = !preview && (pointsQuery.error || totalQuery.error);
 
     if (!user) return null;
 
@@ -30,15 +36,15 @@ function PointsSummaryBlock({ user }) {
             <div className={styles.stats}>
                 <div className={styles.row}>
                     <span>Gameweek Points</span>
-                    <span className={styles.value}>{pointsQuery.isPending ? "…" : pointsQuery.data ?? "-"}</span>
+                    <span className={styles.value}>{pointsPending ? "…" : gameweekPoints ?? "-"}</span>
                 </div>
                 <div className={styles.row}>
                     <span>Overall Points</span>
-                    <span className={styles.value}>{totalQuery.isPending ? "…" : totalQuery.data ?? "-"}</span>
+                    <span className={styles.value}>{totalPending ? "…" : totalPoints ?? "-"}</span>
                 </div>
             </div>
 
-            {(pointsQuery.error || totalQuery.error) && (
+            {error && (
                 <p role="alert">Some point totals are temporarily unavailable.</p>
             )}
 

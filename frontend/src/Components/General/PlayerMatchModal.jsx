@@ -1,10 +1,11 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { CalendarDays, Info, Trophy, X } from "lucide-react";
+import { CalendarDays, Info, Trophy } from "lucide-react";
 import Image from "next/image";
 
 import { useTeamsContext } from "../../Context/TeamsContext";
 import { usePlayerMatchStats } from "../../features/players/usePlayerDetails";
 import { Button } from "../../shared/ui/Button";
+import CloseButton from "../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../shared/ui/ResponsiveDialog";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 
@@ -25,9 +26,7 @@ function PlayerMatchModal({ player, onClose, gameweek, user, onViewInfo, preview
                 <Dialog.Title className="sr-only">Match points for {player?.viewName || "player"}</Dialog.Title>
                 <Dialog.Description className="sr-only">Detailed gameweek scoring, separated by fixture.</Dialog.Description>
                 <Dialog.Close asChild>
-                    <Button variant="ghost" size="icon" className="absolute right-3 top-4 z-10 border border-brand-ink/15 bg-white/25 text-brand-ink hover:bg-white/40" aria-label="Close match points">
-                        <X aria-hidden="true" />
-                    </Button>
+                    <CloseButton className="absolute right-3 top-4 z-10" aria-label="Close match points" />
                 </Dialog.Close>
 
                 {pending ? (
@@ -69,7 +68,7 @@ export function PlayerMatchContent({ matchData, player, teamsById, onViewInfo })
                             {isDoubleGameweek ? `${fixtureMatches.length} fixtures in this Gameweek` : "Fixture contribution"}
                         </p>
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="mr-12 shrink-0 text-right">
                         <strong className="block text-3xl font-black leading-none tabular-nums sm:text-4xl">{finalTotal}</strong>
                         <span className="text-[0.65rem] font-black uppercase tracking-wider opacity-65">points</span>
                     </div>
@@ -262,6 +261,7 @@ function isSemanticStatIcon(iconPath = "") {
         "goal-conceded.svg",
         "own-goal.svg",
         "penalty-missed.svg",
+        "forward-bonus.svg",
         "yellow-card.svg",
         "red-card.svg",
     ].some((fileName) => iconPath.endsWith(fileName));

@@ -1,8 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { HeartPulse, ShieldPlus, X } from "lucide-react";
+import { HeartPulse, ShieldPlus } from "lucide-react";
 
 import { useSignIrPlayer } from "../../../features/transfer-window/useTransferWindow";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../General/PlayerKit";
 
@@ -18,9 +19,7 @@ export default function IRSignModal({ player, user, onClose, previewMode = false
             <ResponsiveDialogSurface>
                 <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
                     <Dialog.Close asChild>
-                        <Button variant="ghost" size="icon" className="absolute right-3 top-3 text-app-muted hover:bg-app-surface-muted hover:text-app-foreground" aria-label="Close IR signing confirmation">
-                            <X aria-hidden="true" />
-                        </Button>
+                        <CloseButton className="absolute right-3 top-3" aria-label="Close IR signing confirmation" />
                     </Dialog.Close>
 
                     <span className="grid size-12 place-items-center rounded-2xl border border-rose-400/35 bg-rose-500/10 text-rose-600 dark:text-rose-300">

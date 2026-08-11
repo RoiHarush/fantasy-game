@@ -7,7 +7,7 @@
 
     --color-brand-purple: var(--brand-purple);
     --color-brand-cyan: var(--brand-cyan);
-    --color-brand-green: #00e59b;
+    --color-brand-green: var(--brand-green);
     --color-brand-ink: #1b1035;
     --color-brand-on-gradient: #ffffff;
     --background-image-brand-gradient: var(--brand-gradient);
@@ -29,6 +29,10 @@
     --color-app-danger-foreground: var(--app-danger-foreground);
     --color-app-danger-surface: var(--app-danger-surface);
     --color-app-danger-border: var(--app-danger-border);
+    --color-app-positive-foreground: var(--app-positive-foreground);
+    --color-app-positive-surface: var(--app-positive-surface);
+    --color-app-positive-hover: var(--app-positive-hover);
+    --color-app-positive-border: var(--app-positive-border);
 
     --radius-control: 0.625rem;
     --shadow-panel: 0 12px 32px rgb(27 16 53 / 0.14);
@@ -38,21 +42,31 @@
     color-scheme: light;
     --brand-purple: #9b2fff;
     --brand-cyan: #00eaff;
+    --brand-green: #00d995;
     --brand-gradient: linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-cyan) 100%);
     --component-gradient: linear-gradient(90deg, var(--brand-cyan) 0%, var(--brand-purple) 100%);
-    --app-background: #ffffff;
+    --app-background: #f8fbfa;
+    --app-background-art:
+        radial-gradient(circle at 8% 6%, color-mix(in srgb, var(--brand-purple) 7%, transparent) 0, transparent 28rem),
+        radial-gradient(circle at 94% 18%, color-mix(in srgb, var(--brand-green) 9%, transparent) 0, transparent 30rem),
+        radial-gradient(circle at 72% 92%, color-mix(in srgb, var(--brand-cyan) 6%, transparent) 0, transparent 26rem),
+        var(--app-background);
     --app-surface: #ffffff;
-    --app-surface-muted: #f7f7fa;
-    --app-surface-elevated: #ffffff;
+    --app-surface-muted: #f2f7f6;
+    --app-surface-elevated: #fcfffe;
     --app-foreground: #171717;
     --app-muted: #667085;
-    --app-border: #e4e7ec;
+    --app-border: #dce7e3;
     --app-accent: #7b2fe5;
     --app-accent-foreground: #4d167d;
     --app-accent-muted: #756482;
     --app-accent-surface: #f6f0ff;
-    --app-accent-hover: #eefcff;
+    --app-accent-hover: #eafbf7;
     --app-accent-border: #e2d2f6;
+    --app-positive-foreground: #087a5b;
+    --app-positive-surface: #e7fbf3;
+    --app-positive-hover: #d9f8ec;
+    --app-positive-border: #98e5c8;
     --app-danger-foreground: #b42343;
     --app-danger-surface: #fff1f3;
     --app-danger-border: #fecdd6;
@@ -60,19 +74,29 @@
 
 .dark {
     color-scheme: dark;
-    --app-background: #0d0815;
-    --app-surface: #171020;
-    --app-surface-muted: #21182d;
-    --app-surface-elevated: #281d35;
+    --brand-green: #23e6aa;
+    --app-background: #090b12;
+    --app-background-art:
+        radial-gradient(circle at 8% 4%, color-mix(in srgb, var(--brand-purple) 15%, transparent) 0, transparent 28rem),
+        radial-gradient(circle at 94% 18%, color-mix(in srgb, var(--brand-green) 10%, transparent) 0, transparent 30rem),
+        radial-gradient(circle at 70% 100%, color-mix(in srgb, var(--brand-cyan) 8%, transparent) 0, transparent 28rem),
+        var(--app-background);
+    --app-surface: #14131e;
+    --app-surface-muted: #1b202a;
+    --app-surface-elevated: #211c2d;
     --app-foreground: #f8fafc;
     --app-muted: #a7b0c0;
-    --app-border: #3b3048;
+    --app-border: #35423f;
     --app-accent: #c7a1ff;
     --app-accent-foreground: #e7d6ff;
     --app-accent-muted: #b8a5cb;
     --app-accent-surface: #241533;
-    --app-accent-hover: #1b2634;
+    --app-accent-hover: #172b2a;
     --app-accent-border: #49315f;
+    --app-positive-foreground: #7cf2c5;
+    --app-positive-surface: #102d27;
+    --app-positive-hover: #174038;
+    --app-positive-border: #276b59;
     --app-danger-foreground: #ffc2cc;
     --app-danger-surface: #3a1722;
     --app-danger-border: #6c293b;
@@ -80,7 +104,7 @@
 
 html {
     min-width: 20rem;
-    background: var(--app-background);
+    background: var(--app-background-art);
     overflow-x: clip;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -89,7 +113,7 @@ html {
 body {
     min-height: 100vh;
     min-width: 0;
-    background: var(--app-background);
+    background: var(--app-background-art);
     color: var(--app-foreground);
     overflow-x: clip;
     transition: background-color 180ms ease, color 180ms ease;
@@ -105,7 +129,6 @@ textarea {
 @keyframes triple-captain-rise {
     0% {
         opacity: 0;
-        bottom: 4%;
         transform: translate3d(0, 0, 0) scale(0.72);
     }
 
@@ -119,8 +142,7 @@ textarea {
 
     100% {
         opacity: 0;
-        bottom: 56%;
-        transform: translate3d(var(--x3-drift), 0, 0) scale(1.08);
+        transform: translate3d(var(--x3-drift), var(--x3-rise), 0) scale(1.08);
     }
 }
 

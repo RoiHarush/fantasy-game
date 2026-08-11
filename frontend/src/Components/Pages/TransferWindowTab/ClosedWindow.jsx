@@ -9,7 +9,6 @@ import {
     Play,
     Settings2,
     ShieldCheck,
-    X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -25,6 +24,8 @@ import {
 } from "../../../features/transfer-window/useTransferWindow";
 import { formatAppDateTime, toAppTimestamp } from "../../../lib/dateTime";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import TurnOrderModal from "./TurnOrderModal";
 
 function ClosedWindow({ user, users, nextGameweek }) {
@@ -218,15 +219,10 @@ function ClosedWindow({ user, users, nextGameweek }) {
             {isOrderModalOpen && <TurnOrderModal onClose={() => setIsOrderModalOpen(false)} usersList={users} />}
 
             <Dialog.Root open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                <Dialog.Portal>
-                    <Dialog.Overlay className="fixed inset-0 z-[5000] bg-black/70 backdrop-blur-sm" />
-                    <Dialog.Content className="fixed bottom-0 left-1/2 z-[5001] max-h-[92dvh] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-t-3xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-1.5rem),27rem)] sm:-translate-y-1/2 sm:rounded-3xl">
-                        <div className="h-1.5 bg-component-gradient" aria-hidden="true" />
+                <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
                         <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
                             <Dialog.Close asChild>
-                                <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground" aria-label="Close confirmation">
-                                    <X aria-hidden="true" size={20} />
-                                </Button>
+                                <CloseButton className="absolute top-4 right-4" aria-label="Close confirmation" />
                             </Dialog.Close>
                             <span className="grid size-10 place-items-center rounded-xl bg-app-danger-surface text-app-danger-foreground ring-1 ring-app-danger-border sm:size-12 sm:rounded-2xl">
                                 <Play aria-hidden="true" size={20} fill="currentColor" />
@@ -251,8 +247,7 @@ function ClosedWindow({ user, users, nextGameweek }) {
                                 </Button>
                             </div>
                         </div>
-                    </Dialog.Content>
-                </Dialog.Portal>
+                </ResponsiveDialogSurface>
             </Dialog.Root>
         </main>
     );

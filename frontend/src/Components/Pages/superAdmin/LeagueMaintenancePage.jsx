@@ -8,6 +8,7 @@ import { toDateTimeLocalInput } from "../../../features/draft/model";
 import { formatAppDateTime } from "../../../lib/dateTime";
 import { useMaintenanceLeagues } from "../../../features/league/useLeague";
 import { Button } from "../../../shared/ui/Button";
+import SelectField from "../../../shared/ui/SelectField";
 import LeagueControlPage from "../Admin/LeagueControlPage";
 
 function DraftMaintenancePanel({ league }) {
@@ -103,19 +104,20 @@ export default function LeagueMaintenancePage() {
                 <p className="my-3">Select one league before making changes. Every request carries its league ID explicitly; this does not make the super admin the league owner.</p>
                 <label className="block max-w-xl font-bold">
                     Maintenance scope
-                    <select
+                    <SelectField
                         value={selectedLeagueId}
-                        onChange={event => setSelectedLeagueId(event.target.value)}
+                        onValueChange={setSelectedLeagueId}
                         disabled={leaguesQuery.isPending}
+                        options={[
+                            { value: "", label: "No league selected" },
+                            ...leagues.map((league) => ({
+                                value: league.id,
+                                label: `${league.name}${league.leagueCode ? ` (${league.leagueCode})` : ""} · ${league.participantCount}/${league.maxParticipants}`,
+                            })),
+                        ]}
+                        ariaLabel="Maintenance scope"
                         className="mt-2 block w-full rounded-lg border border-slate-300 p-2"
-                    >
-                        <option value="">No league selected</option>
-                        {leagues.map(league => (
-                            <option key={league.id} value={league.id}>
-                                {league.name}{league.leagueCode ? ` (${league.leagueCode})` : ""} · {league.participantCount}/{league.maxParticipants}
-                            </option>
-                        ))}
-                    </select>
+                    />
                 </label>
                 {selectedLeague && <Button variant="ghost" className="mt-3" onClick={() => setSelectedLeagueId("")}>Exit maintenance scope</Button>}
                 {leaguesQuery.error && <p className="mt-3 text-red-700" role="alert">{leaguesQuery.error.message}</p>}

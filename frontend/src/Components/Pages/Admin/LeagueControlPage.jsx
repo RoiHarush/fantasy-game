@@ -14,7 +14,6 @@ import {
     Trash2,
     Trophy,
     Users,
-    X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
@@ -34,6 +33,8 @@ import {
     useUpdateLeagueSettings,
 } from "../../../features/league/useLeague";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 
 const managerLoading = () => (
     <div className="grid min-h-48 place-items-center rounded-2xl border border-app-border bg-app-surface-muted p-6 text-sm font-semibold text-app-muted" role="status">
@@ -309,15 +310,10 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
             </section>
 
             <Dialog.Root open={Boolean(managerToRemove)} onOpenChange={(open) => !open && setManagerToRemove(null)}>
-                <Dialog.Portal>
-                    <Dialog.Overlay className="fixed inset-0 z-[5000] bg-black/70 backdrop-blur-sm" />
-                    <Dialog.Content className="fixed bottom-0 left-1/2 z-[5001] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-t-3xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-1.5rem),27rem)] sm:-translate-y-1/2 sm:rounded-3xl">
-                        <div className="h-1.5 bg-component-gradient" aria-hidden="true" />
+                <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
                         <div className="relative p-5 sm:p-7">
                             <Dialog.Close asChild>
-                                <Button variant="ghost" size="icon" className="absolute top-3 right-3 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground" aria-label="Close confirmation">
-                                    <X className="size-5" aria-hidden="true" />
-                                </Button>
+                                <CloseButton className="absolute top-3 right-3" aria-label="Close confirmation" />
                             </Dialog.Close>
                             <span className="grid size-11 place-items-center rounded-xl bg-app-danger-surface text-app-danger-foreground ring-1 ring-app-danger-border">
                                 <Trash2 className="size-5" aria-hidden="true" />
@@ -335,8 +331,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                 </Button>
                             </div>
                         </div>
-                    </Dialog.Content>
-                </Dialog.Portal>
+                </ResponsiveDialogSurface>
             </Dialog.Root>
         </main>
     );

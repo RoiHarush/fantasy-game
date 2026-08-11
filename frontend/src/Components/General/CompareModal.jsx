@@ -1,5 +1,4 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 import { useState } from "react";
 
 import { useTeamsContext } from "../../Context/TeamsContext";
@@ -9,6 +8,7 @@ import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { usePlayerStats } from "../../features/players/usePlayerDetails";
 import { buildPlayerStatRow, buildPlayerStatTotals } from "../../features/players/statsModel";
 import { ResponsiveDialogSurface } from "../../shared/ui/ResponsiveDialog";
+import CloseButton from "../../shared/ui/CloseButton";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import PlayerInfoContent from "./PlayerInfoContent";
 import Switcher from "./Switcher";
@@ -40,13 +40,7 @@ function CompareModal({ players, onClose }) {
                     <Dialog.Description className="sr-only">Side-by-side fixtures and statistics for two players.</Dialog.Description>
 
                     <Dialog.Close asChild>
-                        <button
-                            type="button"
-                            className="absolute top-3 right-3 z-20 grid size-10 place-items-center rounded-full border border-white/45 bg-white/25 text-brand-ink shadow-sm backdrop-blur transition hover:scale-105 hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:top-4 sm:right-4"
-                            aria-label="Close comparison"
-                        >
-                            <X aria-hidden="true" size={21} />
-                        </button>
+                        <CloseButton className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4" aria-label="Close comparison" />
                     </Dialog.Close>
 
                     <header className="relative grid shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-1 bg-component-gradient px-2 pt-11 text-brand-on-gradient sm:gap-6 sm:px-8 sm:pt-5">

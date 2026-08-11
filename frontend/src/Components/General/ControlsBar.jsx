@@ -1,12 +1,16 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 
+import SelectField from "../../shared/ui/SelectField";
+import TeamLogo from "../Pages/FixturesTab/TeamLogo";
 import Switcher from "./Switcher";
 
 function ControlsBar({
     searchQuery,
     setSearchQuery,
-    viewFilter,
-    setViewFilter,
+    positionFilter,
+    setPositionFilter,
+    teamFilter,
+    setTeamFilter,
     sortBy,
     setSortBy,
     activeButton,
@@ -28,7 +32,7 @@ function ControlsBar({
 
     return (
         <div className="border-b border-app-border bg-app-surface-elevated px-3 py-4 sm:px-5">
-            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(14rem,1fr)_minmax(12rem,0.42fr)_minmax(12rem,0.42fr)]">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_minmax(10rem,0.38fr)_minmax(11rem,0.42fr)_minmax(11rem,0.4fr)]">
                 <label className="min-w-0">
                     <span className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-app-muted">
                         <Search aria-hidden="true" size={15} /> Search
@@ -45,39 +49,53 @@ function ControlsBar({
 
                 <label className="min-w-0">
                     <span className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-app-muted">
-                        <SlidersHorizontal aria-hidden="true" size={15} /> View
+                        <SlidersHorizontal aria-hidden="true" size={15} /> Position
                     </span>
-                        <select
-                            aria-label="Filter players"
-                            value={viewFilter}
-                            onChange={(e) => setViewFilter(e.target.value)}
-                            className="h-11 w-full rounded-control border border-app-border bg-app-surface px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent focus:ring-3 focus:ring-app-accent/20"
-                        >
-                            <option value="All">All positions</option>
-                            <option value="GK" disabled={disablePositionOptions}>Goalkeepers</option>
-                            <option value="DEF" disabled={disablePositionOptions}>Defenders</option>
-                            <option value="MID" disabled={disablePositionOptions}>Midfielders</option>
-                            <option value="FWD" disabled={disablePositionOptions}>Forwards</option>
+                        <SelectField
+                            ariaLabel="Filter players by position"
+                            value={positionFilter}
+                            onValueChange={setPositionFilter}
+                            options={[
+                                { value: "All", label: "All positions" },
+                                { value: "GK", label: "Goalkeepers", disabled: disablePositionOptions },
+                                { value: "DEF", label: "Defenders", disabled: disablePositionOptions },
+                                { value: "MID", label: "Midfielders", disabled: disablePositionOptions },
+                                { value: "FWD", label: "Forwards", disabled: disablePositionOptions },
+                            ]}
+                            className="bg-app-surface"
+                        />
+                </label>
 
-                            {teams.map((team) => (
-                                <option key={team.id} value={`Team${team.id}`}>
-                                    {team.name}
-                                </option>
-                            ))}
-                        </select>
+                <label className="min-w-0">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-app-muted">Club</span>
+                    <SelectField
+                        ariaLabel="Filter players by club"
+                        value={teamFilter}
+                        onValueChange={setTeamFilter}
+                        options={[
+                            { value: "All", label: "All clubs" },
+                            ...teams.map((team) => ({
+                                value: team.id,
+                                label: team.name,
+                                icon: <TeamLogo team={team} className="size-5 md:size-5" />,
+                            })),
+                        ]}
+                        className="bg-app-surface"
+                    />
                 </label>
 
                 <label className="min-w-0">
                     <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-app-muted">Sort</span>
-                        <select
-                            aria-label="Sort players"
+                        <SelectField
+                            ariaLabel="Sort players"
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="h-11 w-full rounded-control border border-app-border bg-app-surface px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent focus:ring-3 focus:ring-app-accent/20"
-                        >
-                            <option value="Points">Sort by Points</option>
-                            <option value="Name">Sort by Name</option>
-                        </select>
+                            onValueChange={setSortBy}
+                            options={[
+                                { value: "Points", label: "Sort by Points" },
+                                { value: "Name", label: "Sort by Name" },
+                            ]}
+                            className="bg-app-surface"
+                        />
                 </label>
             </div>
 

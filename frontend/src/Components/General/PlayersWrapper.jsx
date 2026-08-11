@@ -31,11 +31,13 @@ function PlayersWrapper({
     irWaiverDirty = false,
     irWaiverSaving = false,
     irWaiverMessage = "",
-    draftedContent = null
+    draftedContent = null,
+    previewMode = false,
 }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeButton, setActiveButton] = useState("All players");
-    const [viewFilter, setViewFilter] = useState("All");
+    const [positionFilter, setPositionFilter] = useState("All");
+    const [teamFilter, setTeamFilter] = useState("All");
     const [sortBy, setSortBy] = useState("Points");
     const [showAvailable, setShowAvailable] = useState(false);
 
@@ -85,7 +87,8 @@ function PlayersWrapper({
         watchlist: watchlistQuery.watchlist,
         activeButton,
         searchQuery,
-        viewFilter,
+        positionFilter,
+        teamFilter,
         sortBy,
         showAvailable,
         irPosition
@@ -100,8 +103,10 @@ function PlayersWrapper({
             <ControlsBar
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                viewFilter={viewFilter}
-                setViewFilter={setViewFilter}
+                positionFilter={positionFilter}
+                setPositionFilter={setPositionFilter}
+                teamFilter={teamFilter}
+                setTeamFilter={setTeamFilter}
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 activeButton={activeButton}
@@ -158,11 +163,11 @@ function PlayersWrapper({
                     teams={teams}
                     disabledPlayerIds={disabledPlayerIds}
                     watchedPlayerIds={watchedPlayerIds}
-                    onToggleWatch={(playerId) => watchlistQuery.toggleWatch(
+                    onToggleWatch={previewMode ? () => {} : (playerId) => watchlistQuery.toggleWatch(
                         playerId,
                         watchlistQuery.watchlist.some((id) => String(id) === String(playerId)),
                     )}
-                    watchlistUpdating={watchlistQuery.isUpdating}
+                    watchlistUpdating={previewMode ? false : watchlistQuery.isUpdating}
                     onWaiverSelect={onWaiverEntriesChange ? player => {
                         setWaiverCandidate(player);
                     } : undefined}

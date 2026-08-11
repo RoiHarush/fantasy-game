@@ -5,10 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query/keys";
 import { getFixtures, getTeamFixtures } from "./api";
 
-export function useFixtures() {
+export function useFixtures(enabled = true) {
     return useQuery({
         queryKey: queryKeys.allFixtures,
         queryFn: ({ signal }) => getFixtures({ signal }),
+        enabled,
         staleTime: 5 * 60_000,
     });
 }

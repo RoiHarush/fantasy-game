@@ -13,7 +13,6 @@ import {
     ShieldCheck,
     Trash2,
     Users,
-    X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +20,9 @@ import { useDraftAction } from "../../../features/draft/useDraft";
 import { validateTransferOrder } from "../../../features/transfer-window/model";
 import { formatAppDateTime } from "../../../lib/dateTime";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
+import SelectField from "../../../shared/ui/SelectField";
 import DraftCountdown from "./DraftCountdown";
 
 function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed }) {
@@ -280,18 +282,20 @@ function AdminControls({
                 {supplementalDraft && (
                     <label className="block" htmlFor="supplemental-order-source">
                         <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.1em] text-app-muted">Draft order</span>
-                        <select
+                        <SelectField
                             id="supplemental-order-source"
                             value={orderSource}
-                            onChange={(event) => {
-                                setOrderSource(event.target.value);
+                            onValueChange={(value) => {
+                                setOrderSource(value);
                                 setOrderError("");
                             }}
+                            options={[
+                                { value: "TRANSFER_ORDER", label: "Use upcoming transfer-window order" },
+                                { value: "MANUAL", label: "Set order manually" },
+                            ]}
+                            ariaLabel="Draft order"
                             className="h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface"
-                        >
-                            <option value="TRANSFER_ORDER">Use upcoming transfer-window order</option>
-                            <option value="MANUAL">Set order manually</option>
-                        </select>
+                        />
                     </label>
                 )}
 
@@ -303,21 +307,21 @@ function AdminControls({
                         {manualPicks.map((selectedUserId, index) => (
                             <label key={index} className="flex items-center gap-3 rounded-xl border border-app-border bg-app-surface p-2.5">
                                 <span className="w-10 shrink-0 text-center text-xs font-black text-app-accent-foreground">#{index + 1}</span>
-                                <select
+                                <SelectField
                                     value={selectedUserId}
-                                    onChange={(event) => {
+                                    onValueChange={(value) => {
                                         const nextOrder = [...manualPicks];
-                                        nextOrder[index] = event.target.value;
+                                        nextOrder[index] = value;
                                         setManualOrder(nextOrder);
                                         setOrderError("");
                                     }}
+                                    options={[
+                                        { value: "", label: "Select manager" },
+                                        ...users.map((manager) => ({ value: manager.id, label: manager.name })),
+                                    ]}
+                                    ariaLabel={`Manager for pick ${index + 1}`}
                                     className="h-10 min-w-0 flex-1 rounded-lg border border-app-border bg-app-surface-elevated px-2.5 text-xs font-semibold text-app-foreground outline-none focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface sm:text-sm"
-                                >
-                                    <option value="">Select manager</option>
-                                    {users.map(manager => (
-                                        <option key={manager.id} value={manager.id}>{manager.name}</option>
-                                    ))}
-                                </select>
+                                />
                             </label>
                         ))}
                     </div>
@@ -346,7 +350,7 @@ function AdminControls({
                                 <CalendarDays aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-app-accent" />
                                 {!scheduledTime && (
                                     <span className="pointer-events-none absolute top-1/2 left-10 -translate-y-1/2 text-sm font-semibold text-app-muted" aria-hidden="true">
-                                        26.1.25
+                                        26.1.26
                                     </span>
                                 )}
                                 <input
@@ -394,44 +398,38 @@ function ConfirmationDialog({ pendingAction, onOpenChange, onConfirm, isPending,
 
     return (
         <Dialog.Root open={Boolean(pendingAction)} onOpenChange={onOpenChange}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[5000] bg-black/70 backdrop-blur-sm" />
-                <Dialog.Content className="fixed bottom-0 left-1/2 z-[5001] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-t-3xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-1.5rem),27rem)] sm:-translate-y-1/2 sm:rounded-3xl">
-                    <div className="h-1.5 bg-component-gradient" aria-hidden="true" />
-                    <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
+            <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
+                <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
+                    <Dialog.Close asChild>
+                        <CloseButton className="absolute top-4 right-4" aria-label="Close confirmation" />
+                    </Dialog.Close>
+                    <span className={`grid size-10 place-items-center rounded-xl ring-1 sm:size-12 sm:rounded-2xl ${isOpening ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/25 dark:text-emerald-300" : "bg-app-danger-surface text-app-danger-foreground ring-app-danger-border"}`}>
+                        {isOpening ? <Play aria-hidden="true" size={20} fill="currentColor" /> : <Trash2 aria-hidden="true" size={20} />}
+                    </span>
+                    <Dialog.Title className="mt-4 pr-10 text-lg font-black sm:mt-5 sm:text-2xl">
+                        {isOpening ? "Open the draft now?" : "Cancel the scheduled draft?"}
+                    </Dialog.Title>
+                    <Dialog.Description className="mt-2 text-xs leading-5 text-app-muted sm:text-sm sm:leading-6">
+                        {isOpening
+                            ? supplementalDraft
+                                ? "This starts the two-round supplemental draft immediately for every league manager."
+                                : "This starts the initial snake draft immediately for every league manager."
+                            : "The current date and countdown will be removed for every league manager."}
+                    </Dialog.Description>
+                    <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
                         <Dialog.Close asChild>
-                            <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground" aria-label="Close confirmation">
-                                <X aria-hidden="true" size={20} />
-                            </Button>
+                            <Button variant="secondary" className="border-app-border bg-app-surface-muted text-app-foreground hover:bg-app-accent-hover" disabled={isPending}>Back</Button>
                         </Dialog.Close>
-                        <span className={`grid size-10 place-items-center rounded-xl ring-1 sm:size-12 sm:rounded-2xl ${isOpening ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/25 dark:text-emerald-300" : "bg-app-danger-surface text-app-danger-foreground ring-app-danger-border"}`}>
-                            {isOpening ? <Play aria-hidden="true" size={20} fill="currentColor" /> : <Trash2 aria-hidden="true" size={20} />}
-                        </span>
-                        <Dialog.Title className="mt-4 pr-10 text-lg font-black sm:mt-5 sm:text-2xl">
-                            {isOpening ? "Open the draft now?" : "Cancel the scheduled draft?"}
-                        </Dialog.Title>
-                        <Dialog.Description className="mt-2 text-xs leading-5 text-app-muted sm:text-sm sm:leading-6">
-                            {isOpening
-                                ? supplementalDraft
-                                    ? "This starts the two-round supplemental draft immediately for every league manager."
-                                    : "This starts the initial snake draft immediately for every league manager."
-                                : "The current date and countdown will be removed for every league manager."}
-                        </Dialog.Description>
-                        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
-                            <Dialog.Close asChild>
-                                <Button variant="secondary" className="border-app-border bg-app-surface-muted text-app-foreground hover:bg-app-accent-hover" disabled={isPending}>Back</Button>
-                            </Dialog.Close>
-                            <Button
-                                variant={isOpening ? "success" : "danger"}
-                                onClick={onConfirm}
-                                disabled={isPending}
-                            >
-                                {isPending ? "Saving…" : "Confirm"}
-                            </Button>
-                        </div>
+                        <Button
+                            variant={isOpening ? "success" : "danger"}
+                            onClick={onConfirm}
+                            disabled={isPending}
+                        >
+                            {isPending ? "Saving…" : "Confirm"}
+                        </Button>
                     </div>
-                </Dialog.Content>
-            </Dialog.Portal>
+                </div>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

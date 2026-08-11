@@ -3,7 +3,8 @@ export function filterPlayers({
     watchlist = [],
     activeButton = "All players",
     searchQuery = "",
-    viewFilter = "All",
+    positionFilter = "All",
+    teamFilter = "All",
     sortBy = "Points",
     showAvailable = false,
     irPosition = null
@@ -48,13 +49,13 @@ export function filterPlayers({
         };
         const shortPos = positionMap[irPosition.toLowerCase()] || irPosition;
         result = result.filter((p) => p.position === shortPos);
-    } else if (viewFilter !== "All") {
-        if (["GK", "DEF", "MID", "FWD"].includes(viewFilter)) {
-            result = result.filter((p) => p.position === viewFilter);
-        } else if (viewFilter.startsWith("Team")) {
-            const teamNumber = parseInt(viewFilter.replace("Team", ""), 10);
-            result = result.filter((p) => p.teamId === teamNumber);
-        }
+    } else if (["GK", "DEF", "MID", "FWD"].includes(positionFilter)) {
+        result = result.filter((p) => p.position === positionFilter);
+    }
+
+    if (teamFilter !== "All") {
+        const teamNumber = Number(teamFilter);
+        result = result.filter((p) => Number(p.teamId) === teamNumber);
     }
 
     if (showAvailable) {

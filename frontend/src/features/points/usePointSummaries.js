@@ -17,11 +17,11 @@ export function useUserGameweekPoints(userId, gameweekId, enabled = true) {
     });
 }
 
-export function useUserTotalPoints(userId) {
+export function useUserTotalPoints(userId, enabled = true) {
     return useQuery({
         queryKey: queryKeys.userTotalPoints(userId),
         queryFn: ({ signal }) => fetchUserTotalPoints(userId, { signal }),
-        enabled: Boolean(userId),
+        enabled: Boolean(enabled && userId),
         staleTime: 30_000,
     });
 }

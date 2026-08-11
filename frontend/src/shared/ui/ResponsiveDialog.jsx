@@ -5,15 +5,15 @@ import * as Dialog from "@radix-ui/react-dialog";
 
 import { cn } from "../../lib/cn";
 
-const DISMISS_DISTANCE = 112;
-const DISMISS_VELOCITY = 0.55;
+const DISMISS_DISTANCE = 80;
+const DISMISS_VELOCITY = 0.35;
 
 function shouldDismissSheetDrag(offset, elapsed) {
     const safeElapsed = Math.max(elapsed, 1);
     return offset >= DISMISS_DISTANCE || offset / safeElapsed >= DISMISS_VELOCITY;
 }
 
-function ResponsiveDialogSurface({ children, className, style, ...props }) {
+function ResponsiveDialogSurface({ children, className, desktopVariant = "dialog", style, ...props }) {
     const contentRef = useRef(null);
     const closeButtonRef = useRef(null);
     const dragRef = useRef(null);
@@ -83,27 +83,30 @@ function ResponsiveDialogSurface({ children, className, style, ...props }) {
             <Dialog.Content
                 ref={contentRef}
                 className={cn(
-                    "fixed inset-x-0 bottom-0 z-[5001] max-h-[min(92dvh,52rem)] overflow-hidden rounded-t-[2rem] border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-2rem),32rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[2rem]",
+                    "fixed inset-x-0 bottom-0 z-[5001] max-h-[min(92dvh,52rem)] overflow-hidden rounded-t-[2rem] border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none",
+                    desktopVariant === "drawer"
+                        ? "sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none sm:w-[26rem] sm:rounded-none sm:rounded-l-[2rem] sm:border-y-0 sm:border-r-0"
+                        : "sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-2rem),32rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[2rem]",
                     className,
                 )}
                 style={{
                     ...style,
-                    translate: `0 ${dragOffset}px`,
-                    transition: isDragging ? "none" : "translate 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+                    transform: `translate3d(0, ${dragOffset}px, 0)`,
+                    transition: isDragging ? "none" : "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)",
                 }}
                 {...props}
             >
-                <div className="h-1.5 bg-component-gradient" aria-hidden="true" />
                 <button
                     type="button"
                     aria-label="Drag down to close"
-                    className="flex h-9 w-full touch-none cursor-grab items-center justify-center active:cursor-grabbing sm:hidden"
+                    tabIndex={-1}
+                    className="absolute left-1/2 top-0 z-20 flex h-11 w-32 -translate-x-1/2 appearance-none items-start justify-center border-0 bg-transparent p-0 pt-2 shadow-none outline-none touch-none cursor-grab active:cursor-grabbing sm:hidden"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={(event) => finishDrag(event)}
                     onPointerCancel={(event) => finishDrag(event, true)}
                 >
-                    <span className="h-1.5 w-12 rounded-full bg-app-muted/55" aria-hidden="true" />
+                    <span className="h-1 w-9 rounded-full bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.3)]" aria-hidden="true" />
                 </button>
                 {children}
                 <Dialog.Close ref={closeButtonRef} className="sr-only" tabIndex={-1} aria-hidden="true">

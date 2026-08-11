@@ -1,9 +1,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 import Image from "next/image";
 
 import { cn } from "../../../lib/cn";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 
 function ChipConfirmDialog({
     title,
@@ -19,19 +20,12 @@ function ChipConfirmDialog({
 }) {
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onCancel()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-sm" />
-                <Dialog.Content
-                    className="fixed inset-x-0 bottom-0 z-[10000] flex max-h-[90dvh] w-full flex-col items-center overflow-y-auto overscroll-contain rounded-t-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-6 text-[var(--app-foreground)] shadow-[0_-16px_50px_rgba(0,0,0,0.42)] focus:outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-3xl sm:border-y-0 sm:border-r-0 sm:p-10 sm:pt-14 sm:shadow-[-12px_0_40px_rgba(0,0,0,0.42)]"
-                >
+            <ResponsiveDialogSurface
+                desktopVariant="drawer"
+                className="flex flex-col items-center overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:p-10 sm:pt-14"
+            >
                     <Dialog.Close asChild>
-                        <button
-                            type="button"
-                            className="absolute top-4 right-4 grid size-10 place-items-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface-muted)] text-[var(--app-foreground)] transition hover:scale-105 hover:bg-[var(--app-accent-surface)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--app-accent-border)]"
-                            aria-label={`Close ${title} dialog`}
-                        >
-                            <X className="size-5" aria-hidden="true" />
-                        </button>
+                        <CloseButton className="absolute top-4 right-4" aria-label={`Close ${title} dialog`} />
                     </Dialog.Close>
 
                     <Image src={icon} alt={iconAlt} width={76} height={76} className="mb-4 size-16 object-contain sm:size-[76px]" />
@@ -66,8 +60,7 @@ function ChipConfirmDialog({
                             {pending ? "Saving…" : confirmLabel}
                         </Button>
                     </div>
-                </Dialog.Content>
-            </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

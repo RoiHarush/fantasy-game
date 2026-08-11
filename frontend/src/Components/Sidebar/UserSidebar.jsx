@@ -2,7 +2,7 @@ import SidebarContainer from "./SidebarContainer";
 import PointsSummaryBlock from "./PointsSummaryBlock";
 import UserClubBlock from "./UserClubBlock";
 
-function UserSidebar({ user, editable = false }) {
+function UserSidebar({ user, editable = false, previewPoints }) {
     return (
         <SidebarContainer>
             <UserClubBlock
@@ -10,7 +10,7 @@ function UserSidebar({ user, editable = false }) {
                 logoPath={user.logoPath}
                 editable={editable}
             />
-            <PointsSummaryBlock user={user} />
+            <PointsSummaryBlock user={user} previewPoints={previewPoints} />
         </SidebarContainer>
     );
 }

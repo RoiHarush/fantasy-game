@@ -1,13 +1,14 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowDown, ArrowRightLeft, Check, X } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, Check } from "lucide-react";
 import { useMemo } from "react";
 
 import { getFixtureItems } from "../../../features/fixtures/model";
 import { useSquad } from "../../../features/squad/useSquad";
 import { useTransferPlayer } from "../../../features/transfer-window/useTransferWindow";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../General/PlayerKit";
 
@@ -44,9 +45,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                 <div className="flex max-h-[calc(92dvh-0.75rem)] flex-col">
                     <header className="relative shrink-0 border-b border-app-border px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
                         <Dialog.Close asChild>
-                            <Button variant="ghost" size="icon" className="absolute right-3 top-2 text-app-muted hover:bg-app-surface-muted hover:text-app-foreground" aria-label="Close replacement dialog">
-                                <X aria-hidden="true" />
-                            </Button>
+                            <CloseButton className="absolute right-3 top-2" aria-label="Close replacement dialog" />
                         </Dialog.Close>
                         <div className="flex items-center gap-3 pr-12">
                             <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground">

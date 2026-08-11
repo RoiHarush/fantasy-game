@@ -6,7 +6,8 @@ export function useFilteredPlayers({
     watchlist,
     activeButton,
     searchQuery,
-    viewFilter,
+    positionFilter,
+    teamFilter,
     sortBy,
     showAvailable,
     irPosition
@@ -17,7 +18,8 @@ export function useFilteredPlayers({
             watchlist,
             activeButton,
             searchQuery,
-            viewFilter,
+            positionFilter,
+            teamFilter,
             sortBy,
             showAvailable,
             irPosition
@@ -27,7 +29,8 @@ export function useFilteredPlayers({
         watchlist,
         activeButton,
         searchQuery,
-        viewFilter,
+        positionFilter,
+        teamFilter,
         sortBy,
         showAvailable,
         irPosition

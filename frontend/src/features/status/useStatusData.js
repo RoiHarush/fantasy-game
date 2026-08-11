@@ -13,27 +13,29 @@ export function useDailyStatus(gameweekId, enabled = true) {
     });
 }
 
-export function useIrStatuses() {
+export function useIrStatuses(enabled = true) {
     return useQuery({
         queryKey: queryKeys.irStatus,
         queryFn: ({ signal }) => getIrStatuses({ signal }),
+        enabled,
         staleTime: 30_000,
     });
 }
 
-export function usePlayersOfTheWeek() {
+export function usePlayersOfTheWeek(enabled = true) {
     return useQuery({
         queryKey: queryKeys.playersOfTheWeek,
         queryFn: ({ signal }) => getPlayersOfTheWeek({ signal }),
+        enabled,
         staleTime: 5 * 60_000,
     });
 }
 
-export function useDreamTeam(gameweekId) {
+export function useDreamTeam(gameweekId, enabled = true) {
     return useQuery({
         queryKey: queryKeys.dreamTeam(gameweekId),
         queryFn: ({ signal }) => getDreamTeam(gameweekId, { signal }),
-        enabled: Boolean(gameweekId),
+        enabled: Boolean(enabled && gameweekId),
         staleTime: 5 * 60_000,
     });
 }

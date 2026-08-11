@@ -17,11 +17,16 @@ function Status({
     seasonComplete = false,
     transferHistoryGameweekId,
     refreshGameweeks,
+    previewData,
 }) {
-    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id, !preSeason);
-    const dailyStatusQuery = useDailyStatus(currentGameweek?.id, !preSeason);
-    const gwPoints = pointsQuery.isPending ? "…" : pointsQuery.data ?? "-";
-    const dailyStatus = dailyStatusQuery.data ?? [];
+    const preview = previewData != null;
+    const pointsQuery = useUserGameweekPoints(user?.id, currentGameweek?.id, !preSeason && !preview);
+    const dailyStatusQuery = useDailyStatus(currentGameweek?.id, !preSeason && !preview);
+    const pointsPending = !preview && pointsQuery.isPending;
+    const pointsError = !preview && pointsQuery.error;
+    const dailyStatusError = !preview && dailyStatusQuery.error;
+    const gwPoints = preview ? previewData.points : pointsPending ? "…" : pointsQuery.data ?? "-";
+    const dailyStatus = preview ? previewData.dailyStatus ?? [] : dailyStatusQuery.data ?? [];
     const leagueUser = league?.users?.find((leagueMember) => String(leagueMember.id) === String(user.id));
     const isCalculated = currentGameweek?.calculated === true;
 
@@ -44,7 +49,7 @@ function Status({
                 <div>
                     <p>{currentGameweek?.name} points</p>
                     <h2 className="bg-linear-to-r from-brand-green to-brand-cyan bg-clip-text text-center text-[clamp(1.75rem,7vw,3.125rem)] leading-tight font-bold text-transparent">
-                        {pointsQuery.error ? "Unavailable" : gwPoints}
+                        {pointsError ? "Unavailable" : gwPoints}
                     </h2>
                 </div>
 
@@ -56,7 +61,7 @@ function Status({
                 </div>
             </ColumnsBlock>}
 
-            {dailyStatusQuery.error && (
+            {dailyStatusError && (
                 <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
                     Daily gameweek status is temporarily unavailable.
                 </p>
@@ -75,9 +80,9 @@ function Status({
                 </>
             )}
 
-            {!preSeason && <PlayerOfTheWeekBlock gameweekId={currentGameweek?.id} />}
-            <TransferActivityList gameWeekId={transferHistoryGameweekId} />
-            <IRStatusTable />
+            {!preSeason && <PlayerOfTheWeekBlock gameweekId={currentGameweek?.id} previewRecords={previewData?.playersOfTheWeek} previewPlayers={previewData?.players} />}
+            <TransferActivityList gameWeekId={transferHistoryGameweekId} previewActions={previewData?.transferActions} previewPlayers={previewData?.players} />
+            <IRStatusTable previewStatuses={previewData?.irStatuses} />
         </div>
     );
 }

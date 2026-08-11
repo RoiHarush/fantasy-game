@@ -1,8 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { RotateCcw, X } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import Image from "next/image";
 
 import { Button } from "../../../../shared/ui/Button";
+import CloseButton from "../../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../../General/PlayerKit";
 
@@ -30,9 +31,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                 <div className="flex max-h-[calc(92dvh-0.375rem)] min-h-0 flex-col">
                     <header className="relative shrink-0 border-b border-app-border bg-app-surface-muted px-5 py-5 pr-16 sm:px-6 sm:py-6 sm:pr-16">
                         <Dialog.Close asChild>
-                            <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground" aria-label="Close IR release selection">
-                                <X className="size-5" aria-hidden="true" />
-                            </Button>
+                            <CloseButton className="absolute top-4 right-4" aria-label="Close IR release selection" />
                         </Dialog.Close>
                         <div className="flex items-center gap-3">
                             <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface">

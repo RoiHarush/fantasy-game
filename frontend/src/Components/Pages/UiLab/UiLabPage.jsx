@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle, ArrowRightLeft, Beaker, Crown, Play, ShieldX, X } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Beaker, Crown, Play, ShieldX } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -10,6 +10,8 @@ import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { CookieConsentContent } from "../../../features/privacy/CookieConsentToast";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import CompareModal from "../../General/CompareModal";
 import HistoryModal from "../../General/HistoryModal";
 import PlayerActionModal from "../../General/PlayerActionModal";
@@ -25,6 +27,7 @@ import DraftPickDialog from "../TransferWindowTab/DraftPickDialog";
 import IRSignModal from "../TransferWindowTab/IRSignModal";
 import ReplacementModal from "../TransferWindowTab/ReplacementModal";
 import TurnOrderModal from "../TransferWindowTab/TurnOrderModal";
+import UiLabScreenPreview from "./UiLabScreenPreview";
 
 const FALLBACK_PLAYERS = [
     mockPlayer(9001, "David", "Raya", "Raya", "GK", 1, "Arsenal", 126),
@@ -36,11 +39,28 @@ const FALLBACK_PLAYERS = [
     mockPlayer(9007, "Cole", "Palmer", "Palmer", "MID", 6, "Chelsea", 176),
     mockPlayer(9008, "Bruno", "Guimaraes", "Guimaraes", "MID", 17, "Newcastle", 121),
     mockPlayer(9009, "Micky", "van de Ven", "Van de Ven", "DEF", 19, "Spurs", 98),
+    mockPlayer(9010, "Emiliano", "Martinez", "Martinez", "GK", 2, "Aston Villa", 110),
+    mockPlayer(9011, "Gabriel", "Magalhaes", "Gabriel", "DEF", 1, "Arsenal", 132),
+    mockPlayer(9012, "Josko", "Gvardiol", "Gvardiol", "DEF", 15, "Man City", 126),
+    mockPlayer(9013, "Mohamed", "Salah", "Salah", "MID", 14, "Liverpool", 190),
+    mockPlayer(9014, "Anthony", "Gordon", "Gordon", "MID", 17, "Newcastle", 118),
+    mockPlayer(9015, "Alexander", "Isak", "Isak", "FWD", 17, "Newcastle", 149),
 ];
 
 const COOKIE_PREVIEW_TOAST_ID = "ui-lab-cookie-preview";
+const SCREEN_DEMO_IDS = new Set(["screen-draft", "screen-transfer", "screen-points", "screen-status"]);
 
 const GROUPS = [
+    {
+        title: "Full screen states",
+        description: "Open isolated page states that are not currently reachable in the live season timeline.",
+        demos: [
+            ["screen-draft", "Active draft room", "Live supplemental draft with managers and squad"],
+            ["screen-transfer", "Open transfer window", "A manager's active transfer turn"],
+            ["screen-points", "Regular-season points", "Gameweek points, pitch and fixtures"],
+            ["screen-status", "Regular-season status", "Live round summary, deadlines and activity"],
+        ],
+    },
     {
         title: "Players & points",
         description: "Player interactions and read-only information surfaces.",
@@ -109,7 +129,7 @@ export default function UiLabPage() {
         const uniquePlayers = [primaryPlayer, secondaryPlayer, ...players]
             .filter(Boolean)
             .filter((player, index, values) => values.findIndex((item) => String(item.id) === String(player.id)) === index);
-        return uniquePlayers.slice(0, 9);
+        return uniquePlayers.slice(0, 15);
     }, [players, primaryPlayer, secondaryPlayer]);
     const previewSquad = useMemo(() => buildPreviewSquad(previewPlayers), [previewPlayers]);
     const previewUsers = [
@@ -146,6 +166,19 @@ export default function UiLabPage() {
         }
         setActiveDemo(id);
     };
+
+    if (SCREEN_DEMO_IDS.has(activeDemo)) {
+        return (
+            <UiLabScreenPreview
+                id={activeDemo}
+                user={user}
+                users={previewUsers}
+                players={previewPlayers}
+                squad={previewSquad}
+                onClose={close}
+            />
+        );
+    }
 
     return (
         <main className="mx-auto w-full max-w-7xl px-3 py-5 text-app-foreground sm:px-6 sm:py-9">
@@ -242,13 +275,10 @@ function ActivePreview({ id, close, user, players, primaryPlayer, secondaryPlaye
 function ConfirmationPreview({ icon: Icon, eyebrow, title, description, confirmLabel, destructive = false, onClose }) {
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[5000] bg-black/70 backdrop-blur-sm" />
-                <Dialog.Content className="fixed bottom-0 left-1/2 z-[5001] w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-t-3xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-1.5rem),27rem)] sm:-translate-y-1/2 sm:rounded-3xl">
-                    <div className="h-1.5 bg-component-gradient" aria-hidden="true" />
+            <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
                     <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
                         <Dialog.Close asChild>
-                            <Button variant="ghost" size="icon" className="absolute right-3 top-3 text-app-muted" aria-label="Close"><X aria-hidden="true" /></Button>
+                            <CloseButton className="absolute right-3 top-3" aria-label="Close" />
                         </Dialog.Close>
                         <span className="grid size-12 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground"><Icon aria-hidden="true" /></span>
                         <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-app-muted">{eyebrow}</p>
@@ -259,8 +289,7 @@ function ConfirmationPreview({ icon: Icon, eyebrow, title, description, confirmL
                             <Button variant={destructive ? "danger" : "primary"} onClick={onClose}>{confirmLabel}</Button>
                         </div>
                     </div>
-                </Dialog.Content>
-            </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

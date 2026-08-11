@@ -1,4 +1,5 @@
 import SidebarContainer from "../Sidebar/SidebarContainer";
+import SelectField from "../../shared/ui/SelectField";
 import SquadPlayersTable from "./SquadPlayersTable";
 
 function TransferUserSidebar({
@@ -12,8 +13,8 @@ function TransferUserSidebar({
     isLoading = false,
     error = null,
 }) {
-    const handleChange = (e) => {
-        const newUserId = Number(e.target.value);
+    const handleChange = (value) => {
+        const newUserId = Number(value);
         onUserChange?.(newUserId);
     };
 
@@ -22,18 +23,14 @@ function TransferUserSidebar({
             <section className="w-full overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-panel">
                 <header className="bg-component-gradient p-4 text-brand-ink">
                     <label className="mb-2 block text-xs font-extrabold uppercase tracking-widest" htmlFor="transfer-team-select">View squad</label>
-                    <select
+                    <SelectField
                         id="transfer-team-select"
                         value={currentUserId || ""}
-                        onChange={handleChange}
-                        className="h-11 w-full rounded-control border border-white/55 bg-white/75 px-3 text-sm font-bold text-brand-ink outline-none transition focus:border-white focus:ring-3 focus:ring-white/35"
-                    >
-                        {users.map((u) => (
-                            <option key={u.id} value={u.id}>
-                                {u.name}
-                            </option>
-                        ))}
-                    </select>
+                        onValueChange={handleChange}
+                        options={users.map((member) => ({ value: member.id, label: member.name }))}
+                        ariaLabel="View squad"
+                        className="border-white/55 bg-white/75 font-bold text-brand-ink hover:border-white hover:bg-white/85 focus-visible:ring-white/35"
+                    />
                 </header>
 
                 <div>

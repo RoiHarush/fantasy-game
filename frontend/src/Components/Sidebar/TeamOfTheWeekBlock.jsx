@@ -2,10 +2,12 @@ import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { useDreamTeam } from "../../features/status/useStatusData";
 import PlayerKit from "../General/PlayerKit";
 
-function TeamOfTheWeekBlock() {
+function TeamOfTheWeekBlock({ previewTeam }) {
     const { currentGameweek } = useGameweek();
-    const dreamTeamQuery = useDreamTeam(currentGameweek?.id);
-    const dreamTeam = dreamTeamQuery.data?.team ?? [];
+    const preview = Array.isArray(previewTeam);
+    const dreamTeamQuery = useDreamTeam(currentGameweek?.id, !preview);
+    const dreamTeam = preview ? previewTeam : dreamTeamQuery.data?.team ?? [];
+    const pending = !preview && dreamTeamQuery.isPending;
 
     return (
         <section className="mb-5 w-full overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm transition-colors">
@@ -14,7 +16,7 @@ function TeamOfTheWeekBlock() {
                 Team of the Week
             </div>
 
-            {dreamTeamQuery.isPending ? (
+            {pending ? (
                 <p className="p-4 text-center text-sm text-app-muted">Loading dream team...</p>
             ) : dreamTeam.length === 0 ? (
                 <p className="p-4 text-center text-sm text-app-muted">No dream team is available yet.</p>

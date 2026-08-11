@@ -2,8 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { adminUserDetailsSchema } from "../../../features/super-admin/schemas";
 import {
@@ -11,6 +10,8 @@ import {
     useUpdateAdminUser,
 } from "../../../features/super-admin/useSuperAdmin";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import SelectField from "../../../shared/ui/SelectField";
 
 const inputClassName = "mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 outline-none focus:border-brand-cyan focus:ring-3 focus:ring-brand-cyan/20";
 
@@ -37,10 +38,22 @@ function AdminUserEditForm({ details, userId, onSave }) {
                     <label className="text-sm font-semibold">Username<input className={inputClassName} {...form.register("username")} /></label>
                     <label className="text-sm font-semibold">Name<input className={inputClassName} {...form.register("name")} /></label>
                     <label className="text-sm font-semibold">Role
-                        <select className={inputClassName} {...form.register("role")}>
-                            <option value="ROLE_USER">USER</option>
-                            <option value="ROLE_SUPER_ADMIN">SUPER ADMIN</option>
-                        </select>
+                        <Controller
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                                <SelectField
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    ariaLabel="Role"
+                                    className={inputClassName}
+                                    options={[
+                                        { value: "ROLE_USER", label: "USER" },
+                                        { value: "ROLE_SUPER_ADMIN", label: "SUPER ADMIN" },
+                                    ]}
+                                />
+                            )}
+                        />
                     </label>
                     <label className="text-sm font-semibold">Fantasy Team Name<input className={inputClassName} {...form.register("fantasyTeamName")} /></label>
                     <label className="text-sm font-semibold text-amber-700">Reset Password
@@ -99,7 +112,7 @@ export default function AdminUserEditModal({ userId, onClose, onSave }) {
                     <Dialog.Title className="mb-5 border-b border-slate-200 pb-4 text-2xl font-bold">
                         {detailsQuery.data ? `Edit User: ${detailsQuery.data.username} (ID: ${detailsQuery.data.userId})` : "Edit User"}
                     </Dialog.Title>
-                    <Dialog.Close asChild><Button variant="ghost" size="icon" className="absolute right-4 top-4" aria-label="Close"><X aria-hidden="true" /></Button></Dialog.Close>
+                    <Dialog.Close asChild><CloseButton className="absolute right-4 top-4" aria-label="Close" /></Dialog.Close>
                     {detailsQuery.isPending ? <p role="status">Loading details…</p>
                         : detailsQuery.error ? <p className="text-red-700" role="alert">{detailsQuery.error.message}</p>
                             : <AdminUserEditForm key={userId} details={detailsQuery.data} userId={userId} onSave={onSave} />}

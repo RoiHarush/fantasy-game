@@ -1,10 +1,11 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowLeftRight, Check, X } from "lucide-react";
+import { ArrowLeftRight, Check } from "lucide-react";
 import { useState } from "react";
 
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
+import CloseButton from "../../../shared/ui/CloseButton";
 import PlayerKit from "../../General/PlayerKit";
 
 export default function WaiverCandidateDialog({
@@ -55,9 +56,7 @@ export default function WaiverCandidateDialog({
                                 : `Choose the ${candidate.position} player leaving your squad.`}
                         </Dialog.Description>
                         <Dialog.Close asChild>
-                            <button type="button" className="absolute top-2.5 right-2.5 grid size-8 place-items-center rounded-lg border border-white/40 bg-white/35 transition hover:bg-white/60 focus-visible:outline-2 focus-visible:outline-brand-ink sm:top-4 sm:right-4 sm:size-10" aria-label="Close waiver dialog">
-                                <X aria-hidden="true" size={17} />
-                            </button>
+                            <CloseButton className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4" aria-label="Close waiver dialog" />
                         </Dialog.Close>
                     </header>
 

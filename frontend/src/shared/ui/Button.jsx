@@ -12,10 +12,10 @@ const buttonVariants = cva(
         variants: {
             variant: {
                 primary: "bg-gradient-to-r from-brand-purple to-brand-cyan text-white shadow-sm hover:brightness-105",
-                secondary: "border-brand-cyan bg-white text-brand-ink hover:bg-cyan-50",
-                success: "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600",
+                secondary: "border-app-accent-border bg-app-surface-elevated text-app-foreground shadow-sm hover:border-app-positive-border hover:bg-app-positive-surface hover:text-app-positive-foreground",
+                success: "border-app-positive-border bg-app-positive-surface text-app-positive-foreground shadow-sm hover:bg-app-positive-hover",
                 danger: "bg-red-500 text-white shadow-sm hover:bg-red-600",
-                ghost: "text-brand-ink hover:bg-slate-100",
+                ghost: "text-app-foreground hover:bg-app-accent-hover",
             },
             size: {
                 sm: "h-9 px-3",

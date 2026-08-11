@@ -4,16 +4,21 @@ import { usePlayers } from "../../../features/players/usePlayers";
 import { groupTransferActions } from "../../../features/status/model";
 import { useTransferHistory } from "../../../features/transfer-window/useTransferWindow";
 
-function TransferActivityList({ gameWeekId }) {
-    const { players } = usePlayers();
+function TransferActivityList({ gameWeekId, previewActions, previewPlayers }) {
+    const playersQuery = usePlayers();
+    const players = previewPlayers ?? playersQuery.players;
     const { user } = useAuth();
     const historyQuery = useTransferHistory(user?.leagueId, gameWeekId, {
+        enabled: !Array.isArray(previewActions),
         staleTime: 30_000,
     });
+    const preview = Array.isArray(previewActions);
     const actions = useMemo(
-        () => (historyQuery.data ?? []).filter(action => action.windowType === "TRANSFER"),
-        [historyQuery.data],
+        () => (preview ? previewActions : historyQuery.data ?? []).filter(action => action.windowType === "TRANSFER"),
+        [historyQuery.data, preview, previewActions],
     );
+    const pending = !preview && historyQuery.isPending;
+    const error = !preview && historyQuery.error;
 
     const playersById = useMemo(
         () => new Map(players.map(player => [player.id, player])),
@@ -26,9 +31,9 @@ function TransferActivityList({ gameWeekId }) {
     return (
         <section className="mt-6">
             <h3 className="text-xl font-bold text-app-foreground">{gameWeekId ? `Gameweek ${gameWeekId} transfers` : "Gameweek transfers"}</h3>
-            {historyQuery.isPending ? (
+            {pending ? (
                 <p className="mt-2 text-app-muted" role="status">Loading transfers…</p>
-            ) : historyQuery.error ? (
+            ) : error ? (
                 <p className="mt-2 text-red-600 dark:text-red-300" role="alert">Transfer history is temporarily unavailable.</p>
             ) : actions.length === 0 ? (
                 <p className="mt-2 text-app-muted">No transfers have been completed for this gameweek.</p>

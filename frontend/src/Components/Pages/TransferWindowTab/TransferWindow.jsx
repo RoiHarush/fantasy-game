@@ -27,6 +27,9 @@ function TransferWindow({
     players,
     teams,
     fixturesByTeam,
+    previewMode = false,
+    previewSquad = null,
+    previewDraftActions = [],
 }) {
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
     const latestEventQuery = useLatestTransferEvent(user?.leagueId);
@@ -48,7 +51,7 @@ function TransferWindow({
     const draftGameweekId = windowState.gameWeekId > 0
         ? windowState.gameWeekId
         : nextGameweek?.id;
-    const draftSquadQuery = useSquad(user?.id, draftGameweekId, { enabled: isDraftMode });
+    const draftSquadQuery = useSquad(user?.id, draftGameweekId, { enabled: isDraftMode && !previewMode });
     const passMutation = usePassTransferTurn(user?.id);
     const skipTurnMutation = useSkipCurrentTransferTurn(user?.leagueId);
     const draftPlayerMutation = useDraftPlayer({
@@ -58,14 +61,14 @@ function TransferWindow({
         onSuccess: () => setSelectedPlayerIn(null),
     });
     const draftHistoryQuery = useTransferHistory(user?.leagueId, draftGameweekId, {
-        enabled: isDraftMode,
+        enabled: isDraftMode && !previewMode,
     });
-    const draftSquad = draftSquadQuery.data;
+    const draftSquad = previewMode ? previewSquad : draftSquadQuery.data;
     const draftActions = useMemo(
-        () => (draftHistoryQuery.data ?? []).filter(action => (
+        () => (previewMode ? previewDraftActions : draftHistoryQuery.data ?? []).filter(action => (
             action.windowType === "DRAFT" || action.windowType === "SUPPLEMENTAL"
         )),
-        [draftHistoryQuery.data],
+        [draftHistoryQuery.data, previewDraftActions, previewMode],
     );
 
     const draftRuleLockedIds = useMemo(
@@ -165,7 +168,7 @@ function TransferWindow({
                                 <button
                                     type="button"
                                     className={Style.passButton}
-                                    onClick={() => passMutation.mutate()}
+                                    onClick={() => previewMode ? undefined : passMutation.mutate()}
                                     disabled={passMutation.isPending}
                                 >
                                     {passMutation.isPending ? "Passing…" : "Pass Turn"}
@@ -182,7 +185,7 @@ function TransferWindow({
                                 <button
                                     type="button"
                                     className={Style.passButton}
-                                    onClick={() => skipTurnMutation.mutate()}
+                                    onClick={() => previewMode ? undefined : skipTurnMutation.mutate()}
                                     disabled={skipTurnMutation.isPending}
                                 >
                                     {skipTurnMutation.isPending ? "Skipping…" : isIrRound ? "Resolve & skip" : "Skip turn"}
@@ -218,6 +221,7 @@ function TransferWindow({
                 irPosition={isIrRound ? irPosition : null}
                 allTeamFixtures={fixturesByTeam}
                 disabledPlayerIds={draftRuleLockedIds}
+                previewMode={previewMode}
                 draftedContent={isDraftMode ? (
                     <ol className={Style.draftedList} aria-label="Drafted players in pick order">
                         {draftActions.map((action, index) => (
@@ -242,7 +246,7 @@ function TransferWindow({
                 ) : isDraftMode && !isSupplementalDraft ? (
                     <DraftPickDialog
                         player={selectedPlayerIn}
-                        mutation={draftPlayerMutation}
+                        mutation={previewMode ? { mutate: () => setSelectedPlayerIn(null), isPending: false, error: null } : draftPlayerMutation}
                         onClose={() => setSelectedPlayerIn(null)}
                     />
                 ) : (
@@ -253,6 +257,8 @@ function TransferWindow({
                         fixturesByTeam={fixturesByTeam}
                         nextGameweek={nextGameweek}
                         onClose={() => setSelectedPlayerIn(null)}
+                        previewMode={previewMode}
+                        previewSquad={previewSquad}
                     />
                 )
             )}

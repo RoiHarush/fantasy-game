@@ -2,9 +2,12 @@ import { HeartPulse } from "lucide-react";
 
 import { useIrStatuses } from "../../../features/status/useStatusData";
 
-function IRStatusTable() {
-    const irStatusesQuery = useIrStatuses();
-    const irStatuses = irStatusesQuery.data ?? [];
+function IRStatusTable({ previewStatuses }) {
+    const preview = Array.isArray(previewStatuses);
+    const irStatusesQuery = useIrStatuses(!preview);
+    const irStatuses = preview ? previewStatuses : irStatusesQuery.data ?? [];
+    const pending = !preview && irStatusesQuery.isPending;
+    const error = !preview && irStatusesQuery.error;
     const activeIrCount = irStatuses.filter((status) => status.hasIr).length;
 
     return (
@@ -20,7 +23,7 @@ function IRStatusTable() {
                     </div>
                 </div>
 
-                {!irStatusesQuery.isPending && !irStatusesQuery.error && (
+                {!pending && !error && (
                     <span className="rounded-full border border-brand-on-gradient/30 bg-brand-on-gradient/15 px-3 py-1 text-xs font-semibold text-brand-on-gradient shadow-sm backdrop-blur-sm">
                         {activeIrCount} active
                     </span>
@@ -28,9 +31,9 @@ function IRStatusTable() {
             </div>
 
             <div className="p-3 sm:p-4">
-                {irStatusesQuery.isPending && <p role="status" className="px-1 py-3 text-app-muted">Loading IR status…</p>}
-                {irStatusesQuery.error && <p role="alert" className="px-1 py-3 text-red-600 dark:text-red-300">IR status is temporarily unavailable.</p>}
-                {!irStatusesQuery.isPending && !irStatusesQuery.error && irStatuses.length === 0 && (
+                {pending && <p role="status" className="px-1 py-3 text-app-muted">Loading IR status…</p>}
+                {error && <p role="alert" className="px-1 py-3 text-red-600 dark:text-red-300">IR status is temporarily unavailable.</p>}
+                {!pending && !error && irStatuses.length === 0 && (
                     <p className="px-1 py-3 text-app-muted">No managers currently have a player in IR.</p>
                 )}
 

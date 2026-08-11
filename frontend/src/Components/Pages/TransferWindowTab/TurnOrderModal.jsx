@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowDownUp, Save, X } from "lucide-react";
+import { ArrowDownUp, Save } from "lucide-react";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
@@ -12,6 +12,9 @@ import {
 } from "../../../features/transfer-window/useTransferWindow";
 import { validateTransferOrder } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
+import CloseButton from "../../../shared/ui/CloseButton";
+import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
+import SelectField from "../../../shared/ui/SelectField";
 
 export default function TurnOrderModal({ onClose, usersList, previewMode = false }) {
     const { nextGameweek } = useGameweek();
@@ -61,9 +64,7 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
 
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-[5000] bg-black/70 backdrop-blur-sm" />
-                <Dialog.Content className="fixed bottom-0 left-1/2 z-[5001] flex max-h-[92dvh] w-full max-w-2xl -translate-x-1/2 flex-col overflow-hidden rounded-t-3xl border border-app-border bg-app-surface-elevated text-app-foreground shadow-2xl focus:outline-none sm:top-1/2 sm:bottom-auto sm:w-[min(calc(100vw-2rem),38rem)] sm:-translate-y-1/2 sm:rounded-3xl">
+            <ResponsiveDialogSurface className="flex flex-col sm:w-[min(calc(100vw-2rem),38rem)]">
                     <form
                         className="flex min-h-0 flex-1 flex-col overflow-hidden"
                         onSubmit={(event) => {
@@ -71,7 +72,6 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
                             handleSave();
                         }}
                     >
-                    <div className="h-1.5 shrink-0 bg-component-gradient" aria-hidden="true" />
                     <div className="relative border-b border-app-border bg-app-surface-muted px-5 py-4 pr-14 sm:px-7 sm:py-5">
                         <div className="flex items-center gap-3">
                             <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground">
@@ -89,9 +89,7 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
                     </div>
 
                     <Dialog.Close asChild>
-                        <Button variant="ghost" size="icon" className="absolute right-3 top-3.5 z-10 text-app-muted hover:bg-app-accent-hover hover:text-app-foreground sm:right-4 sm:top-5" aria-label="Close">
-                            <X aria-hidden="true" size={20} />
-                        </Button>
+                        <CloseButton className="absolute right-3 top-3.5 z-10 sm:right-4 sm:top-5" aria-label="Close" />
                     </Dialog.Close>
 
                     <div className="min-h-20 flex-1 space-y-2 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
@@ -102,18 +100,19 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
                         ) : picks.map((selectedUserId, index) => (
                             <label key={index} className="grid grid-cols-[3.1rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl border border-app-border bg-app-surface px-2.5 py-2 sm:grid-cols-[5rem_minmax(0,1fr)] sm:gap-4 sm:rounded-2xl sm:px-4 sm:py-3">
                                 <span className="text-center text-xs font-black text-app-accent-foreground sm:text-left sm:text-sm">#{index + 1}</span>
-                                <select
+                                <SelectField
                                     className="min-w-0 rounded-lg border border-app-border bg-app-surface-elevated px-2.5 py-2 text-xs font-semibold text-app-foreground outline-none transition focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface sm:px-3 sm:text-sm"
                                     value={selectedUserId}
-                                    onChange={(event) => handleUserSelect(index, event.target.value)}
-                                >
-                                    <option value="">Select user</option>
-                                    {usersList.map((user) => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.name}{user.fantasyTeamName ? ` (${user.fantasyTeamName})` : ""}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onValueChange={(value) => handleUserSelect(index, value)}
+                                    options={[
+                                        { value: "", label: "Select user" },
+                                        ...usersList.map((manager) => ({
+                                            value: manager.id,
+                                            label: `${manager.name}${manager.fantasyTeamName ? ` (${manager.fantasyTeamName})` : ""}`,
+                                        })),
+                                    ]}
+                                    ariaLabel={`User for transfer pick ${index + 1}`}
+                                />
                             </label>
                         ))}
                     </div>
@@ -133,8 +132,7 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
                         </Button>
                     </div>
                     </form>
-                </Dialog.Content>
-            </Dialog.Portal>
+            </ResponsiveDialogSurface>
         </Dialog.Root>
     );
 }

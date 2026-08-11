@@ -5,6 +5,7 @@ import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useAdminPenalties } from "../../../features/league-admin/useLeagueAdmin";
 import { usePlayers } from "../../../features/players/usePlayers";
+import SelectField from "../../../shared/ui/SelectField";
 import PlayerKit from "../../General/PlayerKit";
 
 const fieldClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface disabled:cursor-not-allowed disabled:opacity-55";
@@ -58,11 +59,16 @@ function PenaltyManager({ maintenanceLeagueId = null }) {
                 <div className="p-4 sm:p-5">
                     <label className="grid gap-1.5 text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted">
                         Gameweek
-                        <select className={fieldClassName} aria-label="Penalties gameweek" value={gameweek || ""} onChange={(event) => setSelectedGameweek(Number(event.target.value))}>
-                            {[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, index) => (
-                                <option key={index + 1} value={index + 1}>Gameweek {index + 1}</option>
-                            ))}
-                        </select>
+                        <SelectField
+                            className={fieldClassName}
+                            ariaLabel="Penalties gameweek"
+                            value={gameweek || ""}
+                            onValueChange={(value) => setSelectedGameweek(Number(value))}
+                            options={[...Array(currentGameweek ? currentGameweek.id : 1)].map((_, index) => ({
+                                value: index + 1,
+                                label: `Gameweek ${index + 1}`,
+                            }))}
+                        />
                     </label>
                 </div>
             </section>

@@ -8,6 +8,7 @@ import {
 } from "../../../features/super-admin/useSuperAdmin";
 import { manualSquadOverrideSchema } from "../../../features/super-admin/schemas";
 import { Button } from "../../../shared/ui/Button";
+import SelectField from "../../../shared/ui/SelectField";
 
 const styles = {
     section: {
@@ -58,15 +59,6 @@ const styles = {
         marginRight: '10px',
         minWidth: '120px',
         height: '40px',
-    },
-    select: {
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        marginRight: '10px',
-        minWidth: '120px',
-        height: '40px',
-        backgroundColor: 'white',
     },
     textarea: {
         width: '100%',
@@ -377,20 +369,20 @@ export default function AdminActionsPage() {
                 </div>
 
                 <div>
-                    <select
-                        aria-label="Squad owner"
+                    <SelectField
+                        ariaLabel="Squad owner"
                         value={squadUserId}
-                        onChange={(e) => setSquadUserId(e.target.value)}
-                        style={styles.select}
+                        onValueChange={setSquadUserId}
+                        options={[
+                            { value: "", label: "Select User" },
+                            ...allUsersList.map(user => ({
+                                value: user.userId,
+                                label: `${user.username} (ID: ${user.userId})`,
+                            })),
+                        ]}
                         disabled={loading}
-                    >
-                        <option value="">Select User</option>
-                        {allUsersList.map(u => (
-                            <option key={u.userId} value={u.userId}>
-                                {u.username} (ID: {u.userId})
-                            </option>
-                        ))}
-                    </select>
+                        className="mb-2 max-w-xl"
+                    />
 
                     <input
                         type="number"

@@ -16,9 +16,11 @@ function Points({
     gameweekView,
     allGameweeks,
     onSelectGameweek,
+    previewPlayers = null,
+    previewFixtures = null,
 }) {
     const playersQuery = usePlayers();
-    const { players } = playersQuery;
+    const players = previewPlayers ?? playersQuery.players;
     const {
         effectiveGameweek: selectedGameweek,
         visibleGameweeks,
@@ -35,8 +37,8 @@ function Points({
         if (canGoNext) onSelectGameweek(visibleGameweeks[selectedIndex + 1].id);
     };
 
-    if (playersQuery.isPending) return <p role="status">Loading player data…</p>;
-    if (playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
+    if (!previewPlayers && playersQuery.isPending) return <p role="status">Loading player data…</p>;
+    if (!previewPlayers && playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
 
     return (
         <div className={styles.pointsScreen}>
@@ -76,6 +78,7 @@ function Points({
                     <FixturesTable
                         gameweeks={allGameweeks}
                         defaultGameweek={selectedGameweek}
+                        previewData={previewFixtures}
                     />
                 </div>
             </div>

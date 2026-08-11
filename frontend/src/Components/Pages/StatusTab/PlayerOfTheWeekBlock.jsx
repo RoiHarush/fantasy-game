@@ -82,12 +82,16 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
     );
 }
 
-function PlayerOfTheWeekBlock({ gameweekId }) {
-    const { players } = usePlayers();
+function PlayerOfTheWeekBlock({ gameweekId, previewRecords, previewPlayers }) {
+    const playersQuery = usePlayers();
+    const players = previewPlayers ?? playersQuery.players;
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const mobile = useSyncExternalStore(subscribeToMobileViewport, getMobileSnapshot, () => false);
-    const playersOfWeekQuery = usePlayersOfTheWeek();
-    const records = playersOfWeekQuery.data?.playersOfTheWeek ?? [];
+    const preview = Array.isArray(previewRecords);
+    const playersOfWeekQuery = usePlayersOfTheWeek(!preview);
+    const records = preview ? previewRecords : playersOfWeekQuery.data?.playersOfTheWeek ?? [];
+    const pending = !preview && playersOfWeekQuery.isPending;
+    const error = !preview && playersOfWeekQuery.error;
     const selectedPlayerDetails = selectedPlayer
         ? getPlayerById(players, selectedPlayer.id)
         : null;
@@ -95,13 +99,13 @@ function PlayerOfTheWeekBlock({ gameweekId }) {
     return (
         <section className="w-full overflow-hidden rounded-xl border border-app-border bg-app-surface pb-4 shadow-sm transition-colors">
             <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink sm:text-xl"><span className="text-xl text-brand-green" aria-hidden="true">★</span>Player of the Week</div>
-            {playersOfWeekQuery.isPending ? (
+            {pending ? (
                 <p role="status" className="p-4 text-app-muted">Loading players of the week…</p>
-            ) : playersOfWeekQuery.error ? (
+            ) : error ? (
                 <p role="alert" className="p-4 text-red-600 dark:text-red-300">Players of the week are temporarily unavailable.</p>
             ) : (
                 <PlayerCarousel
-                    key={`${mobile}-${gameweekId}-${playersOfWeekQuery.dataUpdatedAt}`}
+                    key={`${mobile}-${gameweekId}-${preview ? "preview" : playersOfWeekQuery.dataUpdatedAt}`}
                     records={records}
                     gameweekId={gameweekId}
                     mobile={mobile}

@@ -1,0 +1,318 @@
+"use client";
+
+import { ArrowLeft } from "lucide-react";
+import { useMemo } from "react";
+
+import { Button } from "../../../shared/ui/Button";
+import PageLayout from "../../PageLayout";
+import StatusSidebar from "../../Sidebar/StatusSidebar";
+import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
+import UserSidebar from "../../Sidebar/UserSidebar";
+import Points from "../PointsTab/Points";
+import Status from "../StatusTab/Status";
+import TransferWindow from "../TransferWindowTab/TransferWindow";
+
+const SCREEN_TITLES = {
+    "screen-draft": "Active draft room",
+    "screen-transfer": "Open transfer window",
+    "screen-points": "Regular-season points",
+    "screen-status": "Regular-season status",
+};
+
+export default function UiLabScreenPreview({ id, user, users, players, squad, onClose }) {
+    const previewUser = {
+        id: user?.id ?? users[0]?.id ?? 1,
+        leagueId: user?.leagueId ?? 1,
+        name: user?.name || "Roi Harush",
+        fantasyTeamName: user?.fantasyTeamName || "Roi FC",
+        leagueAdmin: true,
+    };
+    const previewUsers = users.map((manager, index) => ({
+        ...manager,
+        rank: index + 1,
+        gwPoints: [71, 64, 59][index] ?? 48,
+        points: [384, 371, 355][index] ?? 320,
+    }));
+    const previewLeague = { id: 1, name: "UI Lab League", users: previewUsers };
+    const previewTeams = useMemo(() => buildTeams(players), [players]);
+    const fixturesByTeam = useMemo(() => buildFixturesByTeam(previewTeams), [previewTeams]);
+    const gameweeks = useMemo(() => buildGameweeks(), []);
+    const currentGameweek = gameweeks[5];
+    const nextGameweek = gameweeks[6];
+    const completeSquad = useMemo(() => completePreviewSquad(squad, players), [players, squad]);
+    const previewFixtures = useMemo(
+        () => buildPreviewFixtures(previewTeams, currentGameweek.id),
+        [currentGameweek.id, previewTeams],
+    );
+    const statusPreviewData = useMemo(
+        () => buildStatusPreviewData(players, previewUsers, currentGameweek.id),
+        [currentGameweek.id, players, previewUsers],
+    );
+    const previewDreamTeam = useMemo(() => buildPreviewDreamTeam(players), [players]);
+
+    let content;
+    if (id === "screen-transfer" || id === "screen-draft") {
+        const draftMode = id === "screen-draft";
+        const windowPlayers = draftMode
+            ? players.map((player) => ({ ...player, supplementalDraftEligible: true }))
+            : players;
+        const order = [previewUsers[0]?.id, previewUsers[1]?.id, previewUsers[2]?.id].filter(Boolean);
+        const snakeOrder = [...order, ...order.toReversed()];
+        const windowState = {
+            isOpen: true,
+            isDraftMode: draftMode,
+            draftType: draftMode ? "SUPPLEMENTAL" : null,
+            gameWeekId: nextGameweek.id,
+            currentRound: "REGULAR",
+            currentUserId: previewUser.id,
+            currentUserAutomatic: false,
+            order: snakeOrder,
+            initialOrder: snakeOrder,
+            turnsUsed: Object.fromEntries(order.map((managerId, index) => [managerId, index === 0 ? 1 : 0])),
+            totalTurns: Object.fromEntries(order.map((managerId) => [managerId, 2])),
+        };
+        const draftActions = draftMode ? [
+            { id: "preview-pick-1", windowType: "SUPPLEMENTAL", userName: previewUsers[1]?.name, playerInId: players[0]?.id },
+            { id: "preview-pick-2", windowType: "SUPPLEMENTAL", userName: previewUsers[2]?.name, playerInId: players[1]?.id },
+        ] : [];
+
+        content = (
+            <PageLayout
+                left={(
+                    <TransferWindow
+                        user={previewUser}
+                        allUsers={previewUsers}
+                        windowState={windowState}
+                        nextGameweek={nextGameweek}
+                        players={windowPlayers}
+                        teams={previewTeams}
+                        fixturesByTeam={fixturesByTeam}
+                        previewMode
+                        previewSquad={completeSquad}
+                        previewDraftActions={draftActions}
+                    />
+                )}
+                right={(
+                    <TransferUserSidebar
+                        users={previewUsers}
+                        currentUserId={previewUser.id}
+                        squad={completeSquad}
+                        players={windowPlayers}
+                        fixturesByTeam={fixturesByTeam}
+                        nextGameweek={nextGameweek}
+                    />
+                )}
+            />
+        );
+    } else if (id === "screen-points") {
+        const visibleGameweeks = gameweeks.slice(0, 6);
+        const playerData = squadPlayerIds(completeSquad).map((playerId, index) => ({
+            playerId,
+            points: [8, 6, 5, 12, 3, 7, 2, 9, 4, 6, 1, 3, 8, 2, 5][index] ?? 2,
+            nextFixture: index % 2 === 0 ? "CHE (H)" : "LIV (A)",
+        }));
+        const gameweekView = {
+            effectiveGameweek: currentGameweek,
+            visibleGameweeks,
+            selectedIndex: visibleGameweeks.length - 1,
+            canGoPrevious: true,
+            canGoNext: false,
+        };
+
+        content = (
+            <PageLayout
+                left={(
+                    <Points
+                        user={previewUser}
+                        squad={completeSquad}
+                        points={71}
+                        playerData={playerData}
+                        gameweekView={gameweekView}
+                        allGameweeks={gameweeks}
+                        onSelectGameweek={() => {}}
+                        previewPlayers={players}
+                        previewFixtures={{ fixtures: previewFixtures, teams: previewTeams }}
+                    />
+                )}
+                right={(
+                    <UserSidebar
+                        user={previewUser}
+                        editable
+                        previewPoints={{ gameweekPoints: 71, totalPoints: 384 }}
+                    />
+                )}
+            />
+        );
+    } else {
+        content = (
+            <PageLayout
+                left={(
+                    <Status
+                        user={previewUser}
+                        league={previewLeague}
+                        currentGameweek={currentGameweek}
+                        nextGameweek={nextGameweek}
+                        transferHistoryGameweekId={currentGameweek.id}
+                        refreshGameweeks={() => {}}
+                        previewData={statusPreviewData}
+                    />
+                )}
+                right={(
+                    <StatusSidebar
+                        league={previewLeague}
+                        user={previewUser}
+                        previewDreamTeam={previewDreamTeam}
+                    />
+                )}
+            />
+        );
+    }
+
+    return (
+        <>
+            {content}
+            <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                className="fixed right-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[4500] shadow-panel sm:right-6 sm:bottom-6"
+                aria-label={`Close ${SCREEN_TITLES[id]} preview`}
+            >
+                <ArrowLeft className="size-4" aria-hidden="true" /> Back to lab
+            </Button>
+        </>
+    );
+}
+
+function buildStatusPreviewData(players, users, gameweekId) {
+    const availablePlayers = players.filter(Boolean);
+    const pickPlayer = (index) => availablePlayers[index % Math.max(availablePlayers.length, 1)] ?? {};
+    const playersOfTheWeek = Array.from({ length: gameweekId }, (_, index) => {
+        const player = pickPlayer(index + 2);
+        return {
+            id: player.id,
+            gameweek: index + 1,
+            playerName: player.viewName || `Player ${index + 1}`,
+            position: player.position,
+            teamId: player.teamId,
+            points: [11, 13, 10, 15, 12, 14][index] ?? 10,
+        };
+    });
+    const playerIn = pickPlayer(4);
+    const playerOut = pickPlayer(5);
+
+    return {
+        points: 71,
+        players: availablePlayers,
+        dailyStatus: [
+            { date: "2026-09-19T14:00:00", isCalculated: true },
+            { date: "2026-09-20T14:00:00", isCalculated: false },
+            { date: "2026-09-21T19:00:00", isCalculated: false },
+        ],
+        playersOfTheWeek,
+        transferActions: [{
+            id: "preview-transfer-1",
+            windowType: "TRANSFER",
+            userId: users[0]?.id ?? 1,
+            userName: users[0]?.name || "Roi Harush",
+            playerInId: playerIn.id,
+            playerOutId: playerOut.id,
+            source: "MANUAL",
+        }],
+        irStatuses: users.map((manager, index) => ({
+            userId: manager.id,
+            userName: manager.name,
+            teamName: manager.fantasyTeamName,
+            hasIr: index === 0,
+            irPlayerName: index === 0 ? pickPlayer(2).viewName || "Van Dijk" : null,
+        })),
+    };
+}
+
+function buildPreviewDreamTeam(players) {
+    return players.slice(0, 11).map((player, index) => ({
+        id: player.id,
+        name: player.viewName,
+        position: player.position,
+        teamId: player.teamId,
+        team: player.teamShort || player.teamName?.slice(0, 3).toUpperCase() || "TST",
+        points: [12, 10, 9, 8, 15, 7, 11, 8, 6, 13, 9][index] ?? 6,
+    }));
+}
+
+function buildPreviewFixtures(teams, gameweekId) {
+    const matchTeams = teams.slice(0, Math.min(10, teams.length));
+    return Array.from({ length: Math.floor(matchTeams.length / 2) }, (_, index) => ({
+        id: `preview-fixture-${gameweekId}-${index + 1}`,
+        event: gameweekId,
+        homeTeamId: matchTeams[index * 2].id,
+        awayTeamId: matchTeams[index * 2 + 1].id,
+        kickoff_time: `2026-09-${String(19 + (index > 2 ? 1 : 0)).padStart(2, "0")}T${String(14 + index).padStart(2, "0")}:00:00`,
+        homeScore: index < 2 ? [2, 1][index] : null,
+        awayScore: index < 2 ? [1, 1][index] : null,
+    }));
+}
+
+function buildTeams(players) {
+    return [...new Map(players.map((player) => [String(player.teamId), {
+        id: player.teamId,
+        code: player.teamId,
+        name: player.teamName || `Team ${player.teamId}`,
+        shortName: player.teamShort || player.teamName?.slice(0, 3).toUpperCase() || "TST",
+    }])).values()];
+}
+
+function buildFixturesByTeam(teams) {
+    return Object.fromEntries(teams.map((team, index) => [team.id, {
+        7: [{ opponent: index % 2 ? "ARS (H)" : "MCI (A)", difficulty: 3 }],
+    }]));
+}
+
+function buildGameweeks() {
+    return Array.from({ length: 8 }, (_, index) => {
+        const id = index + 1;
+        return {
+            id,
+            name: `Gameweek ${id}`,
+            status: id < 6 ? "COMPLETED" : id === 6 ? "LIVE" : "UPCOMING",
+            calculated: id < 6,
+            transferOpenTime: id === 7 ? "2026-08-21T20:45:00" : null,
+            firstKickoffTime: id === 7 ? "2026-08-21T22:00:00" : "2026-08-15T17:00:00",
+        };
+    });
+}
+
+function completePreviewSquad(squad, players) {
+    const byPosition = (position) => players.filter((player) => player.position === position).map((player) => player.id);
+    const gk = byPosition("GK");
+    const def = byPosition("DEF");
+    const mid = byPosition("MID");
+    const fwd = byPosition("FWD");
+    const fallbackIds = players.map((player) => player.id);
+    const take = (items, count, offset = 0) => Array.from({ length: count }, (_, index) => items[index + offset] ?? fallbackIds[(index + offset) % fallbackIds.length]).filter(Boolean);
+    const startingLineup = {
+        GK: take(gk, 1),
+        DEF: take(def, 4),
+        MID: take(mid, 4),
+        FWD: take(fwd, 2),
+    };
+    const startingIds = Object.values(startingLineup).flat();
+    const benchIds = fallbackIds.filter((id) => !startingIds.includes(id));
+    return {
+        ...squad,
+        startingLineup,
+        formation: { GK: 1, DEF: 4, MID: 4, FWD: 2 },
+        bench: { GK: gk[1] ?? benchIds[0], S1: benchIds[1], S2: benchIds[2], S3: benchIds[3] },
+        captainId: mid[0] ?? fwd[0],
+        viceCaptainId: fwd[0] ?? mid[1],
+        firstPickId: def[0],
+        tripleCaptainActive: false,
+        benchBoostActive: false,
+        irId: null,
+    };
+}
+
+function squadPlayerIds(squad) {
+    return [...Object.values(squad.startingLineup || {}).flat(), ...Object.values(squad.bench || {})].filter(Boolean);
+}

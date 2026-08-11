@@ -10,15 +10,20 @@ import { formatAppLongDate } from "../../../lib/dateTime";
 import styles from "../../../Styles/FixturesTable.module.css";
 import { FixtureCard } from "./FixtureCard";
 
-function FixturesTable({ gameweeks, defaultGameweek }) {
+function FixturesTable({ gameweeks, defaultGameweek, previewData }) {
     const [selectedGameweekId, setSelectedGameweekId] = useState(null);
-    const fixturesQuery = useFixtures();
-    const teamsQuery = useTeams();
+    const preview = previewData != null;
+    const fixturesQuery = useFixtures(!preview);
+    const teamsQuery = useTeams({ enabled: !preview });
     const defaultGameweekId = defaultGameweek?.id ?? gameweeks[0]?.id ?? null;
     const currentGameweekId = selectedGameweekId ?? defaultGameweekId;
     const navigation = getFixtureGameweekNavigation(gameweeks, currentGameweekId);
-    const teamsById = new Map(teamsQuery.teams.map((team) => [String(team.id), team]));
-    const gameweekFixtures = (fixturesQuery.data ?? []).filter(
+    const teams = preview ? previewData.teams ?? [] : teamsQuery.teams;
+    const fixtures = preview ? previewData.fixtures ?? [] : fixturesQuery.data ?? [];
+    const pending = !preview && (fixturesQuery.isPending || teamsQuery.isPending);
+    const error = !preview && (fixturesQuery.error || teamsQuery.error);
+    const teamsById = new Map(teams.map((team) => [String(team.id), team]));
+    const gameweekFixtures = fixtures.filter(
         (fixture) => String(fixture.event) === String(currentGameweekId),
     );
     const fixtureDays = groupFixturesByDay(gameweekFixtures);
@@ -68,11 +73,11 @@ function FixturesTable({ gameweeks, defaultGameweek }) {
             </div>
 
             <div className={styles["fixtures-table"]}>
-                {(fixturesQuery.isPending || teamsQuery.isPending) && <p role="status">Loading fixtures…</p>}
-                {(fixturesQuery.error || teamsQuery.error) && (
+                {pending && <p role="status">Loading fixtures…</p>}
+                {error && (
                     <p role="alert">Fixture data is temporarily unavailable.</p>
                 )}
-                {!fixturesQuery.isPending && !teamsQuery.isPending && !fixturesQuery.error && !teamsQuery.error && fixtureDays.length === 0 && (
+                {!pending && !error && fixtureDays.length === 0 && (
                     <p role="status">No fixtures are scheduled for this gameweek.</p>
                 )}
                 {fixtureDays.map(({ dateKey, fixtures }) => (
