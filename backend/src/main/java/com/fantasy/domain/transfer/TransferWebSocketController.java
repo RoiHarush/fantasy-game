@@ -20,6 +20,7 @@ public class TransferWebSocketController {
     public void sendWindowOpenedEvent(long leagueId,
                                       int firstUserId,
                                       List<Integer> initialOrder,
+                                      List<Integer> canonicalOrder,
                                       List<Integer> turnOrder,
                                       Map<Integer, Integer> turnsUsed,
                                       Map<Integer, Integer> totalTurns,
@@ -29,6 +30,7 @@ public class TransferWebSocketController {
         event.put("leagueId", leagueId);
         event.put("userId", firstUserId);
         event.put("initialOrder", initialOrder);
+        event.put("canonicalOrder", canonicalOrder);
         event.put("turnOrder", turnOrder);
         event.put("turnsUsed", turnsUsed);
         event.put("totalTurns", totalTurns);

@@ -4,6 +4,7 @@ import { memo, useState } from "react";
 import { getInitials } from "../../../lib/initials";
 import { getPlayerInjuryColor } from "../../../lib/playerStatus";
 import { getFixtureItems } from "../../../features/fixtures/model";
+import { getPlayerAcquisitionLockReason } from "../../../features/transfer-window/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
 import WatchButton from "../../General/WatchButton";
@@ -35,6 +36,7 @@ const PlayerRow = memo(function PlayerRow({
             ? user?.name || player.ownerName || "You"
             : player.ownerName || "Unknown manager";
     const ownerInitials = getInitials(ownerName);
+    const acquisitionLockReason = getPlayerAcquisitionLockReason(player, { ruleLocked });
 
     return (
         <>
@@ -161,7 +163,7 @@ const PlayerRow = memo(function PlayerRow({
 
             {(mode === "transfer" || mode === "draft") && (
                 <td className="px-1 py-2 text-center">
-                    {player.available && !ruleLocked ? (
+                    {!acquisitionLockReason ? (
                         <button
                             type="button"
                             className="mx-auto inline-flex h-9 min-w-0 items-center justify-center rounded-lg bg-component-gradient px-2.5 text-xs font-extrabold text-brand-ink transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
@@ -175,10 +177,8 @@ const PlayerRow = memo(function PlayerRow({
                         </button>
                     ) : (
                         <LockKeyhole
-                            aria-label="Locked"
-                            title={ruleLocked
-                                ? "This pick would exceed a squad position or three-player club limit"
-                                : "Player is unavailable"}
+                            aria-label={`Locked: ${acquisitionLockReason}`}
+                            title={acquisitionLockReason}
                             className="mx-auto size-5 text-app-muted"
                         />
                     )}

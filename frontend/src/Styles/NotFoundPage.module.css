@@ -48,7 +48,9 @@
     transition: transform 0.2s, background-color 0.2s;
 }
 
-.homeButton:hover {
-    background-color: #00d66f;
-    transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+    .homeButton:hover {
+        background-color: #00d66f;
+        transform: translateY(-2px);
+    }
 }

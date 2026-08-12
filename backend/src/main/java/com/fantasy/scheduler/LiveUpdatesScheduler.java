@@ -44,7 +44,7 @@ public class LiveUpdatesScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTimeLimit = now.minusMinutes(140);
 
-        boolean hasActiveGames = fixtureRepository.hasActiveFixtures(now, startTimeLimit);
+        boolean hasActiveGames = fixtureRepository.hasActiveFixtures(gwId, now, startTimeLimit);
 
         if (hasActiveGames) {
              log.info("Active games detected in GW {}. Running live updates...", gwId);

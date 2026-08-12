@@ -58,6 +58,10 @@ public class UserSquadEntity {
     @Column(name = "bench_boost_active", nullable = false)
     private boolean benchBoostActive = false;
 
+    @Version
+    @Column(nullable = false)
+    private long version;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -112,4 +116,6 @@ public class UserSquadEntity {
     public void setBenchBoostActive(boolean benchBoostActive) {
         this.benchBoostActive = benchBoostActive;
     }
+
+    public long getVersion() { return version; }
 }

@@ -20,13 +20,13 @@ function ControlsBar({
     filteredCount,
     disablePositionOptions,
     teams,
-    showDrafted = false,
+    extraView = null,
     showWaivers = false
 }) {
     const switcherOptions = [
         "All players",
         "Watchlist",
-        ...(showDrafted ? ["Drafted"] : []),
+        ...(extraView ? [extraView.key] : []),
         ...(showWaivers ? ["Waivers"] : []),
     ];
 
@@ -108,7 +108,12 @@ function ControlsBar({
                         "All players": { mobile: "All", desktop: "All players" },
                         Watchlist: { mobile: "Watch", desktop: "Watchlist" },
                         Waivers: { mobile: "WVR", desktop: "Waivers" },
-                        Drafted: { mobile: "Draft", desktop: "Drafted" },
+                        ...(extraView ? {
+                            [extraView.key]: {
+                                mobile: extraView.mobileLabel,
+                                desktop: extraView.desktopLabel,
+                            },
+                        } : {}),
                     }}
                 />
             </div>

@@ -70,6 +70,7 @@ function DraftRoomPage() {
                     players={screenData.players}
                     teams={screenData.teams}
                     fixturesByTeam={screenData.fixturesByTeam}
+                    isClosing={Boolean(windowState.isClosing)}
                 />
             }
             right={

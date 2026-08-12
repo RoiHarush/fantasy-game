@@ -19,10 +19,15 @@
     transition: color 0.2s ease;
 }
 
-.pointsButtonInside:hover,
-.pointsButtonInside:focus {
+.pointsButtonInside:focus-visible {
     color: white;
     outline: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .pointsButtonInside:hover {
+        color: white;
+    }
 }
 
 .pointsGameweekInfoInside {

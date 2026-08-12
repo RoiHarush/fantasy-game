@@ -93,10 +93,21 @@ public class PlayerService {
                 .map(window -> window.getWindowType() == TransferWindowType.SUPPLEMENTAL)
                 .orElse(false);
         if (scoringLeague != null) {
+            Map<Integer, Map<Integer, List<PlayerFixtureStatsEntity>>> fixtureStatsByPlayerAndGameweek =
+                    fixtureStatsRepo.findAll().stream().collect(Collectors.groupingBy(
+                            stats -> stats.getPlayer().getId(),
+                            Collectors.groupingBy(PlayerFixtureStatsEntity::getGameweek)
+                    ));
             for (PlayerGameweekStatsEntity stats : statsRepo.findAll()) {
                 leaguePointsByPlayer.merge(
                         stats.getPlayer().getId(),
-                        leagueScoringService.calculatePlayerPoints(stats, scoringLeague),
+                        leagueScoringService.calculatePlayerGameweekPoints(
+                                stats,
+                                fixtureStatsByPlayerAndGameweek
+                                        .getOrDefault(stats.getPlayer().getId(), Map.of())
+                                        .getOrDefault(stats.getGameweek(), List.of()),
+                                scoringLeague
+                        ),
                         Integer::sum
                 );
             }
@@ -163,7 +174,7 @@ public class PlayerService {
                         addOwnership(ownership, squad.getStartingLineup(), owner);
                         addOwnership(ownership, squad.getBenchMap().values(), owner);
                         if (squad.getIrId() != null) {
-                            ownership.put(squad.getIrId(), owner);
+                            addOwnership(ownership, List.of(squad.getIrId()), owner);
                         }
                     }
                     return ownership;
@@ -176,7 +187,13 @@ public class PlayerService {
                               PlayerOwnership owner) {
         if (playerIds == null) return;
         for (Integer playerId : playerIds) {
-            if (playerId != null) ownership.put(playerId, owner);
+            if (playerId == null) continue;
+            PlayerOwnership previous = ownership.putIfAbsent(playerId, owner);
+            if (previous != null) {
+                throw new IllegalStateException(
+                        "Player " + playerId + " is assigned to more than one league squad slot"
+                );
+            }
         }
     }
 
@@ -194,6 +211,9 @@ public class PlayerService {
                 .orElseThrow(() -> new RuntimeException("No squad found for user " + userId + " in GW " + gwId));
 
         List<FixtureEntity> gwFixtures = fixtureService.getFixturesByGameweek(gwId);
+        Set<Integer> postponedTeamIds = Optional
+                .ofNullable(fixtureService.getPostponedTeamIdsForGameweek(gwId))
+                .orElseGet(Set::of);
 
         Map<Integer, List<FixtureEntity>> teamFixturesMap = new HashMap<>();
         for (FixtureEntity f : gwFixtures) {
@@ -212,13 +232,22 @@ public class PlayerService {
         if (squadEntity.getBenchMap() != null) playerIds.addAll(squadEntity.getBenchMap().values());
 
         return playerIds.stream()
-                .map(id -> mapPlayerToDataDto(id, gwId, teamFixturesMap, teamNamesMap, gameData.getLeague()))
+                .filter(Objects::nonNull)
+                .map(id -> mapPlayerToDataDto(
+                        id,
+                        gwId,
+                        teamFixturesMap,
+                        teamNamesMap,
+                        postponedTeamIds,
+                        gameData.getLeague()
+                ))
                 .toList();
     }
 
     private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId,
                                              Map<Integer, List<FixtureEntity>> teamFixturesMap,
                                              Map<Integer, String> teamNamesMap,
+                                             Set<Integer> postponedTeamIds,
                                              LeagueEntity scoringLeague) {
 
         Player player = loadDomainPlayer(playerId);
@@ -229,31 +258,43 @@ public class PlayerService {
         boolean hasStarted = myFixtures.stream().anyMatch(FixtureEntity::isStarted);
 
         Integer points = null;
-        String nextFixture = null;
+        List<String> nextFixtures = List.of();
+        boolean fixturePostponed = false;
 
         if (hasStarted) {
             Optional<PlayerPointsEntity> pointsOpt = pointsRepo.findByPlayer_IdAndGameweek(playerId, gwId);
             points = statsRepo.findByPlayer_IdAndGameweek(playerId, gwId)
-                    .map(stats -> leagueScoringService.calculatePlayerPoints(stats, scoringLeague))
+                    .map(stats -> leagueScoringService.calculatePlayerGameweekPoints(
+                            stats,
+                            fixtureStatsRepo.findByPlayer_IdAndGameweekOrderByFixture_KickoffTime(playerId, gwId),
+                            scoringLeague
+                    ))
                     .orElseGet(() -> pointsOpt.map(PlayerPointsEntity::getPoints).orElse(0));
         }
 
         if (points == null) {
-            if (myFixtures.isEmpty()) {
-                nextFixture = "Blank";
+            fixturePostponed = postponedTeamIds.contains(player.getTeamId());
+            if (fixturePostponed) {
+                nextFixtures = List.of();
+            } else if (myFixtures.isEmpty()) {
+                nextFixtures = List.of("Blank");
             } else {
-                nextFixture = myFixtures.stream()
+                nextFixtures = myFixtures.stream()
+                        .sorted(Comparator.comparing(
+                                FixtureEntity::getKickoffTime,
+                                Comparator.nullsLast(Comparator.naturalOrder())
+                        ))
                         .map(f -> {
                             boolean isHome = f.getHomeTeamId() == player.getTeamId();
                             int opponentId = isHome ? f.getAwayTeamId() : f.getHomeTeamId();
                             String oppName = teamNamesMap.getOrDefault(opponentId, "UNK");
                             return oppName + (isHome ? " (H)" : " (A)");
                         })
-                        .collect(Collectors.joining(", "));
+                        .toList();
             }
         }
 
-        return new PlayerDataDto(playerId, points, nextFixture);
+        return new PlayerDataDto(playerId, points, nextFixtures, fixturePostponed);
     }
 
 

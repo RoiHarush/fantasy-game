@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,17 +30,20 @@ public class FantasyTeamService {
     private final GameWeekService gameWeekService;
     private final UserRepository userRepo;
     private final LeaguePlayerCatalog leaguePlayerCatalog;
+    private final AutoSubstitutionRepository autoSubstitutionRepository;
 
     public FantasyTeamService(UserGameDataRepository gameDataRepo,
                               UserSquadRepository userSquadRepo,
                               GameWeekService gameWeekService,
                               UserRepository userRepo,
-                              LeaguePlayerCatalog leaguePlayerCatalog) {
+                              LeaguePlayerCatalog leaguePlayerCatalog,
+                              AutoSubstitutionRepository autoSubstitutionRepository) {
         this.gameDataRepo = gameDataRepo;
         this.userSquadRepo = userSquadRepo;
         this.gameWeekService = gameWeekService;
         this.userRepo = userRepo;
         this.leaguePlayerCatalog = leaguePlayerCatalog;
+        this.autoSubstitutionRepository = autoSubstitutionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +58,7 @@ public class FantasyTeamService {
         if (effectiveGw == null) return null;
 
         return userSquadRepo.findByUser_IdAndGameweek(gameData.getId(), effectiveGw)
-                .map(entity -> SquadMapper.toDto(SquadMapper.toDomain(entity, catalogFor(gameData))))
+                .map(entity -> toSquadDtoWithAutoSubstitutions(entity, gameData))
                 .orElse(null);
     }
 
@@ -62,6 +68,7 @@ public class FantasyTeamService {
         log.info("Saving team for user {}", userId);
 
         UserGameDataEntity gameDataEntity = getGameDataEntity(userId);
+        validateSquadUpdatePreservesOwnership(gameDataEntity.getNextSquad(), dto);
         Map<Integer, Player> leaguePlayers = catalogFor(gameDataEntity);
         UserGameData userDomain = UserMapper.toDomainGameData(gameDataEntity, leaguePlayers);
         FantasyTeam team = userDomain.getNextFantasyTeam();
@@ -310,6 +317,23 @@ public class FantasyTeamService {
         return leaguePlayerCatalog.load(gameData.getLeague());
     }
 
+    private SquadDto toSquadDtoWithAutoSubstitutions(UserSquadEntity entity,
+                                                      UserGameDataEntity gameData) {
+        SquadDto dto = SquadMapper.toDto(SquadMapper.toDomain(entity, catalogFor(gameData)));
+        if (entity.getId() == null) return dto;
+
+        dto.setAutoSubstitutions(autoSubstitutionRepository
+                .findBySquad_IdOrderBySequenceAsc(entity.getId())
+                .stream()
+                .map(substitution -> new AutoSubstitutionDto(
+                        substitution.getPlayerInId(),
+                        substitution.getPlayerOutId(),
+                        substitution.getSequence()
+                ))
+                .toList());
+        return dto;
+    }
+
     private Squad requireNextSquad(UserGameData domain) {
         if (domain.getNextFantasyTeam() == null || domain.getNextFantasyTeam().getSquad() == null) {
             throw new IllegalStateException("There is no upcoming squad to apply this chip to");
@@ -321,15 +345,52 @@ public class FantasyTeamService {
         return first != null && second != null && first.getId() == second.getId();
     }
 
+    private void validateSquadUpdatePreservesOwnership(UserSquadEntity persistedSquad, SquadDto submittedSquad) {
+        if (persistedSquad == null || submittedSquad == null
+                || submittedSquad.getStartingLineup() == null
+                || submittedSquad.getBench() == null) {
+            throw new FantasyTeamException("Squad data is incomplete");
+        }
+
+        List<Integer> submittedPlayers = submittedSquad.getStartingLineup().values().stream()
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        submittedSquad.getBench().values().stream()
+                .filter(Objects::nonNull)
+                .forEach(submittedPlayers::add);
+
+        Set<Integer> submittedPlayerIds = new LinkedHashSet<>(submittedPlayers);
+        if (submittedPlayerIds.size() != submittedPlayers.size()) {
+            throw new FantasyTeamException("A player cannot occupy more than one squad slot");
+        }
+
+        Set<Integer> persistedPlayerIds = new LinkedHashSet<>(persistedSquad.getStartingLineup());
+        persistedSquad.getBenchMap().values().stream()
+                .filter(Objects::nonNull)
+                .forEach(persistedPlayerIds::add);
+
+        if (!persistedPlayerIds.equals(submittedPlayerIds)) {
+            throw new FantasyTeamException(
+                    "Saving a lineup may only rearrange players already owned by the squad"
+            );
+        }
+        if (!Objects.equals(persistedSquad.getIrId(), submittedSquad.getIrId())) {
+            throw new FantasyTeamException("The IR player can only be changed through the IR flow");
+        }
+        if (!Objects.equals(persistedSquad.getFirstPickId(), submittedSquad.getFirstPickId())) {
+            throw new FantasyTeamException("The first-pick player cannot be changed while saving a lineup");
+        }
+    }
+
     private void saveSquadToDb(UserGameDataEntity gameDataEntity, FantasyTeam team) {
         UserSquadEntity nextSquadEntity = gameDataEntity.getNextSquad();
         if (nextSquadEntity == null) throw new RuntimeException("Next squad entity structure missing");
 
-        UserSquadEntity updatedEntity = SquadMapper.toEntity(team.getSquad(), team.getGameweek());
-        updatedEntity.setId(nextSquadEntity.getId());
-        updatedEntity.setUser(gameDataEntity);
-
-        userSquadRepo.save(updatedEntity);
+        SquadMapper.updateEntity(nextSquadEntity, team.getSquad(), team.getGameweek());
+        nextSquadEntity.setUser(gameDataEntity);
+        userSquadRepo.save(nextSquadEntity);
     }
 
     private void saveGameDataChips(UserGameDataEntity entity, UserGameData domain) {

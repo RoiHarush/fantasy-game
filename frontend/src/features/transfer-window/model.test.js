@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
     applyTransferWindowEvent,
+    buildFallbackSnakeOrder,
+    getCurrentPickNumber,
     getDraftRuleLockedIds,
+    getPlayerAcquisitionLockReason,
+    getReplacementBlockReason,
+    getTransferNoticeDetails,
     getTransferNoticeMessage,
     getTurnsUntilUser,
+    summarizeSnakeOrder,
+    transferActionToNotice,
     updatePlayerOwnership,
     updateTransferNotice,
     validateTransferOrder,
@@ -37,6 +44,47 @@ describe("transfer-window event model", () => {
 
         expect(getDraftRuleLockedIds(players, squad, true)).toEqual(new Set([3, 6]));
         expect(getDraftRuleLockedIds(players, squad, false)).toEqual(new Set());
+    });
+
+    it("explains why a player cannot be acquired", () => {
+        expect(getPlayerAcquisitionLockReason({ available: false, supplementalDraftEligible: true }))
+            .toContain("arrived after the last draft");
+        expect(getPlayerAcquisitionLockReason({ available: false, ownerId: 8, ownerName: "Dana" }))
+            .toBe("Already owned by Dana");
+        expect(getPlayerAcquisitionLockReason({ available: false, ownerId: null }))
+            .toBe("This player is locked by the league manager");
+        expect(getPlayerAcquisitionLockReason({ available: true })).toBeNull();
+    });
+
+    it("blocks only outgoing choices that would break the club limit", () => {
+        const playerIn = { id: 20, position: "DEF", teamId: 5 };
+        const squadPlayers = [
+            { id: 1, position: "DEF", teamId: 5 },
+            { id: 2, position: "MID", teamId: 5 },
+            { id: 3, position: "FWD", teamId: 5 },
+            { id: 4, position: "DEF", teamId: 9 },
+        ];
+
+        expect(getReplacementBlockReason({ playerIn, playerOut: squadPlayers[3], squadPlayers }))
+            .toBe("Would exceed the three-player club limit");
+        expect(getReplacementBlockReason({ playerIn, playerOut: squadPlayers[0], squadPlayers }))
+            .toBeNull();
+    });
+
+    it("summarizes a snake order without duplicating managers", () => {
+        const order = [1, 2, 3, 3, 2, 1];
+        const summary = summarizeSnakeOrder(order, [
+            { id: 1, name: "Roi" },
+            { id: 2, name: "Dana" },
+            { id: 3, name: "Noam" },
+        ], { 1: 0, 2: 1, 3: 1 });
+
+        expect(summary).toHaveLength(3);
+        expect(summary[0]).toMatchObject({ name: "Roi", pickNumbers: [1, 6] });
+        expect(summary[2]).toMatchObject({ name: "Noam", pickNumbers: [3, 4] });
+        expect(getCurrentPickNumber({ 1: 0, 2: 1, 3: 1 }, order)).toBe(3);
+        expect(buildFallbackSnakeOrder([1, 2, 3], { 1: 2, 2: 2, 3: 2 }))
+            .toEqual(order);
     });
 
     it("opens and advances a window from server events", () => {
@@ -111,15 +159,42 @@ describe("transfer-window event model", () => {
         expect(players[0].available).toBe(true);
     });
 
-    it("keeps the latest transfer notice across turn-start events", () => {
+    it("keeps the latest transfer notice during the live turn and clears it when the window closes", () => {
         const transfer = { event: "transfer_done", userName: "Roi", playerInId: 10, playerOutId: 20 };
 
         expect(updateTransferNotice(null, transfer)).toBe(transfer);
         expect(updateTransferNotice(transfer, { event: "turn_started" })).toBe(transfer);
+        expect(updateTransferNotice(transfer, { event: "window_closed" })).toBeNull();
         expect(updateTransferNotice(transfer, { event: "ir_round_started" })).toBeNull();
-        expect(getTransferNoticeMessage(transfer, [
+        const noticePlayers = [
             { id: 10, viewName: "Player A" },
             { id: 20, viewName: "Player B" },
-        ], false)).toBe("Roi signed Player A | over Player B");
+        ];
+        expect(getTransferNoticeMessage(transfer, noticePlayers, false))
+            .toBe("Roi: Player A in, Player B out");
+        expect(getTransferNoticeDetails(transfer, noticePlayers, false)).toEqual({
+            type: "transfer",
+            managerName: "Roi",
+            playerInName: "Player A",
+            playerOutName: "Player B",
+        });
+    });
+
+    it("converts persisted history into the same notice shape used by realtime events", () => {
+        expect(transferActionToNotice({
+            id: 18,
+            userId: 2,
+            userName: "Roi",
+            playerInId: 10,
+            playerOutId: 20,
+            createdAt: "2026-08-11T20:15:00",
+        })).toEqual({
+            event: "transfer_done",
+            userId: 2,
+            userName: "Roi",
+            playerInId: 10,
+            playerOutId: 20,
+        });
+        expect(transferActionToNotice(null)).toBeNull();
     });
 });

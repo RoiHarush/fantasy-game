@@ -44,6 +44,89 @@ export function getDraftRuleLockedIds(players, squad, isDraftMode) {
         .map((player) => player.id));
 }
 
+export function getPlayerAcquisitionLockReason(player, { ruleLocked = false } = {}) {
+    if (ruleLocked) {
+        return "This pick would exceed a squad position or the three-player club limit";
+    }
+    if (player?.available) return null;
+    if (player?.supplementalDraftEligible) {
+        return "This player arrived after the last draft and is reserved for the next supplemental draft";
+    }
+    if (player?.ownerId !== null && player?.ownerId !== undefined) {
+        return player.ownerName
+            ? `Already owned by ${player.ownerName}`
+            : "This player is already owned by another manager";
+    }
+    return "This player is locked by the league manager";
+}
+
+export function getReplacementBlockReason({ playerIn, playerOut, squadPlayers = [] }) {
+    if (!playerIn || !playerOut) return "Player information is incomplete";
+    if (isSameTransferId(playerIn.id, playerOut.id)) {
+        return "Incoming and outgoing players must be different";
+    }
+    if (playerIn.position !== playerOut.position) {
+        return "Players must have the same position";
+    }
+
+    const prospectiveClubCount = squadPlayers.filter((player) => (
+        !isSameTransferId(player.id, playerOut.id)
+        && isSameTransferId(player.teamId, playerIn.teamId)
+    )).length + 1;
+
+    if (prospectiveClubCount > 3) {
+        return "Would exceed the three-player club limit";
+    }
+    return null;
+}
+
+export function summarizeSnakeOrder(order = [], users = [], turnsUsed = {}, totalTurns = {}) {
+    const summaries = [];
+    const byUserId = new Map();
+
+    order.forEach((userId, index) => {
+        const key = String(userId);
+        let summary = byUserId.get(key);
+        if (!summary) {
+            const user = users.find((candidate) => isSameTransferId(candidate.id, userId));
+            summary = {
+                id: userId,
+                name: user?.name || user?.fantasyTeamName || "Unknown manager",
+                pickNumbers: [],
+                used: turnsUsed[userId] ?? turnsUsed[key] ?? 0,
+                total: totalTurns[userId] ?? totalTurns[key] ?? 2,
+            };
+            byUserId.set(key, summary);
+            summaries.push(summary);
+        }
+        summary.pickNumbers.push(index + 1);
+    });
+
+    return summaries;
+}
+
+export function buildFallbackSnakeOrder(baseOrder = [], totalTurns = {}) {
+    const maxRounds = baseOrder.reduce((maximum, userId) => (
+        Math.max(maximum, Number(totalTurns[userId] ?? totalTurns[String(userId)] ?? 0))
+    ), 0);
+    const rounds = [];
+
+    for (let round = 0; round < maxRounds; round++) {
+        const eligible = baseOrder.filter((userId) => (
+            Number(totalTurns[userId] ?? totalTurns[String(userId)] ?? 0) > round
+        ));
+        rounds.push(...(round % 2 === 0 ? eligible : [...eligible].reverse()));
+    }
+    return rounds.length > 0 ? rounds : baseOrder;
+}
+
+export function getCurrentPickNumber(turnsUsed = {}, order = []) {
+    if (order.length === 0) return null;
+    const completedPicks = Object.values(turnsUsed)
+        .reduce((total, used) => total + Number(used || 0), 0);
+    return Math.min(order.length, completedPicks + 1);
+}
+
 export function validateTransferOrder(order, leagueUserIds, roundCount = 2, requireEqualDistribution = true) {
     const expectedLength = leagueUserIds.length * roundCount;
     if (order.length !== expectedLength) {
@@ -73,11 +156,13 @@ export function applyTransferWindowEvent(current = {}, event) {
             return {
                 ...current,
                 isOpen: true,
+                isClosing: false,
                 isDraftMode: event.isDraftMode ?? current.isDraftMode ?? false,
                 draftType: event.draftType ?? current.draftType ?? null,
                 currentUserId: event.userId ?? null,
                 order: event.turnOrder ?? [],
                 initialOrder: event.initialOrder ?? [],
+                canonicalOrder: event.canonicalOrder ?? event.initialOrder ?? [],
                 turnsUsed: event.turnsUsed ?? {},
                 totalTurns: event.totalTurns ?? current.totalTurns ?? {},
                 currentRound: event.roundType ?? "REGULAR",
@@ -87,6 +172,7 @@ export function applyTransferWindowEvent(current = {}, event) {
             return {
                 ...current,
                 isOpen: false,
+                isClosing: false,
                 isDraftMode: false,
                 draftType: null,
                 currentUserId: null,
@@ -148,18 +234,40 @@ export function updateTransferNotice(previous, event) {
     return previous;
 }
 
+export function transferActionToNotice(action) {
+    if (!action) return null;
+    return {
+        event: "transfer_done",
+        userId: action.userId,
+        userName: action.userName,
+        playerInId: action.playerInId,
+        playerOutId: action.playerOutId,
+    };
+}
+
 export function getTransferNoticeMessage(event, players, isDraftMode) {
+    const details = getTransferNoticeDetails(event, players, isDraftMode);
+    if (!details) return null;
+    if (details.type === "pass") return `${details.managerName} passed the turn`;
+    if (details.type === "draft") return `${details.managerName} selected ${details.playerInName}`;
+    return `${details.managerName}: ${details.playerInName} in, ${details.playerOutName} out`;
+}
+
+export function getTransferNoticeDetails(event, players, isDraftMode) {
     if (event?.event === "turn_passed") {
-        return `${event.userName || "User"} passed his turn!`;
+        return {
+            type: "pass",
+            managerName: event.userName || "Unknown manager",
+        };
     }
     if (event?.event !== "transfer_done") return null;
 
     const playerIn = players.find((player) => isSameTransferId(player.id, event.playerInId));
     const playerOut = players.find((player) => isSameTransferId(player.id, event.playerOutId));
-    const inName = playerIn?.viewName ?? "Player In";
-    const outName = playerOut?.viewName ?? "Player Out";
-
-    return isDraftMode
-        ? `${event.userName || "User"} drafted ${inName}`
-        : `${event.userName || "User"} signed ${inName} | over ${outName}`;
+    return {
+        type: isDraftMode ? "draft" : "transfer",
+        managerName: event.userName || "Unknown manager",
+        playerInName: playerIn?.viewName ?? "Unknown player",
+        playerOutName: playerOut?.viewName ?? "Unknown player",
+    };
 }

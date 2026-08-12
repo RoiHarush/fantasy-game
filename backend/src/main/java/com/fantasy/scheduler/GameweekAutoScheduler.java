@@ -3,6 +3,10 @@ package com.fantasy.scheduler;
 import com.fantasy.domain.game.GameweekManager;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.FixtureRepository;
+import com.fantasy.domain.game.FixtureService;
+import com.fantasy.domain.game.GameWeekService;
+import com.fantasy.domain.score.LiveScoreManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,10 +24,23 @@ public class GameweekAutoScheduler {
 
     private final GameweekManager gameweekManager;
     private final GameWeekRepository gameweekRepository;
+    private final FixtureRepository fixtureRepository;
+    private final FixtureService fixtureService;
+    private final LiveScoreManager liveScoreManager;
+    private final GameWeekService gameWeekService;
 
-    public GameweekAutoScheduler(GameweekManager gameweekManager, GameWeekRepository gameweekRepository) {
+    public GameweekAutoScheduler(GameweekManager gameweekManager,
+                                 GameWeekRepository gameweekRepository,
+                                 FixtureRepository fixtureRepository,
+                                 FixtureService fixtureService,
+                                 LiveScoreManager liveScoreManager,
+                                 GameWeekService gameWeekService) {
         this.gameweekManager = gameweekManager;
         this.gameweekRepository = gameweekRepository;
+        this.fixtureRepository = fixtureRepository;
+        this.fixtureService = fixtureService;
+        this.liveScoreManager = liveScoreManager;
+        this.gameWeekService = gameWeekService;
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -56,8 +73,22 @@ public class GameweekAutoScheduler {
             LocalDateTime safeProcessTime = gw.getLastKickoffTime().plusHours(HOURS_AFTER_LAST_KICKOFF);
 
             if (now.isAfter(safeProcessTime) && !gw.isCalculated()) {
-                log.info("Gameweek {} finished (Safe time passed). Processing points & subs...", gw.getId());
+                log.info("Gameweek {} reached its safe finalization time. Verifying final FPL data...", gw.getId());
                 try {
+                    fixtureService.updateFixturesForGameweek(gw.getId());
+                    // A postponed fixture may have moved to another event or received
+                    // a new kickoff. Persist the revised event boundaries before the
+                    // next scheduler cycle decides when it is safe to finalize.
+                    gameWeekService.updateGameWeekDeadlines();
+                    var fixtures = fixtureRepository.findByGameweekId(gw.getId());
+                    if (fixtures.isEmpty() || fixtures.stream().anyMatch(fixture -> !fixture.isFinished())) {
+                        log.warn(
+                                "Deferring GW {} finalization because at least one fixture is not confirmed finished",
+                                gw.getId()
+                        );
+                        return;
+                    }
+                    liveScoreManager.updateLiveScores(gw.getId());
                     gameweekManager.processGameweek(gw.getId(), false);
                     log.info("Successfully processed GW {}", gw.getId());
                 } catch (Exception e) {

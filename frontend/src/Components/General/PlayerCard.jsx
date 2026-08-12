@@ -1,5 +1,5 @@
 import PlayerKit from "./PlayerKit";
-import { Crown } from "lucide-react";
+import { CalendarX2, Crown } from "lucide-react";
 import { usePlayerInteraction } from "../../Context/PlayerInteractionProvider";
 import { cn } from "../../lib/cn";
 import FirstPickAura from "./Pitch/FirstPickAura";
@@ -15,7 +15,9 @@ function PlayerCard({
     chipEffect = null,
     pointsLeader = false,
     points = null,
-    nextFixture = null
+    nextFixture = null,
+    nextFixtures = [],
+    fixturePostponed = false,
 }) {
     const { handlePlayerClick, selectedPlayerId, disabledIds } = usePlayerInteraction();
 
@@ -49,7 +51,12 @@ function PlayerCard({
     }
 
     const hasPoints = points !== null && points !== undefined;
-    const shownValue = hasPoints ? (captain ? points * captainMultiplier : points) : (nextFixture ?? "-");
+    const shownPoints = hasPoints ? (captain ? points * captainMultiplier : points) : null;
+    const fixtureItems = nextFixtures.length > 0
+        ? nextFixtures
+        : nextFixture
+            ? [nextFixture]
+            : [];
     return (
         <button
             type="button"
@@ -62,14 +69,25 @@ function PlayerCard({
             aria-pressed={isSelected}
             aria-label={`${player.viewName}${captain ? ", captain" : viceCaptain ? ", vice-captain" : ""}`}
         >
-            {(player.injured || injuryColor) && (
-                <div
-                    className="absolute top-1 right-1 z-[4] flex size-4 items-center justify-center rounded-full text-xs font-black text-white shadow-[0_0_4px_rgba(0,0,0,0.3)] max-md:top-0.5 max-md:right-0.5 max-md:size-2.5 max-md:text-[8px]"
-                    style={{ backgroundColor: injuryColor || "#d81919" }}
-                >
-                    !
-                </div>
-            )}
+            <div className="absolute top-1 right-1 z-[4] flex flex-col items-center gap-1 max-md:top-0.5 max-md:right-0.5 max-md:gap-0.5">
+                {(player.injured || injuryColor) && (
+                    <span
+                        className="flex size-4 items-center justify-center rounded-full text-xs font-black text-white shadow-[0_0_4px_rgba(0,0,0,0.3)] max-md:size-2.5 max-md:text-[8px]"
+                        style={{ backgroundColor: injuryColor || "#d81919" }}
+                    >
+                        !
+                    </span>
+                )}
+                {fixturePostponed && !hasPoints && (
+                    <span
+                        className="grid size-5 place-items-center rounded-full border border-cyan-200/80 bg-[#37003c] text-cyan-200 shadow-[0_0_8px_rgb(34_211_238/0.65)] max-md:size-3.5"
+                        title="Fixture postponed"
+                        aria-label="Fixture postponed"
+                    >
+                        <CalendarX2 aria-hidden="true" className="size-3 max-md:size-2.5" />
+                    </span>
+                )}
+            </div>
 
             {(captain || viceCaptain) && (
                 <div className="absolute top-1.5 -left-2.5 z-[3] max-md:-left-0.5">
@@ -112,8 +130,20 @@ function PlayerCard({
                 {player.viewName}
             </div>
 
-            <div className="relative z-[1] w-[130%] rounded-b-[3px] bg-white/30 px-0 py-0.5 text-center text-[11px] font-semibold text-[#111] max-md:w-full max-md:min-w-0 max-md:truncate max-md:text-[9px]">
-                {shownValue}
+            <div className="relative z-[1] flex min-h-8 w-[130%] flex-col items-center justify-center rounded-b-[3px] bg-white/30 px-0.5 py-0.5 text-center text-[10px] leading-[1.05] font-semibold text-[#111] max-md:min-h-7 max-md:w-full max-md:min-w-0 max-md:text-[7px]">
+                {hasPoints ? (
+                    shownPoints
+                ) : fixturePostponed ? (
+                    <span className="sr-only">Fixture postponed</span>
+                ) : fixtureItems.length > 0 ? (
+                    fixtureItems.map((fixture, index) => (
+                        <span key={`${fixture}-${index}`} className="block w-full truncate">
+                            {fixture}{index < fixtureItems.length - 1 ? "," : ""}
+                        </span>
+                    ))
+                ) : (
+                    "-"
+                )}
             </div>
         </button>
     );

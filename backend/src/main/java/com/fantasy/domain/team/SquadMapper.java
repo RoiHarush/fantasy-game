@@ -63,6 +63,11 @@ public class SquadMapper {
 
     public static UserSquadEntity toEntity(Squad squad, int gw) {
         UserSquadEntity e = new UserSquadEntity();
+        updateEntity(e, squad, gw);
+        return e;
+    }
+
+    public static void updateEntity(UserSquadEntity e, Squad squad, int gw) {
         e.setGameweek(gw);
 
         e.setStartingLineup(
@@ -98,8 +103,6 @@ public class SquadMapper {
         e.setAutoSubsApplied(squad.isAutoSubsApplied());
         e.setTripleCaptainActive(squad.isTripleCaptainActive());
         e.setBenchBoostActive(squad.isBenchBoostActive());
-
-        return e;
     }
 
     public static SquadDto toDto(Squad squad) {

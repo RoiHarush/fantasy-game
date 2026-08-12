@@ -16,6 +16,8 @@ public interface FixtureRepository extends JpaRepository<FixtureEntity, Integer>
 
     List<FixtureEntity> findByGameweekId(int gameweekId);
 
+    List<FixtureEntity> findByPostponedFromGameweekId(int gameweekId);
+
     Optional<FixtureEntity> findByHomeTeamIdAndAwayTeamIdAndGameweekId(int homeTeamId, int awayTeamId, int gameweekId);
     Optional<FixtureEntity> findByGameweekIdAndHomeTeamIdOrGameweekIdAndAwayTeamId(int gw1, int teamId1, int gw2, int teamId2);
 
@@ -40,8 +42,27 @@ public interface FixtureRepository extends JpaRepository<FixtureEntity, Integer>
             @Param("teamId") int teamId
     );
 
-    @Query("SELECT COUNT(f) > 0 FROM FixtureEntity f WHERE f.kickoffTime <= :now AND f.kickoffTime >= :startTimeLimit")
-    boolean hasActiveFixtures(@Param("now") LocalDateTime now, @Param("startTimeLimit") LocalDateTime startTimeLimit);
+    @Query("""
+            SELECT COUNT(f) > 0 FROM FixtureEntity f
+            WHERE f.gameweekId = :gameweekId
+              AND f.kickoffTime <= :now
+              AND f.kickoffTime >= :startTimeLimit
+            """)
+    boolean hasActiveFixtures(
+            @Param("gameweekId") int gameweekId,
+            @Param("now") LocalDateTime now,
+            @Param("startTimeLimit") LocalDateTime startTimeLimit
+    );
+
+    @Query("""
+            SELECT COUNT(f) > 0 FROM FixtureEntity f
+            WHERE f.kickoffTime <= :now
+              AND f.kickoffTime >= :startTimeLimit
+            """)
+    boolean hasAnyActiveFixtures(
+            @Param("now") LocalDateTime now,
+            @Param("startTimeLimit") LocalDateTime startTimeLimit
+    );
 
     @Query("SELECT COUNT(f) > 0 FROM FixtureEntity f WHERE f.kickoffTime BETWEEN :start AND :end")
     boolean existsByKickoffTimeBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

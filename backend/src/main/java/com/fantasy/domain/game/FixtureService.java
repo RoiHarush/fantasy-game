@@ -128,8 +128,11 @@ public class FixtureService {
         log.debug("Periodic check: Updating fixtures for GW {}", gameweekId);
 
         try {
-            String url = FIXTURES_URL + "?event=" + gameweekId;
-            log.debug("Fetching updates from FPL API for GW {}", gameweekId);
+            // Fetch the complete fixture feed here. A postponed fixture can disappear
+            // from ?event={gameweekId} when FPL moves it to another event (or clears
+            // its event entirely), and the old event feed cannot tell us that it left.
+            String url = FIXTURES_URL;
+            log.debug("Fetching fixture updates from FPL API while reconciling GW {}", gameweekId);
 
             String jsonResponse = restTemplate.getForObject(url, String.class);
             JsonNode root = mapper.readTree(jsonResponse);
@@ -147,6 +150,23 @@ public class FixtureService {
                 if (entity == null) continue;
 
                 boolean changed = false;
+
+                int apiGameweekId = node.has("event") && !node.get("event").isNull()
+                        ? node.get("event").asInt()
+                        : 0;
+                if (entity.getGameweekId() != apiGameweekId) {
+                    if (entity.getPostponedFromGameweekId() == null && entity.getGameweekId() > 0) {
+                        entity.setPostponedFromGameweekId(entity.getGameweekId());
+                    }
+                    log.info(
+                            "Fixture {} moved from GW {} to GW {} (postponed/rescheduled)",
+                            id,
+                            entity.getGameweekId(),
+                            apiGameweekId == 0 ? "unassigned" : apiGameweekId
+                    );
+                    entity.setGameweekId(apiGameweekId);
+                    changed = true;
+                }
 
                 Integer newHomeScore = node.get("team_h_score").isNull() ? null : node.get("team_h_score").asInt();
                 Integer newAwayScore = node.get("team_a_score").isNull() ? null : node.get("team_a_score").asInt();
@@ -181,13 +201,15 @@ public class FixtureService {
                     log.debug("Game ID {} time update: {} minutes", id, minutes);
                 }
 
-                String kickoffUtc = node.has("kickoff_time") && !node.get("kickoff_time").isNull() ? node.get("kickoff_time").asText() : null;
-                if (kickoffUtc != null) {
-                    LocalDateTime apiKickoff = LocalDateTime.ofInstant(Instant.parse(kickoffUtc), ZoneId.systemDefault());
-                    if (!apiKickoff.isEqual(entity.getKickoffTime())) {
-                        changed = true;
-                        entity.setKickoffTime(apiKickoff);
-                    }
+                String kickoffUtc = node.has("kickoff_time") && !node.get("kickoff_time").isNull()
+                        ? node.get("kickoff_time").asText()
+                        : null;
+                LocalDateTime apiKickoff = kickoffUtc == null
+                        ? null
+                        : LocalDateTime.ofInstant(Instant.parse(kickoffUtc), ZoneId.systemDefault());
+                if (!Objects.equals(apiKickoff, entity.getKickoffTime())) {
+                    changed = true;
+                    entity.setKickoffTime(apiKickoff);
                 }
 
                 if (changed) {
@@ -219,6 +241,15 @@ public class FixtureService {
         return fixtureRepo.findAll().stream()
                 .filter(f -> f.getGameweekId() == gw)
                 .toList();
+    }
+
+    public Set<Integer> getPostponedTeamIdsForGameweek(int gameweekId) {
+        return fixtureRepo.findByPostponedFromGameweekId(gameweekId).stream()
+                .flatMap(fixture -> java.util.stream.Stream.of(
+                        fixture.getHomeTeamId(),
+                        fixture.getAwayTeamId()
+                ))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public long countFixtures() {

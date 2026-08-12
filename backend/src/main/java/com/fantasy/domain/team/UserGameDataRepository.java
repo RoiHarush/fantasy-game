@@ -2,7 +2,7 @@ package com.fantasy.domain.team;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param; // <-- צריך להוסיף
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +23,7 @@ public interface UserGameDataRepository extends JpaRepository<UserGameDataEntity
     LEFT JOIN FETCH g.currentSquad
     LEFT JOIN FETCH g.nextSquad
     LEFT JOIN FETCH g.chips
+    WHERE g.league IS NOT NULL
     """)
     List<UserGameDataEntity> findAllWithRelations();
 
@@ -39,7 +40,7 @@ public interface UserGameDataRepository extends JpaRepository<UserGameDataEntity
 
     List<UserGameDataEntity> findByLeagueIsNull();
 
-    @Query("SELECT g.user.id FROM UserGameDataEntity g WHERE g.user IS NOT NULL")
+    @Query("SELECT g.user.id FROM UserGameDataEntity g WHERE g.user IS NOT NULL AND g.league IS NOT NULL")
     List<Integer> findAllRealUserIds();
 
     @Query("""

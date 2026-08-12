@@ -26,6 +26,10 @@ vi.mock("../../features/auth/useAuthActions", () => ({
     }),
 }));
 
+vi.mock("../../features/teams/useTeams", () => ({
+    useTeams: () => ({ teams: [], isPending: false }),
+}));
+
 import Login from "./Login";
 
 describe("Login registration mode", () => {

@@ -40,6 +40,17 @@ public interface LeagueTransferWindowRepository extends JpaRepository<LeagueTran
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select w from LeagueTransferWindowEntity w
+            where w.gameWeek.id = :gameWeekId and w.status = :status
+            order by w.id
+            """)
+    List<LeagueTransferWindowEntity> findByGameweekAndStatusForUpdate(
+            @Param("gameWeekId") Integer gameWeekId,
+            @Param("status") TransferWindowStatus status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select w from LeagueTransferWindowEntity w
             where w.league.id = :leagueId
               and w.gameWeek.id = :gameWeekId
               and w.windowType = :windowType

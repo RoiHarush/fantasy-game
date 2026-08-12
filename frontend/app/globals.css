@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant pointer-fine (@media (hover: hover) and (pointer: fine));
 
 @theme inline {
     --font-sans: "Segoe UI", Arial, sans-serif;
@@ -75,12 +76,8 @@
 .dark {
     color-scheme: dark;
     --brand-green: #23e6aa;
-    --app-background: #090b12;
-    --app-background-art:
-        radial-gradient(circle at 8% 4%, color-mix(in srgb, var(--brand-purple) 15%, transparent) 0, transparent 28rem),
-        radial-gradient(circle at 94% 18%, color-mix(in srgb, var(--brand-green) 10%, transparent) 0, transparent 30rem),
-        radial-gradient(circle at 70% 100%, color-mix(in srgb, var(--brand-cyan) 8%, transparent) 0, transparent 28rem),
-        var(--app-background);
+    --app-background: #0d0815;
+    --app-background-art: var(--app-background);
     --app-surface: #14131e;
     --app-surface-muted: #1b202a;
     --app-surface-elevated: #211c2d;
@@ -119,11 +116,37 @@ body {
     transition: background-color 180ms ease, color 180ms ease;
 }
 
+/* Radix overlays hide the page scrollbar while open. Its injected body margin
+   compensation narrows centered layouts, so keep the application width stable. */
+html body[data-scroll-locked] {
+    margin-right: 0 !important;
+}
+
 button,
 input,
 select,
 textarea {
     font: inherit;
+}
+
+@keyframes loading-scan {
+    from {
+        transform: translate3d(-120%, 0, 0);
+    }
+
+    to {
+        transform: translate3d(360%, 0, 0);
+    }
+}
+
+@keyframes login-club-marquee {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
 }
 
 @keyframes triple-captain-rise {

@@ -3,6 +3,8 @@ package com.fantasy.config;
 import com.fantasy.domain.auth.JwtService;
 import com.fantasy.domain.game.GameWeekController;
 import com.fantasy.domain.game.GameWeekService;
+import com.fantasy.domain.realWorldData.TeamController;
+import com.fantasy.domain.realWorldData.TeamService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(GameWeekController.class)
+@WebMvcTest({GameWeekController.class, TeamController.class})
 @Import({SecurityConfig.class, TokenAuthFilter.class})
 class SecurityConfigProxyTest {
 
@@ -28,6 +30,9 @@ class SecurityConfigProxyTest {
 
     @MockBean
     private GameWeekService gameWeekService;
+
+    @MockBean
+    private TeamService teamService;
 
     @MockBean
     private JwtService jwtService;
@@ -41,5 +46,14 @@ class SecurityConfigProxyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    void exposesRealWorldTeamsBeforeAuthenticationForTheLoginScreen() throws Exception {
+        when(teamService.getAllTeams()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/teams"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
     }
 }

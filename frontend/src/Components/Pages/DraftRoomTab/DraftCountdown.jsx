@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import {
     getCountdownParts,
     getVisibleCountdownUnits,
 } from "../../../features/status/model";
+import { useClock } from "../../../shared/hooks/useClock";
 
 function toDate(value) {
     if (!value) return null;
@@ -17,18 +18,8 @@ function toDate(value) {
 
 export default function DraftCountdown({ value, onElapsed, variant = "inline" }) {
     const target = useMemo(() => toDate(value), [value]);
-    const [now, setNow] = useState(null);
+    const now = useClock({ enabled: Boolean(target) });
     const elapsedNotificationSent = useRef(false);
-
-    useEffect(() => {
-        if (!target) return undefined;
-        const frame = window.requestAnimationFrame(() => setNow(Date.now()));
-        const timer = window.setInterval(() => setNow(Date.now()), 1000);
-        return () => {
-            window.cancelAnimationFrame(frame);
-            window.clearInterval(timer);
-        };
-    }, [target]);
 
     const hasElapsed = Boolean(target && now !== null && target.getTime() <= now);
 
@@ -55,9 +46,15 @@ export default function DraftCountdown({ value, onElapsed, variant = "inline" })
             .join(", ");
 
         return (
-            <div className="flex w-full min-w-0 items-center gap-1.5" role="timer" aria-live="off" aria-label={`${readableTime} until the draft starts`}>
+            <div
+                className="grid w-full min-w-0 items-center gap-1.5"
+                style={{ gridTemplateColumns: `repeat(${visibleUnits.length}, minmax(0, 1fr))` }}
+                role="timer"
+                aria-live="off"
+                aria-label={`${readableTime} until the draft starts`}
+            >
                 {visibleUnits.map(([key, label]) => (
-                    <span key={key} className="inline-flex min-w-0 flex-1 items-baseline justify-center gap-0.5 rounded-lg bg-app-surface px-1.5 py-1.5 ring-1 ring-app-border">
+                    <span key={key} className="inline-flex min-w-0 items-baseline justify-center gap-0.5 overflow-hidden rounded-lg bg-app-surface px-1 py-1.5 ring-1 ring-app-border">
                         <strong className="text-sm leading-none font-black tabular-nums text-app-accent sm:text-base">
                             {String(parts[key]).padStart(2, "0")}
                         </strong>

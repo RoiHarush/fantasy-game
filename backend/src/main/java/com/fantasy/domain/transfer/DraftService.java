@@ -1,5 +1,6 @@
 package com.fantasy.domain.transfer;
 
+import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueAccessService;
@@ -86,7 +87,7 @@ public class DraftService {
             league.setStatus(LeagueStatus.WAITING_FOR_DRAFT);
             leagueRepo.save(league);
         }
-        webSocketController.sendDraftCancelledEvent(leagueId, cancelledType);
+        AfterCommitExecutor.run(() -> webSocketController.sendDraftCancelledEvent(leagueId, cancelledType));
     }
 
     @Transactional
@@ -154,7 +155,7 @@ public class DraftService {
             league.setStatus(LeagueStatus.DRAFT_SCHEDULED);
             leagueRepo.save(league);
         }
-        webSocketController.sendDraftScheduledEvent(leagueId, time, draftType);
+        AfterCommitExecutor.run(() -> webSocketController.sendDraftScheduledEvent(leagueId, time, draftType));
     }
 
     @Transactional

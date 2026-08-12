@@ -5,6 +5,7 @@ import PlayerKit from "../PlayerKit";
 import Switcher from "../Switcher";
 import IrContainment from "./IrContainment";
 import Pitch from "./Pitch";
+import AutoSubstitutionList from "./AutoSubstitutionList";
 
 function PitchWrapperBase({
     squad,
@@ -94,6 +95,13 @@ function PitchWrapperBase({
                     <div className="grid min-h-60 w-full place-items-center text-[var(--app-muted)]">
                         <p>List View (soon...)</p>
                     </div>
+                )}
+
+                {view === "points" && (
+                    <AutoSubstitutionList
+                        substitutions={squad?.autoSubstitutions}
+                        players={players}
+                    />
                 )}
             </div>
         </div>

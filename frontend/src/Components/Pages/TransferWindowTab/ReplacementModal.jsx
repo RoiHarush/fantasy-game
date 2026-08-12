@@ -1,12 +1,13 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowDown, ArrowRightLeft, Check } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, Check, LockKeyhole } from "lucide-react";
 import { useMemo } from "react";
 
 import { getFixtureItems } from "../../../features/fixtures/model";
 import { useSquad } from "../../../features/squad/useSquad";
 import { useTransferPlayer } from "../../../features/transfer-window/useTransferWindow";
+import { getReplacementBlockReason } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
@@ -15,16 +16,21 @@ import PlayerKit from "../../General/PlayerKit";
 function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, nextGameweek, previewMode = false, previewSquad = null }) {
     const squadQuery = useSquad(user?.id, nextGameweek?.id, { enabled: !previewMode });
     const squad = previewSquad ?? squadQuery.data;
-    const samePositionPlayers = useMemo(() => {
-        if (!playerIn) return [];
+    const { replacementChoices } = useMemo(() => {
+        if (!playerIn) return { replacementChoices: [] };
         const lineupIds = Object.values(squad?.startingLineup || {}).flat();
         const benchIds = Object.values(squad?.bench || {});
         const squadIds = [...lineupIds, ...benchIds];
-        return (players ?? []).filter((player) => (
-            squadIds.some((id) => String(id) === String(player.id))
-            && String(player.id) !== String(playerIn.id)
-            && player.position === playerIn.position
-        ));
+        const roster = squadIds
+            .map((id) => (players ?? []).find((player) => String(id) === String(player.id)))
+            .filter(Boolean);
+        const choices = roster
+            .filter((player) => String(player.id) !== String(playerIn.id) && player.position === playerIn.position)
+            .map((player) => ({
+                player,
+                blockReason: getReplacementBlockReason({ playerIn, playerOut: player, squadPlayers: roster }),
+            }));
+        return { squadPlayers: roster, replacementChoices: choices };
     }, [playerIn, players, squad]);
     const transfer = useTransferPlayer({
         leagueId: user?.leagueId,
@@ -38,6 +44,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
 
     const loading = !previewMode && squadQuery.isPending;
     const loadError = !previewMode && squadQuery.error;
+    const eligibleChoiceCount = replacementChoices.filter((choice) => !choice.blockReason).length;
 
     return (
         <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -87,20 +94,21 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                                         <h3 className="text-base font-black">Select one from your squad</h3>
                                     </div>
                                     <span className="rounded-full border border-app-border bg-app-surface-muted px-2.5 py-1 text-xs font-bold text-app-muted">
-                                        {samePositionPlayers.length} eligible
+                                        {eligibleChoiceCount} eligible / {replacementChoices.length} shown
                                     </span>
                                 </div>
 
                                 {transfer.error && <StatusCard tone="error">{transfer.error.message || "Transfer failed on the server."}</StatusCard>}
 
                                 <div className="grid gap-2.5">
-                                    {samePositionPlayers.length > 0 ? samePositionPlayers.map((player) => (
+                                    {replacementChoices.length > 0 ? replacementChoices.map(({ player, blockReason }) => (
                                         <PlayerChoiceCard
                                             key={player.id}
                                             player={player}
                                             fixtures={getUpcomingFixtures(player.teamId, fixturesByTeam, nextGameweek?.id)}
                                             actionLabel={previewMode ? "Preview" : "Replace"}
                                             pending={transfer.isPending}
+                                            blockReason={blockReason}
                                             onSelect={() => previewMode ? onClose() : transfer.mutate(player.id)}
                                         />
                                     )) : <StatusCard>No players in this position are available to replace.</StatusCard>}
@@ -120,7 +128,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
     );
 }
 
-function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pending = false, onSelect }) {
+function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pending = false, blockReason, onSelect }) {
     return (
         <article className={`flex min-w-0 items-center gap-3 rounded-2xl border p-3 ${incoming ? "border-emerald-400/50 bg-emerald-500/10" : "border-app-border bg-app-surface"}`}>
             <PlayerKit
@@ -142,6 +150,11 @@ function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pen
             </div>
             {incoming ? (
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><Check className="size-4" aria-hidden="true" /></span>
+            ) : blockReason ? (
+                <span className="flex max-w-36 shrink-0 items-center gap-1.5 text-right text-[0.62rem] leading-4 font-bold text-app-danger-foreground sm:max-w-48 sm:text-xs">
+                    <LockKeyhole className="size-3.5 shrink-0" aria-hidden="true" />
+                    {blockReason}
+                </span>
             ) : (
                 <Button size="sm" className="shrink-0 px-3" onClick={onSelect} disabled={pending}>
                     {pending ? "Saving…" : actionLabel}

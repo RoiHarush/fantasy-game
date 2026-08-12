@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock3 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import {
     getCountdownParts,
@@ -9,25 +9,16 @@ import {
     getVisibleCountdownUnits,
 } from "../../../features/status/model";
 import { formatAppDateTime, toAppTimestamp } from "../../../lib/dateTime";
+import { useClock } from "../../../shared/hooks/useClock";
 import SplitBlock from "../../Blocks/SplitBlock";
 
 export default function UpcomingDeadlines({ gameweek, onDeadlineReached }) {
-    const [now, setNow] = useState(null);
+    const now = useClock();
     const previousDeadline = useRef(undefined);
     const deadlines = useMemo(() => ({
         transferWindow: toAppTimestamp(gameweek?.transferOpenTime),
         lineupLock: toAppTimestamp(gameweek?.firstKickoffTime),
     }), [gameweek?.firstKickoffTime, gameweek?.transferOpenTime]);
-
-    useEffect(() => {
-        const frame = window.requestAnimationFrame(() => setNow(Date.now()));
-        const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-
-        return () => {
-            window.cancelAnimationFrame(frame);
-            window.clearInterval(timer);
-        };
-    }, []);
 
     const activeDeadline = now === null ? null : getUpcomingDeadline(deadlines, now);
     const activeKind = activeDeadline?.kind ?? null;

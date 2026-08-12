@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useAuth } from "../../Context/AuthContext";
 import { useWebSocket } from "../../Context/WebSocketContext";
@@ -17,6 +17,7 @@ export default function RealtimeTransferSync() {
     const { connected, subscribe } = useWebSocket();
     const queryClient = useQueryClient();
     const leagueId = user?.leagueId;
+    const closeTimerRef = useRef(null);
 
     useEffect(() => {
         if (!connected || !leagueId) return;
@@ -24,16 +25,36 @@ export default function RealtimeTransferSync() {
         queryClient.invalidateQueries({ queryKey: queryKeys.transferWindow(leagueId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.players(leagueId) });
 
-        return subscribe(`/topic/leagues/${leagueId}/transfers`, (event) => {
+        const unsubscribe = subscribe(`/topic/leagues/${leagueId}/transfers`, (event) => {
             const windowKey = queryKeys.transferWindow(leagueId);
             const previousWindow = queryClient.getQueryData(windowKey) ?? {};
             const wasDraftMode = Boolean(previousWindow.isDraftMode);
             const gameweekId = previousWindow.gameWeekId;
 
-            queryClient.setQueryData(
-                windowKey,
-                applyTransferWindowEvent(previousWindow, event),
-            );
+            if (event.event === "window_closed") {
+                queryClient.setQueryData(windowKey, {
+                    ...previousWindow,
+                    isOpen: true,
+                    isClosing: true,
+                });
+                if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = window.setTimeout(() => {
+                    queryClient.setQueryData(
+                        windowKey,
+                        (current = previousWindow) => applyTransferWindowEvent(current, event),
+                    );
+                    closeTimerRef.current = null;
+                }, 5_000);
+            } else {
+                if (event.event === "window_opened" && closeTimerRef.current) {
+                    window.clearTimeout(closeTimerRef.current);
+                    closeTimerRef.current = null;
+                }
+                queryClient.setQueryData(
+                    windowKey,
+                    applyTransferWindowEvent(previousWindow, event),
+                );
+            }
             queryClient.setQueryData(
                 queryKeys.transferEvent(leagueId),
                 (previous) => updateTransferNotice(previous, event),
@@ -90,6 +111,12 @@ export default function RealtimeTransferSync() {
                 });
             }
 
+            if (event.event === "window_closed" && gameweekId) {
+                queryClient.invalidateQueries({
+                    queryKey: queryKeys.transferHistory(leagueId, gameweekId),
+                });
+            }
+
             if (event.event === "window_closed" && wasDraftMode) {
                 queryClient.setQueryData(queryKeys.currentLeague(leagueId), (current) => (
                     current ? { ...current, status: "ACTIVE", leagueCode: null } : current
@@ -108,6 +135,20 @@ export default function RealtimeTransferSync() {
                 updateUser({ leagueStatus: "ACTIVE" });
             }
         });
+
+        return () => {
+            unsubscribe?.();
+            if (closeTimerRef.current) {
+                window.clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = null;
+                const windowKey = queryKeys.transferWindow(leagueId);
+                queryClient.setQueryData(windowKey, (current) => (
+                    current?.isClosing
+                        ? applyTransferWindowEvent(current, { event: "window_closed" })
+                        : current
+                ));
+            }
+        };
     }, [connected, leagueId, queryClient, subscribe, updateUser, user?.id]);
 
     return null;

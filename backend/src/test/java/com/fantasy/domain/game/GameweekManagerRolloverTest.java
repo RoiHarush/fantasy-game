@@ -8,6 +8,8 @@ import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.team.AutoSubstitutionRepository;
+import com.fantasy.domain.transfer.TransferMarketService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -18,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -40,6 +43,24 @@ class GameweekManagerRolloverTest {
         verify(dependencies.gameDataRepository, never()).findAllWithRelations();
         verify(dependencies.systemStatusService).setRolloverInProgress(true);
         verify(dependencies.systemStatusService).setRolloverInProgress(false);
+    }
+
+    @Test
+    void refusesToOpenANewGameweekWhileThePreviousLiveGameweekIsUnfinalized() {
+        Dependencies dependencies = new Dependencies();
+        GameWeekEntity upcoming = new GameWeekEntity();
+        upcoming.setId(6);
+        upcoming.setStatus("UPCOMING");
+        GameWeekEntity live = new GameWeekEntity();
+        live.setId(5);
+        live.setStatus("LIVE");
+        live.setCalculated(false);
+        when(dependencies.gameweekRepository.findByIdWithLock(6)).thenReturn(Optional.of(upcoming));
+        when(dependencies.gameweekRepository.findFirstByStatusOrderByIdAsc("LIVE"))
+                .thenReturn(Optional.of(live));
+
+        assertThrows(IllegalStateException.class, () -> dependencies.manager.openNextGameweek(6, false));
+        verify(dependencies.gameDataRepository, never()).findAllWithRelations();
     }
 
     @Test
@@ -73,6 +94,7 @@ class GameweekManagerRolloverTest {
 
         dependencies.manager.openNextGameweek(5, false);
 
+        verify(dependencies.transferMarketService).finalizeWindowsAtGameweekDeadline(5);
         ArgumentCaptor<UserSquadEntity> captor = ArgumentCaptor.forClass(UserSquadEntity.class);
         verify(dependencies.squadRepository).save(captor.capture());
         UserSquadEntity next = captor.getValue();
@@ -131,6 +153,7 @@ class GameweekManagerRolloverTest {
         private final UserSquadRepository squadRepository = mock(UserSquadRepository.class);
         private final GameWeekRepository gameweekRepository = mock(GameWeekRepository.class);
         private final SystemStatusService systemStatusService = mock(SystemStatusService.class);
+        private final TransferMarketService transferMarketService = mock(TransferMarketService.class);
         private final GameweekManager manager = new GameweekManager(
                 gameDataRepository,
                 squadRepository,
@@ -140,7 +163,9 @@ class GameweekManagerRolloverTest {
                 mock(LeaguePlayerCatalog.class),
                 systemStatusService,
                 mock(GameweekDailyStatusRepository.class),
-                mock(FixtureRepository.class)
+                mock(FixtureRepository.class),
+                transferMarketService,
+                mock(AutoSubstitutionRepository.class)
         );
     }
 }

@@ -22,9 +22,11 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -77,6 +79,40 @@ class PlayerServiceOwnershipTest {
         assertEquals("Owner", owned.getOwnerName());
         assertNull(free.getOwnerId());
         assertTrue(free.isAvailable());
+    }
+
+    @Test
+    void refusesToHideCorruptDuplicateLeagueOwnership() {
+        PlayerRepository playerRepository = mock(PlayerRepository.class);
+        PlayerPointsRepository pointsRepository = mock(PlayerPointsRepository.class);
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        LeagueEntity league = new LeagueEntity();
+        league.setId(10L);
+
+        UserGameDataEntity first = gameData(7, 1);
+        UserGameDataEntity second = gameData(8, 1);
+        when(leagueRepository.findFirstByUsers_Id(42)).thenReturn(Optional.of(league));
+        when(gameDataRepository.findAllByLeagueIdWithSquads(10L)).thenReturn(List.of(first, second));
+        when(pointsRepository.findAll()).thenReturn(List.of());
+
+        PlayerService service = new PlayerService(
+                playerRepository,
+                pointsRepository,
+                mock(PlayerGameweekStatsRepository.class),
+                mock(PlayerFixtureStatsRepository.class),
+                mock(TeamRepository.class),
+                mock(FixtureRepository.class),
+                mock(UserSquadRepository.class),
+                mock(FixtureService.class),
+                leagueRepository,
+                gameDataRepository,
+                mock(LeagueScoringService.class),
+                mock(SupplementalDraftPoolService.class),
+                mock(LeagueTransferWindowRepository.class)
+        );
+
+        assertThrows(IllegalStateException.class, () -> service.getAllPlayers(42));
     }
 
     @Test
@@ -146,6 +182,105 @@ class PlayerServiceOwnershipTest {
         assertTrue(result.getFixtures().get(1).getStats().isEmpty());
     }
 
+    @Test
+    void squadDataReturnsEveryFixtureInKickoffOrderForADoubleGameweek() {
+        PlayerRepository playerRepository = mock(PlayerRepository.class);
+        PlayerPointsRepository pointsRepository = mock(PlayerPointsRepository.class);
+        TeamRepository teamRepository = mock(TeamRepository.class);
+        UserSquadRepository squadRepository = mock(UserSquadRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        FixtureService fixtureService = mock(FixtureService.class);
+        PlayerEntity player = player(1);
+        FixtureEntity later = fixture(102, 8, 3, 1, LocalDateTime.of(2026, 1, 14, 20, 0));
+        FixtureEntity earlier = fixture(101, 8, 1, 2, LocalDateTime.of(2026, 1, 10, 15, 0));
+
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(List.of(1));
+        squad.setBenchMap(new LinkedHashMap<>());
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setId(12);
+        gameData.setNextSquad(squad);
+
+        when(gameDataRepository.findByUserId(7)).thenReturn(Optional.of(gameData));
+        when(squadRepository.findByUser_IdAndGameweek(12, 8)).thenReturn(Optional.of(squad));
+        when(fixtureService.getFixturesByGameweek(8)).thenReturn(List.of(later, earlier));
+        when(fixtureService.getPostponedTeamIdsForGameweek(8)).thenReturn(Set.of());
+        when(teamRepository.findAll()).thenReturn(List.of(team(1, "ARS"), team(2, "CHE"), team(3, "MCI")));
+        when(playerRepository.findById(1)).thenReturn(Optional.of(player));
+        when(pointsRepository.findByPlayer_Id(1)).thenReturn(List.of());
+
+        PlayerDataDto result = playerService(
+                playerRepository,
+                pointsRepository,
+                teamRepository,
+                squadRepository,
+                fixtureService,
+                gameDataRepository
+        ).getSquadDataForGameweek(7, 8).getFirst();
+
+        assertEquals(List.of("CHE (H)", "MCI (A)"), result.getNextFixtures());
+    }
+
+    @Test
+    void squadDataMarksKnownPostponementWithoutRenderingBlankAsAFixture() {
+        PlayerRepository playerRepository = mock(PlayerRepository.class);
+        PlayerPointsRepository pointsRepository = mock(PlayerPointsRepository.class);
+        TeamRepository teamRepository = mock(TeamRepository.class);
+        UserSquadRepository squadRepository = mock(UserSquadRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        FixtureService fixtureService = mock(FixtureService.class);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(List.of(1));
+        squad.setBenchMap(new LinkedHashMap<>());
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setId(12);
+        gameData.setNextSquad(squad);
+
+        when(gameDataRepository.findByUserId(7)).thenReturn(Optional.of(gameData));
+        when(squadRepository.findByUser_IdAndGameweek(12, 8)).thenReturn(Optional.of(squad));
+        when(fixtureService.getFixturesByGameweek(8)).thenReturn(List.of());
+        when(fixtureService.getPostponedTeamIdsForGameweek(8)).thenReturn(Set.of(1));
+        when(teamRepository.findAll()).thenReturn(List.of(team(1, "ARS")));
+        when(playerRepository.findById(1)).thenReturn(Optional.of(player(1)));
+        when(pointsRepository.findByPlayer_Id(1)).thenReturn(List.of());
+
+        PlayerDataDto result = playerService(
+                playerRepository,
+                pointsRepository,
+                teamRepository,
+                squadRepository,
+                fixtureService,
+                gameDataRepository
+        ).getSquadDataForGameweek(7, 8).getFirst();
+
+        assertTrue(result.isFixturePostponed());
+        assertTrue(result.getNextFixtures().isEmpty());
+        assertNull(result.getNextFixture());
+    }
+
+    private static PlayerService playerService(PlayerRepository playerRepository,
+                                               PlayerPointsRepository pointsRepository,
+                                               TeamRepository teamRepository,
+                                               UserSquadRepository squadRepository,
+                                               FixtureService fixtureService,
+                                               UserGameDataRepository gameDataRepository) {
+        return new PlayerService(
+                playerRepository,
+                pointsRepository,
+                mock(PlayerGameweekStatsRepository.class),
+                mock(PlayerFixtureStatsRepository.class),
+                teamRepository,
+                mock(FixtureRepository.class),
+                squadRepository,
+                fixtureService,
+                mock(LeagueRepository.class),
+                gameDataRepository,
+                new LeagueScoringService(),
+                mock(SupplementalDraftPoolService.class),
+                mock(LeagueTransferWindowRepository.class)
+        );
+    }
+
     private static PlayerEntity player(int id) {
         PlayerEntity player = new PlayerEntity();
         player.setId(id);
@@ -166,6 +301,16 @@ class PlayerServiceOwnershipTest {
         user.setRegisteredAt(LocalDateTime.now());
         user.setRole(UserRole.ROLE_USER);
         return user;
+    }
+
+    private static UserGameDataEntity gameData(int userId, int playerId) {
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setStartingLineup(List.of(playerId));
+        squad.setBenchMap(new LinkedHashMap<>());
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setUser(user(userId, "User " + userId));
+        gameData.setNextSquad(squad);
+        return gameData;
     }
 
     private static TeamEntity team(int id, String shortName) {

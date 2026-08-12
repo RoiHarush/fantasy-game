@@ -23,6 +23,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SquadCaptainAutoSubTest {
 
     @Test
+    void autoSubToleratesAnEmptyBenchSlotWhileIrReplacementIsUnavailable() {
+        Squad squad = fullSquad();
+        squad.getBench().put("S2", null);
+        squad.getBench().put("GK", null);
+
+        Map<Integer, Integer> minutes = new HashMap<>();
+        squad.getStartingLineup().values().stream()
+                .flatMap(List::stream)
+                .forEach(player -> minutes.put(player.getId(), 90));
+
+        squad.autoSub(minutes);
+
+        assertTrue(squad.isAutoSubsApplied());
+    }
+
+    @Test
     void playingViceCaptainInheritsTripleCaptainWhenCaptainDoesNotPlay() {
         Squad squad = fullSquad();
         Player originalCaptain = squad.getCaptain();
@@ -50,6 +66,26 @@ class SquadCaptainAutoSubTest {
                         Map.of(viceCaptain.getId(), viceStats)
                 )
         ); // defender earned 6 points and inherited the active Triple Captain multiplier
+    }
+
+    @Test
+    void reportsEveryAutomaticLineupSubstitutionInAppliedOrder() {
+        Squad squad = fullSquad();
+        Player goalkeeperOut = squad.getStartingLineup().get(PlayerPosition.GOALKEEPER).getFirst();
+        Player goalkeeperIn = squad.getBench().get("GK");
+        Player outfieldOut = squad.getStartingLineup().get(PlayerPosition.FORWARD).getFirst();
+        Player outfieldIn = squad.getBench().get("S1");
+
+        Map<Integer, Integer> minutes = allMinutes(squad, 90);
+        minutes.put(goalkeeperOut.getId(), 0);
+        minutes.put(outfieldOut.getId(), 0);
+
+        List<AutoSubstitution> substitutions = squad.autoSub(minutes);
+
+        assertEquals(List.of(
+                new AutoSubstitution(goalkeeperIn.getId(), goalkeeperOut.getId(), 1),
+                new AutoSubstitution(outfieldIn.getId(), outfieldOut.getId(), 2)
+        ), substitutions);
     }
 
     private static Squad fullSquad() {

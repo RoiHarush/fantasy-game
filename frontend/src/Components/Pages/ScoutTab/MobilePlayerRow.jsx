@@ -1,9 +1,10 @@
-import { ArrowRightLeft, Eye, Info, ListPlus, LockKeyhole } from "lucide-react";
+import { ArrowRightLeft, Clock3, Eye, Info, ListPlus, LockKeyhole } from "lucide-react";
 import { memo, useState } from "react";
 
 import { getInitials } from "../../../lib/initials";
 import { getPlayerInjuryColor } from "../../../lib/playerStatus";
 import { getFixtureItems } from "../../../features/fixtures/model";
+import { getPlayerAcquisitionLockReason } from "../../../features/transfer-window/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
 
@@ -44,7 +45,8 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
     const fixtureLabel = getFixtureLabel(teamFixtures?.[String(nextGameweek)]);
     const canWaiver = Boolean(onWaiverSelect)
         && (player.available || (player.ownerId != null && String(player.ownerId) !== String(user?.id)));
-    const canAcquire = player.available && !ruleLocked && isMyTurn;
+    const acquisitionLockReason = getPlayerAcquisitionLockReason(player, { ruleLocked });
+    const canAcquire = !acquisitionLockReason && isMyTurn;
 
     return (
         <>
@@ -106,6 +108,22 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                     }`} title={ownerName} aria-label={`Owner: ${ownerName}`}>
                         {player.available ? "Free" : getInitials(ownerName)}
                     </span>
+                ) : acquisitionLockReason ? (
+                    <span
+                        className="mx-auto grid size-6 place-items-center text-app-muted"
+                        aria-label={`Locked: ${acquisitionLockReason}`}
+                        title={acquisitionLockReason}
+                    >
+                        <LockKeyhole aria-hidden="true" size={15} />
+                    </span>
+                ) : !isMyTurn ? (
+                    <span
+                        className="mx-auto grid size-6 place-items-center text-app-muted"
+                        aria-label="Waiting for your turn"
+                        title="Waiting for your turn"
+                    >
+                        <Clock3 aria-hidden="true" size={15} />
+                    </span>
                 ) : (
                     <button
                         type="button"
@@ -113,7 +131,7 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                         disabled={!canAcquire}
                         onClick={() => canAcquire && onPlayerSelect?.(player)}
                     >
-                        {canAcquire ? (mode === "draft" ? "Pick" : "Sign") : "Locked"}
+                        {mode === "draft" ? "Pick" : "Sign"}
                     </button>
                 )}
 

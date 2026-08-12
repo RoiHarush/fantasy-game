@@ -31,7 +31,7 @@ function PlayersWrapper({
     irWaiverDirty = false,
     irWaiverSaving = false,
     irWaiverMessage = "",
-    draftedContent = null,
+    activityView = null,
     previewMode = false,
 }) {
     const [searchQuery, setSearchQuery] = useState("");
@@ -116,7 +116,7 @@ function PlayersWrapper({
                 filteredCount={visiblePlayers.length}
                 disablePositionOptions={comparePlayers.length === 1}
                 teams={teams}
-                showDrafted={Boolean(draftedContent)}
+                extraView={activityView}
                 showWaivers={mode === "scout" && Boolean(onWaiverEntriesChange)}
             />
 
@@ -136,7 +136,7 @@ function PlayersWrapper({
                 </div>
             )}
 
-            {activeButton === "Drafted" && draftedContent ? draftedContent : activeButton === "Waivers" ? (
+            {activityView && activeButton === activityView.key ? activityView.content : activeButton === "Waivers" ? (
                 <WaiverPlanPanel
                     entries={waiverPlanType === "IR" ? irWaiverEntries : waiverEntries}
                     playersById={playersById}

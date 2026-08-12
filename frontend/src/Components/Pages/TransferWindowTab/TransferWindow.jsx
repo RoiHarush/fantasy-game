@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useSquad } from "../../../features/squad/useSquad";
 import {
     useDraftPlayer,
     useLatestTransferEvent,
@@ -7,17 +9,21 @@ import {
     useTransferHistory,
 } from "../../../features/transfer-window/useTransferWindow";
 import {
+    buildFallbackSnakeOrder,
+    getCurrentPickNumber,
     getDraftRuleLockedIds,
-    getTransferNoticeMessage,
+    getTransferNoticeDetails,
     getTurnsUntilUser,
     isSameTransferId,
+    summarizeSnakeOrder,
+    transferActionToNotice,
 } from "../../../features/transfer-window/model";
-import Style from "../../../Styles/TransferWindow.module.css";
-import ReplacementModal from "./ReplacementModal";
-import IRSignModal from "./IRSignModal";
-import DraftPickDialog from "./DraftPickDialog";
 import PlayersWrapper from "../../General/PlayersWrapper";
-import { useSquad } from "../../../features/squad/useSquad";
+import ActiveWindowHeader from "./ActiveWindowHeader";
+import DraftPickDialog from "./DraftPickDialog";
+import IRSignModal from "./IRSignModal";
+import ReplacementModal from "./ReplacementModal";
+import TransferActivityTable from "./TransferActivityTable";
 
 function TransferWindow({
     user,
@@ -27,9 +33,13 @@ function TransferWindow({
     players,
     teams,
     fixturesByTeam,
+    isClosing = false,
     previewMode = false,
     previewSquad = null,
     previewDraftActions = [],
+    previewTransferActions = [],
+    previewLatestEvent = null,
+    previewOnPass = null,
 }) {
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
     const latestEventQuery = useLatestTransferEvent(user?.leagueId);
@@ -43,11 +53,7 @@ function TransferWindow({
     const isSupplementalDraft = windowState.draftType === "SUPPLEMENTAL";
     const isIrRound = windowState.currentRound === "IR";
     const irPosition = windowState.irPosition ?? null;
-    const lastTransferMessage = getTransferNoticeMessage(
-        latestEventQuery.data,
-        players,
-        isDraftMode,
-    );
+    const latestEvent = previewMode ? previewLatestEvent : latestEventQuery.data;
     const draftGameweekId = windowState.gameWeekId > 0
         ? windowState.gameWeekId
         : nextGameweek?.id;
@@ -60,189 +66,99 @@ function TransferWindow({
         gameweekId: draftGameweekId,
         onSuccess: () => setSelectedPlayerIn(null),
     });
-    const draftHistoryQuery = useTransferHistory(user?.leagueId, draftGameweekId, {
-        enabled: isDraftMode && !previewMode,
+    const historyQuery = useTransferHistory(user?.leagueId, draftGameweekId, {
+        enabled: !previewMode,
     });
     const draftSquad = previewMode ? previewSquad : draftSquadQuery.data;
-    const draftActions = useMemo(
-        () => (previewMode ? previewDraftActions : draftHistoryQuery.data ?? []).filter(action => (
-            action.windowType === "DRAFT" || action.windowType === "SUPPLEMENTAL"
-        )),
-        [draftHistoryQuery.data, previewDraftActions, previewMode],
-    );
+    const activityActions = useMemo(() => {
+        const actions = previewMode
+            ? isDraftMode ? previewDraftActions : previewTransferActions
+            : historyQuery.data ?? [];
+        return actions.filter((action) => isDraftMode
+            ? action.windowType === "DRAFT" || action.windowType === "SUPPLEMENTAL"
+            : action.windowType === "TRANSFER");
+    }, [historyQuery.data, isDraftMode, previewDraftActions, previewMode, previewTransferActions]);
+    const latestPersistedAction = activityActions.at(-1) ?? null;
+    const notice = latestEvent ?? transferActionToNotice(latestPersistedAction);
+    const lastTransferNotice = getTransferNoticeDetails(notice, players, isDraftMode);
 
     const draftRuleLockedIds = useMemo(
         () => getDraftRuleLockedIds(players, draftSquad, isDraftMode && !isSupplementalDraft),
         [draftSquad, isDraftMode, isSupplementalDraft, players],
     );
     const displayedPlayers = isSupplementalDraft
-        ? players.filter(player => player.supplementalDraftEligible)
+        ? players.filter((player) => player.supplementalDraftEligible)
         : players;
-
-    const isDataReady = allUsers.length > 0 && (initialOrder.length > 0 || turnOrder.length > 0);
-
+    const canonicalOrder = windowState.canonicalOrder?.length > 0
+        ? windowState.canonicalOrder
+        : buildFallbackSnakeOrder(initialOrder, totalTurnsMap);
+    const summaryOrder = isIrRound ? turnOrder : canonicalOrder;
+    const managerSummaries = summarizeSnakeOrder(summaryOrder, allUsers, turnsUsed, totalTurnsMap);
+    const currentPickNumber = isIrRound ? null : getCurrentPickNumber(turnsUsed, canonicalOrder);
     const turnsLeft = getTurnsUntilUser(turnOrder, currentTurnUserId, user.id);
+    const currentUserName = getUserName(allUsers, currentTurnUserId);
+    const title = isSupplementalDraft ? "Supplemental draft" : isDraftMode ? "Initial draft" : "Transfer window live";
+    const mutationError = passMutation.error || skipTurnMutation.error || draftPlayerMutation.error;
 
     if (!players || players.length === 0) return <div>Loading players...</div>;
+    if (!isWindowOpen) return null;
 
-    function getUserNameById(id) {
-        const found = allUsers.find((item) => isSameTransferId(item.id, id));
-        return found?.name || found?.fantasyTeamName || "Unknown manager";
-    }
-
-    if (!isWindowOpen) {
-        return null;
-    }
-
-    const displayedOrder = isIrRound ? turnOrder : initialOrder;
+    const activityView = {
+        key: isDraftMode ? "Drafted" : "Transferred",
+        mobileLabel: isDraftMode ? "Draft" : "Moves",
+        desktopLabel: isDraftMode ? "Drafted" : "Transferred",
+        content: (
+            <TransferActivityTable
+                actions={activityActions}
+                players={players}
+                pending={!previewMode && historyQuery.isPending}
+                error={!previewMode ? historyQuery.error : null}
+                mode={isDraftMode ? "draft" : "transfer"}
+            />
+        ),
+    };
 
     return (
-        <div className={Style.transferPage}>
-            <h2 className={Style.title}>
-                {isSupplementalDraft ? "Supplemental Draft" : isDraftMode ? "Initial Draft" : "Transfer Window"}
-            </h2>
-
-            <div className={Style.roundHeader}>
-                <div className={Style.roundInfo}>
-                    <span className={`${Style.roundBadge} ${isIrRound ? Style.irBadge : Style.regularBadge}`}>
-                        {isIrRound ? "IR Round" : isDraftMode ? "Initial Draft" : "Regular Round"}
-                    </span>
-                    <span className={Style.roundSubtitle}>
-                        {isDataReady ?
-                            (isIrRound
-                                ? `${displayedOrder.length} Eligible Managers`
-                                : `${Object.keys(turnsUsed).length} Active Managers`)
-                            : "Loading..."}
-                    </span>
-                </div>
-
-                <div className={Style.turnsList}>
-                    {displayedOrder.map((id) => {
-                        const userName = getUserNameById(id);
-                        const used = turnsUsed[id] || 0;
-                        const userMax = totalTurnsMap[id] || 2;
-
-                        const showProgress = !isIrRound;
-                        const done = !isIrRound && used >= userMax;
-                        const isCurrent = isSameTransferId(id, currentTurnUserId);
-
-                        return (
-                            <div
-                                key={id}
-                                className={`${Style.turnCard} ${done ? Style.done : ""} ${isCurrent ? Style.current : ""}`}
-                            >
-                                <div className={Style.userName}>{userName}</div>
-
-                                {showProgress && (
-                                    <>
-                                        <div className={Style.turnProgress}>
-                                            <div
-                                                className={Style.turnBarFill}
-                                                style={{ width: `${(used / userMax) * 100}%` }}
-                                            />
-                                        </div>
-                                        <div className={Style.turnCount}>
-                                            {used}/{userMax} {done && "✅"}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            <div className={Style.turnBar}>
-                <div className={Style.turnContent}>
-                    {isSameTransferId(currentTurnUserId, user.id) ? (
-                        <>
-                            <span className={Style.myTurn}>
-                                {isIrRound
-                                    ? `Pick replacement for ${irPosition} (IR)`
-                                    : isSupplementalDraft
-                                        ? "Your turn to replace a player with a new arrival"
-                                        : isDraftMode ? "Your turn to draft a player" : "Your turn to make a transfer"}
-                            </span>
-
-                            {!isIrRound && (!isDraftMode || isSupplementalDraft) && (
-                                <button
-                                    type="button"
-                                    className={Style.passButton}
-                                    onClick={() => previewMode ? undefined : passMutation.mutate()}
-                                    disabled={passMutation.isPending}
-                                >
-                                    {passMutation.isPending ? "Passing…" : "Pass Turn"}
-                                </button>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <span className={Style.otherTurn}>
-                                {windowState.currentUserAutomatic ? "Auto waivers are running for " : "Waiting for "}
-                                <strong>{getUserNameById(currentTurnUserId)}</strong>...
-                            </span>
-                            {user?.leagueAdmin && (
-                                <button
-                                    type="button"
-                                    className={Style.passButton}
-                                    onClick={() => previewMode ? undefined : skipTurnMutation.mutate()}
-                                    disabled={skipTurnMutation.isPending}
-                                >
-                                    {skipTurnMutation.isPending ? "Skipping…" : isIrRound ? "Resolve & skip" : "Skip turn"}
-                                </button>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {!isIrRound && !isSameTransferId(currentTurnUserId, user.id) && turnsLeft !== null && (
-                    <div className={Style.turnHint}>
-                        {turnsLeft === 1 ? "You're next!" : `Your turn in ${turnsLeft} turns`}
-                    </div>
-                )}
-            </div>
-
-            {lastTransferMessage && (
-                <div className={Style.transferMessage}>{lastTransferMessage}</div>
-            )}
-            {(passMutation.error || skipTurnMutation.error || draftPlayerMutation.error) && (
-                <div className={Style.transferMessage} role="alert">
-                    {(passMutation.error || skipTurnMutation.error || draftPlayerMutation.error).message}
-                </div>
-            )}
+        <div className="w-full min-w-0 text-app-foreground">
+            <ActiveWindowHeader
+                title={title}
+                isDraftMode={isDraftMode}
+                isSupplementalDraft={isSupplementalDraft}
+                isIrRound={isIrRound}
+                isClosing={isClosing}
+                currentUserId={currentTurnUserId}
+                currentUserName={currentUserName}
+                currentUserAutomatic={windowState.currentUserAutomatic}
+                viewingUser={user}
+                currentPickNumber={currentPickNumber}
+                totalPicks={canonicalOrder.length}
+                turnsLeft={turnsLeft}
+                managerSummaries={managerSummaries}
+                lastTransferNotice={lastTransferNotice}
+                errorMessage={mutationError?.message}
+                passPending={passMutation.isPending}
+                skipPending={skipTurnMutation.isPending}
+                onPass={() => previewMode ? previewOnPass?.() : passMutation.mutate()}
+                onSkip={() => previewMode ? undefined : skipTurnMutation.mutate()}
+            />
 
             <PlayersWrapper
                 user={user}
                 players={displayedPlayers}
                 teams={teams}
                 mode={isDraftMode && !isSupplementalDraft ? "draft" : "transfer"}
-                onPlayerSelect={setSelectedPlayerIn}
-                currentTurnUserId={currentTurnUserId}
+                onPlayerSelect={isClosing ? undefined : setSelectedPlayerIn}
+                currentTurnUserId={isClosing ? null : currentTurnUserId}
                 irPosition={isIrRound ? irPosition : null}
                 allTeamFixtures={fixturesByTeam}
                 disabledPlayerIds={draftRuleLockedIds}
                 previewMode={previewMode}
-                draftedContent={isDraftMode ? (
-                    <ol className={Style.draftedList} aria-label="Drafted players in pick order">
-                        {draftActions.map((action, index) => (
-                            <li key={action.id}>
-                                <span>Pick {index + 1}</span>
-                                <strong>{action.userName || "Unknown manager"}</strong>
-                                <span>{players.find((player) => isSameTransferId(player.id, action.playerInId))?.viewName || "Unknown player"}</span>
-                            </li>
-                        ))}
-                        {draftActions.length === 0 && <li>No players have been drafted yet.</li>}
-                    </ol>
-                ) : null}
+                activityView={activityView}
             />
 
-            {selectedPlayerIn && (
+            {!isClosing && selectedPlayerIn && (
                 isIrRound ? (
-                    <IRSignModal
-                        player={selectedPlayerIn}
-                        user={user}
-                        onClose={() => setSelectedPlayerIn(null)}
-                    />
+                    <IRSignModal player={selectedPlayerIn} user={user} onClose={() => setSelectedPlayerIn(null)} />
                 ) : isDraftMode && !isSupplementalDraft ? (
                     <DraftPickDialog
                         player={selectedPlayerIn}
@@ -264,6 +180,11 @@ function TransferWindow({
             )}
         </div>
     );
+}
+
+function getUserName(users, id) {
+    const found = users.find((item) => isSameTransferId(item.id, id));
+    return found?.name || found?.fantasyTeamName || "Unknown manager";
 }
 
 export default TransferWindow;

@@ -1,5 +1,6 @@
 package com.fantasy.domain.transfer;
 
+import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueAccessService;
@@ -21,8 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -174,6 +173,7 @@ public class TransferMarketService {
         long windowLeagueId = league.getId();
         int firstUser = window.currentUserId().orElse(-1);
         List<Integer> initialOrder = window.initialOrder();
+        List<Integer> canonicalOrder = new ArrayList<>(window.getCanonicalOrder());
         List<Integer> remainingOrder = window.remainingOrder();
         Map<Integer, Integer> turnsUsed = window.turnsUsed();
         Map<Integer, Integer> totalTurns = window.totalTurns();
@@ -181,6 +181,7 @@ public class TransferMarketService {
                 windowLeagueId,
                 firstUser,
                 initialOrder,
+                canonicalOrder,
                 remainingOrder,
                 turnsUsed,
                 totalTurns,
@@ -825,6 +826,7 @@ public class TransferMarketService {
             state.put("currentRound", null);
             state.put("order", null);
             state.put("initialOrder", null);
+            state.put("canonicalOrder", null);
             state.put("turnsUsed", null);
             state.put("totalTurns", null);
             state.put("automaticUserIds", List.of());
@@ -843,6 +845,7 @@ public class TransferMarketService {
         state.put("currentRound", window.getPhase().name());
         state.put("order", window.remainingOrder());
         state.put("initialOrder", window.initialOrder());
+        state.put("canonicalOrder", new ArrayList<>(window.getCanonicalOrder()));
         state.put("turnsUsed", window.turnsUsed());
         state.put("totalTurns", window.totalTurns());
         state.put("automaticUserIds", window.getAutomaticUserIds());
@@ -976,6 +979,29 @@ public class TransferMarketService {
         }
     }
 
+    @Transactional
+    public void finalizeWindowsAtGameweekDeadline(int gameWeekId) {
+        List<LeagueTransferWindowEntity> windows = windowRepo.findByGameweekAndStatusForUpdate(
+                gameWeekId,
+                TransferWindowStatus.OPEN
+        );
+        for (LeagueTransferWindowEntity window : windows) {
+            if (window.getWindowType() == TransferWindowType.DRAFT) {
+                throw new IllegalStateException(
+                        "Cannot open GW " + gameWeekId + " while the initial draft is still active"
+                );
+            }
+            if (window.getWindowType() == TransferWindowType.TRANSFER) {
+                finalizeExpiredWindow(window);
+                continue;
+            }
+
+            window.close();
+            windowRepo.saveAndFlush(window);
+            handleWindowClosed(window);
+        }
+    }
+
     private void finalizeExpiredWindow(LeagueTransferWindowEntity window) {
         if (window.getPhase() == TransferWindowPhase.REGULAR) {
             window.finishRegularPhase();
@@ -1102,18 +1128,6 @@ public class TransferMarketService {
             );
             if (draftBasedOrder.isPresent()) {
                 return draftBasedOrder.get();
-            }
-        }
-
-        if (type == TransferWindowType.TRANSFER && gameWeek.getTransferOrder() != null) {
-            Set<Integer> leagueUsers = leagueUserIds(league);
-            List<Integer> legacyOrder = gameWeek.getTransferOrder().stream()
-                    .sorted(Comparator.comparingInt(TransferPickEntity::getPosition))
-                    .map(TransferPickEntity::getUserId)
-                    .filter(leagueUsers::contains)
-                    .toList();
-            if (!legacyOrder.isEmpty()) {
-                return new ArrayList<>(legacyOrder);
             }
         }
 
@@ -1363,15 +1377,6 @@ public class TransferMarketService {
     }
 
     private void publishAfterCommit(Runnable event) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            event.run();
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                event.run();
-            }
-        });
+        AfterCommitExecutor.run(event);
     }
 }

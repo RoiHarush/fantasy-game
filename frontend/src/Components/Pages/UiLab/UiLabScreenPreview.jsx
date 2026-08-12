@@ -4,17 +4,30 @@ import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "../../../shared/ui/Button";
+import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "../PointsTab/Points";
 import Status from "../StatusTab/Status";
+import DraftLobbyView from "../DraftRoomTab/DraftLobbyView";
+import ClosedWindowView from "../TransferWindowTab/ClosedWindowView";
 import TransferWindow from "../TransferWindowTab/TransferWindow";
+import TransferWindowLifecycleScenario from "./TransferWindowLifecycleScenario";
+import {
+    buildClosedTransferOrder,
+    buildTransferWindowPreview,
+    squadPlayerIds,
+} from "./transferPreviewData";
 
 const SCREEN_TITLES = {
+    "screen-loading": "Application loading",
     "screen-draft": "Active draft room",
+    "screen-draft-closed": "Closed draft room",
     "screen-transfer": "Open transfer window",
+    "screen-transfer-closed": "Closed transfer window",
+    "screen-transfer-lifecycle": "Transfer-window lifecycle",
     "screen-points": "Regular-season points",
     "screen-status": "Regular-season status",
 };
@@ -51,30 +64,84 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
     const previewDreamTeam = useMemo(() => buildPreviewDreamTeam(players), [players]);
 
     let content;
-    if (id === "screen-transfer" || id === "screen-draft") {
+    if (id === "screen-loading") {
+        content = <LoadingPage title="Preparing your matchday workspace" />;
+    } else if (id === "screen-draft-closed") {
+        content = (
+            <DraftLobbyView
+                isAdmin
+                supplementalDraft
+                league={{
+                    id: previewLeague.id,
+                    name: previewLeague.name,
+                    status: "ACTIVE",
+                    participantCount: previewUsers.length,
+                    maxParticipants: previewUsers.length,
+                }}
+                users={previewUsers}
+                rawDate="2027-01-26T20:30:00"
+                hasScheduledDraft
+                scheduledTime=""
+                orderSource="TRANSFER_ORDER"
+                manualPicks={Array.from({ length: previewUsers.length * 2 }, () => "")}
+                orderError=""
+                actionError={null}
+                actionPending={false}
+                pendingAction={null}
+                copied={false}
+                copyError=""
+                onScheduledTimeChange={() => {}}
+                onOrderSourceChange={() => {}}
+                onManualPickChange={() => {}}
+                onSchedule={() => {}}
+                onPendingAction={() => {}}
+                onConfirmationOpenChange={() => {}}
+                onConfirmedAction={() => {}}
+                onCopyCode={() => {}}
+                onDraftTimeElapsed={() => {}}
+            />
+        );
+    } else if (id === "screen-transfer-lifecycle") {
+        content = (
+            <TransferWindowLifecycleScenario
+                previewUser={previewUser}
+                previewUsers={previewUsers}
+                players={players}
+                teams={previewTeams}
+                fixturesByTeam={fixturesByTeam}
+                nextGameweek={nextGameweek}
+                squad={completeSquad}
+            />
+        );
+    } else if (id === "screen-transfer-closed") {
+        const previewOrder = buildClosedTransferOrder(previewUsers, previewUser.id);
+
+        content = (
+            <ClosedWindowView
+                gameweekId={nextGameweek.id}
+                transferOpenTime={nextGameweek.transferOpenTime}
+                transferOrder={previewOrder}
+                orderPending={false}
+                orderError={null}
+                automaticAttendance={false}
+                attendancePending={false}
+                attendanceError={null}
+                isLeagueAdmin
+                onAttendanceChange={() => {}}
+                onManageOrder={() => {}}
+                onOpenWindow={() => {}}
+            />
+        );
+    } else if (id === "screen-transfer" || id === "screen-draft") {
         const draftMode = id === "screen-draft";
-        const windowPlayers = draftMode
-            ? players.map((player) => ({ ...player, supplementalDraftEligible: true }))
-            : players;
-        const order = [previewUsers[0]?.id, previewUsers[1]?.id, previewUsers[2]?.id].filter(Boolean);
-        const snakeOrder = [...order, ...order.toReversed()];
-        const windowState = {
-            isOpen: true,
-            isDraftMode: draftMode,
-            draftType: draftMode ? "SUPPLEMENTAL" : null,
-            gameWeekId: nextGameweek.id,
-            currentRound: "REGULAR",
-            currentUserId: previewUser.id,
-            currentUserAutomatic: false,
-            order: snakeOrder,
-            initialOrder: snakeOrder,
-            turnsUsed: Object.fromEntries(order.map((managerId, index) => [managerId, index === 0 ? 1 : 0])),
-            totalTurns: Object.fromEntries(order.map((managerId) => [managerId, 2])),
-        };
-        const draftActions = draftMode ? [
-            { id: "preview-pick-1", windowType: "SUPPLEMENTAL", userName: previewUsers[1]?.name, playerInId: players[0]?.id },
-            { id: "preview-pick-2", windowType: "SUPPLEMENTAL", userName: previewUsers[2]?.name, playerInId: players[1]?.id },
-        ] : [];
+        const preview = buildTransferWindowPreview({
+            players,
+            users: previewUsers,
+            currentUser: previewUser,
+            squad: completeSquad,
+            nextGameweek,
+            draftMode,
+        });
 
         content = (
             <PageLayout
@@ -82,14 +149,15 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
                     <TransferWindow
                         user={previewUser}
                         allUsers={previewUsers}
-                        windowState={windowState}
+                        windowState={preview.windowState}
                         nextGameweek={nextGameweek}
-                        players={windowPlayers}
+                        players={preview.windowPlayers}
                         teams={previewTeams}
                         fixturesByTeam={fixturesByTeam}
                         previewMode
                         previewSquad={completeSquad}
-                        previewDraftActions={draftActions}
+                        previewDraftActions={preview.draftActions}
+                        previewTransferActions={preview.transferActions}
                     />
                 )}
                 right={(
@@ -97,7 +165,7 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
                         users={previewUsers}
                         currentUserId={previewUser.id}
                         squad={completeSquad}
-                        players={windowPlayers}
+                        players={preview.windowPlayers}
                         fixturesByTeam={fixturesByTeam}
                         nextGameweek={nextGameweek}
                     />
@@ -311,8 +379,4 @@ function completePreviewSquad(squad, players) {
         benchBoostActive: false,
         irId: null,
     };
-}
-
-function squadPlayerIds(squad) {
-    return [...Object.values(squad.startingLineup || {}).flat(), ...Object.values(squad.bench || {})].filter(Boolean);
 }

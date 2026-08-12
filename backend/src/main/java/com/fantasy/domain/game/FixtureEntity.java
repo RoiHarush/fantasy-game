@@ -27,6 +27,12 @@ public class FixtureEntity {
     private boolean finished;
     private int minutes;
 
+    /**
+     * The original event when FPL moves a fixture out of a gameweek. This is
+     * retained so the old gameweek can distinguish a postponement from a bye.
+     */
+    private Integer postponedFromGameweekId;
+
     public FixtureEntity() {
     }
 
@@ -76,4 +82,9 @@ public class FixtureEntity {
 
     public int getMinutes() { return minutes; }
     public void setMinutes(int minutes) { this.minutes = minutes; }
+
+    public Integer getPostponedFromGameweekId() { return postponedFromGameweekId; }
+    public void setPostponedFromGameweekId(Integer postponedFromGameweekId) {
+        this.postponedFromGameweekId = postponedFromGameweekId;
+    }
 }

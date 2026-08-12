@@ -408,8 +408,17 @@ public class Squad implements Draftable {
     }
 
     public boolean validate(boolean firstPickUsed) {
-        Map<PlayerPosition, Long> counts = this.startingLineup.values().stream()
+        List<Player> startingPlayers = this.startingLineup.values().stream()
                 .flatMap(List::stream)
+                .toList();
+        if (startingPlayers.stream().anyMatch(Objects::isNull)) return false;
+        if (startingPlayers.stream().map(Player::getId).distinct().count() != startingPlayers.size()) return false;
+
+        List<Player> activePlayers = new ArrayList<>(startingPlayers);
+        this.bench.values().stream().filter(Objects::nonNull).forEach(activePlayers::add);
+        if (activePlayers.stream().map(Player::getId).distinct().count() != activePlayers.size()) return false;
+
+        Map<PlayerPosition, Long> counts = startingPlayers.stream()
                 .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
 
         for (PlayerPosition pos : PlayerPosition.values()) {
@@ -420,10 +429,13 @@ public class Squad implements Draftable {
             if (actual < min || actual > max) return false;
         }
 
-        if (this.startingLineup.values().stream().mapToInt(List::size).sum() != 11)
+        if (startingPlayers.size() != 11)
             return false;
 
         if (this.getCaptain() == null || this.getViceCaptain() == null)
+            return false;
+
+        if (!startingPlayers.contains(this.getCaptain()) || !startingPlayers.contains(this.getViceCaptain()))
             return false;
 
         if (this.getCaptain().equals(this.getViceCaptain()))
@@ -444,12 +456,14 @@ public class Squad implements Draftable {
          return !this.getViceCaptain().equals(firstPick);
     }
 
-    public void autoSub(Map<Integer, Integer> minutesMap){
+    public List<AutoSubstitution> autoSub(Map<Integer, Integer> minutesMap){
 
         if (this.autoSubsApplied) {
             System.out.println("Auto subs already applied for this squad. Skipping.");
-            return;
+            return List.of();
         }
+
+        List<AutoSubstitution> substitutions = new ArrayList<>();
 
         boolean viceTurnedCap = false;
 
@@ -470,11 +484,18 @@ public class Squad implements Draftable {
         Player gk = startingLineup.get(PlayerPosition.GOALKEEPER).getFirst();
         Player benchGoalkeeper = bench.get("GK");
         int minutes = minutesMap.getOrDefault(gk.getId(), 0);
-        int benchGkMinutes = minutesMap.getOrDefault(benchGoalkeeper.getId(), 0);
+        int benchGkMinutes = benchGoalkeeper == null
+                ? 0
+                : minutesMap.getOrDefault(benchGoalkeeper.getId(), 0);
 
         if (minutes == 0 && benchGkMinutes > 0) {
             System.out.println("[AutoAdjust] GK Swap: " + gk.getViewName() + " → " + benchGoalkeeper.getViewName());
             switchPlayers(gk, benchGoalkeeper);
+            substitutions.add(new AutoSubstitution(
+                    benchGoalkeeper.getId(),
+                    gk.getId(),
+                    substitutions.size() + 1
+            ));
         }
 
         List<Player> playersOut = new ArrayList<>();
@@ -495,6 +516,7 @@ public class Squad implements Draftable {
 
                 for (int i = 1; i < 4; i++) {
                     Player benchPlayer = bench.get("S" + i);
+                    if (benchPlayer == null) continue;
                     int benchMinutes = minutesMap.getOrDefault(benchPlayer.getId(), 0);
 
                     if (playersOut.contains(benchPlayer)) continue;
@@ -502,6 +524,11 @@ public class Squad implements Draftable {
                     if (benchMinutes > 0 && isValidFormation(lineupPlayer, benchPlayer)) {
                         System.out.println("[AutoAdjust] Outfield Swap: " + lineupPlayer.getViewName() + " → " + benchPlayer.getViewName());
                         switchPlayers(lineupPlayer, benchPlayer);
+                        substitutions.add(new AutoSubstitution(
+                                benchPlayer.getId(),
+                                lineupPlayer.getId(),
+                                substitutions.size() + 1
+                        ));
                         playersOut.add(lineupPlayer);
                         break;
                     }
@@ -510,5 +537,6 @@ public class Squad implements Draftable {
         }
 
         this.autoSubsApplied = true;
+        return List.copyOf(substitutions);
     }
 }

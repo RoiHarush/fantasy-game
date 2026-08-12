@@ -1,9 +1,7 @@
 package com.fantasy.domain.game;
 
-import com.fantasy.domain.transfer.TransferPickEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "gameweeks")
@@ -17,9 +15,6 @@ public class GameWeekEntity {
     private LocalDateTime lastKickoffTime;
     private String status;
     private LocalDateTime transferOpenTime;
-
-    @OneToMany(mappedBy = "gameWeek", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TransferPickEntity> transferOrder;
 
     @Column(columnDefinition = "boolean default false")
     private boolean calculated = false;
@@ -55,9 +50,6 @@ public class GameWeekEntity {
 
     public LocalDateTime getTransferOpenTime() { return transferOpenTime; }
     public void setTransferOpenTime(LocalDateTime transferOpenTime) { this.transferOpenTime = transferOpenTime; }
-
-    public List<TransferPickEntity> getTransferOrder() { return transferOrder; }
-    public void setTransferOrder(List<TransferPickEntity> transferOrder) { this.transferOrder = transferOrder; }
 
     public boolean isCalculated() { return calculated; }
     public void setCalculated(boolean calculated) { this.calculated = calculated; }

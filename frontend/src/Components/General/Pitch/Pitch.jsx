@@ -31,11 +31,15 @@ function Pitch({
 
         let points = null;
         let nextFixture = null;
+        let nextFixtures = [];
+        let fixturePostponed = false;
 
         if (player) {
             const playerDynamic = playerDataById.get(String(id));
             points = playerDynamic?.points ?? null;
             nextFixture = playerDynamic?.nextFixture ?? null;
+            nextFixtures = playerDynamic?.nextFixtures ?? [];
+            fixturePostponed = playerDynamic?.fixturePostponed === true;
         }
 
         if (!player) {
@@ -49,6 +53,8 @@ function Pitch({
                     currentGw={currentGw}
                     points={null}
                     nextFixture={null}
+                    nextFixtures={[]}
+                    fixturePostponed={false}
                 />
             );
         }
@@ -78,6 +84,8 @@ function Pitch({
                 currentGw={currentGw}
                 points={points}
                 nextFixture={nextFixture}
+                nextFixtures={nextFixtures}
+                fixturePostponed={fixturePostponed}
             />
         );
     };

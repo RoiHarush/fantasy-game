@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle, ArrowRightLeft, Beaker, Crown, Play, ShieldX } from "lucide-react";
+import { AlertTriangle, Beaker, Crown, Play, ShieldX } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ import IRReleaseModal from "../PickTeamTab/IR/IRReleaseModal";
 import WaiverCandidateDialog from "../ScoutTab/WaiverCandidateDialog";
 import DraftPickDialog from "../TransferWindowTab/DraftPickDialog";
 import IRSignModal from "../TransferWindowTab/IRSignModal";
+import OpenTransferWindowDialog from "../TransferWindowTab/OpenTransferWindowDialog";
 import ReplacementModal from "../TransferWindowTab/ReplacementModal";
 import TurnOrderModal from "../TransferWindowTab/TurnOrderModal";
 import UiLabScreenPreview from "./UiLabScreenPreview";
@@ -48,15 +49,19 @@ const FALLBACK_PLAYERS = [
 ];
 
 const COOKIE_PREVIEW_TOAST_ID = "ui-lab-cookie-preview";
-const SCREEN_DEMO_IDS = new Set(["screen-draft", "screen-transfer", "screen-points", "screen-status"]);
+const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-status"]);
 
 const GROUPS = [
     {
         title: "Full screen states",
         description: "Open isolated page states that are not currently reachable in the live season timeline.",
         demos: [
+            ["screen-loading", "Application loading", "The real loading surface used while league data is prepared"],
             ["screen-draft", "Active draft room", "Live supplemental draft with managers and squad"],
+            ["screen-draft-closed", "Closed draft room", "The real lobby, countdown and league controls"],
             ["screen-transfer", "Open transfer window", "A manager's active transfer turn"],
+            ["screen-transfer-closed", "Closed transfer window", "The next order, attendance and league controls"],
+            ["screen-transfer-lifecycle", "Transfer lifecycle runner", "Replay closed, opening, live move and graceful closing states"],
             ["screen-points", "Regular-season points", "Gameweek points, pitch and fixtures"],
             ["screen-status", "Regular-season status", "Live round summary, deadlines and activity"],
         ],
@@ -266,7 +271,7 @@ function ActivePreview({ id, close, user, players, primaryPlayer, secondaryPlaye
     if (id === "replacement") return <ReplacementModal playerIn={secondaryPlayer} user={safeUser} onClose={close} players={players} fixturesByTeam={{}} nextGameweek={nextGameweek} previewMode previewSquad={squad} />;
     if (id === "ir-sign") return <IRSignModal player={primaryPlayer} user={safeUser} onClose={close} previewMode />;
     if (id === "turn-order") return <TurnOrderModal onClose={close} usersList={users} previewMode />;
-    if (id === "open-window") return <ConfirmationPreview icon={ArrowRightLeft} eyebrow="Transfer window" title="Open the transfer window now?" description="Managers will immediately be able to make their scheduled picks." confirmLabel="Open now" onClose={close} />;
+    if (id === "open-window") return <OpenTransferWindowDialog open onOpenChange={(nextOpen) => !nextOpen && close()} onConfirm={close} pending={false} error={null} />;
     if (id === "open-draft") return <ConfirmationPreview icon={Crown} eyebrow="Supplemental draft" title="Open the draft now?" description="This starts the two-round supplemental draft immediately for every league manager." confirmLabel="Open draft" onClose={close} />;
     if (id === "remove-manager") return <ConfirmationPreview icon={ShieldX} eyebrow="League member" title="Remove this manager?" description="They will lose access to this league. This action is only available before the first draft." confirmLabel="Remove manager" destructive onClose={close} />;
     return null;

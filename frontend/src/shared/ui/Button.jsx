@@ -11,11 +11,11 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                primary: "bg-gradient-to-r from-brand-purple to-brand-cyan text-white shadow-sm hover:brightness-105",
-                secondary: "border-app-accent-border bg-app-surface-elevated text-app-foreground shadow-sm hover:border-app-positive-border hover:bg-app-positive-surface hover:text-app-positive-foreground",
-                success: "border-app-positive-border bg-app-positive-surface text-app-positive-foreground shadow-sm hover:bg-app-positive-hover",
-                danger: "bg-red-500 text-white shadow-sm hover:bg-red-600",
-                ghost: "text-app-foreground hover:bg-app-accent-hover",
+                primary: "border-[#704a82] bg-[linear-gradient(110deg,#4f285f_0%,#255b68_100%)] text-white shadow-sm pointer-fine:hover:border-brand-cyan/50 pointer-fine:hover:brightness-110",
+                secondary: "border-app-accent-border bg-app-surface-elevated text-app-foreground shadow-sm pointer-fine:hover:border-app-positive-border pointer-fine:hover:bg-app-positive-surface pointer-fine:hover:text-app-positive-foreground",
+                success: "border-app-positive-border bg-app-positive-surface text-app-positive-foreground shadow-sm pointer-fine:hover:bg-app-positive-hover",
+                danger: "bg-red-500 text-white shadow-sm pointer-fine:hover:bg-red-600",
+                ghost: "text-app-foreground pointer-fine:hover:bg-app-accent-hover",
             },
             size: {
                 sm: "h-9 px-3",

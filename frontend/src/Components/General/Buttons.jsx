@@ -1,13 +1,15 @@
-import Style from "../../Styles/Button.module.css"
+import { Button } from "../../shared/ui/Button";
 
 function Buttons({ clicked, names, className }) {
     return (
         <div>
-            {names.map((name) =>
-                <button key={name} onClick={() => clicked(name)} className={`${Style.btn} ${className}`}>{name}</button>
-            )}
+            {names.map((name) => (
+                <Button key={name} onClick={() => clicked(name)} className={className}>
+                    {name}
+                </Button>
+            ))}
         </div>
-    )
+    );
 }
 
-export default Buttons
+export default Buttons;

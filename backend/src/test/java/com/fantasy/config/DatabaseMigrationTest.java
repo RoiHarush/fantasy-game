@@ -19,7 +19,7 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(15, flyway.migrate().migrationsExecuted);
+        assertEquals(18, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
@@ -36,7 +36,6 @@ class DatabaseMigrationTest {
             assertTrue(hasColumn(metadata, "WAIVER_PREFERENCES", "PLAN_TYPE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "TRIPLE_CAPTAIN_ACTIVE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "BENCH_BOOST_ACTIVE"));
-            assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_DATA"));
             assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_BYTES"));
             assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_CONTENT_TYPE"));
             assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_VERSION"));
@@ -46,8 +45,13 @@ class DatabaseMigrationTest {
             assertTrue(hasTable(metadata, "LEAGUE_TRANSFER_WINDOW_CANONICAL_ORDER"));
             assertTrue(hasTable(metadata, "PLAYER_FIXTURE_STATS"));
             assertTrue(hasTable(metadata, "LEAGUE_TRANSFER_WINDOW_AUTO_USERS"));
+            assertTrue(hasColumn(metadata, "USER_SQUADS", "VERSION"));
+            assertTrue(hasTable(metadata, "AUTO_SUBSTITUTIONS"));
+            assertTrue(hasColumn(metadata, "FIXTURES", "POSTPONED_FROM_GAMEWEEK_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "OWNER_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "STATE"));
+            assertFalse(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_DATA"));
+            assertFalse(hasTable(metadata, "GAMEWEEK_TRANSFER_ORDER"));
 
             try (var statement = connection.createStatement()) {
                 statement.executeUpdate("INSERT INTO teams (id, name, short_name, code, asset_code) "

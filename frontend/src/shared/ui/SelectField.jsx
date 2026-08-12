@@ -2,6 +2,7 @@
 
 import * as Select from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { cn } from "../../lib/cn";
 
@@ -20,6 +21,8 @@ function SelectField({
     name,
     required,
 }) {
+    const [open, setOpen] = useState(false);
+    const reopenGuardUntilRef = useRef(0);
     const normalizedValue = value === "" || value == null ? EMPTY_VALUE : String(value);
     const selectedOption = options.find((option) => {
         const optionValue = option.value === "" || option.value == null
@@ -30,6 +33,13 @@ function SelectField({
 
     return (
         <Select.Root
+            open={open}
+            onOpenChange={(nextOpen) => {
+                const now = Date.now();
+                if (nextOpen && now < reopenGuardUntilRef.current) return;
+                if (!nextOpen) reopenGuardUntilRef.current = now + 350;
+                setOpen(nextOpen);
+            }}
             value={normalizedValue}
             onValueChange={(nextValue) => onValueChange?.(nextValue === EMPTY_VALUE ? "" : nextValue)}
             disabled={disabled}
@@ -39,6 +49,13 @@ function SelectField({
             <Select.Trigger
                 id={id}
                 aria-label={ariaLabel}
+                onPointerDown={(event) => {
+                    if (!open) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    reopenGuardUntilRef.current = Date.now() + 350;
+                    setOpen(false);
+                }}
                 className={cn(
                     "group inline-flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface-elevated px-3.5 py-2.5 text-left text-sm font-semibold text-app-foreground shadow-sm transition",
                     "hover:border-app-accent-border hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-app-accent-border/45",

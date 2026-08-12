@@ -15,7 +15,10 @@ import com.fantasy.domain.team.SquadMapper;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserSquadRepository;
 import com.fantasy.domain.team.ChipNames;
+import com.fantasy.domain.team.AutoSubstitutionEntity;
+import com.fantasy.domain.team.AutoSubstitutionRepository;
 import com.fantasy.domain.user.UserMapper;
+import com.fantasy.domain.transfer.TransferMarketService;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -43,6 +46,8 @@ public class GameweekManager {
     // תוספות חדשות
     private final GameweekDailyStatusRepository dailyStatusRepository;
     private final FixtureRepository fixtureRepository;
+    private final TransferMarketService transferMarketService;
+    private final AutoSubstitutionRepository autoSubstitutionRepository;
 
     public GameweekManager(UserGameDataRepository gameDataRepository,
                            UserSquadRepository squadRepository,
@@ -52,7 +57,9 @@ public class GameweekManager {
                            LeaguePlayerCatalog leaguePlayerCatalog,
                            SystemStatusService systemStatusService,
                            GameweekDailyStatusRepository dailyStatusRepository,
-                           FixtureRepository fixtureRepository) {
+                           FixtureRepository fixtureRepository,
+                           TransferMarketService transferMarketService,
+                           AutoSubstitutionRepository autoSubstitutionRepository) {
         this.gameDataRepository = gameDataRepository;
         this.squadRepository = squadRepository;
         this.gameweekRepository = gameweekRepository;
@@ -62,6 +69,8 @@ public class GameweekManager {
         this.systemStatusService = systemStatusService;
         this.dailyStatusRepository = dailyStatusRepository;
         this.fixtureRepository = fixtureRepository;
+        this.transferMarketService = transferMarketService;
+        this.autoSubstitutionRepository = autoSubstitutionRepository;
     }
 
     @Transactional
@@ -158,13 +167,25 @@ public class GameweekManager {
 
             Squad squad = SquadMapper.toDomain(squadEntity, leaguePlayers);
 
-            squad.autoSub(minutesMap);
+            var autoSubstitutions = squad.autoSub(minutesMap);
 
-            UserSquadEntity updatedEntity = SquadMapper.toEntity(squad, gameweekId);
-            updatedEntity.setId(squadEntity.getId());
-            updatedEntity.setUser(gameDataEntity);
+            SquadMapper.updateEntity(squadEntity, squad, gameweekId);
+            squadEntity.setUser(gameDataEntity);
+            squadRepository.save(squadEntity);
 
-            squadRepository.save(updatedEntity);
+            if (!autoSubstitutions.isEmpty()) {
+                List<AutoSubstitutionEntity> history = autoSubstitutions.stream()
+                        .map(substitution -> {
+                            AutoSubstitutionEntity entity = new AutoSubstitutionEntity();
+                            entity.setSquad(squadEntity);
+                            entity.setSequence(substitution.sequence());
+                            entity.setPlayerInId(substitution.playerInId());
+                            entity.setPlayerOutId(substitution.playerOutId());
+                            return entity;
+                        })
+                        .toList();
+                autoSubstitutionRepository.saveAll(history);
+            }
 
             pointsService.calculateAndPersist(gameDataEntity.getUser().getId(), gameweekId);
         }
@@ -223,9 +244,17 @@ public class GameweekManager {
             return false;
         }
 
+        transferMarketService.finalizeWindowsAtGameweekDeadline(newGwId);
+
         var currentLiveOpt = gameweekRepository.findFirstByStatusOrderByIdAsc("LIVE");
         if (currentLiveOpt.isPresent()) {
             var currentLive = currentLiveOpt.get();
+            if (!currentLive.isCalculated()) {
+                throw new IllegalStateException(
+                        "Cannot open GW " + newGwId
+                                + " before live GW " + currentLive.getId() + " is finalized"
+                );
+            }
             currentLive.setStatus("FINISHED");
             log.info("Marked GW {} as FINISHED", currentLive.getId());
             gameweekRepository.save(currentLive);

@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/gameweeks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/fixtures/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/fpl/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/teams").permitAll()
 
                         .anyRequest().authenticated()
                 )

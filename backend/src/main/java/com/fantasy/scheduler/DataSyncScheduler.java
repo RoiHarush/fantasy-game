@@ -36,7 +36,7 @@ public class DataSyncScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTimeLimit = now.minusMinutes(140);
 
-        boolean hasActiveGames = fixtureRepository.hasActiveFixtures(now, startTimeLimit);
+        boolean hasActiveGames = fixtureRepository.hasAnyActiveFixtures(now, startTimeLimit);
 
         if (hasActiveGames) {
             log.info("Skipping Periodic Data Sync. Active games detected.");

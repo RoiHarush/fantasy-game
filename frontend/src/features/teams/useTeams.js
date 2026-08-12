@@ -11,7 +11,7 @@ export function useTeams(options = {}) {
     const query = useQuery({
         queryKey: queryKeys.teams,
         queryFn: ({ signal }) => getTeams({ signal }),
-        enabled: Boolean(user?.id && (options.enabled ?? true)),
+        enabled: Boolean((user?.id || options.allowUnauthenticated) && (options.enabled ?? true)),
         staleTime: 5 * 60_000,
     });
 

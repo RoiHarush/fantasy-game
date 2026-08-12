@@ -22,5 +22,8 @@ export function usePointsPageData({ userId, gameweekId, live, enabled }) {
         },
         enabled: Boolean(enabled && userId && gameweekId),
         staleTime: live ? 10_000 : 5 * 60_000,
+        // The backend refreshes FPL live data once per minute. Keep an open
+        // live-points screen reconciled even when no navigation/focus event occurs.
+        refetchInterval: live ? 60_000 : false,
     });
 }
