@@ -10,80 +10,8 @@ import { manualSquadOverrideSchema } from "../../../features/super-admin/schemas
 import { Button } from "../../../shared/ui/Button";
 import SelectField from "../../../shared/ui/SelectField";
 
-const styles = {
-    section: {
-        backgroundColor: 'white',
-        padding: '24px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    },
-    h3: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        borderBottom: '2px solid #eee',
-        paddingBottom: '8px',
-        marginBottom: '16px',
-    },
-    h4: {
-        fontSize: '1rem',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-    },
-    input: {
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        marginRight: '10px',
-        minWidth: '120px',
-        height: '40px',
-    },
-    textarea: {
-        width: '100%',
-        minHeight: '280px',
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        fontFamily: 'monospace',
-        fontSize: '0.9rem',
-        marginTop: '10px',
-        boxSizing: 'border-box',
-    },
-    playerFinderInput: {
-        width: '100%',
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
-        boxSizing: 'border-box',
-        marginBottom: '8px',
-    },
-    playerList: {
-        maxHeight: '150px',
-        overflowY: 'auto',
-        border: '1px solid #e5e7eb',
-        borderRadius: '6px',
-        padding: '8px',
-        background: '#f9fafb',
-    },
-    playerListItem: {
-        padding: '4px 8px',
-        borderBottom: '1px solid #eee',
-    },
-    message: {
-        marginTop: '16px',
-        padding: '10px',
-        borderRadius: '6px',
-        wordBreak: 'break-word',
-    },
-    success: {
-        backgroundColor: '#dcfce7',
-        color: '#166534',
-    },
-    error: {
-        backgroundColor: '#fee2e2',
-        color: '#991b1b',
-    },
-};
+const fieldClass = "min-h-11 w-full rounded-xl border border-app-border bg-app-surface-muted px-3 text-sm text-app-foreground outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/15 sm:w-auto sm:min-w-40";
+const sectionClass = "border-t border-app-border py-6 first:border-t-0";
 
 const DEFAULT_SQUAD_DTO = {
     startingLineup: {
@@ -215,6 +143,16 @@ export default function AdminActionsPage() {
         if (!gameweek) return;
         requestConfirmation({ title: `Synchronize Gameweek ${gameweek}?`, description: "All upstream data for this gameweek will be refreshed.", endpoint: `/api/admin/sync/?gw=${gameweek}` });
     };
+    const handleNotificationTest = (mode) => {
+        const forced = mode === "push";
+        requestConfirmation({
+            title: forced ? "Force a device push to every user?" : "Test notification routing for every user?",
+            description: forced
+                ? "Development only. This bypasses presence so registered devices receive an operating-system push."
+                : "Development only. Active users receive a toast and inactive users receive a device push.",
+            endpoint: `/api/admin/dev/notifications/test?mode=${mode}`,
+        });
+    };
     const handleSaveSquad = () => {
         const userId = Number(squadUserId);
         const gameweek = Number(squadGw);
@@ -243,105 +181,130 @@ export default function AdminActionsPage() {
     };
 
     return (
-        <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '20px' }}>
-                System Actions
-            </h1>
+        <div className="mx-auto max-w-5xl">
+            <header className="mb-3">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-red-400">Controlled intervention</p>
+                <h1 className="mt-1 text-2xl font-black text-app-foreground sm:text-3xl">Emergency actions</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-app-muted">Every operation requires explicit confirmation. Use these controls only to recover or correct persisted season state.</p>
+            </header>
 
-            <div style={styles.section}>
-                <h3 style={styles.h3}>Gameweek & Points Management</h3>
-                <div>
+            <section className={sectionClass}>
+                <h2 className="text-lg font-black text-app-foreground">Gameweek and points</h2>
+                <p className="mt-1 text-sm text-app-muted">Open or recalculate one numbered gameweek.</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <input
                         type="number"
                         aria-label="Gameweek ID for gameweek actions"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID"
-                        style={styles.input}
+                        className={fieldClass}
                         disabled={loading}
                     />
-                    <Button type="button" variant="success" className="mt-2.5 mr-2.5" onClick={handleOpenGameweek} disabled={loading}>
+                    <Button type="button" variant="success" onClick={handleOpenGameweek} disabled={loading}>
                         Open Gameweek
                     </Button>
-                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleProcessGameweek} disabled={loading}>
+                    <Button type="button" variant="danger" onClick={handleProcessGameweek} disabled={loading}>
                         Process Gameweek Points
                     </Button>
-                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleUpdatePlayerPoints} disabled={loading}>
+                    <Button type="button" variant="secondary" onClick={handleUpdatePlayerPoints} disabled={loading}>
                         Update Player Points for GW
                     </Button>
                 </div>
-            </div>
+            </section>
 
-            <div style={styles.section}>
-                <h3 style={styles.h3}>Transfer Window Management</h3>
-                <div>
+            <section className={sectionClass}>
+                <h2 className="text-lg font-black text-app-foreground">Transfer windows</h2>
+                <p className="mt-1 text-sm text-app-muted">Open eligible leagues for a gameweek or stop currently active windows.</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <input
                         type="number"
                         aria-label="Gameweek ID for transfer window"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID (for opening)"
-                        style={styles.input}
+                        className={fieldClass}
                         disabled={loading}
                     />
-                    <Button type="button" variant="success" className="mt-2.5 mr-2.5" onClick={handleOpenTransferWindow} disabled={loading}>
+                    <Button type="button" variant="success" onClick={handleOpenTransferWindow} disabled={loading}>
                         Open Transfer Window
                     </Button>
-                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleCloseTransferWindow} disabled={loading}>
+                    <Button type="button" variant="danger" onClick={handleCloseTransferWindow} disabled={loading}>
                         Close Transfer Window
                     </Button>
                 </div>
-            </div>
+            </section>
 
-            <div style={styles.section}>
-                <h3 style={styles.h3}>Data Sync (API)</h3>
-                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleUpdateGameweeks} disabled={loading}>
+            <section className={sectionClass}>
+                <h2 className="text-lg font-black text-app-foreground">Upstream data sync</h2>
+                <p className="mt-1 text-sm text-app-muted">Refresh FPL schedules and player data without changing league ownership.</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button type="button" variant="secondary" onClick={handleUpdateGameweeks} disabled={loading}>
                     Update All Gameweeks
                 </Button>
-                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleRefreshPlayers} disabled={loading}>
+                <Button type="button" variant="secondary" onClick={handleRefreshPlayers} disabled={loading}>
                     Refresh Player List
                 </Button>
-                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleSyncCurrent} disabled={loading}>
+                <Button type="button" variant="secondary" onClick={handleSyncCurrent} disabled={loading}>
                     Full Sync Current GW
                 </Button>
-                <div>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <input
                         type="number"
                         aria-label="Gameweek ID for data synchronization"
                         value={gwInput}
                         onChange={(e) => setGwInput(e.target.value)}
                         placeholder="Gameweek ID"
-                        style={{ ...styles.input, marginTop: '10px' }}
+                        className={fieldClass}
                         disabled={loading}
                     />
-                    <Button type="button" className="mt-2.5 mr-2.5" onClick={handleSyncForGw} disabled={loading}>
+                    <Button type="button" onClick={handleSyncForGw} disabled={loading}>
                         Full Sync for Specific GW
                     </Button>
                 </div>
-            </div>
+            </section>
 
-            <div style={{ ...styles.section, backgroundColor: '#fffbeb' }}>
-                <h3 style={{ ...styles.h3, color: '#b45309' }}>Manual Squad Override (Dangerous)</h3>
+            {process.env.NODE_ENV === "development" && (
+                <section className={sectionClass}>
+                    <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-500">Development only</p>
+                    <h2 className="mt-1 text-lg font-black text-app-foreground">Notification delivery test</h2>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-app-muted">
+                        Send a harmless test event to every registered user. No league, squad, points, or transfer data is changed.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                        <Button type="button" variant="secondary" onClick={() => handleNotificationTest("route")} disabled={loading}>
+                            Test real routing
+                        </Button>
+                        <Button type="button" onClick={() => handleNotificationTest("push")} disabled={loading}>
+                            Force device push
+                        </Button>
+                    </div>
+                </section>
+            )}
 
-                <div style={{ marginBottom: '16px' }}>
-                    <h4 style={styles.h4}>Player ID Finder</h4>
+            <section className={`${sectionClass} border-red-400/35`}>
+                <div className="border-l-2 border-red-400 pl-3"><h2 className="text-lg font-black text-red-500 dark:text-red-300">Manual squad override</h2><p className="mt-1 text-sm text-app-muted">Last-resort repair. This directly replaces a saved squad.</p></div>
+
+                <div className="my-5">
+                    <h3 className="mb-2 text-sm font-black text-app-foreground">Player ID finder</h3>
                     <input
                         type="text"
                         aria-label="Search player ID"
                         value={playerSearch}
                         onChange={(e) => setPlayerSearch(e.target.value)}
                         placeholder="Search player name..."
-                        style={styles.playerFinderInput}
+                        className={`${fieldClass} mb-2 sm:w-full`}
                     />
-                    <div style={styles.playerList}>
+                    <div className="max-h-40 overflow-y-auto rounded-xl border border-app-border bg-app-surface-muted p-2 text-sm">
                         {filteredPlayers.length > 0 ? (
                             filteredPlayers.map(p => (
-                                <div key={p.id} style={styles.playerListItem}>
+                                <div key={p.id} className="border-b border-app-border px-2 py-1.5 last:border-b-0">
                                     <strong>{p.viewName}</strong> (ID: {p.id})
                                 </div>
                             ))
                         ) : (
-                            <span style={{ color: '#6b7280' }}>{playerSearch ? 'No players found' : 'name (ID: number)'}</span>
+                            <span className="text-app-muted">{playerSearch ? 'No players found' : 'Search a name to reveal its player ID.'}</span>
                         )}
                     </div>
                 </div>
@@ -359,7 +322,7 @@ export default function AdminActionsPage() {
                             })),
                         ]}
                         disabled={loading}
-                        className="mb-2 max-w-xl"
+                        className="mb-3 max-w-xl"
                     />
 
                     <input
@@ -368,7 +331,7 @@ export default function AdminActionsPage() {
                         value={squadGw}
                         onChange={(e) => setSquadGw(e.target.value)}
                         placeholder="Gameweek ID"
-                        style={styles.input}
+                        className={fieldClass}
                         disabled={loading}
                     />
                     <textarea
@@ -376,25 +339,25 @@ export default function AdminActionsPage() {
                         value={squadDto}
                         onChange={(e) => setSquadDto(e.target.value)}
                         placeholder="Paste SquadDto JSON here"
-                        style={styles.textarea}
+                        className="mt-3 min-h-72 w-full rounded-xl border border-app-border bg-app-surface-muted p-3 font-mono text-xs text-app-foreground outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/15 sm:text-sm"
                         disabled={loading}
                     />
-                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleSaveSquad} disabled={loading}>
+                    <Button type="button" variant="danger" className="mt-3 w-full sm:w-auto" onClick={handleSaveSquad} disabled={loading}>
                         Save Manual Squad
                     </Button>
                 </div>
-            </div>
+            </section>
 
             {message.text && (
                 <div
-                    style={{ ...styles.message, ...(message.type === 'success' ? styles.success : styles.error) }}
+                    className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold break-words ${message.type === "success" ? "border-app-positive-border bg-app-positive-surface text-app-positive-foreground" : "border-app-danger-border bg-app-danger-surface text-app-danger-foreground"}`}
                     role={message.type === "error" ? "alert" : "status"}
                 >
                     {message.text}
                 </div>
             )}
             {(playersQuery.error || usersQuery.error) && (
-                <div style={{ ...styles.message, ...styles.error }} role="alert">
+                <div className="mt-4 rounded-xl border border-app-danger-border bg-app-danger-surface px-4 py-3 text-sm font-semibold text-app-danger-foreground" role="alert">
                     {(playersQuery.error || usersQuery.error).message}
                 </div>
             )}

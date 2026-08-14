@@ -20,6 +20,7 @@ export default function ClosedWindowView({
     attendancePending,
     attendanceError,
     isLeagueAdmin,
+    openBlockedReason,
     onAttendanceChange,
     onManageOrder,
     onOpenWindow,
@@ -137,10 +138,15 @@ export default function ClosedWindowView({
                                     Manage order
                                     <Settings2 className="size-4" aria-hidden="true" />
                                 </Button>
-                                <Button variant="danger" onClick={onOpenWindow} className="w-full justify-between">
+                                <Button variant="danger" onClick={onOpenWindow} disabled={Boolean(openBlockedReason)} className="w-full justify-between">
                                     Open now
                                     <Play className="size-4" fill="currentColor" aria-hidden="true" />
                                 </Button>
+                                {openBlockedReason && (
+                                    <p className="pt-1 text-xs font-semibold leading-5 text-app-danger-foreground" role="status">
+                                        {openBlockedReason}
+                                    </p>
+                                )}
                             </div>
                         </section>
                     )}

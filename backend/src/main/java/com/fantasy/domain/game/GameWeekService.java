@@ -1,8 +1,12 @@
 package com.fantasy.domain.game;
 
+import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.scheduler.LifecycleScheduleChangedEvent;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,7 @@ public class GameWeekService {
     private final RestTemplate restTemplate;
 
     private GameWeekService self;
+    private ApplicationEventPublisher lifecycleEvents = event -> { };
 
     public GameWeekService(GameWeekRepository gameWeekRepo,
                            FixtureRepository fixtureRepo,
@@ -40,6 +45,11 @@ public class GameWeekService {
     @Autowired
     public void setSelf(@Lazy GameWeekService self) {
         this.self = self;
+    }
+
+    @Autowired
+    void setLifecycleEvents(ApplicationEventPublisher lifecycleEvents) {
+        this.lifecycleEvents = lifecycleEvents;
     }
 
     public void loadFromApiAndSave() {
@@ -82,6 +92,7 @@ public class GameWeekService {
         }
 
         gameWeekRepo.saveAll(gameWeeksToSave);
+        publishScheduleChanged("gameweeks loaded from FPL");
     }
 
     @Transactional
@@ -109,6 +120,13 @@ public class GameWeekService {
         }
 
         gameWeekRepo.saveAll(gameWeeksToUpdate);
+        if (!gameWeeksToUpdate.isEmpty()) {
+            publishScheduleChanged("FPL fixture deadlines changed");
+        }
+    }
+
+    private void publishScheduleChanged(String reason) {
+        AfterCommitExecutor.run(() -> lifecycleEvents.publishEvent(new LifecycleScheduleChangedEvent(reason)));
     }
 
     private record KickoffTimes(LocalDateTime first, LocalDateTime last) {}

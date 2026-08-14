@@ -1,6 +1,8 @@
 package com.fantasy.domain.transfer;
 
 import com.fantasy.domain.game.GameWeekDto;
+import com.fantasy.domain.game.GameWeekEntity;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
@@ -99,6 +101,34 @@ class DraftServiceTest {
                 DraftType.INITIAL
         );
         assertEquals(LeagueStatus.DRAFT_SCHEDULED, fixture.league.getStatus());
+    }
+
+    @Test
+    void refusesToScheduleOrOpenDraftDuringAnActiveGameweek() {
+        Fixture fixture = fixture(2, List.of(manager(10), manager(20)));
+        LocalDateTime now = LocalDateTime.now();
+        GameWeekEntity live = new GameWeekEntity(
+                1,
+                "Gameweek 1",
+                now.minusHours(1),
+                now.plusHours(2),
+                "LIVE"
+        );
+        when(fixture.gameWeekService.getAllGameweeks()).thenReturn(List.of(live));
+
+        assertThrows(
+                GameweekActivityPolicy.GameweekActiveException.class,
+                () -> fixture.service.scheduleDraftForLeague(7L, now.plusMinutes(30))
+        );
+        assertThrows(
+                GameweekActivityPolicy.GameweekActiveException.class,
+                () -> fixture.service.runSnakeDraft(7L)
+        );
+        verify(fixture.marketService, never()).openDraftWindow(
+                eq(7L),
+                eq(1),
+                org.mockito.ArgumentMatchers.anyList()
+        );
     }
 
     @Test

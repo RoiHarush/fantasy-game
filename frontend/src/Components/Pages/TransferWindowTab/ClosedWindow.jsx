@@ -8,12 +8,13 @@ import {
     useTransferAttendance,
     useTransferOrder,
 } from "../../../features/transfer-window/useTransferWindow";
+import { findActiveGameweek, gameweekLabel } from "../../../features/gameweeks/availability";
 import { isSameTransferId } from "../../../features/transfer-window/model";
 import ClosedWindowView from "./ClosedWindowView";
 import OpenTransferWindowDialog from "./OpenTransferWindowDialog";
 import TurnOrderModal from "./TurnOrderModal";
 
-function ClosedWindow({ user, users, nextGameweek }) {
+function ClosedWindow({ user, users, nextGameweek, gameweeks = [], currentGameweek = null }) {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
@@ -44,6 +45,10 @@ function ClosedWindow({ user, users, nextGameweek }) {
 
     const automaticAttendance = Boolean(attendanceQuery.data?.automatic);
     const attendanceError = attendanceQuery.error ?? saveAttendance.error;
+    const activeGameweek = findActiveGameweek(gameweeks, currentGameweek);
+    const openBlockedReason = activeGameweek
+        ? `Transfers cannot open while ${gameweekLabel(activeGameweek)} is active.`
+        : "";
 
     return (
         <>
@@ -57,9 +62,12 @@ function ClosedWindow({ user, users, nextGameweek }) {
                 attendancePending={attendanceQuery.isPending || saveAttendance.isPending}
                 attendanceError={attendanceError}
                 isLeagueAdmin={Boolean(user?.leagueAdmin)}
+                openBlockedReason={openBlockedReason}
                 onAttendanceChange={() => saveAttendance.mutate(!automaticAttendance)}
                 onManageOrder={() => setIsOrderModalOpen(true)}
-                onOpenWindow={() => setIsConfirmOpen(true)}
+                onOpenWindow={() => {
+                    if (!openBlockedReason) setIsConfirmOpen(true);
+                }}
             />
 
             {isOrderModalOpen && (
@@ -72,7 +80,9 @@ function ClosedWindow({ user, users, nextGameweek }) {
             <OpenTransferWindowDialog
                 open={isConfirmOpen}
                 onOpenChange={setIsConfirmOpen}
-                onConfirm={() => openWindow.mutate()}
+                onConfirm={() => {
+                    if (!openBlockedReason) openWindow.mutate();
+                }}
                 pending={openWindow.isPending}
                 error={openWindow.error}
             />

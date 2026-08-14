@@ -83,6 +83,49 @@ class GameweekAutoSchedulerTest {
         verify(dependencies.gameweekManager, never()).processGameweek(4, false);
     }
 
+    @Test
+    void recoveryFinalizesThePreviousGameweekBeforeOpeningAnOverdueNextGameweek() {
+        Dependencies dependencies = new Dependencies();
+        GameWeekEntity live = liveGameweek();
+        GameWeekEntity upcoming = new GameWeekEntity();
+        upcoming.setId(5);
+        upcoming.setStatus("UPCOMING");
+        upcoming.setFirstKickoffTime(LocalDateTime.now().minusMinutes(5));
+        FixtureEntity finished = new FixtureEntity();
+        finished.setFinished(true);
+        when(dependencies.gameWeekRepository.findFirstByStatusOrderByIdAsc("LIVE"))
+                .thenReturn(Optional.of(live));
+        when(dependencies.gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING"))
+                .thenReturn(Optional.of(upcoming));
+        when(dependencies.fixtureRepository.findByGameweekId(4)).thenReturn(List.of(finished));
+
+        dependencies.scheduler.runScheduler();
+
+        InOrder order = inOrder(dependencies.gameweekManager);
+        order.verify(dependencies.gameweekManager).processGameweek(4, false);
+        order.verify(dependencies.gameweekManager).openNextGameweek(5, false);
+    }
+
+    @Test
+    void finalizesAWeekWhoseOnlyFixtureWasConfirmedMovedToAnotherGameweek() {
+        Dependencies dependencies = new Dependencies();
+        GameWeekEntity gameweek = liveGameweek();
+        FixtureEntity postponed = new FixtureEntity();
+        postponed.setId(99);
+        postponed.setPostponedFromGameweekId(4);
+        postponed.setGameweekId(8);
+        when(dependencies.gameWeekRepository.findFirstByStatusOrderByIdAsc("LIVE"))
+                .thenReturn(Optional.of(gameweek));
+        when(dependencies.fixtureRepository.findByGameweekId(4)).thenReturn(List.of());
+        when(dependencies.fixtureRepository.findByPostponedFromGameweekId(4))
+                .thenReturn(List.of(postponed));
+
+        dependencies.scheduler.finalizeDueGameweek();
+
+        verify(dependencies.liveScoreManager).updateLiveScores(4);
+        verify(dependencies.gameweekManager).processGameweek(4, false);
+    }
+
     private GameWeekEntity liveGameweek() {
         GameWeekEntity gameweek = new GameWeekEntity();
         gameweek.setId(4);

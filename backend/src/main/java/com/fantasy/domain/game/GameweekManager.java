@@ -1,5 +1,10 @@
 package com.fantasy.domain.game;
 
+import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.scheduler.LifecycleScheduleChangedEvent;
+import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
+import com.fantasy.domain.notification.NotificationEvents;
+
 import com.fantasy.domain.score.PointsService;
 import com.fantasy.application.SystemStatusService;
 import com.fantasy.domain.team.Squad;
@@ -21,6 +26,8 @@ import com.fantasy.domain.user.UserMapper;
 import com.fantasy.domain.transfer.TransferMarketService;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -48,6 +55,7 @@ public class GameweekManager {
     private final FixtureRepository fixtureRepository;
     private final TransferMarketService transferMarketService;
     private final AutoSubstitutionRepository autoSubstitutionRepository;
+    private ApplicationEventPublisher lifecycleEvents = event -> { };
 
     public GameweekManager(UserGameDataRepository gameDataRepository,
                            UserSquadRepository squadRepository,
@@ -71,6 +79,11 @@ public class GameweekManager {
         this.fixtureRepository = fixtureRepository;
         this.transferMarketService = transferMarketService;
         this.autoSubstitutionRepository = autoSubstitutionRepository;
+    }
+
+    @Autowired
+    void setLifecycleEvents(ApplicationEventPublisher lifecycleEvents) {
+        this.lifecycleEvents = lifecycleEvents;
     }
 
     @Transactional
@@ -118,6 +131,7 @@ public class GameweekManager {
             }
 
             log.info("Successfully opened GW {} and rolled over all squads", newGwId);
+            publishScheduleChanged("gameweek " + newGwId + " opened");
         } finally {
             systemStatusService.setRolloverInProgress(false);
             log.info("SYSTEM UNLOCKED: Finished rollover to GW {}", newGwId);
@@ -196,6 +210,21 @@ public class GameweekManager {
         markAllDaysAsCalculated(gameweekId);
 
         log.info("Finished processing GW {} successfully", gameweekId);
+        publishScheduleChanged("gameweek " + gameweekId + " finalized");
+        gameDataEntities.stream()
+                .filter(data -> data.getLeague() != null)
+                .map(data -> data.getLeague().getId())
+                .distinct()
+                .forEach(leagueId -> AfterCommitExecutor.run(() -> lifecycleEvents.publishEvent(
+                        LeagueNotificationRequestedEvent.league(
+                                leagueId,
+                                NotificationEvents.gameweekFinalized(gameweekId)
+                        )
+                )));
+    }
+
+    private void publishScheduleChanged(String reason) {
+        AfterCommitExecutor.run(() -> lifecycleEvents.publishEvent(new LifecycleScheduleChangedEvent(reason)));
     }
 
     private void markAllDaysAsCalculated(int gwId) {

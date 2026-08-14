@@ -52,20 +52,25 @@ public class DataSyncScheduler {
             log.error("Unexpected error syncing players: {}", e.getMessage());
         }
 
-        try {
-            fixtureService.loadFromApiAndSave();
-            log.info("Fixtures synced.");
-        } catch (Exception e) {
-            log.error("Unexpected error syncing fixtures: {}", e.getMessage());
-        }
-
-        try {
-            gameWeekService.updateGameWeekDeadlines();
-            log.info("GameWeek deadlines synced.");
-        } catch (Exception e) {
-            log.error("Unexpected error updating deadlines: {}", e.getMessage());
-        }
+        syncFixtureScheduleOnly();
 
         log.info("Periodic Data Sync process finished.");
+    }
+
+    /**
+     * Lightweight boundary reconciliation used shortly before a persisted
+     * transfer/gameweek deadline. It avoids missing a late FPL reschedule
+     * without running the heavier player synchronization.
+     */
+    public boolean syncFixtureScheduleOnly() {
+        try {
+            fixtureService.loadFromApiAndSave();
+            gameWeekService.updateGameWeekDeadlines();
+            log.info("Fixtures and GameWeek deadlines synced.");
+            return true;
+        } catch (Exception e) {
+            log.error("Unexpected error syncing fixture deadlines: {}", e.getMessage(), e);
+            return false;
+        }
     }
 }

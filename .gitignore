@@ -28,3 +28,6 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Machine-local Spring overrides (development secrets such as disposable VAPID keys)
+backend/src/main/resources/application-local.properties

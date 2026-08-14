@@ -33,6 +33,9 @@ export default function DraftLobbyView({
     orderError,
     actionError,
     actionPending,
+    openBlockedReason,
+    scheduleBlockedReason,
+    configuredScheduleBlockedReason,
     pendingAction,
     copied,
     copyError,
@@ -117,6 +120,9 @@ export default function DraftLobbyView({
                             users={users}
                             orderError={orderError}
                             actionPending={actionPending}
+                            openBlockedReason={openBlockedReason}
+                            scheduleBlockedReason={scheduleBlockedReason}
+                            configuredScheduleBlockedReason={configuredScheduleBlockedReason}
                             onScheduledTimeChange={onScheduledTimeChange}
                             onOrderSourceChange={onOrderSourceChange}
                             onManualPickChange={onManualPickChange}
@@ -199,6 +205,9 @@ function AdminSetup({
     users,
     orderError,
     actionPending,
+    openBlockedReason,
+    scheduleBlockedReason,
+    configuredScheduleBlockedReason,
     onScheduledTimeChange,
     onOrderSourceChange,
     onManualPickChange,
@@ -268,26 +277,43 @@ function AdminSetup({
                                     />
                                 </span>
                             </label>
-                            <Button type="submit" disabled={actionPending || !scheduledTime} className="w-full justify-between">
+                            <Button type="submit" disabled={actionPending || !scheduledTime || Boolean(scheduleBlockedReason)} className="w-full justify-between">
                                 Schedule draft
                                 <Save aria-hidden="true" size={17} />
                             </Button>
+                            {scheduleBlockedReason && (
+                                <p className="text-xs font-semibold text-app-danger-foreground" role="alert">
+                                    {scheduleBlockedReason}
+                                </p>
+                            )}
                         </form>
                     ) : (
-                        <Button variant="danger" className="w-full justify-between" onClick={() => onPendingAction("delete")} disabled={actionPending}>
-                            Cancel scheduled draft
-                            <Trash2 aria-hidden="true" size={17} />
-                        </Button>
+                        <div>
+                            <Button variant="danger" className="w-full justify-between" onClick={() => onPendingAction("delete")} disabled={actionPending}>
+                                Cancel scheduled draft
+                                <Trash2 aria-hidden="true" size={17} />
+                            </Button>
+                            {configuredScheduleBlockedReason && (
+                                <p className="mt-2 text-xs font-semibold text-app-danger-foreground" role="alert">
+                                    {configuredScheduleBlockedReason}
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
 
                 <div className="mt-4 flex items-center gap-3 border-t border-dashed border-app-border pt-4">
                     <span className="hidden text-xs leading-5 text-app-muted sm:block sm:flex-1">Opens the live room for everyone.</span>
-                    <Button variant="success" className="w-full justify-between sm:w-auto" onClick={() => onPendingAction("open")} disabled={actionPending}>
+                    <Button variant="success" className="w-full justify-between sm:w-auto" onClick={() => onPendingAction("open")} disabled={actionPending || Boolean(openBlockedReason)}>
                         Open draft now
                         <Play aria-hidden="true" size={17} fill="currentColor" />
                     </Button>
                 </div>
+                {openBlockedReason && (
+                    <p className="mt-2 text-xs font-semibold text-app-danger-foreground" role="status">
+                        {openBlockedReason}
+                    </p>
+                )}
             </section>
         </div>
     );

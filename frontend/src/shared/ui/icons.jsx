@@ -8,6 +8,7 @@ import {
     faArrowRotateLeft,
     faArrowUp,
     faBars,
+    faBell,
     faBinoculars,
     faCalendarDays,
     faCalendarXmark,
@@ -108,6 +109,7 @@ export const ArrowRightLeft = createAppIcon(faRightLeft, "ArrowRightLeftIcon");
 export const ArrowUpRight = createAppIcon(faArrowUp, "ArrowUpRightIcon");
 export const BadgeCheck = createAppIcon(faCircleCheck, "BadgeCheckIcon");
 export const Beaker = createAppIcon(faFlask, "BeakerIcon");
+export const Bell = createAppIcon(faBell, "BellIcon");
 export const Binoculars = createAppIcon(faBinoculars, "BinocularsIcon");
 export const Bot = createAppIcon(faRobot, "BotIcon");
 export const CalendarClock = createAppIcon(faCalendarDays, "CalendarClockIcon");

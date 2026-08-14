@@ -1,10 +1,23 @@
 import { useState } from "react";
 
 import { useDraftAction } from "../../../features/draft/useDraft";
+import {
+    findActiveGameweek,
+    findGameweekScheduleConflict,
+    gameweekLabel,
+} from "../../../features/gameweeks/availability";
 import { validateTransferOrder } from "../../../features/transfer-window/model";
 import DraftLobbyView from "./DraftLobbyView";
 
-function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed }) {
+function DraftLobby({
+    isAdmin,
+    config,
+    league,
+    users = [],
+    gameweeks = [],
+    currentGameweek = null,
+    onDraftTimeElapsed,
+}) {
     const [scheduledTime, setScheduledTime] = useState("");
     const [copied, setCopied] = useState(false);
     const [copyError, setCopyError] = useState("");
@@ -20,6 +33,18 @@ function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed })
     });
 
     const supplementalDraft = league?.status === "ACTIVE";
+    const activeGameweek = findActiveGameweek(gameweeks, currentGameweek);
+    const scheduleConflict = findGameweekScheduleConflict(gameweeks, scheduledTime);
+    const configuredScheduleConflict = findGameweekScheduleConflict(
+        gameweeks,
+        config?.scheduledTime || config?.scheduled_time,
+    );
+    const openBlockedReason = activeGameweek
+        ? `Drafts cannot open while ${gameweekLabel(activeGameweek)} is active.`
+        : "";
+    const scheduleBlockedReason = scheduleConflict
+        ? `Choose a time outside ${gameweekLabel(scheduleConflict)}.`
+        : "";
     const pickCount = users.length * 2;
     const manualPicks = Array.from({ length: pickCount }, (_, index) => (
         manualOrder[index] == null ? "" : String(manualOrder[index])
@@ -43,7 +68,7 @@ function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed })
     };
 
     const handleSchedule = () => {
-        if (!scheduledTime) return;
+        if (!scheduledTime || scheduleBlockedReason) return;
         const orderOptions = getDraftOrder();
         if (!orderOptions) return;
         draftAction.mutate({ type: "schedule", time: scheduledTime, ...orderOptions });
@@ -52,6 +77,7 @@ function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed })
     const handleConfirmedAction = () => {
         if (!pendingAction) return;
         if (pendingAction === "open") {
+            if (openBlockedReason) return;
             const orderOptions = getDraftOrder();
             if (!orderOptions) return;
             draftAction.mutate({ type: pendingAction, ...orderOptions });
@@ -93,6 +119,11 @@ function DraftLobby({ isAdmin, config, league, users = [], onDraftTimeElapsed })
             orderError={orderError}
             actionError={draftAction.error}
             actionPending={draftAction.isPending}
+            openBlockedReason={openBlockedReason}
+            scheduleBlockedReason={scheduleBlockedReason}
+            configuredScheduleBlockedReason={configuredScheduleConflict
+                ? `This draft will not open during ${gameweekLabel(configuredScheduleConflict)}. Reschedule it.`
+                : ""}
             pendingAction={pendingAction}
             copied={copied}
             copyError={copyError}

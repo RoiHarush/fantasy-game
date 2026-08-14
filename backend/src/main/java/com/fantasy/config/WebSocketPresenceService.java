@@ -7,19 +7,21 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class WebSocketPresenceService {
 
-    private final Map<String, Integer> sessionUsers = new ConcurrentHashMap<>();
-    private final Map<Integer, AtomicInteger> userSessionCounts = new ConcurrentHashMap<>();
+    private static final Duration ACTIVE_REPORT_TTL = Duration.ofSeconds(35);
+
+    private final Map<String, ConnectionPresence> connections = new ConcurrentHashMap<>();
     private final Map<Integer, LocalDateTime> lastDisconnectedAt = new ConcurrentHashMap<>();
     private final LocalDateTime serviceStartedAt = LocalDateTime.now();
 
@@ -31,30 +33,41 @@ public class WebSocketPresenceService {
         if (principal == null || sessionId == null) return;
 
         int userId = Integer.parseInt(principal.getName());
-        Integer previousUser = sessionUsers.putIfAbsent(sessionId, userId);
-        if (previousUser == null) {
-            userSessionCounts.computeIfAbsent(userId, ignored -> new AtomicInteger()).incrementAndGet();
-            lastDisconnectedAt.remove(userId);
-        }
+        // A transport connection is online, but not considered visibly active
+        // until the browser sends its first application-level presence report.
+        connections.put(sessionId, new ConnectionPresence(userId, false, null, null, Instant.now()));
+        lastDisconnectedAt.remove(userId);
     }
 
     @EventListener
     public void disconnected(SessionDisconnectEvent event) {
-        String sessionId = event.getSessionId();
-        Integer userId = sessionUsers.remove(sessionId);
-        if (userId == null) return;
-
-        userSessionCounts.computeIfPresent(userId, (ignored, count) ->
-                count.decrementAndGet() <= 0 ? null : count
-        );
-        if (!isOnline(userId)) {
-            lastDisconnectedAt.put(userId, LocalDateTime.now());
+        ConnectionPresence removed = connections.remove(event.getSessionId());
+        if (removed != null && !isOnline(removed.userId())) {
+            lastDisconnectedAt.put(removed.userId(), LocalDateTime.now());
         }
     }
 
+    public void report(String sessionId, int userId, boolean visible, String clientInstanceId, String page) {
+        if (sessionId == null) return;
+        connections.compute(sessionId, (ignored, current) -> {
+            if (current != null && current.userId() != userId) {
+                return current;
+            }
+            return new ConnectionPresence(userId, visible, trim(clientInstanceId, 128), trim(page, 256), Instant.now());
+        });
+        lastDisconnectedAt.remove(userId);
+    }
+
+    public boolean isActive(int userId) {
+        Instant cutoff = Instant.now().minus(ACTIVE_REPORT_TTL);
+        return connections.values().stream()
+                .anyMatch(connection -> connection.userId() == userId
+                        && connection.visible()
+                        && connection.lastReportedAt().isAfter(cutoff));
+    }
+
     public boolean isOnline(int userId) {
-        AtomicInteger count = userSessionCounts.get(userId);
-        return count != null && count.get() > 0;
+        return connections.values().stream().anyMatch(connection -> connection.userId() == userId);
     }
 
     public Optional<LocalDateTime> offlineSince(int userId) {
@@ -65,4 +78,17 @@ public class WebSocketPresenceService {
     public List<Integer> onlineUserIds(Collection<Integer> userIds) {
         return userIds.stream().filter(this::isOnline).toList();
     }
+
+    private String trim(String value, int maxLength) {
+        if (value == null || value.isBlank()) return null;
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    record ConnectionPresence(
+            int userId,
+            boolean visible,
+            String clientInstanceId,
+            String page,
+            Instant lastReportedAt
+    ) {}
 }

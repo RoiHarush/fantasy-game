@@ -14,7 +14,7 @@ export const metadata = {
     },
     description: "A multi-league fantasy football draft game.",
     icons: {
-        icon: "/UI/icon.png",
+        icon: "/UI/pl-logo-lion.svg",
     },
     manifest: "/manifest.json",
 };

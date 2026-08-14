@@ -32,6 +32,7 @@ export default function ActiveWindowHeader({
     skipPending,
     onPass,
     onSkip,
+    readOnly = false,
 }) {
     const isMyTurn = isSameTransferId(currentUserId, viewingUser?.id);
     const canPass = !isIrRound && (!isDraftMode || isSupplementalDraft);
@@ -100,13 +101,13 @@ export default function ActiveWindowHeader({
                                 <strong className="text-xl font-black tabular-nums text-app-accent-foreground">{currentPickNumber}<span className="text-xs text-app-muted">/{totalPicks}</span></strong>
                             </div>
                         )}
-                        {isMyTurn && canPass && (
+                        {!readOnly && isMyTurn && canPass && (
                             <Button variant="secondary" size="sm" onClick={onPass} disabled={passPending}>
                                 <SkipForward className="size-4" aria-hidden="true" />
                                 {passPending ? "Passing…" : "Pass"}
                             </Button>
                         )}
-                        {!isMyTurn && viewingUser?.leagueAdmin && (
+                        {!readOnly && !isMyTurn && viewingUser?.leagueAdmin && (
                             <Button variant="secondary" size="sm" onClick={onSkip} disabled={skipPending} title="League-manager action: skip the manager currently on the clock">
                                 <Play className="size-4" fill="currentColor" aria-hidden="true" />
                                 {skipPending ? "Skipping…" : isIrRound ? "Resolve" : "Skip manager"}

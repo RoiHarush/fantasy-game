@@ -6,6 +6,7 @@ import { Client } from "@stomp/stompjs";
 
 import { useAuth } from "./AuthContext";
 import { WebSocketContext } from "./WebSocketContext";
+import { getClientInstanceId } from "../features/notifications/clientInstance";
 
 export function WebSocketProvider({ children }) {
     const { user } = useAuth();
@@ -178,6 +179,21 @@ export function WebSocketProvider({ children }) {
 
         let disposed = false;
 
+        const publishPresence = (stompClient) => {
+            if (!stompClient?.connected) return;
+            stompClient.publish({
+                destination: "/app/presence",
+                body: JSON.stringify({
+                    visible: document.visibilityState === "visible",
+                    clientInstanceId: getClientInstanceId(),
+                    page: window.location.pathname,
+                }),
+            });
+        };
+
+        let presenceInterval = null;
+        const reportPresenceNow = () => publishPresence(stompClientRef.current);
+
         const client = new Client({
             /*
              * Next.js should rewrite `/ws` to the Spring Boot backend.
@@ -215,6 +231,16 @@ export function WebSocketProvider({ children }) {
             for (const topic of desiredSubscriptionsRef.current.keys()) {
                 activateSubscription(topic);
             }
+
+            document.removeEventListener("visibilitychange", reportPresenceNow);
+            window.removeEventListener("pageshow", reportPresenceNow);
+            window.removeEventListener("pagehide", reportPresenceNow);
+            if (presenceInterval) window.clearInterval(presenceInterval);
+            publishPresence(client);
+            document.addEventListener("visibilitychange", reportPresenceNow);
+            window.addEventListener("pageshow", reportPresenceNow);
+            window.addEventListener("pagehide", reportPresenceNow);
+            presenceInterval = window.setInterval(reportPresenceNow, 10_000);
         };
 
         client.onStompError = (frame) => {
@@ -257,6 +283,11 @@ export function WebSocketProvider({ children }) {
         return () => {
             disposed = true;
             setConnected(false);
+
+            document.removeEventListener("visibilitychange", reportPresenceNow);
+            window.removeEventListener("pageshow", reportPresenceNow);
+            window.removeEventListener("pagehide", reportPresenceNow);
+            if (presenceInterval) window.clearInterval(presenceInterval);
 
             activeSubscriptions.clear();
 

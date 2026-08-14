@@ -5,13 +5,19 @@ import { useState } from "react";
 
 import { useDraftAction, useDraftConfig } from "../../../features/draft/useDraft";
 import { toDateTimeLocalInput } from "../../../features/draft/model";
+import {
+    findActiveGameweek,
+    findGameweekScheduleConflict,
+    gameweekLabel,
+} from "../../../features/gameweeks/availability";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { formatAppDateTime } from "../../../lib/dateTime";
 import { useMaintenanceLeagues } from "../../../features/league/useLeague";
 import { Button } from "../../../shared/ui/Button";
 import SelectField from "../../../shared/ui/SelectField";
 import LeagueControlPage from "../Admin/LeagueControlPage";
 
-function DraftMaintenancePanel({ league }) {
+function DraftMaintenancePanel({ league, gameweeks, currentGameweek, gameweeksLoading }) {
     const [draftTime, setDraftTime] = useState(null);
     const [message, setMessage] = useState("");
     const [pendingAction, setPendingAction] = useState(null);
@@ -30,39 +36,54 @@ function DraftMaintenancePanel({ league }) {
     });
     const configuredTime = toDateTimeLocalInput(configQuery.data?.scheduledTime);
     const effectiveDraftTime = draftTime ?? configuredTime;
+    const activeGameweek = findActiveGameweek(gameweeks, currentGameweek);
+    const scheduleConflict = findGameweekScheduleConflict(gameweeks, effectiveDraftTime);
+    const openBlockedReason = activeGameweek
+        ? `Drafts cannot open while ${gameweekLabel(activeGameweek)} is active.`
+        : "";
+    const scheduleBlockedReason = scheduleConflict
+        ? `Choose a time outside ${gameweekLabel(scheduleConflict)}.`
+        : "";
 
     function runAction(draftAction) {
+        if (draftAction.type === "open" && (gameweeksLoading || openBlockedReason)) return;
+        if (draftAction.type === "schedule" && (gameweeksLoading || scheduleBlockedReason)) return;
         setMessage("");
         action.mutate(draftAction);
     }
 
     return (
-        <section className="mb-5 rounded-xl bg-white p-5 shadow-md" aria-labelledby="draft-maintenance-title">
-            <h2 id="draft-maintenance-title" className="text-xl font-bold">Initial draft</h2>
-            <p className="my-3">
+        <section className="border-t border-app-border py-6" aria-labelledby="draft-maintenance-title">
+            <h2 id="draft-maintenance-title" className="text-xl font-black text-app-foreground">Initial draft</h2>
+            <p className="my-3 text-sm text-app-muted">
                 Current state: <strong>{league.status || "Unknown"}</strong>
                 {configQuery.data?.scheduledTime && ` · scheduled for ${formatAppDateTime(configQuery.data.scheduledTime)}`}
             </p>
             {configQuery.isPending ? <p role="status">Loading draft configuration…</p> : (
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                     <input
                         type="datetime-local"
                         aria-label="Draft date and time"
                         value={effectiveDraftTime}
                         onChange={event => setDraftTime(event.target.value)}
                         disabled={action.isPending}
-                        className="rounded-lg border border-slate-300 p-2"
+                        className="min-h-11 rounded-xl border border-app-border bg-app-surface-muted px-3 text-app-foreground outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/15"
                     />
-                    <Button disabled={!effectiveDraftTime || action.isPending} onClick={() => runAction({
+                    <Button disabled={!effectiveDraftTime || action.isPending || gameweeksLoading || Boolean(scheduleBlockedReason)} onClick={() => runAction({
                         type: "schedule",
                         time: effectiveDraftTime,
                     })}>Schedule draft</Button>
-                    <Button variant="secondary" disabled={action.isPending} onClick={() => setPendingAction("open")}>Open now</Button>
+                    <Button variant="secondary" disabled={action.isPending || gameweeksLoading || Boolean(openBlockedReason)} onClick={() => setPendingAction("open")}>Open now</Button>
                     <Button variant="danger" disabled={action.isPending || !configQuery.data} onClick={() => setPendingAction("delete")}>Clear schedule</Button>
                 </div>
             )}
-            {(configQuery.error || action.error) && <p className="mt-3 text-red-700" role="alert">{(configQuery.error || action.error).message}</p>}
-            {message && <p className="mt-3 text-emerald-700" role="status">{message}</p>}
+            {(scheduleBlockedReason || openBlockedReason) && (
+                <p className="mt-3 text-app-danger-foreground" role="status">
+                    {scheduleBlockedReason || openBlockedReason}
+                </p>
+            )}
+            {(configQuery.error || action.error) && <p className="mt-3 text-app-danger-foreground" role="alert">{(configQuery.error || action.error).message}</p>}
+            {message && <p className="mt-3 text-app-positive-foreground" role="status">{message}</p>}
 
             <Dialog.Root open={Boolean(pendingAction)} onOpenChange={(open) => !open && setPendingAction(null)}>
                 <Dialog.Portal>
@@ -78,7 +99,7 @@ function DraftMaintenancePanel({ league }) {
                             <Dialog.Close asChild><Button variant="ghost" className="text-white">Cancel</Button></Dialog.Close>
                             <Button
                                 variant="danger"
-                                disabled={action.isPending}
+                                disabled={action.isPending || (pendingAction === "open" && Boolean(openBlockedReason))}
                                 onClick={() => runAction({ type: pendingAction })}
                             >
                                 {action.isPending ? "Saving…" : "Confirm"}
@@ -94,15 +115,17 @@ function DraftMaintenancePanel({ league }) {
 export default function LeagueMaintenancePage() {
     const [selectedLeagueId, setSelectedLeagueId] = useState("");
     const leaguesQuery = useMaintenanceLeagues();
+    const gameweekState = useGameweek();
     const leagues = leaguesQuery.data ?? [];
     const selectedLeague = leagues.find(league => String(league.id) === selectedLeagueId);
 
     return (
-        <div>
-            <section className="mb-5 rounded-xl bg-white p-5 shadow-md" aria-labelledby="maintenance-title">
-                <h1 id="maintenance-title" className="text-2xl font-bold">League maintenance</h1>
-                <p className="my-3">Select one league before making changes. Every request carries its league ID explicitly; this does not make the super admin the league owner.</p>
-                <label className="block max-w-xl font-bold">
+        <div className="mx-auto max-w-5xl">
+            <section className="pb-6" aria-labelledby="maintenance-title">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-amber-500">Scoped operations</p>
+                <h1 id="maintenance-title" className="mt-1 text-2xl font-black text-app-foreground sm:text-3xl">League maintenance</h1>
+                <p className="my-3 max-w-3xl text-sm leading-6 text-app-muted">Select one league before making changes. Every request carries its league ID explicitly; this does not make the super admin the league owner.</p>
+                <label className="block max-w-xl text-sm font-bold text-app-foreground">
                     Maintenance scope
                     <SelectField
                         value={selectedLeagueId}
@@ -116,16 +139,22 @@ export default function LeagueMaintenancePage() {
                             })),
                         ]}
                         ariaLabel="Maintenance scope"
-                        className="mt-2 block w-full rounded-lg border border-slate-300 p-2"
+                        className="mt-2 block w-full"
                     />
                 </label>
                 {selectedLeague && <Button variant="ghost" className="mt-3" onClick={() => setSelectedLeagueId("")}>Exit maintenance scope</Button>}
-                {leaguesQuery.error && <p className="mt-3 text-red-700" role="alert">{leaguesQuery.error.message}</p>}
+                {leaguesQuery.error && <p className="mt-3 text-app-danger-foreground" role="alert">{leaguesQuery.error.message}</p>}
             </section>
 
             {selectedLeague && (
                 <>
-                    <DraftMaintenancePanel key={selectedLeague.id} league={selectedLeague} />
+                    <DraftMaintenancePanel
+                        key={selectedLeague.id}
+                        league={selectedLeague}
+                        gameweeks={gameweekState.gameweeks}
+                        currentGameweek={gameweekState.currentGameweek}
+                        gameweeksLoading={gameweekState.loading}
+                    />
                     <LeagueControlPage key={selectedLeague.id} maintenanceLeagueId={selectedLeague.id} />
                 </>
             )}

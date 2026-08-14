@@ -1,6 +1,7 @@
 package com.fantasy.domain.user.admin;
 
 import com.fantasy.domain.game.GameWeekService;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.game.GameweekManager;
 import com.fantasy.domain.player.PlayerSyncService;
 import com.fantasy.domain.team.FantasyTeamService;
@@ -109,6 +110,8 @@ public class SuperAdminController {
                 marketService.openTransferWindow(leagueId, gameweekId);
             }
             return ResponseEntity.ok("Transfer window opened for GameWeek " + gameweekId);
+        } catch (GameweekActivityPolicy.GameweekActiveException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body("Failed to open window: " + e.getMessage());

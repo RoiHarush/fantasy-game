@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { showNotificationToast } from "../../../features/notifications/showNotificationToast";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { CookieConsentContent } from "../../../features/privacy/CookieConsentToast";
 import CompareModal from "../../General/CompareModal";
@@ -48,6 +49,62 @@ const FALLBACK_PLAYERS = [
 ];
 
 const COOKIE_PREVIEW_TOAST_ID = "ui-lab-cookie-preview";
+const NOTIFICATION_TOASTS = {
+    "toast-window-soon": {
+        type: "TRANSFER_WINDOW_OPENING_SOON",
+        title: "Transfer window opens in 10 minutes",
+        body: "Your waiver plan is ready. Join the app if you plan to make your picks live.",
+        url: "/transfer-window",
+    },
+    "toast-lineup-soon": {
+        type: "LINEUP_LOCK_SOON",
+        title: "Lineups lock in 10 minutes",
+        body: "Save your final squad before the deadline.",
+        url: "/pick-team",
+    },
+    "toast-window-opened": {
+        type: "TRANSFER_WINDOW_OPENED",
+        title: "Transfer window is open",
+        body: "Gameweek 1 selections are now live.",
+        url: "/transfer-window",
+    },
+    "toast-turn-completed": {
+        type: "TRANSFER_TURN_COMPLETED",
+        title: "Transfer turn completed",
+        body: "Roi FC signed Saka and released Palmer.",
+        url: "/transfer-window",
+    },
+    "toast-your-turn": {
+        type: "YOUR_TRANSFER_TURN",
+        title: "It’s your turn!",
+        body: "Open the transfer window to make your move or pass.",
+        url: "/transfer-window",
+    },
+    "toast-ir-activated": {
+        type: "IR_ACTIVATED",
+        title: "IR chip activated",
+        body: "Roi Harush moved Haaland into IR.",
+        url: "/status",
+    },
+    "toast-ir-released": {
+        type: "IR_RELEASED",
+        title: "IR player released",
+        body: "Roi Harush released Haaland while returning from IR.",
+        url: "/status",
+    },
+    "toast-matchday-closed": {
+        type: "MATCHDAY_CLOSED",
+        title: "Matchday closed",
+        body: "Today’s Gameweek 1 points have been updated.",
+        url: "/points",
+    },
+    "toast-gameweek-finalized": {
+        type: "GAMEWEEK_FINALIZED",
+        title: "Gameweek 1 is complete",
+        body: "Final points have been calculated.",
+        url: "/points",
+    },
+};
 const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status"]);
 
 const GROUPS = [
@@ -121,6 +178,15 @@ const GROUPS = [
             ["toast-success", "Success toast", "Successful profile update"],
             ["toast-error", "Error toast", "Failed profile update"],
             ["toast-cookie", "Cookie preferences", "Cookie-consent notification"],
+            ["toast-window-soon", "Window opens soon", "10-minute transfer-window reminder"],
+            ["toast-lineup-soon", "Lineups lock soon", "10-minute lineup deadline reminder"],
+            ["toast-window-opened", "Window opened", "Transfer window is live"],
+            ["toast-turn-completed", "Turn completed", "A manager completed a transfer turn"],
+            ["toast-your-turn", "Your turn", "The current pick belongs to you"],
+            ["toast-ir-activated", "IR activated", "A player was moved into IR"],
+            ["toast-ir-released", "IR released", "A returning IR player was released"],
+            ["toast-matchday-closed", "Matchday closed", "The day’s points were updated"],
+            ["toast-gameweek-finalized", "Gameweek finalized", "Final Gameweek points were calculated"],
         ],
     },
 ];
@@ -174,6 +240,19 @@ export default function UiLabPage() {
                     id: COOKIE_PREVIEW_TOAST_ID,
                     duration: Infinity,
                     dismissible: true,
+                },
+            );
+            return;
+        }
+        const notification = NOTIFICATION_TOASTS[id];
+        if (notification) {
+            showNotificationToast(
+                {
+                    ...notification,
+                    eventId: `ui-lab:${notification.type}:${Date.now()}`,
+                },
+                {
+                    onOpen: () => toast.info("UI Lab preview only — no navigation was performed."),
                 },
             );
             return;

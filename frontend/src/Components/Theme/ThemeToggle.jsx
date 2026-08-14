@@ -2,6 +2,7 @@
 
 import { Moon, Sun } from "@/src/shared/ui/icons";
 import { useTheme } from "next-themes";
+import { Button } from "../../shared/ui/Button";
 
 export default function ThemeToggle() {
     const { resolvedTheme, setTheme } = useTheme();
@@ -11,8 +12,10 @@ export default function ThemeToggle() {
     }
 
     return (
-        <button
+        <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={toggleTheme}
             aria-label="Toggle color theme"
             title="Toggle color theme"
@@ -20,6 +23,6 @@ export default function ThemeToggle() {
         >
             <span className="block size-5 dark:hidden"><Sun aria-hidden="true" className="size-5" /></span>
             <span className="hidden size-5 dark:block"><Moon aria-hidden="true" className="size-5" /></span>
-        </button>
+        </Button>
     );
 }

@@ -18,6 +18,7 @@ const BASE_PROPS = {
     attendancePending: false,
     attendanceError: null,
     isLeagueAdmin: true,
+    openBlockedReason: "",
     onAttendanceChange: vi.fn(),
     onManageOrder: vi.fn(),
     onOpenWindow: vi.fn(),
@@ -66,5 +67,17 @@ describe("ClosedWindowView", () => {
         expect(onAttendanceChange).toHaveBeenCalledOnce();
         expect(onManageOrder).toHaveBeenCalledOnce();
         expect(onOpenWindow).toHaveBeenCalledOnce();
+    });
+
+    it("disables manual opening while a gameweek is active", () => {
+        render(
+            <ClosedWindowView
+                {...BASE_PROPS}
+                openBlockedReason="Transfers cannot open while Gameweek 3 is active."
+            />,
+        );
+
+        expect(screen.getByRole("button", { name: /Open now/i })).toBeDisabled();
+        expect(screen.getByText("Transfers cannot open while Gameweek 3 is active.")).toBeInTheDocument();
     });
 });

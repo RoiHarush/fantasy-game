@@ -40,6 +40,7 @@ function TransferWindow({
     previewTransferActions = [],
     previewLatestEvent = null,
     previewOnPass = null,
+    readOnly = false,
 }) {
     const [selectedPlayerIn, setSelectedPlayerIn] = useState(null);
     const latestEventQuery = useLatestTransferEvent(user?.leagueId);
@@ -145,6 +146,7 @@ function TransferWindow({
                 skipPending={skipTurnMutation.isPending}
                 onPass={() => previewMode ? previewOnPass?.() : passMutation.mutate()}
                 onSkip={() => previewMode ? undefined : skipTurnMutation.mutate()}
+                readOnly={readOnly}
             />
 
             <PlayersWrapper
@@ -152,7 +154,7 @@ function TransferWindow({
                 players={displayedPlayers}
                 teams={teams}
                 mode={isDraftMode && !isSupplementalDraft ? "draft" : "transfer"}
-                onPlayerSelect={isClosing ? undefined : setSelectedPlayerIn}
+                onPlayerSelect={isClosing || readOnly ? undefined : setSelectedPlayerIn}
                 currentTurnUserId={isClosing ? null : currentTurnUserId}
                 irPosition={isIrRound ? irPosition : null}
                 allTeamFixtures={fixturesByTeam}
@@ -161,7 +163,7 @@ function TransferWindow({
                 activityView={activityView}
             />
 
-            {!isClosing && selectedPlayerIn && (
+            {!isClosing && !readOnly && selectedPlayerIn && (
                 isIrRound ? (
                     <IRSignModal player={selectedPlayerIn} user={user} onClose={() => setSelectedPlayerIn(null)} />
                 ) : isDraftMode && !isSupplementalDraft ? (

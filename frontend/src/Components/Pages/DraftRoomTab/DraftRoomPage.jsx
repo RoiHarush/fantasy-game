@@ -18,7 +18,7 @@ import DraftLobby from "./DraftLobby";
 function DraftRoomPage() {
     const { user } = useAuth();
     const gameweekState = useGameweek();
-    const { nextGameweek } = gameweekState;
+    const { gameweeks, currentGameweek, nextGameweek } = gameweekState;
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
     const leagueId = user?.leagueId;
 
@@ -93,6 +93,8 @@ function DraftRoomPage() {
             config={configQuery.data}
             league={leagueQuery.data}
             users={usersQuery.data ?? []}
+            gameweeks={gameweeks}
+            currentGameweek={currentGameweek}
             onDraftTimeElapsed={() => {
                 void Promise.all([
                     windowQuery.refetch(),

@@ -9,6 +9,7 @@ import CookieConsentToast from "../src/features/privacy/CookieConsentToast";
 import RealtimeTransferSync from "../src/features/transfer-window/RealtimeTransferSync";
 import QueryProvider from "../src/lib/query/QueryProvider";
 import AppToaster from "../src/Components/Theme/AppToaster";
+import { NotificationProvider } from "../src/features/notifications/NotificationContext";
 
 export default function Providers({ children, initialUser, invalidSession, dehydratedState }) {
     return (
@@ -22,8 +23,10 @@ export default function Providers({ children, initialUser, invalidSession, dehyd
             <QueryProvider dehydratedState={dehydratedState}>
                 <AuthProvider initialUser={initialUser} invalidSession={invalidSession}>
                     <WebSocketProvider>
-                        <RealtimeTransferSync />
-                        <SystemStatusProvider>{children}</SystemStatusProvider>
+                        <NotificationProvider>
+                            <RealtimeTransferSync />
+                            <SystemStatusProvider>{children}</SystemStatusProvider>
+                        </NotificationProvider>
                     </WebSocketProvider>
                     <AppToaster />
                     <CookieConsentToast />

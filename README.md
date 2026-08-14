@@ -1,8 +1,8 @@
 # Premier League Fantasy Draft
 
-A real-time fantasy draft game with custom league scoring, exclusive player ownership, live transfer windows, captains, unrestricted IR slots, and offline waiver priorities.
+A real-time fantasy draft game with custom league scoring, exclusive player ownership, live transfer windows, captains, unrestricted IR slots, and planned waiver priorities.
 
-The application is a Java 21 / Spring Boot 3.3 API backed by PostgreSQL, with a React 19 / Vite client. It is intentionally a client-server application: the server owns league state, authorization, scheduled gameweek transitions, scoring, and concurrent draft/transfer decisions.
+The application is a Java 21 / Spring Boot 3.3 API backed by PostgreSQL, with a Next.js 16 / React 19 client. It is intentionally a client-server application: the server owns league state, authorization, scheduled gameweek transitions, scoring, and concurrent draft/transfer decisions.
 
 ## Current capabilities
 
@@ -11,7 +11,7 @@ The application is a Java 21 / Spring Boot 3.3 API backed by PostgreSQL, with a 
 - League-scoped data and configurable scoring rules.
 - Separate permissions for league administrators and the global super administrator.
 - Snake draft and database-backed transfer windows.
-- Up to two successful offline waiver swaps, evaluated in priority order.
+- Explicit opt-out waiver automation: users who mark that they will not attend are processed from their saved priority list, while every other user keeps manual control regardless of connection state.
 - Captain, first-pick captain, and unrestricted IR management.
 - Per-league scoring from raw Premier League match statistics.
 - WebSocket updates with authenticated, league-isolated subscriptions.
@@ -32,7 +32,7 @@ The legacy `ROLE_ADMIN` value grants no global privilege. Global access requires
 
 ```text
 backend/                 Spring Boot API, schedulers, persistence and tests
-frontend/                React/Vite single-page application
+frontend/                Next.js application
 backend/src/main/resources/db/migration/
                          Versioned PostgreSQL migrations
 docs/OPERATIONS.md       Deployment, backup and rollback runbook
@@ -94,8 +94,18 @@ Copy the two `.env.example` files as a reference, but configure secrets in the h
 - `BOOTSTRAP_ENABLED`, normally `false`; set to `true` only for an explicit initial/season load
 - `APP_PUBLIC_URL`, the public Next.js origin used in verification/reset links
 - `MAIL_PROVIDER=resend`, `RESEND_API_KEY`, and `MAIL_FROM` using a sender on a verified domain
+- one stable VAPID key pair in `WEB_PUSH_VAPID_PUBLIC_KEY` and `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_VAPID_SUBJECT`, normally a `mailto:` address for the operator
 
 Local development defaults to `MAIL_PROVIDER=log`; verification and password-reset links are printed in the backend log. Production uses Resend's HTTP API. The free Resend plan is ample for this league, but delivery to real users requires verifying a domain in Resend first.
+
+Generate the Web Push keys once (do not generate them again on every deploy):
+
+```powershell
+npx web-push generate-vapid-keys
+```
+
+Put both values in the Render backend environment and keep the private key secret. Browsers create subscriptions against the public key, so replacing the pair invalidates existing device subscriptions. Push requires HTTPS in production. On iPhone, the user must install the PWA on the Home Screen and enable notifications from inside that installed app; Android and desktop browsers can enable them directly from Settings.
 
 ## New-season reset
 

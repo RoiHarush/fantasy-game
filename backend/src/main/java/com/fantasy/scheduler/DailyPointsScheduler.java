@@ -1,14 +1,18 @@
 package com.fantasy.scheduler;
 
+import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.domain.game.*;
+import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
+import com.fantasy.domain.notification.NotificationEvents;
 import com.fantasy.domain.score.PointsService;
 
 import com.fantasy.domain.team.UserGameDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,25 +33,44 @@ public class DailyPointsScheduler {
     private final GameweekDailyStatusRepository dailyStatusRepository;
     private final PointsService pointsService;
     private final UserGameDataRepository userGameDataRepository;
+    private final FixtureService fixtureService;
+    private final GameWeekService gameWeekService;
+    private ApplicationEventPublisher applicationEvents = event -> { };
 
     public DailyPointsScheduler(GameWeekRepository gameweekRepository,
                                 FixtureRepository fixtureRepository,
                                 GameweekDailyStatusRepository dailyStatusRepository,
                                 PointsService pointsService,
-                                UserGameDataRepository userGameDataRepository) {
+                                UserGameDataRepository userGameDataRepository,
+                                FixtureService fixtureService,
+                                GameWeekService gameWeekService) {
         this.gameweekRepository = gameweekRepository;
         this.fixtureRepository = fixtureRepository;
         this.dailyStatusRepository = dailyStatusRepository;
         this.pointsService = pointsService;
         this.userGameDataRepository = userGameDataRepository;
+        this.fixtureService = fixtureService;
+        this.gameWeekService = gameWeekService;
     }
 
-    @Scheduled(cron = "0 0/15 * * * *")
+    @Autowired
+    void setApplicationEvents(ApplicationEventPublisher applicationEvents) {
+        this.applicationEvents = applicationEvents;
+    }
+
     public void processDailyPoints() {
         Optional<GameWeekEntity> liveGw = gameweekRepository.findFirstByStatusOrderByIdAsc("LIVE");
         if (liveGw.isEmpty()) return;
 
         int gwId = liveGw.get().getId();
+
+        try {
+            fixtureService.updateFixturesForGameweek(gwId);
+            gameWeekService.updateGameWeekDeadlines();
+        } catch (RuntimeException exception) {
+            log.error("Cannot settle daily points for GW {} because the FPL refresh failed", gwId, exception);
+            return;
+        }
 
         List<LocalDate> activeDates = fixtureRepository.findByGameweekId(gwId).stream()
                 .filter(fixture -> fixture.getKickoffTime() != null)
@@ -85,6 +108,16 @@ public class DailyPointsScheduler {
             return;
         }
 
+        boolean allFixturesFinished = fixtureRepository.findByGameweekId(gwId).stream()
+                .filter(fixture -> fixture.getKickoffTime() != null)
+                .filter(fixture -> fixture.getKickoffTime().toLocalDate().equals(date))
+                .allMatch(FixtureEntity::isFinished);
+        if (!allFixturesFinished) {
+            log.warn("Deferring daily point settlement for GW {} on {} until FPL confirms every fixture finished",
+                    gwId, date);
+            return;
+        }
+
 
         GameWeekEntity gw = gameweekRepository.findById(gwId).orElseThrow();
         LocalDate lastMatchDateOfGw = gw.getLastKickoffTime().toLocalDate();
@@ -105,6 +138,17 @@ public class DailyPointsScheduler {
         GameweekDailyStatus status = statusOpt.orElse(new GameweekDailyStatus(gwId, date));
         status.markAsCalculated();
         dailyStatusRepository.save(status);
+
+        userGameDataRepository.findAllWithRelations().stream()
+                .filter(data -> data.getLeague() != null)
+                .map(data -> data.getLeague().getId())
+                .distinct()
+                .forEach(leagueId -> AfterCommitExecutor.run(() -> applicationEvents.publishEvent(
+                        LeagueNotificationRequestedEvent.league(
+                                leagueId,
+                                NotificationEvents.matchdayClosed(gwId, date.toString())
+                        )
+                )));
 
         log.info("Date {} marked as CALCULATED.", date);
     }

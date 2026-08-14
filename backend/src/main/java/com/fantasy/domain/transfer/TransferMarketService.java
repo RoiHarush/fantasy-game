@@ -2,12 +2,17 @@ package com.fantasy.domain.transfer;
 
 import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.config.WebSocketPresenceService;
+import com.fantasy.scheduler.LifecycleScheduleChangedEvent;
+import com.fantasy.scheduler.TransferTurnChangedEvent;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.league.LeagueStatus;
+import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
+import com.fantasy.domain.notification.NotificationEvents;
 import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.player.PlayerRepository;
@@ -22,6 +27,8 @@ import com.fantasy.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -37,11 +44,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 public class TransferMarketService {
 
     private static final Logger log = LoggerFactory.getLogger(TransferMarketService.class);
+    private static final ZoneId LEAGUE_TIME_ZONE = ZoneId.of("Asia/Jerusalem");
 
     private final PlayerRepository playerRepo;
     private final GameWeekRepository gameWeekRepo;
@@ -57,6 +66,7 @@ public class TransferMarketService {
     private final TransferWebSocketController webSocketController;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final WebSocketPresenceService presenceService;
+    private ApplicationEventPublisher lifecycleEvents = event -> { };
 
     public TransferMarketService(PlayerRepository playerRepo,
                                  GameWeekRepository gameWeekRepo,
@@ -86,6 +96,11 @@ public class TransferMarketService {
         this.webSocketController = webSocketController;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
         this.presenceService = presenceService;
+    }
+
+    @Autowired
+    void setLifecycleEvents(ApplicationEventPublisher lifecycleEvents) {
+        this.lifecycleEvents = lifecycleEvents;
     }
 
     @Transactional
@@ -134,8 +149,20 @@ public class TransferMarketService {
                             List<Integer> requestedOrder) {
         LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
-        GameWeekEntity gameWeek = gameWeekRepo.findById(gameWeekId)
+        // The gameweek opener locks this same row. Whichever transaction wins
+        // completes first: either this window opens and is then finalized by
+        // rollover, or rollover marks the gameweek LIVE and this request fails.
+        GameWeekEntity gameWeek = gameWeekRepo.findByIdWithLock(gameWeekId)
                 .orElseThrow(() -> new IllegalArgumentException("GameWeek not found: " + gameWeekId));
+
+        GameweekActivityPolicy.requireCanOpenNow(
+                gameWeekRepo.findAll(),
+                LocalDateTime.now(LEAGUE_TIME_ZONE),
+                type == TransferWindowType.TRANSFER ? "Transfer-window opening" : "Draft opening"
+        );
+        if (!"UPCOMING".equalsIgnoreCase(gameWeek.getStatus())) {
+            throw new IllegalStateException("A transfer or draft window can open only for an upcoming gameweek");
+        }
 
         if (type == TransferWindowType.TRANSFER && league.getStatus() != LeagueStatus.ACTIVE) {
             throw new IllegalStateException("Regular transfer windows are available only after the initial draft");
@@ -191,6 +218,19 @@ public class TransferMarketService {
                 totalTurns,
                 type
         ));
+        publishTransferTurnChanged(windowLeagueId);
+        long openedWindowId = window.getId();
+        if (type == TransferWindowType.TRANSFER) {
+            publishLeagueNotification(windowLeagueId, NotificationEvents.windowOpened(openedWindowId, gameWeekId));
+        }
+        if (firstUser > 0) {
+            publishUserNotification(
+                    windowLeagueId,
+                    firstUser,
+                    NotificationEvents.yourTurn(openedWindowId, window.getPhase().name(), 0)
+            );
+        }
+        publishLifecycleChanged(type + " window opened for league " + leagueId);
         log.info("{} window opened for league {} and GW {}", type, leagueId, gameWeekId);
     }
 
@@ -658,11 +698,28 @@ public class TransferMarketService {
 
     private void advanceTurn(LeagueTransferWindowEntity window) {
         long leagueId = window.getLeague().getId();
+        Integer completedUserId = window.currentUserId().orElse(null);
+        String completedPhase = window.getPhase().name();
+        int completedCursor = window.getPhase() == TransferWindowPhase.IR
+                ? window.getIrCursor()
+                : window.getRegularCursor();
+        if (completedUserId != null) {
+            publishLeagueNotification(
+                    leagueId,
+                    NotificationEvents.turnCompleted(
+                            notificationWindowId(window),
+                            completedPhase,
+                            completedCursor,
+                            getUserName(completedUserId) + " completed a turn."
+                    )
+            );
+        }
         window.advanceTurn();
         windowRepo.saveAndFlush(window);
 
         if (window.getStatus() == TransferWindowStatus.CLOSED) {
             handleWindowClosed(window);
+            publishLifecycleChanged("window closed for league " + leagueId);
             return;
         }
 
@@ -687,6 +744,23 @@ public class TransferMarketService {
                     turnsUsed
             ));
         }
+        publishTransferTurnChanged(leagueId);
+        int nextCursor = window.getPhase() == TransferWindowPhase.IR
+                ? window.getIrCursor()
+                : window.getRegularCursor();
+        publishUserNotification(
+                leagueId,
+                nextUserId,
+                NotificationEvents.yourTurn(notificationWindowId(window), window.getPhase().name(), nextCursor)
+        );
+    }
+
+    private long notificationWindowId(LeagueTransferWindowEntity window) {
+        if (window.getId() != null) return window.getId();
+        long syntheticId = window.getLeague().getId() * 100_000L
+                + window.getGameWeek().getId() * 10L
+                + window.getWindowType().ordinal();
+        return -syntheticId;
     }
 
     private void handleWindowClosed(LeagueTransferWindowEntity window) {
@@ -809,6 +883,11 @@ public class TransferMarketService {
     @Transactional(readOnly = true)
     public List<TransferActionDto> getTransferHistory(int requestingUserId, int gameWeekId) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        return getTransferHistoryForLeague(leagueId, gameWeekId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransferActionDto> getTransferHistoryForLeague(long leagueId, int gameWeekId) {
         return transferActionRepo.findByLeague_IdAndGameWeek_IdOrderByIdAsc(leagueId, gameWeekId).stream()
                 .map(action -> new TransferActionDto(
                         action.getId(),
@@ -827,6 +906,18 @@ public class TransferMarketService {
     @Transactional(readOnly = true)
     public Map<String, Object> getCurrentWindowState(int requestingUserId) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        return buildCurrentWindowState(leagueId, requestingUserId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getCurrentWindowStateForLeague(long leagueId) {
+        if (!leagueRepo.existsById(leagueId)) {
+            throw new IllegalArgumentException("League was not found");
+        }
+        return buildCurrentWindowState(leagueId, null);
+    }
+
+    private Map<String, Object> buildCurrentWindowState(long leagueId, Integer requestingUserId) {
         Optional<LeagueTransferWindowEntity> activeWindow = windowRepo
                 .findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(leagueId, TransferWindowStatus.OPEN);
 
@@ -868,7 +959,9 @@ public class TransferMarketService {
         state.put("onlineUserIds", presenceService.onlineUserIds(
                 window.getLeague().getUsers().stream().map(UserEntity::getId).toList()
         ));
-        state.put("requestingUserAutomatic", window.isAutomaticForUser(requestingUserId));
+        if (requestingUserId != null) {
+            state.put("requestingUserAutomatic", window.isAutomaticForUser(requestingUserId));
+        }
         state.put("currentUserAutomatic", window.currentUserId()
                 .map(window::isAutomaticForUser)
                 .orElse(false));
@@ -884,30 +977,30 @@ public class TransferMarketService {
     }
 
     @Transactional
-    public void processAutomaticTurn(long leagueId) {
+    public boolean processAutomaticTurn(long leagueId) {
         List<LeagueTransferWindowEntity> windows = windowRepo.findByLeagueAndStatusForUpdate(
                 leagueId,
                 TransferWindowStatus.OPEN
         );
-        if (windows.size() != 1) return;
+        if (windows.size() != 1) return false;
 
         LeagueTransferWindowEntity window = windows.getFirst();
         if (window.getWindowType() != TransferWindowType.TRANSFER
                 || window.getTurnStartedAt() == null) {
-            return;
+            return false;
         }
         if (isLineupDeadlineReached(window)) {
             finalizeExpiredWindow(window);
-            return;
+            return true;
         }
 
         int userId = window.currentUserId().orElse(-1);
-        if (userId < 0 || !window.isAutomaticForUser(userId)) return;
+        if (userId < 0 || !window.isAutomaticForUser(userId)) return false;
 
         if (window.getPhase() == TransferWindowPhase.IR) {
             processAutomatedIrTurn(window, userId);
             advanceTurn(window);
-            return;
+            return true;
         }
 
         int nextPriority = waiverProgressRepo
@@ -973,6 +1066,7 @@ public class TransferMarketService {
             ));
         }
         advanceTurn(window);
+        return true;
     }
 
     /**
@@ -1397,5 +1491,28 @@ public class TransferMarketService {
 
     private void publishAfterCommit(Runnable event) {
         AfterCommitExecutor.run(event);
+    }
+
+    private void publishTransferTurnChanged(long leagueId) {
+        publishAfterCommit(() -> lifecycleEvents.publishEvent(new TransferTurnChangedEvent(leagueId)));
+    }
+
+    private void publishLifecycleChanged(String reason) {
+        publishAfterCommit(() -> lifecycleEvents.publishEvent(new LifecycleScheduleChangedEvent(reason)));
+    }
+
+    private void publishLeagueNotification(long leagueId,
+                                           com.fantasy.domain.notification.NotificationEvent notification) {
+        publishAfterCommit(() -> lifecycleEvents.publishEvent(
+                LeagueNotificationRequestedEvent.league(leagueId, notification)
+        ));
+    }
+
+    private void publishUserNotification(long leagueId,
+                                         int userId,
+                                         com.fantasy.domain.notification.NotificationEvent notification) {
+        publishAfterCommit(() -> lifecycleEvents.publishEvent(
+                LeagueNotificationRequestedEvent.user(leagueId, userId, notification)
+        ));
     }
 }

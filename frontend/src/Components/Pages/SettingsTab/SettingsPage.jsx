@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
     BadgeCheck,
+    Bell,
     Eye,
     EyeOff,
     Info,
@@ -22,6 +23,7 @@ import { buildSettingsPayload } from "../../../features/settings/model";
 import { settingsSchema } from "../../../features/settings/schemas";
 import { useUpdateSettings } from "../../../features/settings/useSettings";
 import { Button } from "../../../shared/ui/Button";
+import { useNotifications } from "../../../features/notifications/NotificationContext";
 
 const inputClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface aria-invalid:border-app-danger-border aria-invalid:ring-app-danger-surface";
 
@@ -91,6 +93,7 @@ function Feedback({ message }) {
 }
 
 function SettingsForm({ user, updateUser }) {
+    const notifications = useNotifications();
     const [message, setMessage] = useState(null);
     const [passwordVisibility, setPasswordVisibility] = useState({ currentPassword: false, newPassword: false });
     const form = useForm({
@@ -204,6 +207,40 @@ function SettingsForm({ user, updateUser }) {
                             <p className="flex items-start gap-2 border-l-2 border-app-accent-border pl-3 text-xs leading-5 text-app-muted sm:col-span-2">
                                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-app-accent" aria-hidden="true" />
                                 New passwords must contain at least 8 characters. Your current password is required to confirm the change.
+                            </p>
+                        </div>
+                    </section>
+
+                    <section className="grid gap-4 border-t border-app-border px-4 py-6 sm:px-7 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
+                        <SectionHeader
+                            icon={Bell}
+                            title="Device notifications"
+                            description="Receive important league alerts when the app is closed or in the background."
+                        />
+                        <div className="flex flex-col items-start gap-3">
+                            <p className="text-sm leading-6 text-app-muted">
+                                {notifications.pushState === "enabled" && "Notifications are enabled on this device."}
+                                {notifications.pushState === "disabled" && "Notifications are currently disabled on this device."}
+                                {notifications.pushState === "blocked" && "Notifications are blocked. Enable them in your browser settings first."}
+                                {notifications.pushState === "unsupported" && "This browser does not support PWA push notifications."}
+                                {notifications.pushState === "loading" && "Checking this device…"}
+                            </p>
+                            {notifications.pushState === "enabled" ? (
+                                <Button type="button" variant="secondary" disabled={notifications.busy} onClick={notifications.disable}>
+                                    Disable on this device
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    disabled={notifications.busy || ["blocked", "unsupported", "loading"].includes(notifications.pushState)}
+                                    onClick={() => notifications.enable().catch((error) => setMessage({ type: "error", text: error.message }))}
+                                >
+                                    <Bell className="size-4" aria-hidden="true" />
+                                    Enable notifications
+                                </Button>
+                            )}
+                            <p className="text-xs leading-5 text-app-muted">
+                                On iPhone, install the app to your Home Screen before enabling notifications.
                             </p>
                         </div>
                     </section>

@@ -6,10 +6,10 @@ import com.fantasy.domain.transfer.TransferMarketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 @Component
@@ -17,6 +17,7 @@ import java.util.Optional;
 public class TransferWindowScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(TransferWindowScheduler.class);
+    private static final ZoneId LEAGUE_TIME_ZONE = ZoneId.of("Asia/Jerusalem");
 
     private final TransferMarketService transferMarketService;
     private final GameWeekRepository gameWeekRepository;
@@ -26,10 +27,9 @@ public class TransferWindowScheduler {
         this.gameWeekRepository = gameWeekRepository;
     }
 
-    @Scheduled(cron = "0 * * * * *")
     public void checkAndOpenTransferWindow() {
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(LEAGUE_TIME_ZONE);
         Optional<GameWeekEntity> upcomingGwOpt = gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING");
 
         if (upcomingGwOpt.isPresent()) {
@@ -42,6 +42,17 @@ public class TransferWindowScheduler {
             boolean timeReached = now.isAfter(nextGw.getTransferOpenTime()) || now.isEqual(nextGw.getTransferOpenTime());
 
             if (timeReached && !nextGw.isTransferWindowProcessed()) {
+
+                if (nextGw.getFirstKickoffTime() != null
+                        && !now.isBefore(nextGw.getFirstKickoffTime())) {
+                    nextGw.setTransferWindowProcessed(true);
+                    gameWeekRepository.save(nextGw);
+                    log.warn(
+                            "Skipping stale transfer-window opening for GW {} because its lineup deadline already passed",
+                            nextGw.getId()
+                    );
+                    return;
+                }
 
                 log.info("Transfer window open time reached for GW {}", nextGw.getId());
 

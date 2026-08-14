@@ -1,6 +1,7 @@
 package com.fantasy.domain.transfer;
 
 import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueAccessService;
@@ -10,7 +11,8 @@ import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserSquadEntity;
 import com.fantasy.domain.team.UserSquadRepository;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -20,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.security.SecureRandom;
+import com.fantasy.scheduler.LifecycleScheduleChangedEvent;
 
 @Service
 public class DraftService {
@@ -35,6 +38,7 @@ public class DraftService {
     private final TransferWebSocketController webSocketController;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final SecureRandom secureRandom = new SecureRandom();
+    private ApplicationEventPublisher lifecycleEvents = event -> { };
 
     public DraftService(UserGameDataRepository gameDataRepo, TransferMarketService marketService,
                         GameWeekService gameWeekService, DraftConfigRepository draftConfigRepo,
@@ -51,6 +55,11 @@ public class DraftService {
         this.squadRepo = squadRepo;
         this.webSocketController = webSocketController;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
+    }
+
+    @Autowired
+    void setLifecycleEvents(ApplicationEventPublisher lifecycleEvents) {
+        this.lifecycleEvents = lifecycleEvents;
     }
 
     public DraftConfig getDraftConfig(int requestingUserId) {
@@ -88,6 +97,7 @@ public class DraftService {
             leagueRepo.save(league);
         }
         AfterCommitExecutor.run(() -> webSocketController.sendDraftCancelledEvent(leagueId, cancelledType));
+        publishScheduleChanged("draft cancelled for league " + leagueId);
     }
 
     @Transactional
@@ -121,6 +131,11 @@ public class DraftService {
         if (time == null || !time.isAfter(LocalDateTime.now(LEAGUE_TIME_ZONE))) {
             throw new IllegalArgumentException("Draft time must be in the future");
         }
+        GameweekActivityPolicy.requireCanScheduleAt(
+                gameWeekService.getAllGameweeks(),
+                time,
+                "Draft scheduling"
+        );
         LeagueEntity league = requireLeague(leagueId);
         if (league.getStatus() == LeagueStatus.DRAFT_LIVE) {
             throw new IllegalStateException("A draft is already live");
@@ -156,6 +171,7 @@ public class DraftService {
             leagueRepo.save(league);
         }
         AfterCommitExecutor.run(() -> webSocketController.sendDraftScheduledEvent(leagueId, time, draftType));
+        publishScheduleChanged("draft scheduled for league " + leagueId);
     }
 
     @Transactional
@@ -185,6 +201,11 @@ public class DraftService {
 
     @Transactional
     public void runSnakeDraft(long leagueId) {
+        GameweekActivityPolicy.requireCanOpenNow(
+                gameWeekService.getAllGameweeks(),
+                LocalDateTime.now(LEAGUE_TIME_ZONE),
+                "Draft opening"
+        );
         LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
         if (league.getStatus() == LeagueStatus.DRAFT_LIVE) {
@@ -284,6 +305,7 @@ public class DraftService {
         if (config == null) return;
         config.setProcessed(true);
         draftConfigRepo.save(config);
+        publishScheduleChanged("draft processed for league " + config.getLeague().getId());
     }
 
     private void requireSupplementalPool(long leagueId) {
@@ -307,7 +329,6 @@ public class DraftService {
         }
     }
 
-    @Scheduled(fixedDelayString = "${app.draft.schedule-poll-millis:1000}")
     @Transactional
     public void checkDraftSchedule() {
         for (DraftConfig config : draftConfigRepo.findAllByProcessedFalse()) {
@@ -325,6 +346,27 @@ public class DraftService {
                 }
             }
         }
+    }
+
+    @Transactional
+    public void runScheduledDraft(long configId, long leagueId) {
+        DraftConfig config = draftConfigRepo.findById(configId).orElse(null);
+        if (config == null || config.isProcessed() || config.getScheduledTime() == null) {
+            return;
+        }
+        if (LocalDateTime.now(LEAGUE_TIME_ZONE).isBefore(config.getScheduledTime())) {
+            return;
+        }
+        try {
+            runSnakeDraft(leagueId);
+        } catch (IllegalStateException exception) {
+            log.warn("Scheduled draft for league {} is due but cannot start yet: {}",
+                    leagueId, exception.getMessage());
+        }
+    }
+
+    private void publishScheduleChanged(String reason) {
+        AfterCommitExecutor.run(() -> lifecycleEvents.publishEvent(new LifecycleScheduleChangedEvent(reason)));
     }
 
     private long requireLeagueAdmin(int actingUserId) {

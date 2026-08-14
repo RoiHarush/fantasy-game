@@ -57,6 +57,16 @@ describe("ActiveWindowHeader", () => {
         expect(onSkip).toHaveBeenCalledOnce();
     });
 
+    it("removes every turn mutation from the super-admin observer", () => {
+        const { rerender } = render(<ActiveWindowHeader {...BASE_PROPS} readOnly />);
+
+        expect(screen.queryByRole("button", { name: "Skip manager" })).not.toBeInTheDocument();
+
+        rerender(<ActiveWindowHeader {...BASE_PROPS} currentUserId={1} readOnly />);
+        expect(screen.queryByRole("button", { name: "Pass" })).not.toBeInTheDocument();
+        expect(screen.getByText("Your turn")).toBeInTheDocument();
+    });
+
     it("gives the viewer a prominent distance to their next turn", () => {
         render(<ActiveWindowHeader {...BASE_PROPS} />);
 

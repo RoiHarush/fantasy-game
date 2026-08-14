@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { endSession, getCurrentUser } from "../features/auth/api";
 import { getPostLoginRoute } from "../Utils/routing";
+import { disablePushForCurrentDevice } from "../features/notifications/api";
 
 const AuthContext = createContext(null);
 const SESSION_EXPIRED_MESSAGE = "Your session expired. Please sign in again.";
@@ -77,6 +78,9 @@ export const AuthProvider = ({ children, initialUser = null, invalidSession = fa
     const logout = useCallback(async (options = {}) => {
         const { redirect = true, message = "" } = options;
         try {
+            await disablePushForCurrentDevice().catch((error) => {
+                console.warn("Unable to remove this device's push subscription.", error);
+            });
             await endSession();
         } catch (error) {
             console.warn("The server logout request failed; clearing the local UI session.", error);

@@ -10,9 +10,9 @@ import com.fantasy.domain.score.LiveScoreManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 @Component
@@ -21,6 +21,7 @@ public class GameweekAutoScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(GameweekAutoScheduler.class);
     private static final int HOURS_AFTER_LAST_KICKOFF = 4;
+    private static final ZoneId LEAGUE_TIME_ZONE = ZoneId.of("Asia/Jerusalem");
 
     private final GameweekManager gameweekManager;
     private final GameWeekRepository gameweekRepository;
@@ -43,9 +44,16 @@ public class GameweekAutoScheduler {
         this.gameWeekService = gameWeekService;
     }
 
-    @Scheduled(cron = "0 * * * * *")
     public void runScheduler() {
-        LocalDateTime now = LocalDateTime.now();
+        // Finalize the previous gameweek before attempting to open an overdue
+        // next one. This ordering is essential when the server recovers after
+        // being offline across multiple lifecycle deadlines.
+        finalizeDueGameweek();
+        openDueGameweek();
+    }
+
+    public void openDueGameweek() {
+        LocalDateTime now = LocalDateTime.now(LEAGUE_TIME_ZONE);
 
         Optional<GameWeekEntity> upcoming = gameweekRepository.findFirstByStatusOrderByIdAsc("UPCOMING");
         if (upcoming.isPresent()) {
@@ -62,7 +70,10 @@ public class GameweekAutoScheduler {
                 }
             }
         }
+    }
 
+    public void finalizeDueGameweek() {
+        LocalDateTime now = LocalDateTime.now(LEAGUE_TIME_ZONE);
         Optional<GameWeekEntity> live = gameweekRepository.findFirstByStatusOrderByIdAsc("LIVE");
         if (live.isPresent()) {
             GameWeekEntity gw = live.get();
@@ -72,7 +83,7 @@ public class GameweekAutoScheduler {
             }
             LocalDateTime safeProcessTime = gw.getLastKickoffTime().plusHours(HOURS_AFTER_LAST_KICKOFF);
 
-            if (now.isAfter(safeProcessTime) && !gw.isCalculated()) {
+            if (!now.isBefore(safeProcessTime) && !gw.isCalculated()) {
                 log.info("Gameweek {} reached its safe finalization time. Verifying final FPL data...", gw.getId());
                 try {
                     fixtureService.updateFixturesForGameweek(gw.getId());
@@ -81,7 +92,11 @@ public class GameweekAutoScheduler {
                     // next scheduler cycle decides when it is safe to finalize.
                     gameWeekService.updateGameWeekDeadlines();
                     var fixtures = fixtureRepository.findByGameweekId(gw.getId());
-                    if (fixtures.isEmpty() || fixtures.stream().anyMatch(fixture -> !fixture.isFinished())) {
+                    boolean hasKnownPostponedFixtures = !fixtureRepository
+                            .findByPostponedFromGameweekId(gw.getId())
+                            .isEmpty();
+                    boolean fixtureFeedIsUnknown = fixtures.isEmpty() && !hasKnownPostponedFixtures;
+                    if (fixtureFeedIsUnknown || fixtures.stream().anyMatch(fixture -> !fixture.isFinished())) {
                         log.warn(
                                 "Deferring GW {} finalization because at least one fixture is not confirmed finished",
                                 gw.getId()

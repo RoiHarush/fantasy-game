@@ -17,7 +17,7 @@ import TransferWindow from "./TransferWindow";
 function TransferWindowPage() {
     const { user } = useAuth();
     const gameweekState = useGameweek();
-    const { nextGameweek } = gameweekState;
+    const { gameweeks, currentGameweek, nextGameweek } = gameweekState;
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
     const usersQuery = useLeagueUsers(user?.leagueId);
     const windowQuery = useTransferWindowState(user?.leagueId, { refetchInterval: 3_000 });
@@ -36,7 +36,15 @@ function TransferWindowPage() {
     const windowState = windowQuery.data;
 
     if (!windowState?.isOpen || windowState.isDraftMode) {
-        return <ClosedWindow user={user} users={users} nextGameweek={nextGameweek} />;
+        return (
+            <ClosedWindow
+                user={user}
+                users={users}
+                nextGameweek={nextGameweek}
+                gameweeks={gameweeks}
+                currentGameweek={currentGameweek}
+            />
+        );
     }
 
     if (screenData.isPending) return <LoadingPage />;

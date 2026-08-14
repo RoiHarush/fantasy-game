@@ -1,8 +1,11 @@
 package com.fantasy.domain.team;
 
+import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.player.Player;
 import com.fantasy.domain.league.LeaguePlayerCatalog;
+import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
+import com.fantasy.domain.notification.NotificationEvents;
 import com.fantasy.domain.team.Exceptions.FantasyTeamException;
 import com.fantasy.domain.player.exception.PlayerNotFoundException;
 import com.fantasy.domain.user.UserEntity;
@@ -11,6 +14,8 @@ import com.fantasy.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -31,6 +36,7 @@ public class FantasyTeamService {
     private final UserRepository userRepo;
     private final LeaguePlayerCatalog leaguePlayerCatalog;
     private final AutoSubstitutionRepository autoSubstitutionRepository;
+    private ApplicationEventPublisher applicationEvents = event -> { };
 
     public FantasyTeamService(UserGameDataRepository gameDataRepo,
                               UserSquadRepository userSquadRepo,
@@ -44,6 +50,11 @@ public class FantasyTeamService {
         this.userRepo = userRepo;
         this.leaguePlayerCatalog = leaguePlayerCatalog;
         this.autoSubstitutionRepository = autoSubstitutionRepository;
+    }
+
+    @Autowired
+    void setApplicationEvents(ApplicationEventPublisher applicationEvents) {
+        this.applicationEvents = applicationEvents;
     }
 
     @Transactional(readOnly = true)
@@ -145,6 +156,14 @@ public class FantasyTeamService {
         saveGameDataChips(entity, domain);
         saveSquadToDb(entity, team);
 
+        publishLeagueNotification(entity, NotificationEvents.irActivated(
+                userId,
+                entity.getNextSquad().getGameweek(),
+                playerId,
+                entity.getUser().getFullName(),
+                player.getViewName()
+        ));
+
         return SquadMapper.toDto(team.getSquad());
     }
 
@@ -166,6 +185,14 @@ public class FantasyTeamService {
 
         saveGameDataChips(entity, domain);
         saveSquadToDb(entity, team);
+
+        publishLeagueNotification(entity, NotificationEvents.irReleased(
+                userId,
+                entity.getNextSquad().getGameweek(),
+                playerOutId,
+                entity.getUser().getFullName(),
+                playerOut.getViewName()
+        ));
 
         return SquadMapper.toDto(team.getSquad());
     }
@@ -397,6 +424,15 @@ public class FantasyTeamService {
         entity.setChips(domain.getChips());
         entity.setActiveChips(domain.getActiveChips());
         gameDataRepo.save(entity);
+    }
+
+    private void publishLeagueNotification(UserGameDataEntity gameData,
+                                           com.fantasy.domain.notification.NotificationEvent notification) {
+        if (gameData.getLeague() == null) return;
+        long leagueId = gameData.getLeague().getId();
+        AfterCommitExecutor.run(() -> applicationEvents.publishEvent(
+                LeagueNotificationRequestedEvent.league(leagueId, notification)
+        ));
     }
 
 }

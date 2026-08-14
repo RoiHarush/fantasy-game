@@ -28,6 +28,9 @@ const BASE_PROPS = {
     orderError: "",
     actionError: null,
     actionPending: false,
+    openBlockedReason: "",
+    scheduleBlockedReason: "",
+    configuredScheduleBlockedReason: "",
     pendingAction: null,
     copied: false,
     copyError: "",
@@ -95,5 +98,21 @@ describe("DraftLobbyView", () => {
         expect(screen.getByText("Selection order")).toBeInTheDocument();
         expect(screen.queryByText("FPL-2026")).not.toBeInTheDocument();
         expect(screen.getByText("Two-round snake")).toBeInTheDocument();
+    });
+
+    it("disables opening and conflicting scheduling during a gameweek", () => {
+        render(
+            <DraftLobbyView
+                {...BASE_PROPS}
+                scheduledTime="2026-08-22T12:00"
+                openBlockedReason="Drafts cannot open while Gameweek 1 is active."
+                scheduleBlockedReason="Choose a time outside Gameweek 1."
+            />,
+        );
+
+        expect(screen.getByRole("button", { name: "Open draft now" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Schedule draft" })).toBeDisabled();
+        expect(screen.getByText("Drafts cannot open while Gameweek 1 is active.")).toBeInTheDocument();
+        expect(screen.getByText("Choose a time outside Gameweek 1.")).toBeInTheDocument();
     });
 });

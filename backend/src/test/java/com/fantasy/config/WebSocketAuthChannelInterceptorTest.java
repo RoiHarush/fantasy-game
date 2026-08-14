@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class WebSocketAuthChannelInterceptorTest {
@@ -89,5 +90,26 @@ class WebSocketAuthChannelInterceptorTest {
                 AccessDeniedException.class,
                 () -> interceptor.preSend(message, mock(org.springframework.messaging.MessageChannel.class))
         );
+    }
+
+    @Test
+    void letsTheSuperAdminObserveAnyLeagueTopicWithoutJoiningIt() {
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        WebSocketAuthChannelInterceptor interceptor = new WebSocketAuthChannelInterceptor(
+                mock(JwtService.class),
+                leagueAccess
+        );
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setLeaveMutable(true);
+        accessor.setDestination("/topic/leagues/99/transfers");
+        accessor.setUser(new UsernamePasswordAuthenticationToken(
+                "1",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        ));
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        assertNotNull(interceptor.preSend(message, mock(org.springframework.messaging.MessageChannel.class)));
+        verifyNoInteractions(leagueAccess);
     }
 }
