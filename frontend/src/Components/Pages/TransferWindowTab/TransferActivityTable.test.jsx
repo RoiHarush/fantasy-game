@@ -41,4 +41,24 @@ describe("TransferActivityTable", () => {
         render(<TransferActivityTable players={PLAYERS} />);
         expect(screen.getByText("No moves yet")).toBeInTheDocument();
     });
+
+    it("renders supplemental draft activity as a replacement rather than an initial pick", () => {
+        render(
+            <TransferActivityTable
+                mode="supplemental"
+                players={PLAYERS}
+                actions={[{
+                    id: 92,
+                    source: "DRAFT",
+                    userName: "Roi",
+                    playerInId: 10,
+                    playerOutId: 20,
+                }]}
+            />,
+        );
+
+        expect(screen.getByText("Cole Palmer")).toBeInTheDocument();
+        expect(screen.getByText("Bukayo Saka")).toBeInTheDocument();
+        expect(screen.getByText("Draft move 1")).toBeInTheDocument();
+    });
 });

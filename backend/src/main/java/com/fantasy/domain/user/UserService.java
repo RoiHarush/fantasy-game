@@ -52,14 +52,26 @@ public class UserService {
 
         LeagueEntity league = leagueRepository.findFirstByUsers_Id(requestingUserId)
                 .orElseThrow(() -> new IllegalStateException("User is not in a league"));
-        return league.getUsers().stream().map(user -> convertToDto(user, league)).toList();
+        return league.getUsers().stream()
+                .map(user -> {
+                    UserDto dto = convertToDto(user, league);
+                    if (user.getId() != requestingUserId) {
+                        dto.setEmail(null);
+                    }
+                    return dto;
+                })
+                .toList();
     }
 
     public UserDto getUserById(int requestingUserId, int id) {
         leagueAccessService.requireSameLeague(requestingUserId, id);
         UserEntity user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return convertToDto(user);
+        UserDto dto = convertToDto(user);
+        if (requestingUserId != id) {
+            dto.setEmail(null);
+        }
+        return dto;
     }
 
     @Transactional
@@ -192,6 +204,8 @@ public class UserService {
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
         dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setEmailVerified(user.isEmailVerified());
         dto.setRole(user.getRole().name());
         dto.setFantasyTeamName(teamName);
         applyTeamLogo(dto, user.getId(), gameData);

@@ -7,6 +7,7 @@ import { useUserGameweekPoints } from "../../../features/points/usePointSummarie
 import { useDailyStatus } from "../../../features/status/useStatusData";
 import TransferActivityList from "./TransferActivityList";
 import UpcomingDeadlines from "./UpcomingDeadlines";
+import GameweekRoast from "./GameweekRoast";
 
 function Status({
     user,
@@ -78,6 +79,10 @@ function Status({
                     <h3 className="text-xl font-bold text-app-foreground">Upcoming deadlines</h3>
                     <UpcomingDeadlines gameweek={nextGameweek} onDeadlineReached={refreshGameweeks} />
                 </>
+            )}
+
+            {!preview && !preSeason && isCalculated && (
+                <GameweekRoast gameweekId={currentGameweek.id} />
             )}
 
             {!preSeason && <PlayerOfTheWeekBlock gameweekId={currentGameweek?.id} previewRecords={previewData?.playersOfTheWeek} previewPlayers={previewData?.players} />}

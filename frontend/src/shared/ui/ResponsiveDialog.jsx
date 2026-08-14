@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
 import { cn } from "../../lib/cn";
+import { Button } from "./Button";
 
 const DISMISS_DISTANCE = 80;
 const DISMISS_VELOCITY = 0.35;
@@ -96,8 +97,9 @@ function ResponsiveDialogSurface({ children, className, desktopVariant = "dialog
                 }}
                 {...props}
             >
-                <button
+                <Button
                     type="button"
+                    variant="ghost"
                     aria-label="Drag down to close"
                     tabIndex={-1}
                     className="absolute left-1/2 top-0 z-20 flex h-11 w-32 -translate-x-1/2 appearance-none items-start justify-center border-0 bg-transparent p-0 pt-2 shadow-none outline-none touch-none cursor-grab active:cursor-grabbing sm:hidden"
@@ -107,7 +109,7 @@ function ResponsiveDialogSurface({ children, className, desktopVariant = "dialog
                     onPointerCancel={(event) => finishDrag(event, true)}
                 >
                     <span className="h-1 w-9 rounded-full bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.3)]" aria-hidden="true" />
-                </button>
+                </Button>
                 {children}
                 <Dialog.Close ref={closeButtonRef} className="sr-only" tabIndex={-1} aria-hidden="true">
                     Close

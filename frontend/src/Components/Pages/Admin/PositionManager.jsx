@@ -1,10 +1,11 @@
-import { Search, Shirt } from "lucide-react";
+import { Search, Shirt } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 
 import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useUpdatePlayerPosition } from "../../../features/league-admin/useLeagueAdmin";
 import { usePlayers } from "../../../features/players/usePlayers";
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 const POSITIONS = [
     { id: 1, code: "GK", label: "Goalkeeper" },
@@ -75,8 +76,9 @@ function PositionManager({ maintenanceLeagueId = null }) {
                                 const active = player.position === position.code;
                                 const pending = updatePosition.isPending && updatePosition.variables?.playerId === player.id;
                                 return (
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant={active ? "success" : "secondary"}
                                         key={position.id}
                                         disabled={pending}
                                         onClick={() => handleChangePosition(player, position)}
@@ -85,7 +87,7 @@ function PositionManager({ maintenanceLeagueId = null }) {
                                         aria-label={`Set ${player.viewName} as ${position.label}`}
                                     >
                                         {position.code}
-                                    </button>
+                                    </Button>
                                 );
                             })}
                         </div>

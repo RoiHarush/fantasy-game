@@ -1,7 +1,7 @@
 "use client";
 
 import * as Select from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@/src/shared/ui/icons";
 import { useRef, useState } from "react";
 
 import { cn } from "../../lib/cn";

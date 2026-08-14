@@ -27,3 +27,44 @@ export function isFirstPickStarting(squad) {
     return Object.values(squad.startingLineup ?? {}).flat()
         .some((playerId) => String(playerId) === String(squad.firstPickId));
 }
+
+export function getUnsavedSquadActionReason(hasUnsavedChanges, savePending, action = "using this chip") {
+    if (savePending) return "Wait for your team changes to finish saving.";
+    if (hasUnsavedChanges) return `Save your team changes before ${action}.`;
+    return "";
+}
+
+export function getGameweekChipUnavailableReason({
+    title,
+    isActive,
+    remaining,
+    disabledReason = "",
+    hasUnsavedChanges = false,
+    savePending = false,
+}) {
+    const pendingSquadReason = getUnsavedSquadActionReason(hasUnsavedChanges, savePending);
+    if (pendingSquadReason) return pendingSquadReason;
+    if (isActive) return "";
+    if ((remaining ?? 0) <= 0) return `No ${title} uses remain.`;
+    return disabledReason;
+}
+
+export function getIrChipUnavailableReason({
+    isActive,
+    remaining,
+    playersCount,
+    transferWindowProcessed,
+    hasUnsavedChanges = false,
+    savePending = false,
+}) {
+    const pendingSquadReason = getUnsavedSquadActionReason(
+        hasUnsavedChanges,
+        savePending,
+        "using an IR action",
+    );
+    if (pendingSquadReason) return pendingSquadReason;
+    if (transferWindowProcessed) return "IR actions are unavailable after the deadline.";
+    if (isActive && playersCount < 15) return "Your squad must contain 15 players before releasing IR.";
+    if (!isActive && (remaining ?? 0) <= 0) return "No IR Chip uses remain.";
+    return "";
+}

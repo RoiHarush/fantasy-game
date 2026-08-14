@@ -400,7 +400,16 @@ public class Squad implements Draftable {
         if (firstPick == null)
             throw new RuntimeException("Squad doesn't have first pick");
 
+        if (!isFirstPickStarting())
+            throw new IllegalStateException("The first-pick player must be in the starting lineup");
+
         captain = firstPick;
+    }
+
+    public boolean isFirstPickStarting() {
+        return firstPick != null && startingLineup.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(firstPick::equals);
     }
 
     public void releaseFirstPickCaptain(){
@@ -441,10 +450,7 @@ public class Squad implements Draftable {
         if (this.getCaptain().equals(this.getViceCaptain()))
             return false;
 
-        boolean firstPickIsStarting = firstPick != null
-                && this.startingLineup.values().stream()
-                .flatMap(List::stream)
-                .anyMatch(firstPick::equals);
+        boolean firstPickIsStarting = isFirstPickStarting();
 
         if (firstPickUsed) {
             if (!firstPickIsStarting || !this.getCaptain().equals(firstPick))

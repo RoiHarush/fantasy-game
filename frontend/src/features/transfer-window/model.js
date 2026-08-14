@@ -80,7 +80,13 @@ export function getReplacementBlockReason({ playerIn, playerOut, squadPlayers = 
     return null;
 }
 
-export function summarizeSnakeOrder(order = [], users = [], turnsUsed = {}, totalTurns = {}) {
+export function summarizeSnakeOrder(
+    order = [],
+    users = [],
+    turnsUsed = {},
+    totalTurns = {},
+    { automaticUserIds = [], onlineUserIds = [] } = {},
+) {
     const summaries = [];
     const byUserId = new Map();
 
@@ -95,6 +101,8 @@ export function summarizeSnakeOrder(order = [], users = [], turnsUsed = {}, tota
                 pickNumbers: [],
                 used: turnsUsed[userId] ?? turnsUsed[key] ?? 0,
                 total: totalTurns[userId] ?? totalTurns[key] ?? 2,
+                automatic: automaticUserIds.some((id) => isSameTransferId(id, userId)),
+                online: onlineUserIds.some((id) => isSameTransferId(id, userId)),
             };
             byUserId.set(key, summary);
             summaries.push(summary);
@@ -265,7 +273,9 @@ export function getTransferNoticeDetails(event, players, isDraftMode) {
     const playerIn = players.find((player) => isSameTransferId(player.id, event.playerInId));
     const playerOut = players.find((player) => isSameTransferId(player.id, event.playerOutId));
     return {
-        type: isDraftMode ? "draft" : "transfer",
+        type: isDraftMode && (event.playerOutId === null || event.playerOutId === undefined)
+            ? "draft"
+            : "transfer",
         managerName: event.userName || "Unknown manager",
         playerInName: playerIn?.viewName ?? "Unknown player",
         playerOutName: playerOut?.viewName ?? "Unknown player",

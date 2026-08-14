@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { CalendarDays, Info, Trophy } from "lucide-react";
+import { CalendarDays, Info, Trophy } from "@/src/shared/ui/icons";
 import Image from "next/image";
 
 import { useTeamsContext } from "../../Context/TeamsContext";

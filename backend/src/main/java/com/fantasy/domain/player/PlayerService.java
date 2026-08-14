@@ -13,6 +13,7 @@ import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.score.LeagueScoringService;
 import com.fantasy.domain.transfer.LeagueTransferWindowRepository;
+import com.fantasy.domain.transfer.LeagueTransferWindowEntity;
 import com.fantasy.domain.transfer.SupplementalDraftPoolService;
 import com.fantasy.domain.transfer.TransferWindowStatus;
 import com.fantasy.domain.transfer.TransferWindowType;
@@ -80,18 +81,25 @@ public class PlayerService {
                 ? null
                 : leagueRepo.findFirstByUsers_Id(requestingUserId).orElse(null);
         Map<Integer, Integer> leaguePointsByPlayer = new HashMap<>();
+        var activeWindow = scoringLeague == null
+                ? Optional.<LeagueTransferWindowEntity>empty()
+                : transferWindowRepository.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
+                        scoringLeague.getId(),
+                        TransferWindowStatus.OPEN
+                );
+        boolean supplementalDraftOpen = activeWindow
+                .map(window -> window.getWindowType() == TransferWindowType.SUPPLEMENTAL)
+                .orElse(false);
         Set<Integer> supplementalPlayerIds = scoringLeague == null
                 ? Set.of()
                 : Optional.ofNullable(supplementalDraftPoolService.playerIds(scoringLeague.getId()))
                     .orElseGet(Set::of);
-        boolean supplementalDraftOpen = scoringLeague != null
-                && transferWindowRepository
-                .findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
+        Set<Integer> currentSupplementalDraftPlayerIds = scoringLeague == null || !supplementalDraftOpen
+                ? Set.of()
+                : supplementalDraftPoolService.playerIdsEligibleAt(
                         scoringLeague.getId(),
-                        TransferWindowStatus.OPEN
-                )
-                .map(window -> window.getWindowType() == TransferWindowType.SUPPLEMENTAL)
-                .orElse(false);
+                        activeWindow.orElseThrow().getOpenedAt()
+                );
         if (scoringLeague != null) {
             Map<Integer, Map<Integer, List<PlayerFixtureStatsEntity>>> fixtureStatsByPlayerAndGameweek =
                     fixtureStatsRepo.findAll().stream().collect(Collectors.groupingBy(
@@ -125,9 +133,10 @@ public class PlayerService {
                             ? false
                             : scoringLeague.isPlayerLocked(p.getId());
                     boolean supplementalEligible = supplementalPlayerIds.contains(p.getId());
+                    boolean supplementalSelectable = currentSupplementalDraftPlayerIds.contains(p.getId());
                     boolean available = ownerId == null
                             && !locked
-                            && (!supplementalEligible || supplementalDraftOpen);
+                            && (!supplementalEligible || supplementalSelectable);
 
                     if (scoringLeague != null) {
                         PlayerDto dto = PlayerMapper.toDtoWithTotalPoints(
@@ -139,6 +148,7 @@ public class PlayerService {
                                 effectivePosition
                         );
                         dto.setSupplementalDraftEligible(supplementalEligible);
+                        dto.setSupplementalDraftSelectable(supplementalSelectable);
                         return dto;
                     }
                     return PlayerMapper.toDto(
@@ -231,6 +241,8 @@ public class PlayerService {
         if (squadEntity.getStartingLineup() != null) playerIds.addAll(squadEntity.getStartingLineup());
         if (squadEntity.getBenchMap() != null) playerIds.addAll(squadEntity.getBenchMap().values());
 
+        Set<Integer> leagueLeaderIds = findLeagueGameweekLeaderIds(gameData.getLeague(), gwId);
+
         return playerIds.stream()
                 .filter(Objects::nonNull)
                 .map(id -> mapPlayerToDataDto(
@@ -239,16 +251,71 @@ public class PlayerService {
                         teamFixturesMap,
                         teamNamesMap,
                         postponedTeamIds,
-                        gameData.getLeague()
+                        gameData.getLeague(),
+                        leagueLeaderIds
                 ))
                 .toList();
+    }
+
+    private Set<Integer> findLeagueGameweekLeaderIds(LeagueEntity league, int gameweekId) {
+        if (league == null || league.getId() == null) return Set.of();
+
+        List<UserSquadEntity> leagueSquads = Optional
+                .ofNullable(userSquadRepo.findByGameweek(gameweekId))
+                .orElseGet(List::of)
+                .stream()
+                .filter(squad -> squad.getUser() != null
+                        && squad.getUser().getLeague() != null
+                        && Objects.equals(squad.getUser().getLeague().getId(), league.getId()))
+                .sorted(Comparator.comparing(
+                        squad -> squad.getUser().getId(),
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ))
+                .toList();
+        if (leagueSquads.isEmpty()) return Set.of();
+
+        Map<Integer, PlayerGameweekStatsEntity> statsByPlayer = Optional
+                .ofNullable(statsRepo.findByGameweek(gameweekId))
+                .orElseGet(List::of)
+                .stream()
+                .collect(Collectors.toMap(
+                        stats -> stats.getPlayer().getId(),
+                        Function.identity(),
+                        (first, ignored) -> first
+                ));
+        Map<Integer, List<PlayerFixtureStatsEntity>> fixtureStatsByPlayer = Optional
+                .ofNullable(fixtureStatsRepo.findByGameweek(gameweekId))
+                .orElseGet(List::of)
+                .stream()
+                .collect(Collectors.groupingBy(stats -> stats.getPlayer().getId()));
+
+        Set<Integer> candidatePlayerIds = leagueSquads.stream()
+                .flatMap(squad -> LeagueGameweekLeaderResolver.orderedPlayerIds(squad).stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Integer, Integer> pointsByPlayer = new HashMap<>();
+        for (Integer playerId : candidatePlayerIds) {
+            PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
+            int points = stats == null
+                    ? pointsRepo.findByPlayer_IdAndGameweek(playerId, gameweekId)
+                            .map(PlayerPointsEntity::getPoints)
+                            .orElse(0)
+                    : leagueScoringService.calculatePlayerGameweekPoints(
+                            stats,
+                            fixtureStatsByPlayer.getOrDefault(playerId, List.of()),
+                            league
+                    );
+            pointsByPlayer.put(playerId, points);
+        }
+
+        return LeagueGameweekLeaderResolver.resolve(leagueSquads, pointsByPlayer);
     }
 
     private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId,
                                              Map<Integer, List<FixtureEntity>> teamFixturesMap,
                                              Map<Integer, String> teamNamesMap,
                                              Set<Integer> postponedTeamIds,
-                                             LeagueEntity scoringLeague) {
+                                             LeagueEntity scoringLeague,
+                                             Set<Integer> leagueLeaderIds) {
 
         Player player = loadDomainPlayer(playerId);
         if (player == null) return new PlayerDataDto(playerId, 0, null);
@@ -294,7 +361,13 @@ public class PlayerService {
             }
         }
 
-        return new PlayerDataDto(playerId, points, nextFixtures, fixturePostponed);
+        return new PlayerDataDto(
+                playerId,
+                points,
+                nextFixtures,
+                fixturePostponed,
+                leagueLeaderIds.contains(playerId)
+        );
     }
 
 

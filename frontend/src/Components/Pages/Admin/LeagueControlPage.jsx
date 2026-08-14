@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as Dialog from "@radix-ui/react-dialog";
 import {
     BadgeCheck,
+    ChevronDown,
     Goal,
     LockKeyhole,
     Rows3,
@@ -14,7 +14,7 @@ import {
     Trash2,
     Trophy,
     Users,
-} from "lucide-react";
+} from "@/src/shared/ui/icons";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -33,8 +33,7 @@ import {
     useUpdateLeagueSettings,
 } from "../../../features/league/useLeague";
 import { Button } from "../../../shared/ui/Button";
-import CloseButton from "../../../shared/ui/CloseButton";
-import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
+import RemoveManagerDialog from "./RemoveManagerDialog";
 
 const managerLoading = () => (
     <div className="grid min-h-48 place-items-center rounded-2xl border border-app-border bg-app-surface-muted p-6 text-sm font-semibold text-app-muted" role="status">
@@ -175,9 +174,10 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                             const { label, icon: Icon } = TAB_META[tab];
                             const selected = activeTab === tab;
                             return (
-                                <button
+                                <Button
                                     key={tab}
                                     type="button"
+                                    variant="ghost"
                                     role="tab"
                                     aria-selected={selected}
                                     className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-extrabold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent sm:min-h-11 sm:flex-1 sm:px-4 sm:text-sm ${selected ? "bg-app-surface text-app-accent-foreground shadow-sm ring-1 ring-app-border" : "text-app-muted hover:bg-app-accent-hover hover:text-app-foreground"}`}
@@ -188,7 +188,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                 >
                                     <Icon className="size-4" aria-hidden="true" />
                                     {label}
-                                </button>
+                                </Button>
                             );
                         })}
                     </div>
@@ -235,7 +235,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                         <h2 className="text-sm font-black text-app-foreground sm:text-lg">Scoring rules</h2>
                                         <p className="mt-0.5 text-xs leading-5 text-app-muted sm:text-sm">Changes apply to the next points calculation for this league.</p>
                                     </div>
-                                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-app-border bg-app-surface text-app-muted transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-app-border bg-app-surface text-app-muted transition group-open:rotate-180" aria-hidden="true"><ChevronDown className="size-3.5" /></span>
                                 </summary>
                                 <div className="grid max-h-[34rem] gap-2 overflow-y-auto overscroll-contain p-3 sm:grid-cols-2 sm:gap-3 sm:p-5">
                                     {scoringRuleFields.map((field, index) => (
@@ -309,30 +309,12 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                 </div>
             </section>
 
-            <Dialog.Root open={Boolean(managerToRemove)} onOpenChange={(open) => !open && setManagerToRemove(null)}>
-                <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
-                        <div className="relative p-5 sm:p-7">
-                            <Dialog.Close asChild>
-                                <CloseButton className="absolute top-3 right-3" aria-label="Close confirmation" />
-                            </Dialog.Close>
-                            <span className="grid size-11 place-items-center rounded-xl bg-app-danger-surface text-app-danger-foreground ring-1 ring-app-danger-border">
-                                <Trash2 className="size-5" aria-hidden="true" />
-                            </span>
-                            <Dialog.Title className="mt-4 text-xl font-black">Remove manager?</Dialog.Title>
-                            <Dialog.Description className="mt-2 pr-3 text-sm leading-6 text-app-muted">
-                                {managerToRemove?.name} will lose access to this league. This action is available only before the initial draft.
-                            </Dialog.Description>
-                            <div className="mt-6 grid grid-cols-2 gap-3">
-                                <Dialog.Close asChild>
-                                    <Button variant="secondary" className="border-app-border bg-app-surface-muted text-app-foreground hover:bg-app-accent-hover" disabled={removeManager.isPending}>Cancel</Button>
-                                </Dialog.Close>
-                                <Button variant="danger" onClick={handleRemoveManager} disabled={removeManager.isPending}>
-                                    {removeManager.isPending ? "Removing…" : "Remove"}
-                                </Button>
-                            </div>
-                        </div>
-                </ResponsiveDialogSurface>
-            </Dialog.Root>
+            <RemoveManagerDialog
+                manager={managerToRemove}
+                onOpenChange={(open) => !open && setManagerToRemove(null)}
+                onConfirm={handleRemoveManager}
+                pending={removeManager.isPending}
+            />
         </main>
     );
 }

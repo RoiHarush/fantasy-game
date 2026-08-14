@@ -24,6 +24,7 @@ vi.mock("../../features/auth/useAuthActions", () => ({
         mutate: authMocks.mutate,
         isPending: false,
     }),
+    useResendVerification: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../../features/teams/useTeams", () => ({
@@ -47,15 +48,17 @@ describe("Login registration mode", () => {
         fireEvent.click(screen.getByRole("button", { name: "New here? Create an account" }));
         fireEvent.change(screen.getByLabelText("First name"), { target: { value: "Test" } });
         fireEvent.change(screen.getByLabelText("Last name"), { target: { value: "User" } });
+        fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "test@example.com" } });
         fireEvent.change(screen.getByLabelText("Username"), { target: { value: "test.user" } });
         fireEvent.change(screen.getByLabelText("Password"), { target: { value: "valid-password" } });
         fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "valid-password" } });
-        fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
+        fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
         await waitFor(() => expect(authMocks.mutate).toHaveBeenCalledOnce());
         expect(authMocks.mutate.mock.calls[0][0]).toEqual({
             firstName: "Test",
             lastName: "User",
+            email: "test@example.com",
             username: "test.user",
             password: "valid-password",
             confirmPassword: "valid-password",

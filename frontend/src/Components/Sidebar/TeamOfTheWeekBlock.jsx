@@ -1,5 +1,6 @@
 import { useGameweek } from "../../features/gameweeks/useGameweek";
 import { useDreamTeam } from "../../features/status/useStatusData";
+import { Star } from "../../shared/ui/icons";
 import PlayerKit from "../General/PlayerKit";
 
 function TeamOfTheWeekBlock({ previewTeam }) {
@@ -12,7 +13,7 @@ function TeamOfTheWeekBlock({ previewTeam }) {
     return (
         <section className="mb-5 w-full overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm transition-colors">
             <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink">
-                <span className="text-xl text-brand-green" aria-hidden="true">★</span>
+                <Star className="size-5 text-brand-green" aria-hidden="true" />
                 Team of the Week
             </div>
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "@/src/shared/ui/icons";
 import Image from "next/image";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { Button } from "../../shared/ui/Button";
 
 export const COOKIE_PREFERENCE_KEY = "fantasy-cookie-preference-v1";
 const COOKIE_TOAST_ID = "fantasy-cookie-consent";
@@ -39,21 +40,23 @@ export function CookieConsentContent({ onPreference = savePreference }) {
                         We use essential cookies to keep you signed in and protect account actions. We do not currently use analytics or advertising cookies.
                     </p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
+                        <Button
                             type="button"
-                            className="min-h-10 rounded-xl border border-app-border bg-app-surface px-2.5 py-2 text-xs font-bold transition hover:bg-app-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent sm:px-4 sm:text-sm"
+                            variant="secondary"
+                            className="min-h-10 rounded-xl px-2.5 py-2 text-xs sm:px-4 sm:text-sm"
                             onClick={() => onPreference("essential")}
                         >
                             Essential only
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
-                            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-component-gradient px-2.5 py-2 text-xs font-black text-brand-ink shadow-sm transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent sm:px-4 sm:text-sm"
+                            variant="primary"
+                            className="min-h-10 rounded-xl px-2.5 py-2 text-xs font-black sm:px-4 sm:text-sm"
                             onClick={() => onPreference("accepted")}
                         >
                             <ShieldCheck size={16} aria-hidden="true" />
                             Accept
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

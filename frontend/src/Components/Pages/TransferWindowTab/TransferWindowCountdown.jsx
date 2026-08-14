@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock } from "lucide-react";
+import { CalendarClock } from "@/src/shared/ui/icons";
 
 import {
     getCountdownParts,

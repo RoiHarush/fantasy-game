@@ -2,7 +2,9 @@ package com.fantasy.domain.team;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,15 @@ public interface UserGameDataRepository extends JpaRepository<UserGameDataEntity
     WHERE g.user.id = :userId
 """)
     Optional<UserGameDataEntity> findByUserId(@Param("userId") Integer userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT g FROM UserGameDataEntity g
+    JOIN FETCH g.user
+    LEFT JOIN FETCH g.league
+    WHERE g.user.id = :userId
+    """)
+    Optional<UserGameDataEntity> findByUserIdForUpdate(@Param("userId") Integer userId);
 
     @Query("""
     SELECT DISTINCT g FROM UserGameDataEntity g

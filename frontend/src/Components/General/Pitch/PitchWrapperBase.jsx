@@ -46,8 +46,8 @@ function PitchWrapperBase({
                 </div>
 
                 {squad && (
-                    <section className="flex min-h-13 w-[calc(100%-24px)] items-center gap-2.5 self-center rounded-xl border border-[var(--app-accent-border)] bg-[var(--app-accent-surface)] px-2.5 py-2 max-md:min-h-[46px] max-md:w-[calc(100%-16px)] max-md:gap-2 max-md:px-2 max-md:py-1.5" aria-label="Injured reserve slot">
-                        <div className="shrink-0 rounded-full border border-[var(--app-accent-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-[0.68rem] font-extrabold tracking-[0.08em] text-[var(--app-accent-foreground)] uppercase max-md:px-2 max-md:py-1 max-md:text-[0.62rem]">
+                    <section className="flex min-h-13 w-[calc(100%-24px)] items-center gap-2.5 self-center border-y border-[var(--app-border)] px-1 py-2 max-md:min-h-[46px] max-md:w-[calc(100%-16px)] max-md:gap-2 max-md:py-1.5" aria-label="Injured reserve slot">
+                        <div className="shrink-0 border-l-2 border-[var(--app-accent)] pl-2 text-[0.68rem] font-extrabold tracking-[0.08em] text-[var(--app-accent-foreground)] uppercase max-md:text-[0.62rem]">
                             IR Slot
                         </div>
                         {irPlayer ? (
@@ -62,7 +62,7 @@ function PitchWrapperBase({
                                 <span className="min-w-0 truncate text-[0.78rem] font-bold max-md:text-[0.72rem]">
                                     {irPlayer.viewName}
                                 </span>
-                                <span className="rounded-full bg-[var(--app-surface)] px-1.5 py-0.5 text-[0.62rem] font-bold text-[var(--app-muted)]">
+                                <span className="text-[0.62rem] font-bold text-[var(--app-muted)]">
                                     {irPlayer.position}
                                 </span>
                             </div>

@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw } from "@/src/shared/ui/icons";
 import Image from "next/image";
 
 import { Button } from "../../../../shared/ui/Button";
@@ -34,7 +34,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                             <CloseButton className="absolute top-4 right-4" aria-label="Close IR release selection" />
                         </Dialog.Close>
                         <div className="flex items-center gap-3">
-                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface">
+                            <span className="grid size-9 shrink-0 place-items-center">
                                 <Image src="/Icons/ir-chip.svg" alt="" width={30} height={30} className="size-7 object-contain" />
                             </span>
                             <div className="min-w-0">
@@ -47,7 +47,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                     </header>
 
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5">
-                        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-app-accent-border bg-app-accent-surface px-3 py-3 text-app-accent-foreground">
+                        <div className="mb-3 flex items-center gap-3 border-y border-app-accent-border px-1 py-3 text-app-accent-foreground">
                             <RotateCcw className="size-5 shrink-0" aria-hidden="true" />
                             <p className="min-w-0 text-xs leading-5 sm:text-sm">
                                 Returning <strong>{irPlayer.viewName}</strong> from IR
@@ -55,17 +55,18 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                         </div>
 
                         {samePositionPlayers.length === 0 ? (
-                            <p className="rounded-2xl border border-dashed border-app-border bg-app-surface-muted px-5 py-10 text-center text-sm font-bold text-app-muted">
+                            <p className="border-y border-dashed border-app-border px-5 py-10 text-center text-sm font-bold text-app-muted">
                                 No available players of the same position.
                             </p>
                         ) : (
-                            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                            <div className="divide-y divide-app-border border-y border-app-border">
                                 {samePositionPlayers.map((player) => (
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="ghost"
                                         key={player.id}
                                         onClick={() => selectOutgoing(player)}
-                                        className="flex min-w-0 items-center gap-3 rounded-2xl border border-app-border bg-app-surface px-3 py-3 text-left transition hover:border-red-400/50 hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-red-500"
+                                        className="flex h-auto min-h-16 w-full min-w-0 items-center gap-3 px-1 py-3 text-left transition hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-red-500 sm:px-2"
                                     >
                                         <PlayerKit
                                             teamId={player.teamId}
@@ -77,7 +78,7 @@ function IRReleaseModal({ squad, players, irPlayer, onClose, onConfirm }) {
                                             <strong className="block truncate text-sm text-app-foreground">{player.viewName}</strong>
                                             <span className="mt-0.5 block truncate text-[0.68rem] font-bold uppercase tracking-wide text-app-muted">{player.teamName || player.position}</span>
                                         </span>
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         )}

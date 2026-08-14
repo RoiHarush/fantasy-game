@@ -7,12 +7,13 @@ import {
     EyeOff,
     Info,
     LockKeyhole,
+    Mail,
     Save,
     Settings2,
     ShieldCheck,
     TriangleAlert,
     UserRound,
-} from "lucide-react";
+} from "@/src/shared/ui/icons";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -54,15 +55,17 @@ function PasswordField({ id, label, register, error, autoComplete, visible, onTo
                     aria-invalid={Boolean(error)}
                     {...register(id)}
                 />
-                <button
+                <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-app-muted transition hover:bg-app-accent-hover hover:text-app-foreground focus-visible:outline-2 focus-visible:outline-app-accent"
                     aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`}
                     aria-pressed={visible}
                     onClick={onToggle}
                 >
                     {visible ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
-                </button>
+                </Button>
             </div>
             <FieldError error={error} />
         </div>
@@ -165,6 +168,14 @@ function SettingsForm({ user, updateUser }) {
                                 <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor="username">Username</label>
                                 <input id="username" autoComplete="username" spellCheck="false" className={inputClassName} aria-invalid={Boolean(form.formState.errors.username)} {...form.register("username")} />
                                 <FieldError error={form.formState.errors.username} />
+                            </div>
+                            <div className="sm:col-span-2">
+                                <span className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted">Verified email</span>
+                                <div className="flex min-h-11 items-center gap-2 rounded-xl border border-app-border bg-app-surface-muted px-3 text-sm font-semibold text-app-muted">
+                                    <Mail className="size-4 text-app-positive-foreground" aria-hidden="true" />
+                                    <span className="min-w-0 truncate">{user.email}</span>
+                                    {user.emailVerified && <BadgeCheck className="ml-auto size-4 shrink-0 text-app-positive-foreground" aria-label="Verified" />}
+                                </div>
                             </div>
                         </div>
                     </section>

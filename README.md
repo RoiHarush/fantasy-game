@@ -6,7 +6,7 @@ The application is a Java 21 / Spring Boot 3.3 API backed by PostgreSQL, with a 
 
 ## Current capabilities
 
-- Self-service registration and JWT authentication.
+- Email-verified registration, email-or-username sign-in, secure password reset, and JWT session cookies.
 - Create a league or join one with an invitation code.
 - League-scoped data and configurable scoring rules.
 - Separate permissions for league administrators and the global super administrator.
@@ -92,6 +92,10 @@ Copy the two `.env.example` files as a reference, but configure secrets in the h
 - `WEBSOCKET_ALLOWED_ORIGIN_PATTERNS`, containing every production frontend origin allowed to open a SockJS/STOMP connection
 - `SCHEDULING_ENABLED`, kept `false` until post-deploy state checks pass
 - `BOOTSTRAP_ENABLED`, normally `false`; set to `true` only for an explicit initial/season load
+- `APP_PUBLIC_URL`, the public Next.js origin used in verification/reset links
+- `MAIL_PROVIDER=resend`, `RESEND_API_KEY`, and `MAIL_FROM` using a sender on a verified domain
+
+Local development defaults to `MAIL_PROVIDER=log`; verification and password-reset links are printed in the backend log. Production uses Resend's HTTP API. The free Resend plan is ample for this league, but delivery to real users requires verifying a domain in Resend first.
 
 ## New-season reset
 

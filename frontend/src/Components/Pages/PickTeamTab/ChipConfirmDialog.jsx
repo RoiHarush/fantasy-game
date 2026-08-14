@@ -40,7 +40,7 @@ function ChipConfirmDialog({
                     </Dialog.Description>
 
                     {notice && (
-                        <p className="mt-2 w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 text-center text-xs leading-5 text-[var(--app-muted)] sm:text-sm">
+                        <p className="mt-2 w-full border-y border-[var(--app-border)] px-2 py-3 text-center text-xs leading-5 text-[var(--app-muted)] sm:text-sm">
                             {notice}
                         </p>
                     )}

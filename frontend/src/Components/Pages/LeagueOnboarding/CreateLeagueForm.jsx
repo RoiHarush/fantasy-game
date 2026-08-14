@@ -7,8 +7,8 @@ import { createLeagueSchema } from "../../../features/league-onboarding/schemas"
 import { useCreateLeague } from "../../../features/league-onboarding/useLeagueOnboarding";
 import { formatScoringRule, toScoringRuleRows } from "../../../features/league/scoringRules";
 import { Button } from "../../../shared/ui/Button";
-import styles from "../../../Styles/LeagueOnboarding.module.css";
 import FormError from "./FormError";
+import { LeagueField, LeagueForm, leagueInputClassName } from "./LeagueOnboardingUi";
 
 export default function CreateLeagueForm({ scoringRules, onCreated }) {
     const scoringRuleRows = toScoringRuleRows(scoringRules);
@@ -24,52 +24,46 @@ export default function CreateLeagueForm({ scoringRules, onCreated }) {
     const mutation = useCreateLeague(onCreated);
 
     return (
-        <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} className={styles.form} noValidate>
-            <label>
-                League name
-                <input aria-invalid={Boolean(form.formState.errors.leagueName)} {...form.register("leagueName")} />
-                <FormError error={form.formState.errors.leagueName} />
-            </label>
-            <label>
-                Maximum participants
+        <LeagueForm onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+            <LeagueField label="League name" error={form.formState.errors.leagueName}>
+                <input className={leagueInputClassName} aria-invalid={Boolean(form.formState.errors.leagueName)} {...form.register("leagueName")} />
+            </LeagueField>
+            <LeagueField label="Maximum participants" error={form.formState.errors.maxParticipants}>
                 <input
+                    className={leagueInputClassName}
                     type="number"
                     min="2"
                     max="20"
                     aria-invalid={Boolean(form.formState.errors.maxParticipants)}
                     {...form.register("maxParticipants", { valueAsNumber: true })}
                 />
-                <FormError error={form.formState.errors.maxParticipants} />
-            </label>
-            <details className={styles.scoringSettings}>
-                <summary>Customize scoring rules</summary>
-                <p>These values are stored per league and can be changed later by the league admin.</p>
-                <div className={styles.scoringGrid}>
+            </LeagueField>
+            <details className="rounded-2xl border border-app-border bg-app-surface-muted p-4 open:bg-app-surface-elevated">
+                <summary className="cursor-pointer font-black text-app-accent-foreground">Customize scoring rules</summary>
+                <p className="mt-2 text-sm leading-6 text-app-muted">These values are stored per league and can be changed later by the league admin.</p>
+                <div className="mt-4 grid max-h-[26rem] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
                     {scoringRuleRows.map(({ rule }, index) => (
-                        <label key={rule}>
-                            {formatScoringRule(rule)}
+                        <LeagueField key={rule} label={formatScoringRule(rule)} error={form.formState.errors.scoringRules?.[index]?.points} className="rounded-xl border border-app-border bg-app-surface p-3 text-xs">
                             <input type="hidden" {...form.register(`scoringRules.${index}.rule`)} />
                             <input
+                                className={leagueInputClassName}
                                 type="number"
                                 min="-100"
                                 max="100"
                                 aria-invalid={Boolean(form.formState.errors.scoringRules?.[index]?.points)}
                                 {...form.register(`scoringRules.${index}.points`, { valueAsNumber: true })}
                             />
-                            <FormError error={form.formState.errors.scoringRules?.[index]?.points} />
-                        </label>
+                        </LeagueField>
                     ))}
                 </div>
             </details>
-            <label>
-                Fantasy team name
-                <input aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
-                <FormError error={form.formState.errors.teamName} />
-            </label>
+            <LeagueField label="Fantasy team name" error={form.formState.errors.teamName}>
+                <input className={leagueInputClassName} aria-invalid={Boolean(form.formState.errors.teamName)} {...form.register("teamName")} />
+            </LeagueField>
             <FormError error={mutation.error} />
-            <Button type="submit" className={styles.submit} disabled={mutation.isPending}>
+            <Button type="submit" className="mt-1 w-full sm:w-auto sm:justify-self-start" disabled={mutation.isPending}>
                 {mutation.isPending ? "Saving…" : "Create league"}
             </Button>
-        </form>
+        </LeagueForm>
     );
 }

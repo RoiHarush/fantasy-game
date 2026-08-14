@@ -1,8 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowRightLeft, Crown, Info, ShieldCheck } from "lucide-react";
+import { ArrowRightLeft, Crown, Info, ShieldCheck } from "@/src/shared/ui/icons";
 import { cn } from "../../lib/cn";
 import CloseButton from "../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../shared/ui/ResponsiveDialog";
+import { Button } from "../../shared/ui/Button";
 
 function PlayerActionModal({
     player,
@@ -38,8 +39,9 @@ function PlayerActionModal({
                 </div>
 
                 <div className="flex flex-col gap-3 pt-4">
-                    <button
+                    <Button
                         type="button"
+                        variant="secondary"
                         className={cn(ACTION_BUTTON, isLockedFirstPickCaptain && "cursor-not-allowed opacity-45")}
                         onClick={() => onSwitch(player.id)}
                         disabled={isLockedFirstPickCaptain}
@@ -49,7 +51,7 @@ function PlayerActionModal({
                             <strong className="text-sm font-extrabold">Switch player</strong>
                             <small className="text-xs text-app-muted">Choose a valid squad replacement</small>
                         </span>
-                    </button>
+                    </Button>
 
                     <div className="grid grid-cols-2 gap-2.5">
                         <label className={cn(ROLE_OPTION, isCaptain && ROLE_SELECTED, (!canBeCaptain || firstPickUsed) && "cursor-not-allowed opacity-45")}>
@@ -83,10 +85,10 @@ function PlayerActionModal({
                         </label>
                     </div>
 
-                    <button type="button" className={`${ACTION_BUTTON} justify-center font-extrabold text-app-accent-foreground`} onClick={() => onViewInfo(player)}>
+                    <Button type="button" variant="secondary" className={`${ACTION_BUTTON} justify-center font-extrabold text-app-accent-foreground`} onClick={() => onViewInfo(player)}>
                         <Info aria-hidden="true" size={20} />
                         <span>View player information</span>
-                    </button>
+                    </Button>
 
                 </div>
             </ResponsiveDialogSurface>
@@ -94,7 +96,7 @@ function PlayerActionModal({
     );
 }
 
-const ACTION_BUTTON = "flex w-full items-center gap-3 rounded-xl border border-app-border bg-app-surface-muted px-3.5 py-3 text-left text-app-foreground transition hover:-translate-y-px hover:border-app-accent-border hover:bg-app-accent-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-border disabled:cursor-not-allowed disabled:opacity-45";
+const ACTION_BUTTON = "flex h-auto min-h-14 w-full items-center gap-3 rounded-xl border border-app-border bg-app-surface-muted px-3.5 py-3 text-left text-app-foreground transition hover:-translate-y-px hover:border-app-accent-border hover:bg-app-accent-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent-border disabled:cursor-not-allowed disabled:opacity-45";
 const ROLE_OPTION = "relative flex min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border border-app-border bg-app-surface p-3 text-app-muted transition hover:border-app-accent-border hover:bg-app-accent-surface hover:text-app-accent-foreground focus-within:ring-2 focus-within:ring-app-accent-border";
 const ROLE_SELECTED = "border-app-accent bg-app-accent-surface text-app-accent-foreground ring-1 ring-app-accent";
 

@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useState } from "react";
 
+import { ArrowLeft, ArrowRight } from "../../../shared/ui/icons";
 import { getFixtureGameweekNavigation, groupFixturesByDay } from "../../../features/fixtures/model";
 import { useFixtures } from "../../../features/fixtures/useFixtures";
 import { useTeams } from "../../../features/teams/useTeams";
 import { formatAppLongDate } from "../../../lib/dateTime";
 import { FixtureCard } from "./FixtureCard";
+import { Button } from "../../../shared/ui/Button";
 
 const STATUS_CLASS = "m-4 text-center text-app-muted";
 
@@ -57,23 +59,27 @@ function FixturesTable({ gameweeks, defaultGameweek, previewData }) {
 
                 <div className="relative z-[2] grid grid-cols-[80px_1fr_80px] items-center px-0 pb-3.5 pt-2.5 text-center text-[0.82rem] text-brand-ink before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(to_right,transparent,rgb(255_255_255_/_78%),transparent)] before:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[linear-gradient(to_right,transparent,rgb(255_255_255_/_78%),transparent)] after:content-[''] min-[481px]:text-base md:grid-cols-[120px_1fr_120px]">
                     {navigation.canGoPrevious ? (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={handlePrevious}
                             className="cursor-pointer border-0 bg-transparent font-bold text-brand-ink transition-[color,transform] duration-150 focus-visible:-translate-y-px focus-visible:text-white focus-visible:outline-none pointer-fine:hover:-translate-y-px pointer-fine:hover:text-white"
                         >
-                            ← Previous
-                        </button>
+                            <ArrowLeft className="mr-1 inline size-3.5" aria-hidden="true" /> Previous
+                        </Button>
                     ) : <span aria-hidden="true" />}
                     <div className="font-bold">Gameweek {currentGameweekId}</div>
                     {navigation.canGoNext ? (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={handleNext}
                             className="cursor-pointer border-0 bg-transparent font-bold text-brand-ink transition-[color,transform] duration-150 focus-visible:-translate-y-px focus-visible:text-white focus-visible:outline-none pointer-fine:hover:-translate-y-px pointer-fine:hover:text-white"
                         >
-                            Next →
-                        </button>
+                            Next <ArrowRight className="ml-1 inline size-3.5" aria-hidden="true" />
+                        </Button>
                     ) : <span aria-hidden="true" />}
                 </div>
 

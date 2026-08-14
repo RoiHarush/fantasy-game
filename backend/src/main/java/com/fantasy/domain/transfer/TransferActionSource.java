@@ -4,5 +4,7 @@ public enum TransferActionSource {
     DRAFT,
     MANUAL,
     WAIVER,
-    IR
+    IR,
+    IR_MANUAL,
+    IR_WAIVER
 }

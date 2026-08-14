@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { HeartPulse, ShieldPlus } from "lucide-react";
+import { HeartPulse, ShieldPlus } from "@/src/shared/ui/icons";
 
 import { useSignIrPlayer } from "../../../features/transfer-window/useTransferWindow";
 import { Button } from "../../../shared/ui/Button";
@@ -22,7 +22,7 @@ export default function IRSignModal({ player, user, onClose, previewMode = false
                         <CloseButton className="absolute right-3 top-3" aria-label="Close IR signing confirmation" />
                     </Dialog.Close>
 
-                    <span className="grid size-12 place-items-center rounded-2xl border border-rose-400/35 bg-rose-500/10 text-rose-600 dark:text-rose-300">
+                    <span className="grid size-9 place-items-center text-rose-600 dark:text-rose-300">
                         <HeartPulse className="size-6" aria-hidden="true" />
                     </span>
                     <p className="mt-5 text-[0.65rem] font-black uppercase tracking-[0.16em] text-app-muted">Injured Reserve replacement</p>
@@ -31,7 +31,7 @@ export default function IRSignModal({ player, user, onClose, previewMode = false
                         Sign this player as the eligible replacement for your injured squad member.
                     </Dialog.Description>
 
-                    <div className="mt-5 flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 shadow-sm">
+                    <div className="mt-5 flex items-center gap-3 border-y border-app-border py-3.5">
                         <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className="h-auto w-12 shrink-0 select-none" />
                         <div className="min-w-0 flex-1">
                             <strong className="block truncate text-lg font-black">{player.viewName}</strong>
@@ -42,12 +42,12 @@ export default function IRSignModal({ player, user, onClose, previewMode = false
                         <ShieldPlus className="size-6 shrink-0 text-emerald-500" aria-hidden="true" />
                     </div>
 
-                    <p className="mt-3 rounded-xl border border-app-border bg-app-surface-muted px-3 py-2.5 text-xs leading-5 text-app-muted">
+                    <p className="mt-3 border-l-2 border-app-accent-border px-3 py-2 text-xs leading-5 text-app-muted">
                         Position limits and the maximum of three players from one club are validated again by the server.
                     </p>
 
                     {signPlayer.error && (
-                        <p role="alert" className="mt-3 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2.5 text-sm text-red-700 dark:text-red-300">
+                        <p role="alert" className="mt-3 border-l-2 border-red-400 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                             {signPlayer.error.message || "Error signing the IR player."}
                         </p>
                     )}

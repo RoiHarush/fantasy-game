@@ -1,7 +1,11 @@
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
 import "./globals.css";
 import Providers from "./providers";
 import { getCurrentSession } from "../src/server/auth";
 import { buildInitialQueryState } from "../src/server/queryPrefetch";
+
+config.autoAddCss = false;
 
 export const metadata = {
     title: {

@@ -24,7 +24,7 @@ function DraftRoomPage() {
 
     const usersQuery = useLeagueUsers(leagueId);
     const windowQuery = useTransferWindowState(leagueId, {
-        refetchInterval: (query) => query.state.data?.isOpen ? false : 5_000,
+        refetchInterval: (query) => query.state.data?.isOpen ? 3_000 : 5_000,
     });
     const configQuery = useDraftConfig(leagueId, {
         refetchInterval: (query) => query.state.data?.processed ? false : 5_000,

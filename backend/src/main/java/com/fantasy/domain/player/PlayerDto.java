@@ -19,6 +19,7 @@ public class PlayerDto {
     private Integer chanceOfPlayingNextRound;
     private String photo;
     private boolean supplementalDraftEligible;
+    private boolean supplementalDraftSelectable;
 
 
     // Constructor
@@ -65,5 +66,9 @@ public class PlayerDto {
     public boolean isSupplementalDraftEligible() { return supplementalDraftEligible; }
     public void setSupplementalDraftEligible(boolean supplementalDraftEligible) {
         this.supplementalDraftEligible = supplementalDraftEligible;
+    }
+    public boolean isSupplementalDraftSelectable() { return supplementalDraftSelectable; }
+    public void setSupplementalDraftSelectable(boolean supplementalDraftSelectable) {
+        this.supplementalDraftSelectable = supplementalDraftSelectable;
     }
 }

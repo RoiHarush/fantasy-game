@@ -51,7 +51,8 @@ class WaiverAutomationTest {
                 mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
                 mock(LeagueAccessService.class), windowRepo, waiverRepo, mock(WaiverPlanProgressRepository.class),
                 mock(LeagueTransferActionRepository.class), mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
@@ -91,7 +92,8 @@ class WaiverAutomationTest {
                 progressRepo,
                 actionRepo,
                 webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -166,7 +168,8 @@ class WaiverAutomationTest {
                 progressRepo,
                 mock(LeagueTransferActionRepository.class),
                 webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -219,7 +222,8 @@ class WaiverAutomationTest {
                 playerRepo, mock(GameWeekRepository.class), squadRepo, gameDataRepo, userRepo, leagueRepo,
                 mock(LeagueAccessService.class), windowRepo, waiverRepo,
                 mock(WaiverPlanProgressRepository.class), actionRepo,
-                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class)
+                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -299,7 +303,8 @@ class WaiverAutomationTest {
                 mock(WaiverPlanProgressRepository.class),
                 actionRepo,
                 webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();

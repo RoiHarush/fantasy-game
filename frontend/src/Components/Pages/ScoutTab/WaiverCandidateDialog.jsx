@@ -1,12 +1,13 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowLeftRight, Check } from "lucide-react";
+import { ArrowLeftRight, Check } from "@/src/shared/ui/icons";
 import { useState } from "react";
 
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import CloseButton from "../../../shared/ui/CloseButton";
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 export default function WaiverCandidateDialog({
     candidate,
@@ -67,9 +68,11 @@ export default function WaiverCandidateDialog({
                                     ["REGULAR", "Transfer waiver"],
                                     ["IR", "IR replacement"],
                                 ].map(([value, label]) => (
-                                    <button
+                                    <Button
                                         key={value}
                                         type="button"
+                                        variant="ghost"
+                                        size="sm"
                                         className={`rounded-lg px-2 py-2 text-xs font-extrabold transition sm:text-sm ${planType === value
                                             ? "bg-app-surface-elevated text-app-accent-foreground shadow-sm"
                                             : "text-app-muted hover:text-app-foreground"
@@ -77,11 +80,11 @@ export default function WaiverCandidateDialog({
                                         onClick={() => setPlanType(value)}
                                     >
                                         {label}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         )}
-                        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/35 bg-emerald-500/10 p-2 sm:gap-3 sm:p-3">
+                        <div className="flex items-center gap-2 border-y border-emerald-400/35 py-2 sm:gap-3 sm:py-3">
                             <PlayerKit
                                 teamId={candidate.teamId}
                                 type={candidate.position === "GK" ? "gk" : "field"}
@@ -98,11 +101,11 @@ export default function WaiverCandidateDialog({
 
                         {planType === "REGULAR" ? <fieldset className="mt-3 sm:mt-5">
                             <legend className="mb-1.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-app-muted sm:mb-2 sm:text-xs">Outgoing player</legend>
-                            <div className="grid gap-2">
+                            <div className="divide-y divide-app-border border-y border-app-border">
                                 {eligibleOutgoing.map((player) => {
                                     const selected = String(playerOutId) === String(player.id);
                                     return (
-                                        <label key={player.id} className={`flex cursor-pointer items-center gap-2 rounded-xl border p-2 transition sm:gap-3 sm:p-3 ${selected ? "border-app-accent bg-app-accent-surface shadow-sm" : "border-app-border bg-app-surface hover:border-app-accent-border hover:bg-app-accent-hover"}`}>
+                                        <label key={player.id} className={`flex cursor-pointer items-center gap-2 border-l-2 px-1 py-2 transition sm:gap-3 sm:px-2 sm:py-3 ${selected ? "border-app-accent bg-app-accent-surface" : "border-transparent hover:bg-app-accent-hover"}`}>
                                             <input
                                                 type="radio"
                                                 name="outgoing-player"
@@ -129,12 +132,12 @@ export default function WaiverCandidateDialog({
                                 })}
                             </div>
                             {eligibleOutgoing.length === 0 && (
-                                <p className="rounded-xl border border-dashed border-app-border bg-app-surface-muted p-5 text-center text-sm text-app-muted">
+                                <p className="border-y border-dashed border-app-border p-5 text-center text-sm text-app-muted">
                                     Your squad has no eligible {candidate.position} replacement.
                                 </p>
                             )}
                         </fieldset> : (
-                            <div className="mt-3 rounded-xl border border-app-accent-border bg-app-accent-surface p-3 text-xs text-app-accent-foreground sm:mt-5 sm:text-sm">
+                            <div className="mt-3 border-l-2 border-app-accent px-3 py-2 text-xs text-app-accent-foreground sm:mt-5 sm:text-sm">
                                 If every saved IR priority is unavailable, the server signs the highest-scoring legal {candidate.position} automatically.
                             </div>
                         )}
@@ -142,11 +145,11 @@ export default function WaiverCandidateDialog({
 
                     <footer className="flex shrink-0 gap-2 border-t border-app-border bg-app-surface px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
                         <Dialog.Close asChild>
-                            <button type="button" className="h-9 flex-1 whitespace-nowrap rounded-control border border-app-border bg-app-surface-muted px-3 text-xs font-bold text-app-foreground transition hover:bg-app-accent-hover sm:h-11 sm:flex-none sm:px-4 sm:text-sm">Cancel</button>
+                            <Button type="button" variant="secondary" size="sm" className="h-9 flex-1 whitespace-nowrap text-xs sm:h-11 sm:flex-none sm:text-sm">Cancel</Button>
                         </Dialog.Close>
-                        <button type="button" className="h-9 flex-1 whitespace-nowrap rounded-control bg-component-gradient px-3 text-xs font-extrabold text-brand-ink shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:flex-none sm:px-5 sm:text-sm" disabled={(planType === "REGULAR" && !playerOutId) || saving} onClick={addPriority}>
+                        <Button type="button" variant="primary" size="sm" className="h-9 flex-1 whitespace-nowrap text-xs font-extrabold sm:h-11 sm:flex-none sm:text-sm" disabled={(planType === "REGULAR" && !playerOutId) || saving} onClick={addPriority}>
                             {saving ? "Saving..." : planType === "IR" ? "Add IR priority" : "Add waiver"}
-                        </button>
+                        </Button>
                     </footer>
             </ResponsiveDialogSurface>
         </Dialog.Root>

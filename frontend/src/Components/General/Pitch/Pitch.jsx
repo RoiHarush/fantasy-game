@@ -4,7 +4,7 @@ import { cn } from "../../../lib/cn";
 import BenchBoostEffect from "./BenchBoostEffect";
 import BenchPlayerShock from "./BenchPlayerShock";
 import { BENCH_BOOST_CYCLE_SECONDS, getBenchImpactDelay } from "./benchBoostTiming";
-import { getLeadingPlayerId } from "./model";
+import { getLeagueLeadingPlayerId } from "./model";
 
 function Pitch({
     squad,
@@ -17,7 +17,7 @@ function Pitch({
     const playerDataById = new Map(
         (playerData ?? []).map((player) => [String(player.playerId), player]),
     );
-    const leadingPlayerId = getLeadingPlayerId(squad, playerData);
+    const leadingPlayerId = getLeagueLeadingPlayerId(playerData);
     const firstPickCaptainIsGoalkeeper = !squad.tripleCaptainActive
         && squad.captainId != null
         && squad.firstPickId != null

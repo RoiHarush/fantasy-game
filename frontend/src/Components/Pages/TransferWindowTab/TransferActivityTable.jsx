@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowRightLeft, Clock3 } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Clock3 } from "@/src/shared/ui/icons";
 import { useMemo } from "react";
 
 import PlayerKit from "../../General/PlayerKit";
@@ -15,6 +15,7 @@ export default function TransferActivityTable({
         [players],
     );
     const isDraft = mode === "draft";
+    const isSupplemental = mode === "supplemental";
 
     if (pending) {
         return (
@@ -38,7 +39,7 @@ export default function TransferActivityTable({
                 <div>
                     <Clock3 className="mx-auto size-5 text-app-muted" aria-hidden="true" />
                     <p className="mt-3 font-black text-app-foreground">No moves yet</p>
-                    <p className="mt-1 text-sm text-app-muted">Completed {isDraft ? "draft picks" : "transfers"} will appear here live.</p>
+                    <p className="mt-1 text-sm text-app-muted">Completed {isDraft ? "draft picks" : isSupplemental ? "supplemental moves" : "transfers"} will appear here live.</p>
                 </div>
             </div>
         );
@@ -64,7 +65,11 @@ export default function TransferActivityTable({
                             <div className="min-w-0">
                                 <strong className="block truncate text-app-foreground">{action.userName || "Unknown manager"}</strong>
                                 <span className="mt-0.5 block text-[0.56rem] font-black uppercase tracking-wide text-app-muted sm:text-[0.65rem]">
-                                    {isDraft ? `Pick ${index + 1}` : action.source === "WAIVER" ? "Waiver" : "Manual"}
+                                    {isDraft
+                                        ? `Pick ${index + 1}`
+                                        : isSupplemental
+                                            ? `Draft move ${index + 1}`
+                                            : getActionSourceLabel(action.source)}
                                 </span>
                             </div>
                             <ActivityPlayer player={incoming} fallback={`Player #${action.playerInId}`} tone="incoming" />
@@ -82,6 +87,14 @@ export default function TransferActivityTable({
             </ol>
         </section>
     );
+}
+
+function getActionSourceLabel(source) {
+    if (source === "WAIVER") return "Waiver";
+    if (source === "IR_WAIVER") return "IR · Waiver";
+    if (source === "IR_MANUAL") return "IR · Manual";
+    if (source === "IR") return "IR";
+    return "Manual";
 }
 
 function ActivityPlayer({ player, fallback, tone }) {

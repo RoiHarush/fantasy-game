@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3 } from "lucide-react";
+import { Clock3 } from "@/src/shared/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
 
 import {

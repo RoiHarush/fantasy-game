@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CircleStop, Play, RotateCcw, StepForward, Users } from "lucide-react";
+import { CheckCircle2, CircleStop, Play, RotateCcw, StepForward, Users } from "@/src/shared/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "../../../shared/ui/Button";

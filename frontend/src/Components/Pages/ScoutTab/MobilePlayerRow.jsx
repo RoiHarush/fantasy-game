@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Clock3, Eye, Info, ListPlus, LockKeyhole } from "lucide-react";
+import { Clock3, Compare, Eye, Info, LockKeyhole, WaiverAdd } from "@/src/shared/ui/icons";
 import { memo, useState } from "react";
 
 import { getInitials } from "../../../lib/initials";
@@ -7,6 +7,8 @@ import { getFixtureItems } from "../../../features/fixtures/model";
 import { getPlayerAcquisitionLockReason } from "../../../features/transfer-window/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
+import NewPlayerLabel from "./NewPlayerLabel";
+import { Button } from "../../../shared/ui/Button";
 
 export function getMobilePlayerColumns(mode, hasWaiverAction = false) {
     if (mode === "scout") {
@@ -55,15 +57,17 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                 style={{ gridTemplateColumns: getMobilePlayerColumns(mode, Boolean(onWaiverSelect)) }}
             >
                 <div className="flex min-w-0 items-center gap-1">
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         className="grid size-4 shrink-0 place-items-center p-0 transition hover:scale-110 focus-visible:outline-2 focus-visible:outline-app-accent"
                         style={{ color: injuryColor || "var(--app-muted)" }}
                         aria-label={`View ${player.viewName} information`}
                         onClick={() => setShowInfo(true)}
                     >
                         <Info aria-hidden="true" size={14} strokeWidth={2.1} />
-                    </button>
+                    </Button>
                     <PlayerKit
                         teamId={player.teamId}
                         type={player.position === "GK" ? "gk" : "field"}
@@ -71,7 +75,10 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                         style={{ width: "1.5rem", height: "1.5rem", maxWidth: "1.5rem", maxHeight: "1.5rem" }}
                     />
                     <div className="min-w-0 leading-tight">
-                        <span className="block truncate text-[0.65rem] font-extrabold" title={player.viewName}>{player.viewName}</span>
+                        <span className="flex min-w-0 items-center gap-0.5">
+                            <span className="block min-w-0 truncate text-[0.65rem] font-extrabold" title={player.viewName}>{player.viewName}</span>
+                            {player.supplementalDraftEligible && <NewPlayerLabel className="text-[0.42rem]" />}
+                        </span>
                         <span className="block truncate text-[0.5rem] font-semibold text-app-muted">
                             {team?.shortName || "-"} • {player.position}
                         </span>
@@ -87,27 +94,32 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                     disabled={isSelectedForCompare}
                     onClick={() => onCompare?.(player)}
                 >
-                    <ArrowRightLeft aria-hidden="true" size={14} />
+                    <Compare aria-hidden="true" size={14} />
                 </MobileActionButton>
 
                 <MobileActionButton
                     label={isWatched ? `Remove ${player.viewName} from watchlist` : `Add ${player.viewName} to watchlist`}
                     active={isWatched}
                     disabled={watchlistUpdating}
+                    preserveAppearanceWhenDisabled
                     onClick={onToggleWatch}
                 >
                     <Eye aria-hidden="true" size={14} />
                 </MobileActionButton>
 
                 {mode === "scout" ? (
-                    <span className={`mx-auto inline-flex h-5 max-w-full items-center justify-center truncate rounded px-1.5 text-[0.48rem] font-extrabold uppercase ${player.available
-                        ? "bg-app-surface-muted text-app-muted"
-                        : String(player.ownerId) === String(user?.id)
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
-                            : "bg-app-accent-surface text-app-accent-foreground"
-                    }`} title={ownerName} aria-label={`Owner: ${ownerName}`}>
-                        {player.available ? "Free" : getInitials(ownerName)}
-                    </span>
+                    player.supplementalDraftEligible ? (
+                        <NewPlayerLabel className="mx-auto justify-center text-[0.44rem]" />
+                    ) : (
+                        <span className={`mx-auto inline-flex h-5 max-w-full items-center justify-center truncate rounded px-1.5 text-[0.48rem] font-extrabold uppercase ${player.available
+                            ? "bg-app-surface-muted text-app-muted"
+                            : String(player.ownerId) === String(user?.id)
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                                : "bg-app-accent-surface text-app-accent-foreground"
+                        }`} title={ownerName} aria-label={`Owner: ${ownerName}`}>
+                            {player.available ? "Free" : getInitials(ownerName)}
+                        </span>
+                    )
                 ) : acquisitionLockReason ? (
                     <span
                         className="mx-auto grid size-6 place-items-center text-app-muted"
@@ -125,26 +137,28 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
                         <Clock3 aria-hidden="true" size={15} />
                     </span>
                 ) : (
-                    <button
+                    <Button
                         type="button"
+                        variant="primary"
+                        size="xs"
                         className="mx-auto h-6 rounded bg-component-gradient px-1.5 text-[0.52rem] font-extrabold text-brand-ink disabled:bg-app-surface-muted disabled:text-app-muted disabled:opacity-60"
                         disabled={!canAcquire}
                         onClick={() => canAcquire && onPlayerSelect?.(player)}
                     >
                         {mode === "draft" ? "Pick" : "Sign"}
-                    </button>
+                    </Button>
                 )}
 
                 {onWaiverSelect && (
                     <MobileActionButton
                         label={canWaiver
                             ? `Add waiver for ${player.viewName}`
-                            : `Waiver unavailable for ${player.viewName}`}
+                            : `Waiver unavailable for ${player.viewName}: ${acquisitionLockReason || "already in your squad"}`}
                         disabled={!canWaiver}
                         onClick={() => onWaiverSelect(player)}
                     >
                         {canWaiver
-                            ? <ListPlus aria-hidden="true" size={14} />
+                            ? <WaiverAdd aria-hidden="true" size={14} />
                             : <LockKeyhole aria-hidden="true" size={14} />}
                     </MobileActionButton>
                 )}
@@ -155,21 +169,23 @@ const MobilePlayerRow = memo(function MobilePlayerRow({
     );
 });
 
-function MobileActionButton({ label, active = false, disabled = false, onClick, children }) {
+function MobileActionButton({ label, active = false, disabled = false, preserveAppearanceWhenDisabled = false, onClick, children }) {
     return (
-        <button
+        <Button
             type="button"
-            className={`mx-auto grid size-6 place-items-center rounded-md border transition ${active
+            variant="secondary"
+            size="icon"
+            className={`mx-auto grid size-6 place-items-center rounded-md border transition-colors duration-150 ${active
                 ? "border-app-accent bg-app-accent text-brand-ink ring-2 ring-app-accent/35 ring-offset-1 ring-offset-app-surface"
                 : "border-app-border bg-app-surface-muted text-app-muted hover:border-app-accent-border hover:text-app-foreground"
-            } disabled:cursor-not-allowed disabled:opacity-45`}
+            } disabled:cursor-not-allowed ${preserveAppearanceWhenDisabled ? "disabled:cursor-wait disabled:opacity-100" : "disabled:opacity-45"}`}
             aria-label={label}
             title={label}
             disabled={disabled}
             onClick={onClick}
         >
             {children}
-        </button>
+        </Button>
     );
 }
 

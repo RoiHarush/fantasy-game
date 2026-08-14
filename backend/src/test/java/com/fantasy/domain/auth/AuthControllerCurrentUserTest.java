@@ -62,6 +62,31 @@ class AuthControllerCurrentUserTest {
         assertCurrentUser(13, "ROLE_SUPER_ADMIN", false);
     }
 
+    @Test
+    void verificationCreatesAServerSession() {
+        UserDto user = new UserDto();
+        user.setId(21);
+        user.setEmail("verified@example.com");
+        EmailVerificationResponse verification = new EmailVerificationResponse(
+                "verification-session-token",
+                user,
+                "Email verified. Your account is ready."
+        );
+        org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie
+                .from("fantasy_session", "verification-session-token")
+                .httpOnly(true)
+                .path("/")
+                .build();
+        when(authService.verifyEmail(new TokenRequest("raw-verification-token"))).thenReturn(verification);
+        when(authCookieService.createSessionCookie("verification-session-token")).thenReturn(cookie);
+
+        ResponseEntity<?> response = controller.verifyEmail(new TokenRequest("raw-verification-token"));
+
+        assertEquals(200, response.getStatusCode().value());
+        assertSame(verification, response.getBody());
+        assertTrue(response.getHeaders().getFirst("Set-Cookie").contains("fantasy_session=verification-session-token"));
+    }
+
     private void assertCurrentUser(int userId, String role, boolean leagueAdmin) {
         UserDto expected = new UserDto();
         expected.setId(userId);

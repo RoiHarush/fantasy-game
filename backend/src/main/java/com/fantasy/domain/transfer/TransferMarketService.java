@@ -1,6 +1,7 @@
 package com.fantasy.domain.transfer;
 
 import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.config.WebSocketPresenceService;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.league.LeagueAccessService;
@@ -55,6 +56,7 @@ public class TransferMarketService {
     private final LeagueTransferActionRepository transferActionRepo;
     private final TransferWebSocketController webSocketController;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
+    private final WebSocketPresenceService presenceService;
 
     public TransferMarketService(PlayerRepository playerRepo,
                                  GameWeekRepository gameWeekRepo,
@@ -68,7 +70,8 @@ public class TransferMarketService {
                                  WaiverPlanProgressRepository waiverProgressRepo,
                                  LeagueTransferActionRepository transferActionRepo,
                                  TransferWebSocketController webSocketController,
-                                 SupplementalDraftPoolService supplementalDraftPoolService) {
+                                 SupplementalDraftPoolService supplementalDraftPoolService,
+                                 WebSocketPresenceService presenceService) {
         this.playerRepo = playerRepo;
         this.gameWeekRepo = gameWeekRepo;
         this.squadRepo = squadRepo;
@@ -82,6 +85,7 @@ public class TransferMarketService {
         this.transferActionRepo = transferActionRepo;
         this.webSocketController = webSocketController;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
+        this.presenceService = presenceService;
     }
 
     @Transactional
@@ -392,7 +396,7 @@ public class TransferMarketService {
                 .orElseThrow(() -> new FantasyTeamException("User game data was not found"));
         Integer irPlayerId = requireNextSquad(gameData).getIrId();
         performIrReplacement(window.getLeague().getId(), request.getUserId(), request.getPlayerId());
-        recordAction(window, request.getUserId(), TransferActionSource.IR, request.getPlayerId(), irPlayerId);
+        recordAction(window, request.getUserId(), TransferActionSource.IR_MANUAL, request.getPlayerId(), irPlayerId);
 
         long leagueId = window.getLeague().getId();
         String userName = getUserName(request.getUserId());
@@ -426,7 +430,18 @@ public class TransferMarketService {
         LeagueEntity league = requireLeague(leagueId);
 
         if (supplementalDraft) {
-            supplementalDraftPoolService.requireEligible(leagueId, playerInId);
+            LeagueTransferWindowEntity supplementalWindow = windowRepo
+                    .findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
+                            leagueId,
+                            TransferWindowStatus.OPEN
+                    )
+                    .filter(window -> window.getWindowType() == TransferWindowType.SUPPLEMENTAL)
+                    .orElseThrow(() -> new IllegalStateException("Supplemental draft is not open"));
+            supplementalDraftPoolService.requireEligibleAt(
+                    leagueId,
+                    playerInId,
+                    supplementalWindow.getOpenedAt()
+            );
         } else if (supplementalDraftPoolService.isEligible(leagueId, playerInId)) {
             throw new FantasyTeamException("Incoming player is reserved for the next supplemental draft");
         }
@@ -685,7 +700,7 @@ public class TransferMarketService {
             leagueRepo.save(league);
             prepareFirstTransferOrder(window);
         } else if (type == TransferWindowType.SUPPLEMENTAL) {
-            supplementalDraftPoolService.releasePool(leagueId);
+            supplementalDraftPoolService.releaseEligiblePool(leagueId, window.getOpenedAt());
         } else if (type == TransferWindowType.TRANSFER) {
             prepareNextWeekOrder(window);
         }
@@ -710,7 +725,7 @@ public class TransferMarketService {
             if (window.getWindowType() == TransferWindowType.TRANSFER) {
                 prepareNextWeekOrder(window);
             } else if (window.getWindowType() == TransferWindowType.SUPPLEMENTAL) {
-                supplementalDraftPoolService.releasePool(leagueId);
+                supplementalDraftPoolService.releaseEligiblePool(leagueId, window.getOpenedAt());
             }
         }
         windowRepo.saveAll(windows);
@@ -830,6 +845,7 @@ public class TransferMarketService {
             state.put("turnsUsed", null);
             state.put("totalTurns", null);
             state.put("automaticUserIds", List.of());
+            state.put("onlineUserIds", List.of());
             return state;
         }
 
@@ -849,6 +865,9 @@ public class TransferMarketService {
         state.put("turnsUsed", window.turnsUsed());
         state.put("totalTurns", window.totalTurns());
         state.put("automaticUserIds", window.getAutomaticUserIds());
+        state.put("onlineUserIds", presenceService.onlineUserIds(
+                window.getLeague().getUsers().stream().map(UserEntity::getId).toList()
+        ));
         state.put("requestingUserAutomatic", window.isAutomaticForUser(requestingUserId));
         state.put("currentUserAutomatic", window.currentUserId()
                 .map(window::isAutomaticForUser)
@@ -1084,7 +1103,7 @@ public class TransferMarketService {
         }
 
         int completedPlayerId = selectedPlayerId;
-        recordAction(window, userId, TransferActionSource.IR, completedPlayerId, irPlayerId);
+        recordAction(window, userId, TransferActionSource.IR_WAIVER, completedPlayerId, irPlayerId);
         String userName = getUserName(userId);
         publishAfterCommit(() -> webSocketController.sendTransferDoneEvent(
                 leagueId, userId, completedPlayerId, userName

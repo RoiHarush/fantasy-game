@@ -9,7 +9,7 @@ export default async function SiteLayout({ children }) {
 
     return (
         <TeamsProvider>
-            <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip">
+            <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">
                 <HeaderCollage />
                 <Header />
                 <main className="min-w-0 flex-1">{children}</main>

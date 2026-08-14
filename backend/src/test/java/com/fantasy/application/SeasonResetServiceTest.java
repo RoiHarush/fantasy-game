@@ -27,8 +27,8 @@ class SeasonResetServiceTest {
         jdbc.update("INSERT INTO gameweeks (id, name) VALUES (1, 'Gameweek 1')");
         jdbc.update("INSERT INTO fixtures (id, gameweek_id, home_team_id, away_team_id) "
                 + "VALUES (1, 1, 1, 2)");
-        jdbc.update("INSERT INTO users (username, password, name, role, registered_at) "
-                + "VALUES ('owner', 'hash', 'Owner', 'ROLE_USER', CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO users (username, email, email_verified, password, name, role, registered_at) "
+                + "VALUES ('owner', 'owner@example.com', TRUE, 'hash', 'Owner', 'ROLE_USER', CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO leagues (name, league_code, admin_id) "
                 + "SELECT 'League', 'ABC123', id FROM users WHERE username = 'owner'");
         jdbc.update("INSERT INTO league_users (league_id, user_id) "
@@ -36,20 +36,20 @@ class SeasonResetServiceTest {
 
         var summary = new SeasonResetService(jdbc).resetAllData();
 
-        assertEquals(37, summary.clearedTables());
+        assertEquals(39, summary.clearedTables());
         assertEquals(0, count(jdbc, "teams"));
         assertEquals(0, count(jdbc, "players"));
         assertEquals(0, count(jdbc, "fixtures"));
         assertEquals(0, count(jdbc, "gameweeks"));
         assertEquals(0, count(jdbc, "users"));
         assertEquals(0, count(jdbc, "leagues"));
-        assertEquals(18, jdbc.queryForObject(
+        assertEquals(20, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL",
                 Integer.class
         ));
 
-        jdbc.update("INSERT INTO users (username, password, name, role, registered_at) "
-                + "VALUES ('first-new-user', 'hash', 'First', 'ROLE_USER', CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO users (username, email, email_verified, password, name, role, registered_at) "
+                + "VALUES ('first-new-user', 'first@example.com', TRUE, 'hash', 'First', 'ROLE_USER', CURRENT_TIMESTAMP)");
         assertEquals(1, jdbc.queryForObject(
                 "SELECT id FROM users WHERE username = 'first-new-user'",
                 Integer.class

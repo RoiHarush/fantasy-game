@@ -1,4 +1,4 @@
-import { LockKeyhole, Minus, Plus, Search, ShieldAlert } from "lucide-react";
+import { LockKeyhole, Minus, Plus, Search, ShieldAlert } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
@@ -7,6 +7,7 @@ import { useAdminPenalties } from "../../../features/league-admin/useLeagueAdmin
 import { usePlayers } from "../../../features/players/usePlayers";
 import SelectField from "../../../shared/ui/SelectField";
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 const fieldClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface disabled:cursor-not-allowed disabled:opacity-55";
 
@@ -87,9 +88,9 @@ function PenaltyManager({ maintenanceLeagueId = null }) {
                                     <p className="truncate text-sm font-extrabold text-app-foreground">{player.viewName}</p>
                                     <p className="text-xs text-app-muted">{player.position}</p>
                                 </div>
-                                <button type="button" onClick={() => handlePunish(player.id, "ADD")} className="inline-flex h-9 items-center gap-1 rounded-lg bg-red-500 px-3 text-xs font-extrabold text-white transition hover:bg-red-600 disabled:opacity-50" disabled={!canEdit || updatePenalty.isPending}>
+                                <Button type="button" variant="danger" size="sm" onClick={() => handlePunish(player.id, "ADD")} className="gap-1 text-xs font-extrabold" disabled={!canEdit || updatePenalty.isPending}>
                                     <Plus className="size-3.5" aria-hidden="true" /> Record
-                                </button>
+                                </Button>
                             </div>
                         ))}
                     </div>
@@ -119,9 +120,9 @@ function PenaltyManager({ maintenanceLeagueId = null }) {
                                 <p className="text-xs font-bold text-app-danger-foreground">{item.penaltiesConceded} conceded · {item.penaltiesConceded * -2} pts</p>
                             </div>
                             <div className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface-muted p-1">
-                                <button type="button" aria-label={`Remove one penalty conceded from ${item.viewName}`} onClick={() => handlePunish(item.playerId, "REMOVE")} disabled={!canEdit || updatePenalty.isPending} className="grid size-9 place-items-center rounded-lg bg-app-surface text-app-danger-foreground transition hover:bg-app-danger-surface disabled:opacity-45"><Minus className="size-4" aria-hidden="true" /></button>
+                                <Button type="button" variant="secondary" size="icon" aria-label={`Remove one penalty conceded from ${item.viewName}`} onClick={() => handlePunish(item.playerId, "REMOVE")} disabled={!canEdit || updatePenalty.isPending} className="size-9"><Minus className="size-4" aria-hidden="true" /></Button>
                                 <strong className="min-w-7 text-center text-base tabular-nums text-app-foreground">{item.penaltiesConceded}</strong>
-                                <button type="button" aria-label={`Add one penalty conceded to ${item.viewName}`} onClick={() => handlePunish(item.playerId, "ADD")} disabled={!canEdit || updatePenalty.isPending} className="grid size-9 place-items-center rounded-lg bg-red-500 text-white transition hover:bg-red-600 disabled:opacity-45"><Plus className="size-4" aria-hidden="true" /></button>
+                                <Button type="button" variant="danger" size="icon" aria-label={`Add one penalty conceded to ${item.viewName}`} onClick={() => handlePunish(item.playerId, "ADD")} disabled={!canEdit || updatePenalty.isPending} className="size-9"><Plus className="size-4" aria-hidden="true" /></Button>
                             </div>
                         </article>
                     );

@@ -59,6 +59,7 @@ export function useWatchlist() {
         watchlist: query.data ?? [],
         toggleWatch,
         isUpdating: mutation.isPending,
+        updatingPlayerId: mutation.isPending ? mutation.variables?.playerId ?? null : null,
         isPending: query.isPending && Boolean(user?.leagueId),
         error: clientError ?? query.error ?? mutation.error ?? null,
     };

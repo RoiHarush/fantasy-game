@@ -2,29 +2,38 @@ import { useState } from "react";
 import IRModal from "./IRModal";
 import ConfirmIRModal from "./ConfirmIRModal";
 import IRReleaseModal from "./IRReleaseModal";
-import { countSquadPlayers } from "../../../../features/pick-team/model";
+import { countSquadPlayers, getIrChipUnavailableReason } from "../../../../features/pick-team/model";
 import { useIrChip } from "../../../../features/pick-team/usePickTeamActions";
 import ChipCard from "../ChipCard";
+import { showChipError } from "../chipFeedback";
 
-function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, transferWindowProcessed, refreshPlayerData, players }) {
+function IRManager({
+    userId,
+    gameweekId,
+    squad,
+    setSquad,
+    chips,
+    setChips,
+    transferWindowProcessed,
+    refreshPlayerData,
+    players,
+    hasUnsavedChanges = false,
+    squadSavePending = false,
+}) {
     const [showIRModal, setShowIRModal] = useState(false);
     const [confirmIRPlayer, setConfirmIRPlayer] = useState(null);
     const [showReleaseModal, setShowReleaseModal] = useState(false);
     const [confirmReleasePlayer, setConfirmReleasePlayer] = useState(null);
-    const [message, setMessage] = useState("");
     const irPlayer = players.find((player) => String(player.id) === String(squad.irId));
     const irMutation = useIrChip({
         userId,
         gameweekId,
-        onSuccess: ({ updatedSquad, updatedChips }, { mode }) => {
+        onSuccess: ({ updatedSquad, updatedChips }) => {
             setSquad(updatedSquad);
             setChips(updatedChips);
             if (refreshPlayerData) void refreshPlayerData();
-            setMessage(mode === "assign" ? "IR assigned successfully." : "IR released successfully.");
         },
-        onError: (error) => {
-            setMessage(error.message || "Unexpected error while processing IR.");
-        },
+        onError: (error) => showChipError(error, "Could not update the IR Chip."),
         onSettled: () => {
             setConfirmIRPlayer(null);
             setConfirmReleasePlayer(null);
@@ -34,27 +43,15 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
     });
 
     const isActive = chips.active?.IR === true;
-    const isUsedUp = chips.remaining?.IR <= 0;
-
     const playersCount = countSquadPlayers(squad);
-
-
-    const isReleaseDisabled = playersCount < 15 || transferWindowProcessed;
-
-    const isPlayDisabled = isUsedUp || transferWindowProcessed;
-
-
-    const getReleaseTitle = () => {
-        if (transferWindowProcessed) return "Cannot release IR after deadline";
-        if (playersCount < 15) return "Squad must be full (15 players) to release IR";
-        return "Release IR Player";
-    };
-
-    const getPlayTitle = () => {
-        if (transferWindowProcessed) return "Cannot assign IR after deadline";
-        if (isUsedUp) return "Unavailable";
-        return "Play IR Chip";
-    };
+    const unavailableReason = getIrChipUnavailableReason({
+        isActive,
+        remaining: chips.remaining?.IR,
+        playersCount,
+        transferWindowProcessed,
+        hasUnsavedChanges,
+        savePending: squadSavePending,
+    });
 
     const openIRModal = () => setShowIRModal(true);
     const openReleaseModal = () => setShowReleaseModal(true);
@@ -68,12 +65,12 @@ function IRManager({ userId, gameweekId, squad, setSquad, chips, setChips, trans
                 icon="/Icons/ir-chip.svg"
                 iconAlt="IR chip"
                 title="IR Chip"
-                actionLabel={isActive ? "Release" : isUsedUp ? "Unavailable" : "Play"}
+                actionLabel={isActive ? "Release" : unavailableReason ? "Unavailable" : "Play"}
                 onAction={isActive ? openReleaseModal : openIRModal}
-                disabled={isActive ? isReleaseDisabled : isPlayDisabled}
+                disabled={Boolean(unavailableReason)}
                 active={isActive}
-                actionTitle={isActive ? getReleaseTitle() : getPlayTitle()}
-                message={message}
+                actionTitle={unavailableReason || (isActive ? "Release IR Player" : "Play IR Chip")}
+                message={unavailableReason}
                 remaining={chips.remaining?.IR ?? 0}
                 total={2}
             />

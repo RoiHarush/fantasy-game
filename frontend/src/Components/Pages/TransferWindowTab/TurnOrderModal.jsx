@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowDownUp, Save } from "lucide-react";
+import { ArrowDownUp, Save } from "@/src/shared/ui/icons";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";

@@ -1,15 +1,18 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft } from "@/src/shared/ui/icons";
+import { useMemo, useState } from "react";
 
 import { Button } from "../../../shared/ui/Button";
 import LoadingPage from "../../General/LoadingPage";
+import NotFoundPage from "../NotFoundPage";
+import { LeagueModeTabs, LeagueOnboardingShell, leagueInputClassName } from "../LeagueOnboarding/LeagueOnboardingUi";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "../PointsTab/Points";
+import { PreSeasonPointsState } from "../PointsTab/PointsPage";
 import Status from "../StatusTab/Status";
 import DraftLobbyView from "../DraftRoomTab/DraftLobbyView";
 import ClosedWindowView from "../TransferWindowTab/ClosedWindowView";
@@ -23,16 +26,21 @@ import {
 
 const SCREEN_TITLES = {
     "screen-loading": "Application loading",
+    "screen-gameweek-update": "Gameweek rollover",
+    "screen-not-found": "Not found",
+    "screen-onboarding": "League onboarding",
     "screen-draft": "Active draft room",
     "screen-draft-closed": "Closed draft room",
     "screen-transfer": "Open transfer window",
     "screen-transfer-closed": "Closed transfer window",
     "screen-transfer-lifecycle": "Transfer-window lifecycle",
     "screen-points": "Regular-season points",
+    "screen-points-closed": "Pre-season points",
     "screen-status": "Regular-season status",
 };
 
 export default function UiLabScreenPreview({ id, user, users, players, squad, onClose }) {
+    const [onboardingMode, setOnboardingMode] = useState("create");
     const previewUser = {
         id: user?.id ?? users[0]?.id ?? 1,
         leagueId: user?.leagueId ?? 1,
@@ -66,6 +74,46 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
     let content;
     if (id === "screen-loading") {
         content = <LoadingPage title="Preparing your matchday workspace" />;
+    } else if (id === "screen-gameweek-update") {
+        content = (
+            <LoadingPage
+                eyebrow="Gameweek rollover"
+                title="Season update in progress"
+                description="Scores, squads and league standings are being finalized. The app will unlock automatically when the update is complete."
+            />
+        );
+    } else if (id === "screen-not-found") {
+        content = <NotFoundPage />;
+    } else if (id === "screen-onboarding") {
+        content = (
+            <LeagueOnboardingShell
+                eyebrow="Welcome to Fantasy Draft"
+                title="Choose your league"
+                intro="Create a league for your group or join one using a code from a friend."
+                labelledBy="preview-league-onboarding-title"
+            >
+                <LeagueModeTabs mode={onboardingMode} onChange={setOnboardingMode} />
+                <form className="grid gap-4" onSubmit={(event) => event.preventDefault()}>
+                    <label className="grid gap-1.5 text-sm font-bold">
+                        {onboardingMode === "create" ? "League name" : "League code"}
+                        <input className={leagueInputClassName} defaultValue={onboardingMode === "create" ? "UI Lab League" : "DRAFT26"} />
+                    </label>
+                    {onboardingMode === "create" && (
+                        <label className="grid gap-1.5 text-sm font-bold">
+                            Maximum participants
+                            <input className={leagueInputClassName} type="number" defaultValue="7" />
+                        </label>
+                    )}
+                    <label className="grid gap-1.5 text-sm font-bold">
+                        Fantasy team name
+                        <input className={leagueInputClassName} defaultValue="Roi FC" />
+                    </label>
+                    <Button type="submit" className="w-full sm:w-auto sm:justify-self-start">
+                        {onboardingMode === "create" ? "Create league" : "Join league"}
+                    </Button>
+                </form>
+            </LeagueOnboardingShell>
+        );
     } else if (id === "screen-draft-closed") {
         content = (
             <DraftLobbyView
@@ -172,6 +220,8 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
                 )}
             />
         );
+    } else if (id === "screen-points-closed") {
+        content = <PreSeasonPointsState />;
     } else if (id === "screen-points") {
         const visibleGameweeks = gameweeks.slice(0, 6);
         const playerData = squadPlayerIds(completeSquad).map((playerId, index) => ({
@@ -269,6 +319,9 @@ function buildStatusPreviewData(players, users, gameweekId) {
     });
     const playerIn = pickPlayer(4);
     const playerOut = pickPlayer(5);
+    const waiverIn = pickPlayer(7);
+    const waiverOut = pickPlayer(8);
+    const irPlayer = pickPlayer(2);
 
     return {
         points: 71,
@@ -279,15 +332,38 @@ function buildStatusPreviewData(players, users, gameweekId) {
             { date: "2026-09-21T19:00:00", isCalculated: false },
         ],
         playersOfTheWeek,
-        transferActions: [{
-            id: "preview-transfer-1",
-            windowType: "TRANSFER",
-            userId: users[0]?.id ?? 1,
-            userName: users[0]?.name || "Roi Harush",
-            playerInId: playerIn.id,
-            playerOutId: playerOut.id,
-            source: "MANUAL",
-        }],
+        transferActions: [
+            {
+                id: 101,
+                windowType: "TRANSFER",
+                userId: users[0]?.id ?? 1,
+                userName: users[0]?.name || "Roi Harush",
+                playerInId: playerIn.id,
+                playerOutId: playerOut.id,
+                source: "MANUAL",
+                createdAt: "2026-09-16T18:04:00",
+            },
+            {
+                id: 102,
+                windowType: "TRANSFER",
+                userId: users[1]?.id ?? 2,
+                userName: users[1]?.name || "Demo Manager",
+                playerInId: waiverIn.id,
+                playerOutId: waiverOut.id,
+                source: "WAIVER",
+                createdAt: "2026-09-16T18:06:00",
+            },
+            {
+                id: 103,
+                windowType: "TRANSFER",
+                userId: users[0]?.id ?? 1,
+                userName: users[0]?.name || "Roi Harush",
+                playerInId: pickPlayer(9).id,
+                playerOutId: irPlayer.id,
+                source: "IR",
+                createdAt: "2026-09-16T18:09:00",
+            },
+        ],
         irStatuses: users.map((manager, index) => ({
             userId: manager.id,
             userName: manager.name,

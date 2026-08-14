@@ -30,28 +30,6 @@ const styles = {
         fontWeight: 'bold',
         marginBottom: '8px',
     },
-    button: {
-        backgroundColor: '#3b82f6',
-        color: 'white',
-        padding: '10px 16px',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        marginRight: '10px',
-        marginTop: '10px',
-        fontSize: '0.9rem',
-    },
-    buttonDestructive: {
-        backgroundColor: '#ef4444',
-        color: 'white',
-        padding: '10px 16px',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        marginRight: '10px',
-        marginTop: '10px',
-        fontSize: '0.9rem',
-    },
     input: {
         padding: '10px',
         border: '1px solid #ccc',
@@ -282,15 +260,15 @@ export default function AdminActionsPage() {
                         style={styles.input}
                         disabled={loading}
                     />
-                    <button type="button" style={styles.button} onClick={handleOpenGameweek} disabled={loading}>
+                    <Button type="button" variant="success" className="mt-2.5 mr-2.5" onClick={handleOpenGameweek} disabled={loading}>
                         Open Gameweek
-                    </button>
-                    <button type="button" style={styles.buttonDestructive} onClick={handleProcessGameweek} disabled={loading}>
+                    </Button>
+                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleProcessGameweek} disabled={loading}>
                         Process Gameweek Points
-                    </button>
-                    <button type="button" style={styles.buttonDestructive} onClick={handleUpdatePlayerPoints} disabled={loading}>
+                    </Button>
+                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleUpdatePlayerPoints} disabled={loading}>
                         Update Player Points for GW
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -306,26 +284,26 @@ export default function AdminActionsPage() {
                         style={styles.input}
                         disabled={loading}
                     />
-                    <button type="button" style={styles.button} onClick={handleOpenTransferWindow} disabled={loading}>
+                    <Button type="button" variant="success" className="mt-2.5 mr-2.5" onClick={handleOpenTransferWindow} disabled={loading}>
                         Open Transfer Window
-                    </button>
-                    <button type="button" style={styles.buttonDestructive} onClick={handleCloseTransferWindow} disabled={loading}>
+                    </Button>
+                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleCloseTransferWindow} disabled={loading}>
                         Close Transfer Window
-                    </button>
+                    </Button>
                 </div>
             </div>
 
             <div style={styles.section}>
                 <h3 style={styles.h3}>Data Sync (API)</h3>
-                <button type="button" style={styles.button} onClick={handleUpdateGameweeks} disabled={loading}>
+                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleUpdateGameweeks} disabled={loading}>
                     Update All Gameweeks
-                </button>
-                <button type="button" style={styles.button} onClick={handleRefreshPlayers} disabled={loading}>
+                </Button>
+                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleRefreshPlayers} disabled={loading}>
                     Refresh Player List
-                </button>
-                <button type="button" style={styles.button} onClick={handleSyncCurrent} disabled={loading}>
+                </Button>
+                <Button type="button" className="mt-2.5 mr-2.5" onClick={handleSyncCurrent} disabled={loading}>
                     Full Sync Current GW
-                </button>
+                </Button>
                 <div>
                     <input
                         type="number"
@@ -336,9 +314,9 @@ export default function AdminActionsPage() {
                         style={{ ...styles.input, marginTop: '10px' }}
                         disabled={loading}
                     />
-                    <button type="button" style={styles.button} onClick={handleSyncForGw} disabled={loading}>
+                    <Button type="button" className="mt-2.5 mr-2.5" onClick={handleSyncForGw} disabled={loading}>
                         Full Sync for Specific GW
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -401,9 +379,9 @@ export default function AdminActionsPage() {
                         style={styles.textarea}
                         disabled={loading}
                     />
-                    <button type="button" style={styles.buttonDestructive} onClick={handleSaveSquad} disabled={loading}>
+                    <Button type="button" variant="danger" className="mt-2.5 mr-2.5" onClick={handleSaveSquad} disabled={loading}>
                         Save Manual Squad
-                    </button>
+                    </Button>
                 </div>
             </div>
 

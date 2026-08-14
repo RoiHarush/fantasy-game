@@ -87,6 +87,19 @@ describe("transfer-window event model", () => {
             .toEqual(order);
     });
 
+    it("adds live presence and planned absence to each manager summary", () => {
+        const summary = summarizeSnakeOrder(
+            [1, 2, 2, 1],
+            [{ id: 1, name: "Roi" }, { id: 2, name: "Dana" }],
+            {},
+            {},
+            { onlineUserIds: ["1"], automaticUserIds: [2] },
+        );
+
+        expect(summary[0]).toMatchObject({ id: 1, online: true, automatic: false });
+        expect(summary[1]).toMatchObject({ id: 2, online: false, automatic: true });
+    });
+
     it("opens and advances a window from server events", () => {
         const opened = applyTransferWindowEvent({}, {
             event: "window_opened",
@@ -196,5 +209,24 @@ describe("transfer-window event model", () => {
             playerOutId: 20,
         });
         expect(transferActionToNotice(null)).toBeNull();
+    });
+
+    it("shows a supplemental draft replacement as a full in-and-out move", () => {
+        const players = [
+            { id: 10, viewName: "New arrival" },
+            { id: 20, viewName: "Released player" },
+        ];
+
+        expect(getTransferNoticeDetails({
+            event: "transfer_done",
+            userName: "Roi",
+            playerInId: 10,
+            playerOutId: 20,
+        }, players, true)).toEqual({
+            type: "transfer",
+            managerName: "Roi",
+            playerInName: "New arrival",
+            playerOutName: "Released player",
+        });
     });
 });

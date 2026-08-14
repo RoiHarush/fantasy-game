@@ -96,7 +96,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "app.scheduling.enabled=false",
         "app.bootstrap.enabled=false",
         "app.season-reset.enabled=false",
-        "app.waivers.offline-grace-seconds=0",
         "app.jwt.secret=ZmFudGFzeS1zZWFzb24tc2ltdWxhdGlvbi10ZXN0LWtleQ==",
         "logging.level.com.fantasy=warn"
 })
@@ -343,17 +342,19 @@ class FullSeasonSimulationTest {
         List<Integer> ids = new ArrayList<>();
         for (int index = 1; index <= MANAGER_COUNT; index++) {
             String username = "season.manager." + index;
-            LoginResponse registered = authService.register(new RegisterRequest(
+            authService.register(new RegisterRequest(
                     "Season Manager " + index,
                     username,
+                    username + "@example.com",
                     PASSWORD
             ));
-            assertNotNull(registered.token);
-            assertFalse(registered.token.isBlank());
-            ids.add(registered.user.getId());
+            var registeredUser = userRepository.findByUsername(username).orElseThrow();
+            registeredUser.setEmailVerified(true);
+            userRepository.save(registeredUser);
+            ids.add(registeredUser.getId());
 
             LoginResponse loggedIn = authService.login(new LoginRequest(username, PASSWORD));
-            assertEquals(registered.user.getId(), loggedIn.user.getId());
+            assertEquals(registeredUser.getId(), loggedIn.user.getId());
         }
 
         assertThrows(IllegalArgumentException.class, () -> authService.register(
@@ -676,7 +677,7 @@ class FullSeasonSimulationTest {
 
             if (!mainScenarioExecuted && scenario == WindowScenario.WAIVER) {
                 Thread.sleep(2);
-                transferMarketService.processOfflineTurn(leagueId);
+                transferMarketService.processAutomaticTurn(leagueId);
                 mainScenarioExecuted = true;
                 continue;
             }
@@ -714,6 +715,7 @@ class FullSeasonSimulationTest {
         List<Integer> order = transferMarketService.getCurrentTurnOrder(requestingUserId, gameweek);
         assertFalse(order.isEmpty());
         int waiverUserId = order.getFirst();
+        transferMarketService.setAttendancePreference(waiverUserId, gameweek, true);
         UserSquadEntity squad = requireGameData(waiverUserId).getNextSquad();
         int outgoingId = squad.getStartingLineup().getFirst();
         PlayerEntity outgoing = playerRepository.findById(outgoingId).orElseThrow();
@@ -952,12 +954,13 @@ class FullSeasonSimulationTest {
                 () -> assertEquals(0, windowRepository.count())
         );
 
-        LoginResponse afterReset = authService.register(new RegisterRequest(
+        authService.register(new RegisterRequest(
                 "First Manager After Reset",
                 "after.reset",
+                "after.reset@example.com",
                 PASSWORD
         ));
-        assertEquals(1, afterReset.user.getId());
+        assertEquals(1, userRepository.findByUsername("after.reset").orElseThrow().getId());
         System.out.println("SEASON RESET PASSED: all simulation data removed and user identity restarted at 1");
     }
 

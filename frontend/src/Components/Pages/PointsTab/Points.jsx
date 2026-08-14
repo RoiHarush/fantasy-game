@@ -2,10 +2,9 @@
 
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
 import { usePlayers } from "../../../features/players/usePlayers";
-import styles from "../../../Styles/Points.module.css";
 import PointsBlock from "../../Blocks/PointsBlock";
-import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import GameweekController from "../../General/Pitch/GameweekController";
+import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import FixturesTable from "../FixturesTab/FixturesTable";
 
 function Points({
@@ -41,19 +40,14 @@ function Points({
     if (!previewPlayers && playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
 
     return (
-        <div className={styles.pointsScreen}>
-            <h3 className={styles.title}>
+        <div className="flex min-w-0 flex-col gap-5">
+            <h3 className="mb-1 text-center text-xl font-bold text-app-foreground md:mb-5 md:text-left md:text-[1.6rem]">
                 {selectedGameweek.name} – {user.fantasyTeamName}
             </h3>
 
-            <div className={styles.contentWrapper}>
-                <div className={styles.pitchWrapper}>
-                    <PlayerInteractionProvider
-                        mode="points"
-                        players={players}
-                        gameweek={selectedGameweek}
-                        user={user}
-                    >
+            <div className="flex w-full max-w-[62.5rem] flex-col gap-5">
+                <div className="w-full">
+                    <PlayerInteractionProvider mode="points" players={players} gameweek={selectedGameweek} user={user}>
                         <PitchWrapperBase
                             squad={squad}
                             view="points"
@@ -61,7 +55,7 @@ function Points({
                             playerData={playerData}
                             players={players}
                             block={<PointsBlock points={points} />}
-                            gwControl={
+                            gwControl={(
                                 <GameweekController
                                     onPrev={handlePrev}
                                     onNext={handleNext}
@@ -69,17 +63,13 @@ function Points({
                                     canGoNext={canGoNext}
                                     gw={selectedGameweek.id}
                                 />
-                            }
+                            )}
                         />
                     </PlayerInteractionProvider>
                 </div>
 
-                <div className={styles.fixtures}>
-                    <FixturesTable
-                        gameweeks={allGameweeks}
-                        defaultGameweek={selectedGameweek}
-                        previewData={previewFixtures}
-                    />
+                <div className="w-full">
+                    <FixturesTable gameweeks={allGameweeks} defaultGameweek={selectedGameweek} previewData={previewFixtures} />
                 </div>
             </div>
         </div>

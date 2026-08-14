@@ -54,7 +54,7 @@ function PlayerTable({
     disabledPlayerIds,
     watchedPlayerIds,
     onToggleWatch,
-    watchlistUpdating,
+    watchlistUpdatingPlayerId,
     onWaiverSelect,
 }) {
     const isMobile = useMediaQuery("(max-width: 767px)");
@@ -113,7 +113,7 @@ function PlayerTable({
                             ruleLocked={disabledPlayerIds?.has(player.id)}
                             isWatched={watchedPlayerIds?.has(String(player.id))}
                             onToggleWatch={() => onToggleWatch(player.id)}
-                            watchlistUpdating={watchlistUpdating}
+                            watchlistUpdating={String(watchlistUpdatingPlayerId) === String(player.id)}
                             onWaiverSelect={onWaiverSelect}
                         />
                     )}
@@ -181,7 +181,7 @@ function PlayerTable({
                         ruleLocked={disabledPlayerIds?.has(player.id)}
                         isWatched={watchedPlayerIds?.has(String(player.id))}
                         onToggleWatch={() => onToggleWatch(player.id)}
-                        watchlistUpdating={watchlistUpdating}
+                        watchlistUpdating={String(watchlistUpdatingPlayerId) === String(player.id)}
                         onWaiverSelect={onWaiverSelect}
                     />
                 )}

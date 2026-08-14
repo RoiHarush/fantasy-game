@@ -6,6 +6,8 @@ public class UserDto {
     private String firstName;
     private String lastName;
     private String username;
+    private String email;
+    private boolean emailVerified;
     private String fantasyTeamName;
     private String logoPath;
     private long logoVersion;
@@ -30,6 +32,10 @@ public class UserDto {
     public void setUsername(String username) {
         this.username = username;
     }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
     public String getFantasyTeamName() { return fantasyTeamName; }
     public void setFantasyTeamName(String fantasyTeamName) { this.fantasyTeamName = fantasyTeamName; }

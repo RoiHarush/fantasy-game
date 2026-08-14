@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowDown, ArrowRightLeft, Check, LockKeyhole } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, Check, LockKeyhole } from "@/src/shared/ui/icons";
 import { useMemo } from "react";
 
 import { getFixtureItems } from "../../../features/fixtures/model";
@@ -55,7 +55,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                             <CloseButton className="absolute right-3 top-2" aria-label="Close replacement dialog" />
                         </Dialog.Close>
                         <div className="flex items-center gap-3 pr-12">
-                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground">
+                            <span className="grid size-9 shrink-0 place-items-center text-app-accent-foreground">
                                 <ArrowRightLeft className="size-5" aria-hidden="true" />
                             </span>
                             <div className="min-w-0">
@@ -70,13 +70,13 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
 
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
                         {loading ? (
-                            <StatusCard>Loading your squad…</StatusCard>
+                            <StatusMessage>Loading your squad…</StatusMessage>
                         ) : loadError || !squad ? (
-                            <StatusCard tone="error">{loadError?.message || "Could not load this squad."}</StatusCard>
+                            <StatusMessage tone="error">{loadError?.message || "Could not load this squad."}</StatusMessage>
                         ) : (
                             <>
                                 <p className="mb-2 text-[0.65rem] font-black uppercase tracking-[0.15em] text-app-muted">Incoming player</p>
-                                <PlayerChoiceCard
+                                <PlayerChoiceRow
                                     player={playerIn}
                                     fixtures={getUpcomingFixtures(playerIn.teamId, fixturesByTeam, nextGameweek?.id)}
                                     incoming
@@ -93,16 +93,16 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                                         <p className="text-[0.65rem] font-black uppercase tracking-[0.15em] text-app-muted">Outgoing player</p>
                                         <h3 className="text-base font-black">Select one from your squad</h3>
                                     </div>
-                                    <span className="rounded-full border border-app-border bg-app-surface-muted px-2.5 py-1 text-xs font-bold text-app-muted">
+                                    <span className="text-xs font-bold text-app-muted">
                                         {eligibleChoiceCount} eligible / {replacementChoices.length} shown
                                     </span>
                                 </div>
 
-                                {transfer.error && <StatusCard tone="error">{transfer.error.message || "Transfer failed on the server."}</StatusCard>}
+                                {transfer.error && <StatusMessage tone="error">{transfer.error.message || "Transfer failed on the server."}</StatusMessage>}
 
-                                <div className="grid gap-2.5">
+                                <div className="divide-y divide-app-border border-y border-app-border">
                                     {replacementChoices.length > 0 ? replacementChoices.map(({ player, blockReason }) => (
-                                        <PlayerChoiceCard
+                                        <PlayerChoiceRow
                                             key={player.id}
                                             player={player}
                                             fixtures={getUpcomingFixtures(player.teamId, fixturesByTeam, nextGameweek?.id)}
@@ -111,7 +111,7 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
                                             blockReason={blockReason}
                                             onSelect={() => previewMode ? onClose() : transfer.mutate(player.id)}
                                         />
-                                    )) : <StatusCard>No players in this position are available to replace.</StatusCard>}
+                                    )) : <StatusMessage>No players in this position are available to replace.</StatusMessage>}
                                 </div>
                             </>
                         )}
@@ -128,9 +128,9 @@ function ReplacementModal({ playerIn, user, onClose, players, fixturesByTeam, ne
     );
 }
 
-function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pending = false, blockReason, onSelect }) {
+function PlayerChoiceRow({ player, fixtures, incoming = false, actionLabel, pending = false, blockReason, onSelect }) {
     return (
-        <article className={`flex min-w-0 items-center gap-3 rounded-2xl border p-3 ${incoming ? "border-emerald-400/50 bg-emerald-500/10" : "border-app-border bg-app-surface"}`}>
+        <div className={`flex min-w-0 items-center gap-3 border-l-2 px-1 py-3 sm:px-2 ${incoming ? "border-emerald-400 bg-emerald-500/8" : "border-transparent"}`}>
             <PlayerKit
                 teamId={player.teamId}
                 type={player.position === "GK" ? "gk" : "field"}
@@ -144,12 +144,12 @@ function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pen
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[0.68rem] font-bold text-app-muted sm:text-xs">
                     <span>{player.points ?? 0} pts</span>
                     {fixtures.map((fixture, index) => (
-                        <span key={`${fixture}-${index}`} className="max-w-24 truncate rounded-md bg-app-surface-muted px-1.5 py-0.5">{fixture}</span>
+                        <span key={`${fixture}-${index}`} className="max-w-24 truncate">{fixture}</span>
                     ))}
                 </div>
             </div>
             {incoming ? (
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><Check className="size-4" aria-hidden="true" /></span>
+                <span className="grid size-9 shrink-0 place-items-center text-emerald-500"><Check className="size-4" aria-hidden="true" /></span>
             ) : blockReason ? (
                 <span className="flex max-w-36 shrink-0 items-center gap-1.5 text-right text-[0.62rem] leading-4 font-bold text-app-danger-foreground sm:max-w-48 sm:text-xs">
                     <LockKeyhole className="size-3.5 shrink-0" aria-hidden="true" />
@@ -160,13 +160,13 @@ function PlayerChoiceCard({ player, fixtures, incoming = false, actionLabel, pen
                     {pending ? "Saving…" : actionLabel}
                 </Button>
             )}
-        </article>
+        </div>
     );
 }
 
-function StatusCard({ children, tone = "neutral" }) {
+function StatusMessage({ children, tone = "neutral" }) {
     return (
-        <p role={tone === "error" ? "alert" : "status"} className={`rounded-2xl border px-4 py-5 text-center text-sm ${tone === "error" ? "border-red-400/40 bg-red-500/10 text-red-700 dark:text-red-300" : "border-app-border bg-app-surface-muted text-app-muted"}`}>
+        <p role={tone === "error" ? "alert" : "status"} className={`border-y px-4 py-5 text-center text-sm ${tone === "error" ? "border-red-400/40 text-red-700 dark:text-red-300" : "border-app-border text-app-muted"}`}>
             {children}
         </p>
     );

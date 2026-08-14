@@ -27,6 +27,8 @@ class LeagueTransferWindowRepositoryTest {
     void reloadsOpenWindowAndCurrentTurnFromDatabase() {
         UserEntity admin = new UserEntity();
         admin.setUsername("admin@example.com");
+        admin.setEmail("admin@example.com");
+        admin.setEmailVerified(true);
         admin.setPassword("encoded-password");
         admin.setName("League Admin");
         admin.setRegisteredAt(LocalDateTime.now());

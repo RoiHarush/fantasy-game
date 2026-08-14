@@ -1,18 +1,20 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X } from "@/src/shared/ui/icons";
 import { forwardRef } from "react";
 
 import { cn } from "../../lib/cn";
+import { Button } from "./Button";
 
 const CloseButton = forwardRef(function CloseButton(
     { className, "aria-label": ariaLabel = "Close", ...props },
     ref,
 ) {
     return (
-        <button
+        <Button
             ref={ref}
-            type="button"
+            variant="secondary"
+            size="icon"
             aria-label={ariaLabel}
             className={cn(
                 "grid size-9 shrink-0 place-items-center rounded-xl border border-app-border bg-app-surface-elevated text-app-muted shadow-sm transition",
@@ -23,7 +25,7 @@ const CloseButton = forwardRef(function CloseButton(
             {...props}
         >
             <X className="size-[1.125rem]" strokeWidth={2.25} aria-hidden="true" />
-        </button>
+        </Button>
     );
 });
 

@@ -87,13 +87,18 @@ function TransferWindow({
         [draftSquad, isDraftMode, isSupplementalDraft, players],
     );
     const displayedPlayers = isSupplementalDraft
-        ? players.filter((player) => player.supplementalDraftEligible)
+        ? players.filter((player) => (
+            player.supplementalDraftSelectable ?? player.supplementalDraftEligible
+        ))
         : players;
     const canonicalOrder = windowState.canonicalOrder?.length > 0
         ? windowState.canonicalOrder
         : buildFallbackSnakeOrder(initialOrder, totalTurnsMap);
     const summaryOrder = isIrRound ? turnOrder : canonicalOrder;
-    const managerSummaries = summarizeSnakeOrder(summaryOrder, allUsers, turnsUsed, totalTurnsMap);
+    const managerSummaries = summarizeSnakeOrder(summaryOrder, allUsers, turnsUsed, totalTurnsMap, {
+        automaticUserIds: windowState.automaticUserIds ?? [],
+        onlineUserIds: windowState.onlineUserIds ?? [],
+    });
     const currentPickNumber = isIrRound ? null : getCurrentPickNumber(turnsUsed, canonicalOrder);
     const turnsLeft = getTurnsUntilUser(turnOrder, currentTurnUserId, user.id);
     const currentUserName = getUserName(allUsers, currentTurnUserId);
@@ -113,7 +118,7 @@ function TransferWindow({
                 players={players}
                 pending={!previewMode && historyQuery.isPending}
                 error={!previewMode ? historyQuery.error : null}
-                mode={isDraftMode ? "draft" : "transfer"}
+                mode={isSupplementalDraft ? "supplemental" : isDraftMode ? "draft" : "transfer"}
             />
         ),
     };

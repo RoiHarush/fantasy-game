@@ -1,7 +1,9 @@
 import { useState } from "react";
 
+import { getGameweekChipUnavailableReason } from "../../../../features/pick-team/model";
 import { useGameweekChip } from "../../../../features/pick-team/usePickTeamActions";
 import ChipCard from "../ChipCard";
+import { showChipError } from "../chipFeedback";
 import ConfirmGameweekChipModal from "./ConfirmGameweekChipModal";
 
 function GameweekChipManager({
@@ -16,12 +18,20 @@ function GameweekChipManager({
     icon,
     description,
     disabledReason = "",
+    hasUnsavedChanges = false,
+    squadSavePending = false,
 }) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [message, setMessage] = useState("");
     const isActive = chips.active?.[chipName] === true;
-    const isUsedUp = (chips.remaining?.[chipName] ?? 0) <= 0;
-    const isBlocked = !isActive && (isUsedUp || Boolean(disabledReason));
+    const displayedReason = getGameweekChipUnavailableReason({
+        title,
+        isActive,
+        remaining: chips.remaining?.[chipName],
+        disabledReason,
+        hasUnsavedChanges,
+        savePending: squadSavePending,
+    });
+    const isBlocked = Boolean(displayedReason);
 
     const mutation = useGameweekChip({
         userId,
@@ -31,9 +41,8 @@ function GameweekChipManager({
         onSuccess: ({ updatedSquad, updatedChips }) => {
             setSquad(updatedSquad);
             setChips(updatedChips);
-            setMessage(`${title} ${isActive ? "cancelled" : "activated"} successfully.`);
         },
-        onError: (error) => setMessage(error.message || `Could not update ${title}.`),
+        onError: (error) => showChipError(error, `Could not update ${title}.`),
         onSettled: () => setShowConfirmModal(false),
     });
 
@@ -46,8 +55,8 @@ function GameweekChipManager({
                 onAction={() => setShowConfirmModal(true)}
                 disabled={isBlocked}
                 active={isActive}
-                actionTitle={disabledReason || undefined}
-                message={message || (!isActive ? disabledReason : "")}
+                actionTitle={displayedReason || undefined}
+                message={displayedReason}
                 remaining={chips.remaining?.[chipName] ?? 0}
                 total={1}
             />

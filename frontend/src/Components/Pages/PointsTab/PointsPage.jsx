@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesColumnIncreasing, Clock3 } from "lucide-react";
+import { ChartNoAxesColumnIncreasing, Clock3, Sparkles } from "@/src/shared/ui/icons";
 import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
@@ -11,6 +11,35 @@ import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import UserSidebar from "../../Sidebar/UserSidebar";
 import Points from "./Points";
+
+export function PreSeasonPointsState() {
+    return (
+        <main className="mx-auto flex min-h-[25rem] w-full max-w-5xl items-center px-4 py-10 text-app-foreground sm:min-h-[32rem] sm:px-7 sm:py-14">
+            <section className="relative isolate w-full overflow-hidden py-8 text-center sm:py-12" aria-labelledby="preseason-points-title">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-56 w-[min(42rem,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/7 blur-3xl dark:bg-brand-cyan/5" aria-hidden="true" />
+                <div className="mx-auto h-1 w-16 rounded-full bg-component-gradient" aria-hidden="true" />
+
+                <div className="mt-6 flex items-center justify-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-app-accent-foreground sm:text-xs">
+                    <Sparkles className="size-3.5" aria-hidden="true" />
+                    Season preview
+                </div>
+
+                <ChartNoAxesColumnIncreasing className="mx-auto mt-6 size-9 text-app-accent sm:size-11" strokeWidth={1.7} aria-hidden="true" />
+                <h1 id="preseason-points-title" className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-[-0.035em] text-app-foreground sm:text-5xl">
+                    Points begin with the first kickoff
+                </h1>
+                <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-app-muted sm:text-base sm:leading-7">
+                    Scores, player contributions and rankings appear after kickoff.
+                </p>
+
+                <div className="mx-auto mt-8 flex w-fit items-center gap-2 border-y border-app-border px-5 py-3 text-xs font-bold text-app-muted sm:text-sm">
+                    <Clock3 className="size-4 text-app-accent" aria-hidden="true" />
+                    Waiting for Gameweek 1
+                </div>
+            </section>
+        </main>
+    );
+}
 
 function PointsPage({ displayedUser }) {
     const { user: loggedUser } = useAuth();
@@ -33,34 +62,7 @@ function PointsPage({ displayedUser }) {
     if (gameweekState.error) return <p role="alert">Error loading gameweeks: {gameweekState.error}</p>;
 
     if (gameweekView.preSeason) {
-        return (
-            <section className="mx-auto grid min-h-[24rem] w-full max-w-3xl place-items-center px-3 py-8 text-app-foreground sm:min-h-[30rem] sm:px-6 sm:py-12">
-                <div className="relative w-full overflow-hidden rounded-2xl border border-app-border bg-app-surface px-5 py-8 text-center shadow-panel sm:rounded-3xl sm:px-10 sm:py-12">
-                    <div className="absolute inset-x-0 top-0 h-1.5 bg-component-gradient" aria-hidden="true" />
-                    <div className="pointer-events-none absolute -top-20 left-1/2 size-56 -translate-x-1/2 rounded-full bg-app-accent-surface blur-3xl" aria-hidden="true" />
-
-                    <div className="relative">
-                        <span className="mx-auto grid size-12 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground shadow-sm sm:size-14">
-                            <ChartNoAxesColumnIncreasing aria-hidden="true" className="size-6 sm:size-7" />
-                        </span>
-                        <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface-muted px-2.5 py-1 text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-app-muted sm:text-xs">
-                            <Clock3 aria-hidden="true" size={13} />
-                            Before Gameweek 1
-                        </div>
-                        <h1 className="mt-3 text-xl font-black tracking-tight text-app-foreground sm:text-3xl">
-                            The season has not started yet
-                        </h1>
-                        <p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-app-muted sm:text-base sm:leading-7">
-                            There are no gameweek points to show yet. Scores and rankings will appear here after the first matches begin.
-                        </p>
-                        <div className="mx-auto mt-6 h-px w-20 bg-app-border" aria-hidden="true" />
-                        <p className="mt-4 text-xs font-semibold text-app-muted sm:text-sm">
-                            Waiting for the first kickoff
-                        </p>
-                    </div>
-                </div>
-            </section>
-        );
+        return <PreSeasonPointsState />;
     }
 
     if (!gameweekView.effectiveGameweek) {

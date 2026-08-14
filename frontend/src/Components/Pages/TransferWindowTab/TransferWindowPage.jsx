@@ -20,7 +20,7 @@ function TransferWindowPage() {
     const { nextGameweek } = gameweekState;
     const [selectedUserId, setSelectedUserId] = useState(user?.id);
     const usersQuery = useLeagueUsers(user?.leagueId);
-    const windowQuery = useTransferWindowState(user?.leagueId);
+    const windowQuery = useTransferWindowState(user?.leagueId, { refetchInterval: 3_000 });
     const isActiveTransferWindow = Boolean(windowQuery.data?.isOpen && !windowQuery.data?.isDraftMode);
     const screenData = useTransferScreenData(isActiveTransferWindow);
     const selectedSquadQuery = useSquad(selectedUserId, nextGameweek?.id, {

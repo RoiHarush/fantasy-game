@@ -21,7 +21,17 @@ const SETTINGS_ITEM = ["/settings", "Settings"];
 const LEAGUE_CONTROL_ITEM = ["/league-control", "League Control", "admin"];
 
 function toNavigationItem([href, label, kind = "default"]) {
-    return { href, label, kind };
+    return {
+        href,
+        label,
+        kind,
+        mobilePrimary: ["/status", "/points", "/pick-team", "/scout", "/transfer-window"].includes(href),
+        section: href === "/settings"
+            ? "account"
+            : kind === "admin"
+                ? "management"
+                : "league",
+    };
 }
 
 export function getSiteNavigation(user) {
@@ -43,4 +53,12 @@ export function getSiteNavigation(user) {
 
 export function isNavigationItemActive(pathname, href) {
     return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function getMobilePrimaryNavigation(items) {
+    return items.filter((item) => item.mobilePrimary);
+}
+
+export function getMobileSecondaryNavigation(items) {
+    return items.filter((item) => !item.mobilePrimary);
 }

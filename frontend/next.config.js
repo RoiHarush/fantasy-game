@@ -3,7 +3,10 @@ const backendUrl = (process.env.BACKEND_URL ?? "http://localhost:8080").replace(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactCompiler: true,
-    allowedDevOrigins: ['192.168.1.181'],
+    allowedDevOrigins: [
+        '192.168.1.181',
+        '192.168.68.69',
+    ],
     images: {
         remotePatterns: [
             {

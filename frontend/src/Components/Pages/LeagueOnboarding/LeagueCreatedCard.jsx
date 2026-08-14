@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "../../../shared/ui/Button";
-import styles from "../../../Styles/LeagueOnboarding.module.css";
+import { LeagueOnboardingShell } from "./LeagueOnboardingUi";
 
 export default function LeagueCreatedCard({ league, onContinue }) {
     const [copyStatus, setCopyStatus] = useState("idle");
@@ -24,19 +24,21 @@ export default function LeagueCreatedCard({ league, onContinue }) {
             : "Copy league code";
 
     return (
-        <section className={styles.page} aria-labelledby="league-created-title">
-            <div className={styles.card}>
-                <p className={styles.eyebrow}>League created</p>
-                <h1 id="league-created-title">Invite your managers</h1>
-                <p>Share this code before the initial draft begins:</p>
-                <div className="my-6 text-4xl font-extrabold tracking-[.16em]">{league.leagueCode}</div>
+        <LeagueOnboardingShell
+            eyebrow="League created"
+            title="Invite your managers"
+            intro="Share this code before the initial draft begins:"
+            labelledBy="league-created-title"
+        >
+                <div className="my-7 overflow-hidden rounded-2xl border border-app-accent-border bg-app-accent-surface px-4 py-5 text-center font-mono text-3xl font-black tracking-[.16em] text-app-accent-foreground sm:text-4xl">{league.leagueCode}</div>
+                <div className="flex flex-col gap-3 sm:flex-row">
                 <Button type="button" variant="secondary" onClick={copyLeagueCode}>
                     {copyLabel}
                 </Button>
-                <Button type="button" className={styles.submit} onClick={onContinue}>
+                <Button type="button" onClick={onContinue}>
                     Set up initial draft
                 </Button>
-            </div>
-        </section>
+                </div>
+        </LeagueOnboardingShell>
     );
 }

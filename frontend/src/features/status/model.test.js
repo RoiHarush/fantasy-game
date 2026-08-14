@@ -6,7 +6,8 @@ import {
     getRankLabel,
     getUpcomingDeadline,
     getVisibleCountdownUnits,
-    groupTransferActions,
+    splitTransferActions,
+    getIrTransferSourceLabel,
 } from "./model";
 
 describe("status model", () => {
@@ -49,13 +50,15 @@ describe("status model", () => {
         ]);
     });
 
-    it("groups transfer actions by user without changing their order", () => {
-        const grouped = groupTransferActions([
-            { id: 1, userId: 7, userName: "Roi" },
-            { id: 2, userId: 8, userName: "Dan" },
-            { id: 3, userId: 7, userName: "Roi" },
+    it("keeps transfer history in action order and separates IR moves", () => {
+        const split = splitTransferActions([
+            { id: 3, userId: 7, source: "MANUAL" },
+            { id: 1, userId: 8, source: "WAIVER" },
+            { id: 2, userId: 7, source: "IR_WAIVER" },
         ]);
-        expect(grouped.get(7).actions.map(({ id }) => id)).toEqual([1, 3]);
+        expect(split.regular.map(({ id }) => id)).toEqual([1, 3]);
+        expect(split.ir.map(({ id }) => id)).toEqual([2]);
+        expect(getIrTransferSourceLabel(split.ir[0].source)).toBe("Waiver");
     });
 
     it("moves the single countdown from the transfer window to lineup lock", () => {

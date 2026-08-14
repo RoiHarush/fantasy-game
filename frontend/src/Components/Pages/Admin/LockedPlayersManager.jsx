@@ -1,10 +1,11 @@
-import { LockKeyhole, Search, ShieldCheck, UnlockKeyhole } from "lucide-react";
+import { LockKeyhole, Search, ShieldCheck, UnlockKeyhole } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 
 import { findPlayers } from "../../../features/league-admin/playerSearch";
 import { useLockedPlayers } from "../../../features/league-admin/useLeagueAdmin";
 import { usePlayers } from "../../../features/players/usePlayers";
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 function PlayerIdentity({ player, position }) {
     return (
@@ -63,9 +64,9 @@ function LockedPlayersManager({ maintenanceLeagueId = null }) {
                             {searchResults.map((player) => (
                                 <div key={player.id} className="flex items-center gap-3 px-3 py-2.5">
                                     <div className="min-w-0 flex-1"><PlayerIdentity player={player} position={player.position} /></div>
-                                    <button type="button" onClick={() => handleToggleLock(player, true)} disabled={toggleLock.isPending} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-red-500 px-3 text-xs font-extrabold text-white transition hover:bg-red-600 disabled:opacity-50">
+                                    <Button type="button" variant="danger" size="sm" onClick={() => handleToggleLock(player, true)} disabled={toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
                                         <LockKeyhole className="size-3.5" aria-hidden="true" /> Lock
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -103,9 +104,9 @@ function LockedPlayersManager({ maintenanceLeagueId = null }) {
                             return (
                                 <div key={player.id} className="flex items-center gap-3 px-3 py-3 sm:px-5">
                                     <div className="min-w-0 flex-1"><PlayerIdentity player={player} position={position} /></div>
-                                    <button type="button" onClick={() => handleToggleLock(player, false)} disabled={toggleLock.isPending} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-extrabold text-emerald-700 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-300">
+                                    <Button type="button" variant="success" size="sm" onClick={() => handleToggleLock(player, false)} disabled={toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
                                         <UnlockKeyhole className="size-3.5" aria-hidden="true" /> Unlock
-                                    </button>
+                                    </Button>
                                 </div>
                             );
                         })}

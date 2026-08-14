@@ -51,16 +51,17 @@ class SupplementalDraftPoolServiceTest {
     }
 
     @Test
-    void releasesEveryRemainingPlayerWhenTheSupplementalDraftEnds() {
+    void releasesOnlyPlayersThatBelongedToTheDraftSnapshot() {
         SupplementalDraftPoolRepository poolRepository = mock(SupplementalDraftPoolRepository.class);
         SupplementalDraftPoolService service = new SupplementalDraftPoolService(
                 poolRepository,
                 mock(LeagueRepository.class)
         );
 
-        service.releasePool(7L);
+        LocalDateTime openedAt = LocalDateTime.of(2027, 1, 5, 18, 0);
+        service.releaseEligiblePool(7L, openedAt);
 
-        verify(poolRepository).deleteByLeague_Id(7L);
+        verify(poolRepository).deleteByLeague_IdAndDiscoveredAtLessThanEqual(7L, openedAt);
     }
 
     private LeagueEntity league(long id, LeagueStatus status) {

@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, Repeat2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Repeat2 } from "@/src/shared/ui/icons";
 
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerKit from "../PlayerKit";

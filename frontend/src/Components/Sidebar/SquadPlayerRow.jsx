@@ -1,9 +1,10 @@
-import { Info } from "lucide-react";
+import { Info } from "@/src/shared/ui/icons";
 import { useState } from "react";
 
 import { getPlayerInjuryColor } from "../../lib/playerStatus";
 import PlayerInfoModal from "../General/PlayerInfoModal";
 import PlayerKit from "../General/PlayerKit";
+import { Button } from "../../shared/ui/Button";
 
 function SquadPlayerRow({ player, fixture }) {
     const [showInfo, setShowInfo] = useState(false);
@@ -14,15 +15,17 @@ function SquadPlayerRow({ player, fixture }) {
             <tr className="h-12 border-t border-app-border/70 bg-app-surface transition-colors hover:bg-app-accent-hover">
                 <td className="px-1 text-center" style={{ width: "2.25rem" }}>
                     {player && (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             className="mx-auto grid size-4 place-items-center p-0 transition hover:scale-110 focus-visible:outline-2 focus-visible:outline-app-accent"
                             style={{ color: injuryColor || "var(--app-muted)" }}
                             onClick={() => setShowInfo(true)}
                             aria-label={`View ${player.viewName} information`}
                         >
                             <Info aria-hidden="true" size={14} strokeWidth={2.2} />
-                        </button>
+                        </Button>
                     )}
                 </td>
                 <td className="min-w-0 overflow-hidden py-1 pr-1">

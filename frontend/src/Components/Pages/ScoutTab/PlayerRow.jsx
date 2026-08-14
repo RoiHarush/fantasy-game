@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Info, ListPlus, LockKeyhole } from "lucide-react";
+import { Compare, Info, LockKeyhole, WaiverAdd } from "@/src/shared/ui/icons";
 import { memo, useState } from "react";
 
 import { getInitials } from "../../../lib/initials";
@@ -7,7 +7,9 @@ import { getFixtureItems } from "../../../features/fixtures/model";
 import { getPlayerAcquisitionLockReason } from "../../../features/transfer-window/model";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerKit from "../../General/PlayerKit";
+import NewPlayerLabel from "./NewPlayerLabel";
 import WatchButton from "../../General/WatchButton";
+import { Button } from "../../../shared/ui/Button";
 
 const PlayerRow = memo(function PlayerRow({
     player,
@@ -42,8 +44,10 @@ const PlayerRow = memo(function PlayerRow({
         <>
             <td className="min-w-0 px-1.5 py-2 sm:px-3">
                 <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         className="grid size-4 shrink-0 place-items-center p-0 transition hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent"
                         aria-label={`View ${player.viewName} information`}
                         style={{ color: injuryColor || "var(--app-muted)" }}
@@ -53,7 +57,7 @@ const PlayerRow = memo(function PlayerRow({
                         }}
                     >
                         <Info aria-hidden="true" size={14} strokeWidth={2.2} />
-                    </button>
+                    </Button>
                     <PlayerKit
                         teamId={player.teamId}
                         type={player.position === "GK" ? "gk" : "field"}
@@ -61,7 +65,10 @@ const PlayerRow = memo(function PlayerRow({
                         style={{ width: "1.75rem", height: "1.75rem" }}
                     />
                     <div className="min-w-0 leading-tight">
-                        <span className="block truncate text-xs font-bold text-app-foreground sm:text-sm">{player.viewName}</span>
+                        <span className="flex min-w-0 items-center gap-1">
+                            <span className="block min-w-0 truncate text-xs font-bold text-app-foreground sm:text-sm">{player.viewName}</span>
+                            {player.supplementalDraftEligible && <NewPlayerLabel />}
+                        </span>
                         <span className="block truncate text-[0.64rem] font-medium text-app-muted sm:text-[0.7rem]">
                             {teamName} • {player.position}
                         </span>
@@ -87,8 +94,10 @@ const PlayerRow = memo(function PlayerRow({
             })}
 
             <td className="px-1 py-2 text-center">
-                <button
+                <Button
                     type="button"
+                    variant="secondary"
+                    size="icon"
                     className={`mx-auto inline-flex size-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-app-accent xl:h-9 xl:w-auto xl:px-2.5 ${isSelectedForCompare
                         ? "border-app-accent bg-app-accent text-brand-ink ring-2 ring-app-accent/35 ring-offset-1 ring-offset-app-surface"
                         : "border-app-border bg-app-surface-muted text-app-foreground hover:border-app-accent-border hover:bg-app-accent-hover"
@@ -99,9 +108,9 @@ const PlayerRow = memo(function PlayerRow({
                     }}
                     disabled={isSelectedForCompare}
                 >
-                    <ArrowRightLeft aria-hidden="true" size={17} />
+                    <Compare aria-hidden="true" size={17} />
                     <span className="hidden xl:inline">{isSelectedForCompare ? "Selected" : "Compare"}</span>
-                </button>
+                </Button>
             </td>
 
             <td className="px-1 py-2 text-center">
@@ -114,7 +123,9 @@ const PlayerRow = memo(function PlayerRow({
 
             {mode === "scout" && (
                 <td className="px-1 py-2 text-center">
-                    {player.available ? (
+                    {player.supplementalDraftEligible ? (
+                        <NewPlayerLabel className="mx-auto justify-center" />
+                    ) : player.available ? (
                         <span
                             title="Free agent"
                             aria-label="Owner: Free agent"
@@ -140,21 +151,23 @@ const PlayerRow = memo(function PlayerRow({
             {mode === "scout" && onWaiverSelect && (
                 <td className="px-1 py-2 text-center">
                     {player.available || (player.ownerId != null && String(player.ownerId) !== String(user?.id)) ? (
-                        <button
+                        <Button
                             type="button"
+                            variant="secondary"
+                            size="sm"
                             className="mx-auto inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-app-accent-border bg-app-accent-surface px-2 text-xs font-bold text-app-accent-foreground transition hover:border-app-accent hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent"
                             onClick={(event) => {
                                 event.stopPropagation();
                                 onWaiverSelect(player);
                             }}
                         >
-                            <ListPlus aria-hidden="true" size={16} />
+                            <WaiverAdd aria-hidden="true" size={16} />
                             <span className="hidden xl:inline">Waiver</span>
-                        </button>
+                        </Button>
                     ) : (
                         <LockKeyhole
-                            aria-label="Unavailable"
-                            title="This player is already in your squad"
+                            aria-label={`Unavailable: ${acquisitionLockReason || "This player is already in your squad"}`}
+                            title={acquisitionLockReason || "This player is already in your squad"}
                             className="mx-auto size-5 text-app-muted"
                         />
                     )}
@@ -164,8 +177,10 @@ const PlayerRow = memo(function PlayerRow({
             {(mode === "transfer" || mode === "draft") && (
                 <td className="px-1 py-2 text-center">
                     {!acquisitionLockReason ? (
-                        <button
+                        <Button
                             type="button"
+                            variant="primary"
+                            size="sm"
                             className="mx-auto inline-flex h-9 min-w-0 items-center justify-center rounded-lg bg-component-gradient px-2.5 text-xs font-extrabold text-brand-ink transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
                             disabled={!isMyTurn}
                             onClick={(event) => {
@@ -174,7 +189,7 @@ const PlayerRow = memo(function PlayerRow({
                             }}
                         >
                             {isMyTurn ? (mode === "draft" ? "Pick" : "Sign") : "Wait"}
-                        </button>
+                        </Button>
                     ) : (
                         <LockKeyhole
                             aria-label={`Locked: ${acquisitionLockReason}`}

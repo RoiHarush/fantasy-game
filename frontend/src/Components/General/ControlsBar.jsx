@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "@/src/shared/ui/icons";
 
 import SelectField from "../../shared/ui/SelectField";
 import TeamLogo from "../Pages/FixturesTab/TeamLogo";

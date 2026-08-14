@@ -1,18 +1,39 @@
 import { useState } from "react";
 import ConfirmFirstPickCaptainModal from "./ConfirmFirstPickCaptainModal";
-import { isFirstPickStarting } from "../../../../features/pick-team/model";
+import { getUnsavedSquadActionReason, isFirstPickStarting } from "../../../../features/pick-team/model";
 import { useFirstPickCaptain } from "../../../../features/pick-team/usePickTeamActions";
 import ChipCard from "../ChipCard";
+import { showChipError } from "../chipFeedback";
 
-function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips, players }) {
+function FirstPickManager({
+    userId,
+    gameweekId,
+    squad,
+    setSquad,
+    chips,
+    setChips,
+    players,
+    hasUnsavedChanges = false,
+    squadSavePending = false,
+}) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [message, setMessage] = useState("");
 
     const isActive = chips.active?.FIRST_PICK_CAPTAIN === true;
     const isUsedUp = chips.remaining?.FIRST_PICK_CAPTAIN <= 0;
     const tripleCaptainActive = chips.active?.TRIPLE_CAPTAIN === true;
 
     const isFirstPickInStarting = isFirstPickStarting(squad);
+    const firstPickPlayer = players.find((item) => String(item.id) === String(squad.firstPickId));
+    const unavailableReason = getFirstPickCaptainUnavailableReason({
+        isActive,
+        isUsedUp,
+        tripleCaptainActive,
+        firstPickId: squad.firstPickId,
+        firstPickName: firstPickPlayer?.viewName,
+        isFirstPickInStarting,
+        hasUnsavedChanges,
+        squadSavePending,
+    });
 
     const handleToggle = () => setShowConfirmModal(true);
 
@@ -23,11 +44,8 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
         onSuccess: ({ updatedSquad, updatedChips }) => {
             setSquad(updatedSquad);
             setChips(updatedChips);
-            setMessage(`Captain Chip ${isActive ? "cancelled" : "activated"} successfully.`);
         },
-        onError: (error) => {
-            setMessage(error.message || "Unexpected error while toggling chip.");
-        },
+        onError: (error) => showChipError(error, "Could not update First Pick Captain."),
         onSettled: () => {
             setShowConfirmModal(false);
         },
@@ -41,26 +59,19 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
                 title="First Pick Captain"
                 actionLabel={isActive
                     ? "Active"
-                    : tripleCaptainActive || !isFirstPickInStarting
-                        ? "Unavailable"
-                        : "Play"}
+                    : unavailableReason ? "Unavailable" : "Play"}
                 onAction={handleToggle}
-                disabled={
-                    (!isFirstPickInStarting && !isActive)
-                    || (isUsedUp && !isActive)
-                    || (tripleCaptainActive && !isActive)
-                }
+                disabled={Boolean(unavailableReason)}
                 active={isActive}
-                message={message || (!isActive && tripleCaptainActive
-                    ? "Unavailable while Triple Captain is active."
-                    : "")}
+                actionTitle={unavailableReason || undefined}
+                message={unavailableReason}
                 remaining={chips.remaining?.FIRST_PICK_CAPTAIN ?? 0}
                 total={1}
             />
 
             {showConfirmModal && (
                 <ConfirmFirstPickCaptainModal
-                    player={players.find((item) => String(item.id) === String(squad.firstPickId))}
+                    player={firstPickPlayer}
                     onConfirm={() => chipMutation.mutate()}
                     onCancel={() => setShowConfirmModal(false)}
                     isActive={isActive}
@@ -69,6 +80,28 @@ function FirstPickManager({ userId, gameweekId, squad, setSquad, chips, setChips
             )}
         </>
     );
+}
+
+export function getFirstPickCaptainUnavailableReason({
+    isActive,
+    isUsedUp,
+    tripleCaptainActive,
+    firstPickId,
+    firstPickName,
+    isFirstPickInStarting,
+    hasUnsavedChanges = false,
+    squadSavePending = false,
+}) {
+    const pendingSquadReason = getUnsavedSquadActionReason(hasUnsavedChanges, squadSavePending);
+    if (pendingSquadReason) return pendingSquadReason;
+    if (isActive) return "";
+    if (isUsedUp) return "No First Pick Captain uses remain.";
+    if (tripleCaptainActive) return "Unavailable while Triple Captain is active.";
+    if (firstPickId == null) return "Your original first-pick player is no longer in the squad.";
+    if (!isFirstPickInStarting) {
+        return `Move ${firstPickName || "your first-pick player"} into the starting XI to use this chip.`;
+    }
+    return "";
 }
 
 export default FirstPickManager;

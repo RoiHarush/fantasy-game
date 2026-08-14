@@ -41,7 +41,18 @@ describe("NavButtons responsive navigation", () => {
 
     afterEach(() => cleanup());
 
-    it("opens an accessible mobile menu with the same navigation and active page", () => {
+    it("keeps the important screens in the mobile quick navigation", () => {
+        render(<NavButtons />);
+
+        const quickNavigation = screen.getByRole("navigation", { name: "Mobile quick navigation" });
+        expect(within(quickNavigation).getByRole("link", { name: "Status" })).toHaveAttribute("aria-current", "page");
+        expect(within(quickNavigation).getByRole("link", { name: "Points" })).toHaveAttribute("href", "/points");
+        expect(within(quickNavigation).getByRole("link", { name: "Team" })).toHaveAttribute("href", "/pick-team");
+        expect(within(quickNavigation).getByRole("link", { name: "Scout" })).toHaveAttribute("href", "/scout");
+        expect(within(quickNavigation).getByRole("link", { name: "Transfers" })).toHaveAttribute("href", "/transfer-window");
+    });
+
+    it("opens an accessible mobile menu for secondary screens", () => {
         render(<NavButtons />);
 
         const menuButton = screen.getByRole("button", { name: /open navigation menu.*status/i });
@@ -49,21 +60,41 @@ describe("NavButtons responsive navigation", () => {
 
         expect(menuButton).toHaveAttribute("aria-expanded", "true");
 
-        const mobileNavigation = screen.getByRole("navigation", { name: "Mobile primary navigation" });
-        expect(within(mobileNavigation).getByRole("link", { name: "Status" })).toHaveAttribute("aria-current", "page");
+        const mobileNavigation = screen.getByRole("navigation", { name: "More navigation" });
+        expect(within(mobileNavigation).queryByRole("link", { name: "Status" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).getByRole("link", { name: "League" })).toHaveAttribute("href", "/league");
         expect(within(mobileNavigation).getByRole("link", { name: "League Control" })).toHaveAttribute("href", "/league-control");
 
         fireEvent.keyDown(window, { key: "Escape" });
-        expect(screen.queryByRole("navigation", { name: "Mobile primary navigation" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("navigation", { name: "More navigation" })).not.toBeInTheDocument();
     });
 
     it("keeps logout available from the mobile menu", async () => {
         render(<NavButtons />);
 
         fireEvent.click(screen.getByRole("button", { name: /open navigation menu.*status/i }));
-        fireEvent.click(within(screen.getByRole("navigation", { name: "Mobile primary navigation" })).getByRole("button", { name: "Logout" }));
+        fireEvent.click(within(screen.getByRole("navigation", { name: "More navigation" })).getByRole("button", { name: "Logout" }));
 
         await waitFor(() => expect(navigationMocks.logout).toHaveBeenCalledOnce());
-        expect(screen.queryByRole("navigation", { name: "Mobile primary navigation" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("navigation", { name: "More navigation" })).not.toBeInTheDocument();
+    });
+
+    it("compacts while scrolling down and expands after a short upward scroll", () => {
+        Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+        render(<NavButtons />);
+
+        const quickNavigation = screen.getByRole("navigation", { name: "Mobile quick navigation" });
+        expect(quickNavigation).toHaveAttribute("data-compact", "false");
+        expect(quickNavigation).toHaveClass("w-[calc(100%_-_1rem)]");
+
+        window.scrollY = 120;
+        fireEvent.scroll(window);
+        expect(quickNavigation).toHaveAttribute("data-compact", "true");
+        expect(quickNavigation).toHaveClass("w-[calc(100%_-_3rem)]");
+
+        window.scrollY = 108;
+        fireEvent.scroll(window);
+        expect(quickNavigation).toHaveAttribute("data-compact", "false");
+        expect(quickNavigation).toHaveClass("w-[calc(100%_-_1rem)]");
     });
 });

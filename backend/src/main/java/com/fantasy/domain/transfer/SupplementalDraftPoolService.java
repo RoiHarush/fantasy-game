@@ -51,19 +51,29 @@ public class SupplementalDraftPoolService {
     }
 
     @Transactional(readOnly = true)
+    public Set<Integer> playerIdsEligibleAt(long leagueId, LocalDateTime cutoff) {
+        if (cutoff == null) return Set.of();
+        return poolRepository.findByLeague_IdAndDiscoveredAtLessThanEqual(leagueId, cutoff).stream()
+                .map(entry -> entry.getPlayer().getId())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Transactional(readOnly = true)
     public boolean isEligible(long leagueId, int playerId) {
         return poolRepository.existsByLeague_IdAndPlayer_Id(leagueId, playerId);
     }
 
     @Transactional(readOnly = true)
-    public void requireEligible(long leagueId, int playerId) {
-        if (!isEligible(leagueId, playerId)) {
+    public void requireEligibleAt(long leagueId, int playerId, LocalDateTime cutoff) {
+        if (cutoff == null || !poolRepository
+                .existsByLeague_IdAndPlayer_IdAndDiscoveredAtLessThanEqual(leagueId, playerId, cutoff)) {
             throw new FantasyTeamException("Player is not eligible for this supplemental draft");
         }
     }
 
     @Transactional
-    public void releasePool(long leagueId) {
-        poolRepository.deleteByLeague_Id(leagueId);
+    public void releaseEligiblePool(long leagueId, LocalDateTime cutoff) {
+        if (cutoff == null) return;
+        poolRepository.deleteByLeague_IdAndDiscoveredAtLessThanEqual(leagueId, cutoff);
     }
 }

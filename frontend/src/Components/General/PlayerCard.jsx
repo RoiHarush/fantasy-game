@@ -1,9 +1,10 @@
 import PlayerKit from "./PlayerKit";
-import { CalendarX2, Crown } from "lucide-react";
+import { CalendarX2, Crown } from "@/src/shared/ui/icons";
 import { usePlayerInteraction } from "../../Context/PlayerInteractionProvider";
 import { cn } from "../../lib/cn";
 import FirstPickAura from "./Pitch/FirstPickAura";
 import TripleCaptainEffect from "./Pitch/TripleCaptainEffect";
+import { Button } from "../../shared/ui/Button";
 
 
 function PlayerCard({
@@ -57,11 +58,13 @@ function PlayerCard({
         : nextFixture
             ? [nextFixture]
             : [];
+    const hasMultipleFixtures = fixtureItems.length > 1;
     return (
-        <button
+        <Button
             type="button"
+            variant="ghost"
             className={cn(
-                "relative isolate m-1.5 flex h-full w-20 cursor-pointer flex-col items-center border-0 bg-transparent p-0 text-center font-[inherit] text-inherit transition-[transform,opacity] duration-150 hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#00ff87] max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center",
+                "relative isolate m-1.5 flex h-full w-20 cursor-pointer flex-col items-center gap-0 border-0 bg-transparent p-0 text-center font-[inherit] text-inherit transition-[transform,opacity] duration-150 hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#00ff87] max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center",
                 isDisabled && "pointer-events-none opacity-40",
             )}
             onClick={handleClick}
@@ -130,7 +133,10 @@ function PlayerCard({
                 {player.viewName}
             </div>
 
-            <div className="relative z-[1] flex min-h-8 w-[130%] flex-col items-center justify-center rounded-b-[3px] bg-white/30 px-0.5 py-0.5 text-center text-[10px] leading-[1.05] font-semibold text-[#111] max-md:min-h-7 max-md:w-full max-md:min-w-0 max-md:text-[7px]">
+            <div className={cn(
+                "relative z-[1] flex w-[130%] flex-col items-center justify-center rounded-b-[3px] bg-white/30 px-0.5 py-0.5 text-center text-[10px] leading-[1.05] font-semibold text-[#111] max-md:w-full max-md:min-w-0 max-md:text-[7px]",
+                hasMultipleFixtures ? "min-h-8 max-md:min-h-7" : "min-h-[18px] max-md:min-h-4",
+            )}>
                 {hasPoints ? (
                     shownPoints
                 ) : fixturePostponed ? (
@@ -145,7 +151,7 @@ function PlayerCard({
                     "-"
                 )}
             </div>
-        </button>
+        </Button>
     );
 }
 

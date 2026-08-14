@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { ShieldPlus } from "lucide-react";
+import { ShieldPlus } from "@/src/shared/ui/icons";
 import Image from "next/image";
 
 import { Button } from "../../../../shared/ui/Button";
@@ -26,7 +26,7 @@ function IRModal({ squad, players, onClose, onSelect }) {
                             <CloseButton className="absolute top-4 right-4" aria-label="Close IR player selection" />
                         </Dialog.Close>
                         <div className="flex items-center gap-3">
-                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface">
+                            <span className="grid size-9 shrink-0 place-items-center">
                                 <Image src="/Icons/ir-chip.svg" alt="" width={30} height={30} className="size-7 object-contain" />
                             </span>
                             <div className="min-w-0">
@@ -40,18 +40,19 @@ function IRModal({ squad, players, onClose, onSelect }) {
 
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5">
                         {eligiblePlayers.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-app-border bg-app-surface-muted px-5 py-10 text-center">
+                            <div className="border-y border-dashed border-app-border px-5 py-10 text-center">
                                 <ShieldPlus className="mx-auto size-7 text-app-muted" aria-hidden="true" />
                                 <p className="mt-3 text-sm font-bold text-app-muted">No players are available for IR.</p>
                             </div>
                         ) : (
-                            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                            <div className="divide-y divide-app-border border-y border-app-border">
                                 {eligiblePlayers.map((player) => (
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="ghost"
                                         key={player.id}
                                         onClick={() => onSelect(player)}
-                                        className="flex min-w-0 items-center gap-3 rounded-2xl border border-app-border bg-app-surface px-3 py-3 text-left transition hover:border-app-accent-border hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent"
+                                        className="flex h-auto min-h-16 w-full min-w-0 items-center gap-3 px-1 py-3 text-left transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent sm:px-2"
                                     >
                                         <PlayerKit
                                             teamId={player.teamId}
@@ -63,7 +64,7 @@ function IRModal({ squad, players, onClose, onSelect }) {
                                             <strong className="block truncate text-sm text-app-foreground">{player.viewName}</strong>
                                             <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-wide text-app-muted">{player.position}</span>
                                         </span>
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         )}

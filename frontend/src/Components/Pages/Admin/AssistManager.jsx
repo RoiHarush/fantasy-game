@@ -1,4 +1,4 @@
-import { Goal, LockKeyhole, Minus, Plus, Search } from "lucide-react";
+import { Goal, LockKeyhole, Minus, Plus, Search } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
@@ -7,6 +7,7 @@ import { useAdminAssists } from "../../../features/league-admin/useLeagueAdmin";
 import { usePlayers } from "../../../features/players/usePlayers";
 import SelectField from "../../../shared/ui/SelectField";
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 const fieldClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface disabled:cursor-not-allowed disabled:opacity-55";
 
@@ -95,14 +96,16 @@ function AssistManager({ maintenanceLeagueId = null }) {
                                     <p className="truncate text-sm font-extrabold text-app-foreground">{player.viewName}</p>
                                     <p className="text-xs text-app-muted">{player.position}</p>
                                 </div>
-                                <button
+                                <Button
                                     type="button"
+                                    variant="success"
+                                    size="sm"
                                     onClick={() => handleUpdate(player.id, "ADD")}
                                     className="inline-flex h-9 items-center gap-1 rounded-lg bg-emerald-500 px-3 text-xs font-extrabold text-white transition hover:bg-emerald-600 disabled:opacity-50"
                                     disabled={!canEdit || updateAssist.isPending}
                                 >
                                     <Plus className="size-3.5" aria-hidden="true" /> Add
-                                </button>
+                                </Button>
                             </div>
                         ))}
                     </div>
@@ -132,9 +135,9 @@ function AssistManager({ maintenanceLeagueId = null }) {
                                     <p className="text-xs font-semibold text-app-muted">Credited assists</p>
                                 </div>
                                 <div className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface-muted p-1">
-                                    <button type="button" aria-label={`Remove one assist from ${item.viewName}`} onClick={() => handleUpdate(item.playerId, "REMOVE")} disabled={!canEdit || updateAssist.isPending} className="grid size-9 place-items-center rounded-lg bg-app-surface text-app-danger-foreground transition hover:bg-app-danger-surface disabled:opacity-45"><Minus className="size-4" aria-hidden="true" /></button>
+                                    <Button type="button" variant="danger" size="icon" aria-label={`Remove one assist from ${item.viewName}`} onClick={() => handleUpdate(item.playerId, "REMOVE")} disabled={!canEdit || updateAssist.isPending} className="size-9"><Minus className="size-4" aria-hidden="true" /></Button>
                                     <strong className="min-w-7 text-center text-base tabular-nums text-app-foreground">{item.numOfAssist}</strong>
-                                    <button type="button" aria-label={`Add one assist to ${item.viewName}`} onClick={() => handleUpdate(item.playerId, "ADD")} disabled={!canEdit || updateAssist.isPending} className="grid size-9 place-items-center rounded-lg bg-app-accent text-white transition hover:brightness-110 disabled:opacity-45"><Plus className="size-4" aria-hidden="true" /></button>
+                                    <Button type="button" variant="success" size="icon" aria-label={`Add one assist to ${item.viewName}`} onClick={() => handleUpdate(item.playerId, "ADD")} disabled={!canEdit || updateAssist.isPending} className="size-9"><Plus className="size-4" aria-hidden="true" /></Button>
                                 </div>
                             </article>
                         );

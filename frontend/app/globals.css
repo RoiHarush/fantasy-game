@@ -71,6 +71,9 @@
     --app-danger-foreground: #b42343;
     --app-danger-surface: #fff1f3;
     --app-danger-border: #fecdd6;
+    --button-primary-start: #4f285f;
+    --button-primary-end: #255b68;
+    --button-primary-border: #704a82;
 }
 
 .dark {
@@ -97,6 +100,9 @@
     --app-danger-foreground: #ffc2cc;
     --app-danger-surface: #3a1722;
     --app-danger-border: #6c293b;
+    --button-primary-start: #5d2d70;
+    --button-primary-end: #216775;
+    --button-primary-border: #805496;
 }
 
 html {

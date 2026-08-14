@@ -1,0 +1,169 @@
+package com.fantasy.domain.ai;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fantasy.domain.game.GameWeekEntity;
+import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.league.LeagueEntity;
+import com.fantasy.domain.player.PlayerEntity;
+import com.fantasy.domain.player.PlayerFixtureStatsRepository;
+import com.fantasy.domain.player.PlayerGameweekStatsEntity;
+import com.fantasy.domain.player.PlayerGameweekStatsRepository;
+import com.fantasy.domain.score.LeagueScoringService;
+import com.fantasy.domain.team.UserGameDataEntity;
+import com.fantasy.domain.team.UserGameDataRepository;
+import com.fantasy.domain.team.UserPointsEntity;
+import com.fantasy.domain.team.UserPointsRepository;
+import com.fantasy.domain.team.UserSquadEntity;
+import com.fantasy.domain.team.UserSquadRepository;
+import com.fantasy.domain.user.UserEntity;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class AiRoastServiceTest {
+
+    private AiRoastRepository roastRepository;
+    private UserGameDataRepository gameDataRepository;
+    private UserPointsRepository pointsRepository;
+    private UserSquadRepository squadRepository;
+    private GameWeekRepository gameWeekRepository;
+    private PlayerGameweekStatsRepository statsRepository;
+    private PlayerFixtureStatsRepository fixtureStatsRepository;
+    private LeagueScoringService scoringService;
+    private FantasyAiClient aiClient;
+    private AiRoastService service;
+
+    @BeforeEach
+    void setUp() {
+        roastRepository = mock(AiRoastRepository.class);
+        gameDataRepository = mock(UserGameDataRepository.class);
+        pointsRepository = mock(UserPointsRepository.class);
+        squadRepository = mock(UserSquadRepository.class);
+        gameWeekRepository = mock(GameWeekRepository.class);
+        statsRepository = mock(PlayerGameweekStatsRepository.class);
+        fixtureStatsRepository = mock(PlayerFixtureStatsRepository.class);
+        scoringService = mock(LeagueScoringService.class);
+        aiClient = mock(FantasyAiClient.class);
+        service = new AiRoastService(
+                roastRepository,
+                gameDataRepository,
+                pointsRepository,
+                squadRepository,
+                gameWeekRepository,
+                statsRepository,
+                fixtureStatsRepository,
+                scoringService,
+                aiClient,
+                new ObjectMapper()
+        );
+    }
+
+    @Test
+    void reusesTheSavedRoastWithoutCallingTheProviderAgain() {
+        UserGameDataEntity gameData = gameData();
+        AiRoastEntity saved = new AiRoastEntity();
+        saved.setUser(gameData);
+        saved.setGameweek(1);
+        saved.setContent("Already roasted.");
+        saved.setProvider("groq");
+        saved.setGeneratedAt(LocalDateTime.now());
+
+        when(gameDataRepository.findByUserIdForUpdate(7)).thenReturn(Optional.of(gameData));
+        when(roastRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(saved));
+
+        AiRoastDto result = service.generate(7, 1);
+
+        assertEquals("Already roasted.", result.content());
+        verify(aiClient, never()).complete(any(), any(), anyInt());
+        verify(roastRepository, never()).save(any());
+    }
+
+    @Test
+    void usesLeagueScoringFactsAndFallsBackCleanlyWhenAiIsDisabled() {
+        UserGameDataEntity gameData = gameData();
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(1);
+        gameweek.setCalculated(true);
+        UserPointsEntity userPoints = points(gameData, 44);
+        UserPointsEntity leaderPoints = points(gameData, 61);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(1);
+        squad.setUser(gameData);
+        squad.setStartingLineup(List.of(10));
+        squad.setBenchMap(Map.of("1", 20));
+        squad.setCaptainId(10);
+        PlayerGameweekStatsEntity captainStats = stats(10, "Captain Choice");
+        PlayerGameweekStatsEntity benchStats = stats(20, "Bench Hero");
+
+        when(gameDataRepository.findByUserIdForUpdate(7)).thenReturn(Optional.of(gameData));
+        when(roastRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.empty());
+        when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
+        when(pointsRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(userPoints));
+        when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints, leaderPoints));
+        when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
+        when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats, benchStats));
+        when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(2);
+        when(scoringService.calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any())).thenReturn(9);
+        when(aiClient.complete(any(), any(), eq(160))).thenReturn(Optional.empty());
+        when(roastRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AiRoastDto result = service.generate(7, 1);
+
+        assertFalse(result.generatedByAi());
+        assertEquals(1, result.gameweek());
+        assertEquals(true, result.content().contains("Bench Hero"));
+        verify(scoringService).calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any());
+    }
+
+    private UserGameDataEntity gameData() {
+        UserEntity user = new UserEntity();
+        user.setId(7);
+        user.setName("Roi");
+        user.setFirstName("Roi");
+        user.setLastName("Harush");
+        LeagueEntity league = new LeagueEntity();
+        league.setId(3L);
+        league.setName("Friends League");
+
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setId(70);
+        gameData.setUser(user);
+        gameData.setLeague(league);
+        gameData.setFantasyTeamName("Roi United");
+        return gameData;
+    }
+
+    private UserPointsEntity points(UserGameDataEntity gameData, int points) {
+        UserPointsEntity entity = new UserPointsEntity();
+        entity.setUser(gameData);
+        entity.setGameweek(1);
+        entity.setPoints(points);
+        return entity;
+    }
+
+    private PlayerGameweekStatsEntity stats(int id, String name) {
+        PlayerEntity player = new PlayerEntity();
+        player.setId(id);
+        player.setViewName(name);
+        PlayerGameweekStatsEntity stats = new PlayerGameweekStatsEntity();
+        stats.setPlayer(player);
+        stats.setGameweek(1);
+        return stats;
+    }
+}
+

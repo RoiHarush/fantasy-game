@@ -1,7 +1,6 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle, Beaker, Crown, Play, ShieldX } from "lucide-react";
+import { AlertTriangle, Beaker, Play } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,14 +8,13 @@ import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { CookieConsentContent } from "../../../features/privacy/CookieConsentToast";
-import { Button } from "../../../shared/ui/Button";
-import CloseButton from "../../../shared/ui/CloseButton";
-import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import CompareModal from "../../General/CompareModal";
 import HistoryModal from "../../General/HistoryModal";
 import PlayerActionModal from "../../General/PlayerActionModal";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerMatchModal from "../../General/PlayerMatchModal";
+import RemoveManagerDialog from "../Admin/RemoveManagerDialog";
+import DraftConfirmationDialog from "../DraftRoomTab/DraftConfirmationDialog";
 import ConfirmFirstPickCaptainModal from "../PickTeamTab/FirstPickCaptain/ConfirmFirstPickCaptainModal";
 import ConfirmGameweekChipModal from "../PickTeamTab/GameweekChip/ConfirmGameweekChipModal";
 import ConfirmIRModal from "../PickTeamTab/IR/ConfirmIRModal";
@@ -29,6 +27,7 @@ import OpenTransferWindowDialog from "../TransferWindowTab/OpenTransferWindowDia
 import ReplacementModal from "../TransferWindowTab/ReplacementModal";
 import TurnOrderModal from "../TransferWindowTab/TurnOrderModal";
 import UiLabScreenPreview from "./UiLabScreenPreview";
+import { Button } from "../../../shared/ui/Button";
 
 const FALLBACK_PLAYERS = [
     mockPlayer(9001, "David", "Raya", "Raya", "GK", 1, "Arsenal", 126),
@@ -49,7 +48,7 @@ const FALLBACK_PLAYERS = [
 ];
 
 const COOKIE_PREVIEW_TOAST_ID = "ui-lab-cookie-preview";
-const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-status"]);
+const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status"]);
 
 const GROUPS = [
     {
@@ -57,12 +56,16 @@ const GROUPS = [
         description: "Open isolated page states that are not currently reachable in the live season timeline.",
         demos: [
             ["screen-loading", "Application loading", "The real loading surface used while league data is prepared"],
+            ["screen-gameweek-update", "Gameweek rollover", "The locked state shown while scores and squads are finalized"],
+            ["screen-not-found", "Not found", "The shared 404 route used by Next.js and application navigation"],
+            ["screen-onboarding", "League onboarding", "Create and join presentation with isolated inputs"],
             ["screen-draft", "Active draft room", "Live supplemental draft with managers and squad"],
             ["screen-draft-closed", "Closed draft room", "The real lobby, countdown and league controls"],
             ["screen-transfer", "Open transfer window", "A manager's active transfer turn"],
             ["screen-transfer-closed", "Closed transfer window", "The next order, attendance and league controls"],
             ["screen-transfer-lifecycle", "Transfer lifecycle runner", "Replay closed, opening, live move and graceful closing states"],
             ["screen-points", "Regular-season points", "Gameweek points, pitch and fixtures"],
+            ["screen-points-closed", "Pre-season points", "The real closed points screen before Gameweek 1"],
             ["screen-status", "Regular-season status", "Live round summary, deadlines and activity"],
         ],
     },
@@ -107,6 +110,7 @@ const GROUPS = [
         demos: [
             ["open-window", "Open transfer window", "Early window confirmation"],
             ["open-draft", "Open draft now", "Supplemental draft confirmation"],
+            ["cancel-draft", "Cancel draft schedule", "Scheduled-draft cancellation confirmation"],
             ["remove-manager", "Remove manager", "Destructive league action"],
         ],
     },
@@ -136,6 +140,11 @@ export default function UiLabPage() {
             .filter((player, index, values) => values.findIndex((item) => String(item.id) === String(player.id)) === index);
         return uniquePlayers.slice(0, 15);
     }, [players, primaryPlayer, secondaryPlayer]);
+    const screenPreviewPlayers = useMemo(() => {
+        const realNewPlayers = players.filter((player) => player.supplementalDraftEligible);
+        return [...realNewPlayers, ...previewPlayers]
+            .filter((player, index, values) => values.findIndex((item) => String(item.id) === String(player.id)) === index);
+    }, [players, previewPlayers]);
     const previewSquad = useMemo(() => buildPreviewSquad(previewPlayers), [previewPlayers]);
     const previewUsers = [
         { id: user?.id ?? 1, name: user?.name || "Roi Harush", fantasyTeamName: user?.fantasyTeamName || "Roi FC" },
@@ -178,7 +187,7 @@ export default function UiLabPage() {
                 id={activeDemo}
                 user={user}
                 users={previewUsers}
-                players={previewPlayers}
+                players={screenPreviewPlayers}
                 squad={previewSquad}
                 onClose={close}
             />
@@ -215,11 +224,12 @@ export default function UiLabPage() {
                         <p className="mt-1 text-xs leading-5 text-app-muted sm:text-sm">{group.description}</p>
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
                             {group.demos.map(([id, label, description]) => (
-                                <button
+                                <Button
                                     key={id}
                                     type="button"
+                                    variant="secondary"
                                     onClick={() => launchDemo(id)}
-                                    className="group flex min-h-20 items-center gap-3 rounded-2xl border border-app-border bg-app-surface-elevated p-3 text-left transition hover:-translate-y-0.5 hover:border-app-accent-border hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent"
+                                    className="group flex h-auto min-h-20 w-full items-center justify-start gap-3 rounded-2xl border border-app-border bg-app-surface-elevated p-3 text-left transition hover:-translate-y-0.5 hover:border-app-accent-border hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent"
                                 >
                                     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-app-accent-surface text-app-accent-foreground transition group-hover:bg-component-gradient group-hover:text-brand-ink">
                                         <Play className="size-4" aria-hidden="true" />
@@ -228,7 +238,7 @@ export default function UiLabPage() {
                                         <strong className="block text-sm font-black">{label}</strong>
                                         <small className="mt-0.5 block text-[0.68rem] leading-4 text-app-muted sm:text-xs">{description}</small>
                                     </span>
-                                </button>
+                                </Button>
                             ))}
                         </div>
                     </section>
@@ -272,31 +282,10 @@ function ActivePreview({ id, close, user, players, primaryPlayer, secondaryPlaye
     if (id === "ir-sign") return <IRSignModal player={primaryPlayer} user={safeUser} onClose={close} previewMode />;
     if (id === "turn-order") return <TurnOrderModal onClose={close} usersList={users} previewMode />;
     if (id === "open-window") return <OpenTransferWindowDialog open onOpenChange={(nextOpen) => !nextOpen && close()} onConfirm={close} pending={false} error={null} />;
-    if (id === "open-draft") return <ConfirmationPreview icon={Crown} eyebrow="Supplemental draft" title="Open the draft now?" description="This starts the two-round supplemental draft immediately for every league manager." confirmLabel="Open draft" onClose={close} />;
-    if (id === "remove-manager") return <ConfirmationPreview icon={ShieldX} eyebrow="League member" title="Remove this manager?" description="They will lose access to this league. This action is only available before the first draft." confirmLabel="Remove manager" destructive onClose={close} />;
+    if (id === "open-draft") return <DraftConfirmationDialog pendingAction="open" onOpenChange={(open) => !open && close()} onConfirm={close} isPending={false} supplementalDraft />;
+    if (id === "cancel-draft") return <DraftConfirmationDialog pendingAction="delete" onOpenChange={(open) => !open && close()} onConfirm={close} isPending={false} supplementalDraft />;
+    if (id === "remove-manager") return <RemoveManagerDialog manager={{ name: "Demo Manager" }} onOpenChange={(open) => !open && close()} onConfirm={close} />;
     return null;
-}
-
-function ConfirmationPreview({ icon: Icon, eyebrow, title, description, confirmLabel, destructive = false, onClose }) {
-    return (
-        <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-            <ResponsiveDialogSurface className="sm:w-[min(calc(100vw-1.5rem),27rem)]">
-                    <div className="relative p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-7">
-                        <Dialog.Close asChild>
-                            <CloseButton className="absolute right-3 top-3" aria-label="Close" />
-                        </Dialog.Close>
-                        <span className="grid size-12 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground"><Icon aria-hidden="true" /></span>
-                        <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-app-muted">{eyebrow}</p>
-                        <Dialog.Title className="mt-1 text-xl font-black sm:text-2xl">{title}</Dialog.Title>
-                        <Dialog.Description className="mt-3 text-sm leading-6 text-app-muted">{description}</Dialog.Description>
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            <Dialog.Close asChild><Button variant="secondary">Back</Button></Dialog.Close>
-                            <Button variant={destructive ? "danger" : "primary"} onClick={onClose}>{confirmLabel}</Button>
-                        </div>
-                    </div>
-            </ResponsiveDialogSurface>
-        </Dialog.Root>
-    );
 }
 
 function buildPreviewSquad(players) {

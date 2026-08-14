@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ImagePlus, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, ImagePlus, Save, ShieldCheck, Trash2 } from "@/src/shared/ui/icons";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -97,10 +97,10 @@ function TeamProfilePage() {
                                     onChange={(event) => form.setValue("logo", event.target.files?.[0] ?? null, { shouldDirty: true, shouldValidate: true })}
                                 />
                             </label>
-                            <button type="button" disabled={removing || !hasCustomLogo} onClick={removeLogo} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-app-border px-3 text-xs font-black text-app-muted transition hover:border-app-danger-border hover:bg-app-danger-surface hover:text-app-danger-foreground disabled:cursor-not-allowed disabled:opacity-45">
+                            <Button type="button" variant="danger" disabled={removing || !hasCustomLogo} onClick={removeLogo} className="min-h-11 px-3 text-xs font-black">
                                 <Trash2 className="size-4" aria-hidden="true" />
                                 Remove
-                            </button>
+                            </Button>
                         </div>
                         {form.formState.errors.logo && <p className="mt-2 text-xs font-bold text-app-danger-foreground" role="alert">{form.formState.errors.logo.message}</p>}
                     </div>

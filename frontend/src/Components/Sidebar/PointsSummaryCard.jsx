@@ -1,3 +1,6 @@
+import { ArrowRight } from "../../shared/ui/icons";
+import { Button } from "../../shared/ui/Button";
+
 function SummaryRow({ label, value, pending, last = false }) {
     return (
         <div className={`flex justify-between py-2 text-[0.86rem] ${last ? "" : "border-b border-app-border"}`}>
@@ -40,13 +43,14 @@ export default function PointsSummaryCard({
                 </p>
             )}
 
-            <button
+            <Button
                 type="button"
+                variant="link"
                 className="block w-full cursor-pointer border-0 bg-transparent px-4 pb-[13px] pt-[9px] text-right text-[0.82rem] font-bold text-app-accent-foreground transition-colors duration-150 focus-visible:bg-app-accent-surface focus-visible:text-app-accent focus-visible:outline-none pointer-fine:hover:bg-app-accent-surface pointer-fine:hover:text-app-accent"
                 onClick={onOpenHistory}
             >
-                View History →
-            </button>
+                View History <ArrowRight className="ml-1 inline size-3" aria-hidden="true" />
+            </Button>
         </section>
     );
 }

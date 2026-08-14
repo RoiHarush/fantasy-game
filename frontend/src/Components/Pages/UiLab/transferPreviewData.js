@@ -26,7 +26,10 @@ export function buildTransferWindowPreview({
         .slice(0, 4)
         .map((player) => String(player.id));
     const windowPlayers = draftMode
-        ? players.map((player) => ({ ...player, supplementalDraftEligible: true }))
+        ? players.map((player) => ({
+            ...player,
+            supplementalDraftSelectable: Boolean(player.supplementalDraftEligible),
+        }))
         : players.map((player, index) => {
             const previewState = rankedPlayerIds.indexOf(String(player.id));
             if (previewState === 0) {
@@ -52,7 +55,10 @@ export function buildTransferWindowPreview({
     const firstRound = users.map((manager) => manager.id).filter((id) => id !== undefined && id !== null);
     const previewSquadIds = squadPlayerIds(squad);
     const previewSquadIdSet = new Set(previewSquadIds.map(String));
-    const incomingPlayers = players.filter((player) => !previewSquadIdSet.has(String(player.id)));
+    const incomingPlayers = players.filter((player) => (
+        !previewSquadIdSet.has(String(player.id))
+        && (!draftMode || player.supplementalDraftEligible)
+    ));
     const sampleActions = firstRound.slice(0, 3).map((managerId, index) => {
         const incoming = incomingPlayers[index]
             ?? players.find((player) => !previewSquadIdSet.has(String(player.id)))

@@ -19,7 +19,7 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(18, flyway.migrate().migrationsExecuted);
+        assertEquals(20, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
@@ -33,6 +33,10 @@ class DatabaseMigrationTest {
             assertTrue(hasColumn(metadata, "LEAGUE_DRAFT_CONFIG", "ORDER_SOURCE"));
             assertTrue(hasColumn(metadata, "USERS", "FIRST_NAME"));
             assertTrue(hasColumn(metadata, "USERS", "LAST_NAME"));
+            assertTrue(hasColumn(metadata, "USERS", "EMAIL"));
+            assertTrue(hasColumn(metadata, "USERS", "EMAIL_VERIFIED"));
+            assertTrue(hasTable(metadata, "AUTH_TOKENS"));
+            assertTrue(hasTable(metadata, "AI_ROASTS"));
             assertTrue(hasColumn(metadata, "WAIVER_PREFERENCES", "PLAN_TYPE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "TRIPLE_CAPTAIN_ACTIVE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "BENCH_BOOST_ACTIVE"));

@@ -25,7 +25,7 @@ describe("shared general UI", () => {
         expect(onChange).toHaveBeenCalledWith("list");
     });
 
-    it("renders the corporate loader as a polite busy status", () => {
+    it("renders the shared loader as a polite busy status", () => {
         render(<LoadingPage title="Building your squad" />);
 
         const status = screen.getByRole("status");

@@ -1,9 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "../../lib/query/keys";
-import { getDailyStatus, getDreamTeam, getIrStatuses, getPlayersOfTheWeek } from "./api";
+import {
+    generateGameweekRoast,
+    getDailyStatus,
+    getDreamTeam,
+    getGameweekRoast,
+    getIrStatuses,
+    getPlayersOfTheWeek,
+} from "./api";
 
 export function useDailyStatus(gameweekId, enabled = true) {
     return useQuery({
@@ -37,5 +44,25 @@ export function useDreamTeam(gameweekId, enabled = true) {
         queryFn: ({ signal }) => getDreamTeam(gameweekId, { signal }),
         enabled: Boolean(enabled && gameweekId),
         staleTime: 5 * 60_000,
+    });
+}
+
+export function useGameweekRoast(gameweekId, enabled = true) {
+    return useQuery({
+        queryKey: queryKeys.gameweekRoast(gameweekId),
+        queryFn: ({ signal }) => getGameweekRoast(gameweekId, { signal }),
+        enabled: Boolean(enabled && gameweekId),
+        staleTime: Infinity,
+    });
+}
+
+export function useGenerateGameweekRoast(gameweekId) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => generateGameweekRoast(gameweekId),
+        onSuccess: (roast) => {
+            queryClient.setQueryData(queryKeys.gameweekRoast(gameweekId), roast);
+        },
     });
 }

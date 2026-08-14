@@ -5,7 +5,7 @@ import {
     Play,
     Settings2,
     ShieldCheck,
-} from "lucide-react";
+} from "@/src/shared/ui/icons";
 
 import { Button } from "../../../shared/ui/Button";
 import TransferWindowCountdown from "./TransferWindowCountdown";
@@ -45,7 +45,7 @@ export default function ClosedWindowView({
                             Transfer window is closed
                         </h1>
                         <p className="mt-3 max-w-xl text-sm leading-6 text-app-muted sm:text-base sm:leading-7">
-                            The next order is ready. Review your position and prepare any waiver priorities before the window opens.
+                            Check your next pick and opening time.
                         </p>
                     </div>
 
@@ -63,7 +63,7 @@ export default function ClosedWindowView({
                                     Upcoming order
                                 </h2>
                                 <p className="mt-1 text-xs leading-5 text-app-muted sm:text-sm">
-                                    Picks run from top to bottom in this exact sequence.
+                                    The exact sequence for the next window.
                                 </p>
                             </div>
                         </div>
@@ -89,14 +89,15 @@ export default function ClosedWindowView({
                                 Attendance
                             </h2>
                         </div>
-                        <p className="mt-3 text-base font-black text-app-foreground">Can’t make this window?</p>
+                        <p className="mt-3 text-base font-black text-app-foreground">Can’t attend?</p>
                         <p className="mt-1 text-xs leading-5 text-app-muted">
-                            The server will try your waiver plan automatically, then pass if no move succeeds.
+                            We’ll run your waivers, then pass if none succeed.
                         </p>
 
                         {gameweekId && (
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 role="switch"
                                 aria-label="I won’t attend this transfer window"
                                 aria-checked={automaticAttendance}
@@ -113,7 +114,7 @@ export default function ClosedWindowView({
                                 <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${automaticAttendance ? "bg-emerald-500" : "bg-app-surface-muted ring-1 ring-app-border"}`} aria-hidden="true">
                                     <span className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${automaticAttendance ? "translate-x-6" : "translate-x-1"}`} />
                                 </span>
-                            </button>
+                            </Button>
                         )}
 
                         {attendanceError && (
@@ -131,9 +132,6 @@ export default function ClosedWindowView({
                                     League controls
                                 </h2>
                             </div>
-                            <p className="mt-3 text-xs leading-5 text-app-muted">
-                                Adjust the order or start the window ahead of schedule.
-                            </p>
                             <div className="mt-4 grid gap-2">
                                 <Button variant="secondary" onClick={onManageOrder} className="w-full justify-between">
                                     Manage order
@@ -179,7 +177,7 @@ function TransferOrderList({ order, pending, error }) {
             <div className="mt-7 border-y border-dashed border-app-border py-8 text-center">
                 <Clock3 className="mx-auto size-5 text-app-muted" aria-hidden="true" />
                 <p className="mt-3 font-black text-app-foreground">Order pending</p>
-                <p className="mt-1 text-sm text-app-muted">The league manager can set it before the window opens.</p>
+                <p className="mt-1 text-sm text-app-muted">The manager will set it before opening.</p>
             </div>
         );
     }

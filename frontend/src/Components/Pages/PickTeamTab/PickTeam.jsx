@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check } from "@/src/shared/ui/icons";
 
 import FixturesTable from "../FixturesTab/FixturesTable";
 import PickTeamBlock from "../../Blocks/PickTeamBlock";
@@ -57,6 +57,8 @@ function PickTeam({
                     transferWindowProcessed={nextGameweek.transferWindowProcessed}
                     refreshPlayerData={refreshPlayerData}
                     players={players}
+                    hasUnsavedChanges={isDirty}
+                    squadSavePending={savePending}
                 />
 
                 <FirstPickManager
@@ -67,6 +69,8 @@ function PickTeam({
                     chips={chips}
                     setChips={setChips}
                     players={players}
+                    hasUnsavedChanges={isDirty}
+                    squadSavePending={savePending}
                 />
 
                 <GameweekChipManager
@@ -81,6 +85,8 @@ function PickTeam({
                     title="Triple Captain"
                     icon="/Icons/tcaptain-chip.svg"
                     description="Your captain will score triple points in the upcoming Gameweek instead of double."
+                    hasUnsavedChanges={isDirty}
+                    squadSavePending={savePending}
                     disabledReason={
                         (chips.active?.FIRST_PICK_CAPTAIN || captainIsFirstPick)
                             ? "Unavailable while your first-pick player is captain."
@@ -100,6 +106,8 @@ function PickTeam({
                     title="Bench Boost"
                     icon="/Icons/bboost-chip.svg"
                     description="All four bench players will be included in your score for the upcoming Gameweek."
+                    hasUnsavedChanges={isDirty}
+                    squadSavePending={savePending}
                 />
             </div>
 

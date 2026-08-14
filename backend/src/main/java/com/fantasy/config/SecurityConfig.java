@@ -52,7 +52,15 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/h2-console/**")
                         .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/logout",
+                                "/api/auth/verify-email",
+                                "/api/auth/resend-verification",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()

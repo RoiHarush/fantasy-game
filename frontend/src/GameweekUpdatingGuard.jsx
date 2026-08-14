@@ -1,22 +1,18 @@
 "use client";
 
-import React from 'react';
-import Style from './Styles/GameweekUpdating.module.css';
-import { useSystemStatus } from './Context/SystemStatusContext';
+import LoadingPage from "./Components/General/LoadingPage";
+import { useSystemStatus } from "./Context/SystemStatusContext";
 
 const GameweekUpdatingGuard = ({ children }) => {
     const { isSystemLocked } = useSystemStatus();
 
     if (isSystemLocked) {
         return (
-            <div className={Style.container}>
-                <div className={Style.spinner}></div>
-                <h2 className={Style.title}>Season Update in Progress</h2>
-                <p className={Style.message}>
-                    We are currently processing the gameweek rollover...
-                </p>
-                <div className={Style.badge}>PLEASE WAIT...</div>
-            </div>
+            <LoadingPage
+                eyebrow="Gameweek rollover"
+                title="Season update in progress"
+                description="Scores, squads and league standings are being finalized. The app will unlock automatically when the update is complete."
+            />
         );
     }
 

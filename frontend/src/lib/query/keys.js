@@ -25,6 +25,7 @@ export const queryKeys = {
     userGameweekPoints: (userId, gameweekId) => ["user-points", userId, gameweekId],
     userTotalPoints: (userId) => ["user-total-points", userId],
     dailyStatus: (gameweekId) => ["daily-status", gameweekId],
+    gameweekRoast: (gameweekId) => ["ai-roast", "gameweek", gameweekId],
     dreamTeam: (gameweekId) => ["dream-team", gameweekId],
     scoringDefaults: ["scoring-rules", "defaults"],
     playerStats: (playerId) => ["player-stats", playerId],

@@ -15,3 +15,11 @@ export function getPlayersOfTheWeek({ signal } = {}) {
 export function getDreamTeam(gameweekId, { signal } = {}) {
     return apiRequest(`/api/fpl/dream-team/${gameweekId}`, { auth: false, signal });
 }
+
+export function getGameweekRoast(gameweekId, { signal } = {}) {
+    return apiRequest(`/api/ai/roasts/gameweeks/${gameweekId}`, { signal });
+}
+
+export function generateGameweekRoast(gameweekId) {
+    return apiRequest(`/api/ai/roasts/gameweeks/${gameweekId}`, { method: "POST" });
+}

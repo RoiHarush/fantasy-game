@@ -26,10 +26,18 @@ function renderCard(props) {
 
 describe("PlayerCard fixture summary", () => {
     it("renders double-gameweek fixtures on separate lines with a comma separator", () => {
-        renderCard({ nextFixtures: ["CHE (H)", "MCI (A)"] });
+        const { container } = renderCard({ nextFixtures: ["CHE (H)", "MCI (A)"] });
 
         expect(screen.getByText("CHE (H),")).toBeInTheDocument();
         expect(screen.getByText("MCI (A)")).toBeInTheDocument();
+        expect(container.querySelector(".min-h-8")).toBeInTheDocument();
+    });
+
+    it("keeps the compact fixture box for a single match", () => {
+        const { container } = renderCard({ nextFixtures: ["CHE (H)"] });
+
+        expect(screen.getByText("CHE (H)")).toBeInTheDocument();
+        expect(container.querySelector(".min-h-\\[18px\\]")).toBeInTheDocument();
     });
 
     it("keeps the fixture box visually empty and shows a postponement badge", () => {

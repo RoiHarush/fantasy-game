@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Play } from "lucide-react";
+import { Play } from "@/src/shared/ui/icons";
 
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";

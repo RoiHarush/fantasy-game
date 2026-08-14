@@ -1,4 +1,5 @@
 import { cn } from "../../lib/cn";
+import { Button } from "../../shared/ui/Button";
 
 function Switcher({ active, options, onChange, labels = {} }) {
     return (
@@ -6,8 +7,9 @@ function Switcher({ active, options, onChange, labels = {} }) {
             {options.map((option) => {
                 const label = labels[option];
                 return (
-                    <button
+                    <Button
                     type="button"
+                    variant="ghost"
                     key={option}
                     onClick={() => onChange(option)}
                     aria-pressed={active === option}
@@ -22,7 +24,7 @@ function Switcher({ active, options, onChange, labels = {} }) {
                                 <span className="hidden sm:inline">{label.desktop}</span>
                             </>
                         ) : option}
-                    </button>
+                    </Button>
                 );
             })}
         </div>

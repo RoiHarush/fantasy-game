@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "@/src/shared/ui/icons";
 
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";
@@ -15,7 +15,7 @@ export default function DraftPickDialog({ player, mutation, onClose }) {
                         <CloseButton className="absolute right-3 top-3" aria-label="Close draft confirmation" />
                     </Dialog.Close>
 
-                    <span className="grid size-12 place-items-center rounded-2xl border border-app-accent-border bg-app-accent-surface text-app-accent-foreground">
+                    <span className="grid size-9 place-items-center text-app-accent-foreground">
                         <Sparkles className="size-6" aria-hidden="true" />
                     </span>
                     <p className="mt-5 text-[0.65rem] font-black uppercase tracking-[0.16em] text-app-muted">Your draft turn</p>
@@ -24,7 +24,7 @@ export default function DraftPickDialog({ player, mutation, onClose }) {
                         This player will be added to your squad when the pick is confirmed.
                     </Dialog.Description>
 
-                    <div className="mt-5 flex items-center gap-3 rounded-2xl border border-app-accent-border bg-app-accent-surface p-3.5">
+                    <div className="mt-5 flex items-center gap-3 border-y border-app-accent-border py-3.5">
                         <PlayerKit teamId={player.teamId} type={player.position === "GK" ? "gk" : "field"} className="h-auto w-12 shrink-0 select-none" />
                         <div className="min-w-0 flex-1">
                             <strong className="block truncate text-lg font-black text-app-foreground">{player.viewName}</strong>
@@ -36,7 +36,7 @@ export default function DraftPickDialog({ player, mutation, onClose }) {
                     </div>
 
                     {mutation.error && (
-                        <p className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2.5 text-sm text-red-700 dark:text-red-300" role="alert">
+                        <p className="mt-4 border-l-2 border-red-400 px-3 py-2 text-sm text-red-700 dark:text-red-300" role="alert">
                             {mutation.error.message || "The draft pick could not be completed."}
                         </p>
                     )}

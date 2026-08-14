@@ -3,9 +3,11 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { usePlayers } from "../../../features/players/usePlayers";
 import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
 import { cn } from "../../../lib/cn";
+import { ArrowLeft, ArrowRight, Star } from "../../../shared/ui/icons";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerOfWeekCard from "../../General/PlayerOfTheWeekCard";
+import { Button } from "../../../shared/ui/Button";
 
 function subscribeToMobileViewport(callback) {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -51,9 +53,9 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
     }
 
     return (
-        <div className="relative flex items-center justify-center py-3">
-            <button type="button" className="mx-1 shrink-0 rounded-lg bg-app-surface-muted px-2 py-1 text-2xl text-app-foreground transition hover:bg-app-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple sm:mx-2 sm:px-3 sm:text-3xl" onClick={() => move(-1)} aria-label="Previous gameweek">‹</button>
-            <div className="w-[min(300px,calc(100vw-6rem))] overflow-hidden md:w-[600px]">
+        <div className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 py-3 sm:gap-2">
+            <Button type="button" variant="secondary" size="icon" className="size-9 justify-self-center" onClick={() => move(-1)} aria-label="Previous gameweek"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
+            <div className="mx-auto w-[min(300px,100%)] min-w-0 overflow-hidden md:w-[600px]">
                 <div
                     className="flex will-change-transform"
                     style={{
@@ -63,21 +65,22 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                     onTransitionEnd={handleTransitionEnd}
                 >
                     {topPlayers.map((player, index) => (
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
                             key={`player-${player?.gameweek ?? index}-${index}`}
                             className={cn(
-                                "flex shrink-0 justify-center px-1.5",
+                                "flex h-auto shrink-0 justify-center px-1.5 py-0",
                                 mobile ? "w-[100px]" : "w-[120px]",
                             )}
                             onClick={() => player?.id && onSelect(player)}
                         >
                             <PlayerOfWeekCard player={player} size={mobile ? "small" : "normal"} />
-                        </button>
+                        </Button>
                     ))}
                 </div>
             </div>
-            <button type="button" className="mx-1 shrink-0 rounded-lg bg-app-surface-muted px-2 py-1 text-2xl text-app-foreground transition hover:bg-app-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple sm:mx-2 sm:px-3 sm:text-3xl" onClick={() => move(1)} aria-label="Next gameweek">›</button>
+            <Button type="button" variant="secondary" size="icon" className="size-9 justify-self-center" onClick={() => move(1)} aria-label="Next gameweek"><ArrowRight className="size-4" aria-hidden="true" /></Button>
         </div>
     );
 }
@@ -98,7 +101,7 @@ function PlayerOfTheWeekBlock({ gameweekId, previewRecords, previewPlayers }) {
 
     return (
         <section className="w-full overflow-hidden rounded-xl border border-app-border bg-app-surface pb-4 shadow-sm transition-colors">
-            <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink sm:text-xl"><span className="text-xl text-brand-green" aria-hidden="true">★</span>Player of the Week</div>
+            <div className="flex items-center gap-2 bg-component-gradient px-4 py-3 text-base font-bold text-brand-ink sm:text-xl"><Star className="size-5 text-brand-green" aria-hidden="true" />Player of the Week</div>
             {pending ? (
                 <p role="status" className="p-4 text-app-muted">Loading players of the week…</p>
             ) : error ? (

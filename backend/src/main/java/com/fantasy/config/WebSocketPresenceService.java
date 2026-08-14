@@ -9,6 +9,8 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,5 +60,9 @@ public class WebSocketPresenceService {
     public Optional<LocalDateTime> offlineSince(int userId) {
         if (isOnline(userId)) return Optional.empty();
         return Optional.of(lastDisconnectedAt.getOrDefault(userId, serviceStartedAt));
+    }
+
+    public List<Integer> onlineUserIds(Collection<Integer> userIds) {
+        return userIds.stream().filter(this::isOnline).toList();
     }
 }

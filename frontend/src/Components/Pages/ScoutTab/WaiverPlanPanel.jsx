@@ -1,6 +1,7 @@
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, GripVertical, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, GripVertical, Save, Trash2 } from "@/src/shared/ui/icons";
 
 import PlayerKit from "../../General/PlayerKit";
+import { Button } from "../../../shared/ui/Button";
 
 function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, saving, message, gameWeekId, planType = "REGULAR", onPlanTypeChange, hasIrPlan = false }) {
     const move = (from, to) => {
@@ -28,18 +29,17 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                             : "These moves run only if you are offline when your transfer turn begins."}
                     </p>
                 </div>
-                <button
+                <Button
                     type="button"
-                    className={`inline-flex min-h-9 min-w-28 items-center justify-center gap-1.5 rounded-control px-3 text-xs font-extrabold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent ${hasChanges
-                        ? "bg-component-gradient text-brand-ink hover:brightness-105"
-                        : "border border-app-border bg-app-surface-muted text-app-muted"
-                    } disabled:cursor-not-allowed disabled:opacity-65`}
+                    variant={hasChanges ? "primary" : "secondary"}
+                    size="sm"
+                    className="min-w-28 text-xs font-extrabold"
                     disabled={!hasChanges || saving}
                     onClick={() => void onSave?.()}
                 >
                     <Save aria-hidden="true" size={15} />
                     {saving ? "Saving..." : hasChanges ? "Save changes" : "Saved"}
-                </button>
+                </Button>
             </header>
 
             {hasIrPlan && (
@@ -48,17 +48,19 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                         ["REGULAR", "Transfer waivers"],
                         ["IR", "IR replacements"],
                     ].map(([value, label]) => (
-                        <button
+                        <Button
                             key={value}
                             type="button"
-                            className={`rounded-lg px-3 py-2 text-xs font-extrabold transition sm:text-sm ${planType === value
+                            variant="ghost"
+                            size="sm"
+                            className={`rounded-lg px-3 py-2 text-xs font-extrabold sm:text-sm ${planType === value
                                 ? "bg-app-surface-elevated text-app-accent-foreground shadow-sm"
                                 : "text-app-muted hover:text-app-foreground"
                             }`}
                             onClick={() => onPlanTypeChange?.(value)}
                         >
                             {label}
-                        </button>
+                        </Button>
                     ))}
                 </div>
             )}
@@ -98,24 +100,28 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                                         {index + 1}
                                     </span>
                                     <div className="grid min-w-0 flex-1 grid-rows-2 gap-1">
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="secondary"
+                                            size="icon"
                                             className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
                                             aria-label={`Move ${playerName(entry.playerInId)} up`}
                                             disabled={index === 0}
                                             onClick={() => move(index, index - 1)}
                                         >
                                             <ChevronUp aria-hidden="true" size={19} strokeWidth={2.7} />
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             type="button"
+                                            variant="secondary"
+                                            size="icon"
                                             className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
                                             aria-label={`Move ${playerName(entry.playerInId)} down`}
                                             disabled={index === entries.length - 1}
                                             onClick={() => move(index, index + 1)}
                                         >
                                             <ChevronDown aria-hidden="true" size={19} strokeWidth={2.7} />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -138,14 +144,16 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                                 </div>
                             )}
 
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
+                                size="icon"
                                 className="grid size-8 place-items-center rounded-lg text-app-muted transition hover:bg-app-danger-surface hover:text-app-danger-foreground focus-visible:outline-2 focus-visible:outline-app-danger-foreground sm:size-9"
                                 aria-label={`Remove waiver for ${playerName(entry.playerInId)}`}
                                 onClick={() => onChange(entries.filter((_, itemIndex) => itemIndex !== index))}
                             >
                                 <Trash2 aria-hidden="true" size={17} />
-                            </button>
+                            </Button>
                         </li>
                     );
                 })}

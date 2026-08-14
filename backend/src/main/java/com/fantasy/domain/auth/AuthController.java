@@ -28,6 +28,12 @@ public class AuthController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, authCookieService.createSessionCookie(response.token).toString())
                     .body(response);
+        } catch (EmailVerificationRequiredException exception) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "message", exception.getMessage(),
+                    "code", "EMAIL_NOT_VERIFIED",
+                    "email", exception.getEmail()
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         }
@@ -36,13 +42,37 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            LoginResponse response = authService.register(request);
-            return ResponseEntity.status(201)
-                    .header(HttpHeaders.SET_COOKIE, authCookieService.createSessionCookie(response.token).toString())
-                    .body(response);
+            return ResponseEntity.status(201).body(authService.register(request));
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(exception.getMessage());
         }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestBody TokenRequest request) {
+        try {
+            EmailVerificationResponse response = authService.verifyEmail(request);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, authCookieService.createSessionCookie(response.token()).toString())
+                    .body(response);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestBody ResendVerificationRequest request) {
+        return authAction(() -> authService.resendVerification(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        return authAction(() -> authService.forgotPassword(request));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        return authAction(() -> authService.resetPassword(request));
     }
 
     @PostMapping("/logout")
@@ -76,5 +106,13 @@ public class AuthController {
         return ResponseEntity.status(401)
                 .header(HttpHeaders.SET_COOKIE, authCookieService.clearSessionCookie().toString())
                 .build();
+    }
+
+    private ResponseEntity<?> authAction(java.util.function.Supplier<AuthMessageResponse> action) {
+        try {
+            return ResponseEntity.ok(action.get());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        }
     }
 }

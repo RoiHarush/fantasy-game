@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Pencil } from "@/src/shared/ui/icons";
 
 import ImageWithFallback from "../../shared/ui/ImageWithFallback";
 

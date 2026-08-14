@@ -14,6 +14,8 @@ public class SeasonResetService {
     private static final Logger log = LoggerFactory.getLogger(SeasonResetService.class);
 
     private static final List<String> DELETE_ORDER = List.of(
+            "auth_tokens",
+            "ai_roasts",
             "user_squad_starting",
             "user_squad_bench",
             "user_squad_formation",
@@ -54,6 +56,8 @@ public class SeasonResetService {
     );
 
     private static final List<String> IDENTITY_TABLES = List.of(
+            "auth_tokens",
+            "ai_roasts",
             "users",
             "leagues",
             "player_gameweek_stats",

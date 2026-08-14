@@ -54,7 +54,8 @@ class TransferMarketServicePersistenceTest {
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
                 leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -151,7 +152,8 @@ class TransferMarketServicePersistenceTest {
                 mock(WaiverPlanProgressRepository.class),
                 actionRepo,
                 webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -224,7 +226,8 @@ class TransferMarketServicePersistenceTest {
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
                 leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
-                poolService
+                poolService,
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -261,6 +264,8 @@ class TransferMarketServicePersistenceTest {
         when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
                 .thenReturn(List.of(window));
+        when(windowRepo.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(7L, TransferWindowStatus.OPEN))
+                .thenReturn(Optional.of(window));
         when(gameDataRepo.findByUserId(10)).thenReturn(Optional.of(gameData));
         when(gameDataRepo.findAllByLeagueIdWithSquads(7L)).thenReturn(List.of(gameData));
         when(playerRepo.findById(100)).thenReturn(Optional.of(outgoing));
@@ -272,8 +277,8 @@ class TransferMarketServicePersistenceTest {
 
         assertEquals(List.of(501), squad.getStartingLineup());
         assertEquals(TransferWindowStatus.CLOSED, window.getStatus());
-        verify(poolService).requireEligible(7L, 501);
-        verify(poolService).releasePool(7L);
+        verify(poolService).requireEligibleAt(7L, 501, window.getOpenedAt());
+        verify(poolService).releaseEligiblePool(7L, window.getOpenedAt());
         verify(webSocket).sendWindowClosedEvent(7L);
         ArgumentCaptor<LeagueTransferActionEntity> actionCaptor =
                 ArgumentCaptor.forClass(LeagueTransferActionEntity.class);
@@ -298,7 +303,8 @@ class TransferMarketServicePersistenceTest {
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
                 leagueAccess, windowRepo, waiverPreferenceRepo, mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueTransferWindowEntity completedDraft = new LeagueTransferWindowEntity();
@@ -329,7 +335,8 @@ class TransferMarketServicePersistenceTest {
                 mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
                 mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         UserEntity firstUser = new UserEntity();
@@ -372,7 +379,8 @@ class TransferMarketServicePersistenceTest {
                 mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
                 mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -421,7 +429,8 @@ class TransferMarketServicePersistenceTest {
                 leagueAccess, windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
                 mock(TransferWebSocketController.class),
-                mock(SupplementalDraftPoolService.class)
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
         LeagueEntity league = new LeagueEntity();
@@ -478,6 +487,48 @@ class TransferMarketServicePersistenceTest {
         assertEquals(101, squad.getViceCaptainId());
         assertTrue(List.of(200, 102).contains(squad.getCaptainId()));
         verify(gameDataRepo).save(gameData);
+    }
+
+    @Test
+    void currentWindowStateIncludesLivePresenceAndPlannedAbsence() {
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        com.fantasy.config.WebSocketPresenceService presence =
+                mock(com.fantasy.config.WebSocketPresenceService.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class), mock(GameWeekRepository.class), mock(UserSquadRepository.class),
+                mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
+                leagueAccess, windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
+                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class), presence
+        );
+
+        UserEntity first = new UserEntity();
+        first.setId(10);
+        UserEntity second = new UserEntity();
+        second.setId(20);
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        league.setUsers(List.of(first, second));
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(4);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setWindowType(TransferWindowType.TRANSFER);
+        window.setTurnOrder(List.of(10, 20));
+        window.setAutomaticForUser(20, true);
+        window.open(List.of());
+
+        when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
+        when(windowRepo.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(7L, TransferWindowStatus.OPEN))
+                .thenReturn(Optional.of(window));
+        when(presence.onlineUserIds(List.of(10, 20))).thenReturn(List.of(10));
+
+        var state = service.getCurrentWindowState(10);
+
+        assertEquals(List.of(10), state.get("onlineUserIds"));
+        assertEquals(Set.of(20), state.get("automaticUserIds"));
     }
 
     private PlayerEntity player(int id, PlayerPosition position, int teamId) {

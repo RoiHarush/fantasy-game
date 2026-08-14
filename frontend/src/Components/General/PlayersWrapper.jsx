@@ -6,6 +6,7 @@ import CompareModal from "./CompareModal";
 import WaiverPlanPanel from "../Pages/ScoutTab/WaiverPlanPanel";
 import WaiverCandidateDialog from "../Pages/ScoutTab/WaiverCandidateDialog";
 import { useWatchlist } from "../../features/watchlist/useWatchlist";
+import { Button } from "../../shared/ui/Button";
 
 function PlayersWrapper({
     user,
@@ -127,12 +128,12 @@ function PlayersWrapper({
             )}
 
             {comparePlayers.length === 1 && (
-                <div className="mx-2 mt-2 flex flex-wrap items-center justify-center gap-1.5 rounded-control border border-app-accent-border bg-app-accent-surface p-2 text-center text-[0.68rem] leading-snug text-app-accent-foreground sm:mx-4 sm:mt-4 sm:gap-2 sm:p-3 sm:text-sm">
+                <div className="mx-3 mt-3 flex flex-wrap items-center justify-center gap-1.5 border-l-2 border-app-accent px-3 py-1.5 text-center text-[0.68rem] leading-snug text-app-accent-foreground sm:mx-5 sm:mt-4 sm:gap-2 sm:py-2 sm:text-sm">
                     Select another <strong>{filterByPosition}</strong> to compare with{" "}
                     <strong>{comparePlayers[0].viewName}</strong>.
-                    <button type="button" className="rounded-full border border-app-accent-border px-2 py-0.5 text-[0.65rem] font-bold transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent sm:px-3 sm:py-1 sm:text-sm" onClick={handleCloseCompare}>
+                    <Button type="button" variant="link" size="xs" className="text-[0.65rem] font-black sm:text-sm" onClick={handleCloseCompare}>
                         Cancel
-                    </button>
+                    </Button>
                 </div>
             )}
 
@@ -167,7 +168,7 @@ function PlayersWrapper({
                         playerId,
                         watchlistQuery.watchlist.some((id) => String(id) === String(playerId)),
                     )}
-                    watchlistUpdating={previewMode ? false : watchlistQuery.isUpdating}
+                    watchlistUpdatingPlayerId={previewMode ? null : watchlistQuery.updatingPlayerId}
                     onWaiverSelect={onWaiverEntriesChange ? player => {
                         setWaiverCandidate(player);
                     } : undefined}

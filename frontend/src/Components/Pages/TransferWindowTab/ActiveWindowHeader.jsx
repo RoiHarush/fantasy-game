@@ -7,7 +7,7 @@ import {
     Play,
     ShieldCheck,
     SkipForward,
-} from "lucide-react";
+} from "@/src/shared/ui/icons";
 
 import { Button } from "../../../shared/ui/Button";
 import { isSameTransferId } from "../../../features/transfer-window/model";
@@ -180,7 +180,10 @@ function SnakeOrder({ managerSummaries, currentUserId, isClosing }) {
                                 <span className={`size-2 shrink-0 rounded-full ${isCurrent ? "bg-brand-cyan shadow-[0_0_0_4px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]" : done ? "bg-app-positive-foreground" : "bg-app-border"}`} aria-hidden="true" />
                                 <strong className={`min-w-0 truncate text-xs sm:text-sm ${isCurrent ? "text-app-accent-foreground" : "text-app-foreground"}`}>{manager.name}</strong>
                             </div>
-                            <div className="mt-2 flex items-center justify-between gap-2 font-mono text-[0.58rem] font-black tabular-nums text-app-muted sm:text-[0.65rem]">
+                            <div className="mt-2 flex min-w-0 items-center gap-1.5">
+                                <PresenceBadge online={manager.online} automatic={manager.automatic} />
+                            </div>
+                            <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[0.58rem] font-black tabular-nums text-app-muted sm:text-[0.65rem]">
                                 <span>{manager.pickNumbers.join(" · ")}</span>
                                 <span>{manager.used}/{manager.total}</span>
                             </div>
@@ -189,6 +192,23 @@ function SnakeOrder({ managerSummaries, currentUserId, isClosing }) {
                 })}
             </ol>
         </section>
+    );
+}
+
+function PresenceBadge({ online, automatic }) {
+    return (
+        <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={`inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] ${online ? "text-app-positive-foreground" : "text-app-muted"}`}>
+                <span className={`size-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-app-border"}`} aria-hidden="true" />
+                {online ? "Online" : "Offline"}
+            </span>
+            {automatic && (
+                <span className="inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] text-amber-600 dark:text-amber-300" title="This manager marked that they will not attend; their waiver plan will run automatically">
+                    <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                    Away · auto
+                </span>
+            )}
+        </span>
     );
 }
 

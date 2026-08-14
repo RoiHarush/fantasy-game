@@ -48,13 +48,42 @@ export function deriveStatusGameweekView({
     };
 }
 
-export function groupTransferActions(actions = []) {
-    return actions.reduce((groups, action) => {
-        const existing = groups.get(action.userId) ?? { name: action.userName, actions: [] };
-        existing.actions.push(action);
-        groups.set(action.userId, existing);
-        return groups;
-    }, new Map());
+export function splitTransferActions(actions = []) {
+    const ordered = actions
+        .map((action, originalIndex) => ({ action, originalIndex }))
+        .sort((left, right) => compareTransferActionOrder(left, right))
+        .map(({ action }, index) => ({ ...action, sequence: index + 1 }));
+
+    return {
+        regular: ordered.filter((action) => !isIrTransferSource(action.source)),
+        ir: ordered.filter((action) => isIrTransferSource(action.source)),
+    };
+}
+
+export function isIrTransferSource(source) {
+    return source === "IR" || source === "IR_MANUAL" || source === "IR_WAIVER";
+}
+
+export function getIrTransferSourceLabel(source) {
+    if (source === "IR_WAIVER") return "Waiver";
+    if (source === "IR_MANUAL") return "Manual";
+    return "IR";
+}
+
+function compareTransferActionOrder(left, right) {
+    const leftId = Number(left.action.id);
+    const rightId = Number(right.action.id);
+    if (Number.isFinite(leftId) && Number.isFinite(rightId) && leftId !== rightId) {
+        return leftId - rightId;
+    }
+
+    const leftTime = Date.parse(left.action.createdAt);
+    const rightTime = Date.parse(right.action.createdAt);
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+        return leftTime - rightTime;
+    }
+
+    return left.originalIndex - right.originalIndex;
 }
 
 export function getUpcomingDeadline({ transferWindow, lineupLock }, now) {

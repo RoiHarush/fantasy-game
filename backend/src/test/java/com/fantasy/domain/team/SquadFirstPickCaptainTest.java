@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SquadFirstPickCaptainTest {
@@ -31,6 +32,18 @@ class SquadFirstPickCaptainTest {
         squad.getBench().put("GK", reserveGoalkeeper);
         squad.setCaptain(squad.getStartingLineup().get(PlayerPosition.DEFENDER).getFirst());
         assertFalse(squad.validate(true));
+    }
+
+    @Test
+    void cannotActivateFirstPickCaptainWhileTheFirstPickIsBenched() {
+        Squad squad = validSquad();
+        Player firstPick = squad.getFirstPick();
+        Player reserveGoalkeeper = squad.getBench().get("GK");
+        squad.getStartingLineup().put(PlayerPosition.GOALKEEPER, new ArrayList<>(List.of(reserveGoalkeeper)));
+        squad.getBench().put("GK", firstPick);
+
+        assertFalse(squad.isFirstPickStarting());
+        assertThrows(IllegalStateException.class, squad::signFirstPickCaptain);
     }
 
     private static Squad validSquad() {
