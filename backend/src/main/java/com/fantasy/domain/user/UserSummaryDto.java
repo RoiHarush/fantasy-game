@@ -4,14 +4,16 @@ public class UserSummaryDto {
     private int id;
     private String name;
     private String fantasyTeamName;
+    private String logoPath;
     private int gwPoints;
     private int points;
     private int rank;
 
-    public UserSummaryDto(int id, String name, String fantasyTeam, int points, int gwPoints, int rank) {
+    public UserSummaryDto(int id, String name, String fantasyTeam, String logoPath, int points, int gwPoints, int rank) {
         this.id = id;
         this.name = name;
         this.fantasyTeamName = fantasyTeam;
+        this.logoPath = logoPath;
         this.points = points;
         this.gwPoints = gwPoints;
         this.rank = rank;
@@ -27,6 +29,10 @@ public class UserSummaryDto {
 
     public String getFantasyTeamName() {
         return fantasyTeamName;
+    }
+
+    public String getLogoPath() {
+        return logoPath;
     }
 
     public int getPoints() {

@@ -7,6 +7,7 @@ import {
     useLeagueStandings,
 } from "../../../features/league/useLeague";
 import { deriveStatusGameweekView } from "../../../features/status/model";
+import { useTransferWindowState } from "../../../features/transfer-window/useTransferWindow";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
@@ -21,6 +22,9 @@ function StatusPage() {
     });
     const leagueIsActive = leagueDetailsQuery.data?.status === "ACTIVE";
     const standingsQuery = useLeagueStandings(user?.leagueId, {
+        enabled: leagueIsActive,
+    });
+    const presenceQuery = useTransferWindowState(user?.leagueId, {
         enabled: leagueIsActive,
     });
     const leagueError = leagueDetailsQuery.error ?? standingsQuery.error;
@@ -68,6 +72,9 @@ function StatusPage() {
                     seasonComplete={gameweekView.seasonComplete}
                     transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}
                     refreshGameweeks={gameweekState.refreshGameweeks}
+                    presenceState={presenceQuery.data}
+                    presenceLoading={presenceQuery.isPending}
+                    presenceUnavailable={Boolean(presenceQuery.error)}
                 />
             }
             right={<StatusSidebar league={league} user={user} preSeason={gameweekView.preSeason} />}

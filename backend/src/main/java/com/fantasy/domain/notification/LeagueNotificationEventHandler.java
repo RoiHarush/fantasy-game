@@ -26,7 +26,14 @@ public class LeagueNotificationEventHandler {
                 return;
             }
             var recipients = leagueRepository.findUserIdsByLeagueId(event.leagueId());
-            router.route(recipients, event.notification());
+            recipients.stream()
+                    .distinct()
+                    .filter(userId -> !event.excludedUserIds().contains(userId))
+                    .forEach(userId -> router.route(
+                            userId,
+                            event.notification(),
+                            event.sourceUserId() != null && event.sourceUserId().equals(userId)
+                    ));
         } catch (RuntimeException exception) {
             // Notification delivery must never roll back or stop the fantasy action.
             log.error("Notification routing failed: eventId={}, leagueId={}",

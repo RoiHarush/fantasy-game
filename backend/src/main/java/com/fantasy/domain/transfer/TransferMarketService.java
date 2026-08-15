@@ -220,14 +220,16 @@ public class TransferMarketService {
         ));
         publishTransferTurnChanged(windowLeagueId);
         long openedWindowId = window.getId();
-        if (type == TransferWindowType.TRANSFER) {
-            publishLeagueNotification(windowLeagueId, NotificationEvents.windowOpened(openedWindowId, gameWeekId));
-        }
-        if (firstUser > 0) {
+        publishLeagueNotificationExcluding(
+                windowLeagueId,
+                window.getAutomaticUserIds(),
+                openedNotification(type, openedWindowId, gameWeekId)
+        );
+        if (firstUser > 0 && !window.isAutomaticForUser(firstUser)) {
             publishUserNotification(
                     windowLeagueId,
                     firstUser,
-                    NotificationEvents.yourTurn(openedWindowId, window.getPhase().name(), 0)
+                    yourTurnNotification(type, openedWindowId, window.getPhase().name(), 0)
             );
         }
         publishLifecycleChanged(type + " window opened for league " + leagueId);
@@ -290,17 +292,24 @@ public class TransferMarketService {
     @Transactional(readOnly = true)
     public Map<String, Object> getAttendancePreference(int requestingUserId, int gameWeekId) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
-        boolean automatic = windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
+        Optional<LeagueTransferWindowEntity> configuredWindow = windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                         leagueId,
                         gameWeekId,
                         TransferWindowType.TRANSFER
-                )
+                );
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("gameWeekId", gameWeekId);
+        response.put("automatic", configuredWindow
                 .map(window -> window.isAutomaticForUser(requestingUserId))
-                .orElse(false);
-        return Map.of(
-                "gameWeekId", gameWeekId,
-                "automatic", automatic
-        );
+                .orElse(false));
+        response.put("automaticUserIds", configuredWindow
+                .map(LeagueTransferWindowEntity::getAutomaticUserIds)
+                .orElseGet(Set::of));
+        response.put("windowStatus", configuredWindow
+                .map(window -> window.getStatus().name())
+                .orElse("NOT_CREATED"));
+        return response;
     }
 
     @Transactional
@@ -331,10 +340,12 @@ public class TransferMarketService {
         }
         window.setAutomaticForUser(requestingUserId, automatic);
         windowRepo.saveAndFlush(window);
-        return Map.of(
-                "gameWeekId", gameWeekId,
-                "automatic", automatic
-        );
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("gameWeekId", gameWeekId);
+        response.put("automatic", automatic);
+        response.put("automaticUserIds", window.getAutomaticUserIds());
+        response.put("windowStatus", window.getStatus().name());
+        return response;
     }
 
     @Transactional
@@ -698,22 +709,6 @@ public class TransferMarketService {
 
     private void advanceTurn(LeagueTransferWindowEntity window) {
         long leagueId = window.getLeague().getId();
-        Integer completedUserId = window.currentUserId().orElse(null);
-        String completedPhase = window.getPhase().name();
-        int completedCursor = window.getPhase() == TransferWindowPhase.IR
-                ? window.getIrCursor()
-                : window.getRegularCursor();
-        if (completedUserId != null) {
-            publishLeagueNotification(
-                    leagueId,
-                    NotificationEvents.turnCompleted(
-                            notificationWindowId(window),
-                            completedPhase,
-                            completedCursor,
-                            getUserName(completedUserId) + " completed a turn."
-                    )
-            );
-        }
         window.advanceTurn();
         windowRepo.saveAndFlush(window);
 
@@ -748,10 +743,47 @@ public class TransferMarketService {
         int nextCursor = window.getPhase() == TransferWindowPhase.IR
                 ? window.getIrCursor()
                 : window.getRegularCursor();
-        publishUserNotification(
-                leagueId,
-                nextUserId,
-                NotificationEvents.yourTurn(notificationWindowId(window), window.getPhase().name(), nextCursor)
+        if (!window.isAutomaticForUser(nextUserId)) {
+            publishUserNotification(
+                    leagueId,
+                    nextUserId,
+                    yourTurnNotification(
+                            window.getWindowType(),
+                            notificationWindowId(window),
+                            window.getPhase().name(),
+                            nextCursor
+                    )
+            );
+        }
+    }
+
+    private com.fantasy.domain.notification.NotificationEvent openedNotification(
+            TransferWindowType type,
+            long windowId,
+            int gameweekId) {
+        if (type == TransferWindowType.TRANSFER) {
+            return NotificationEvents.windowOpened(windowId, gameweekId);
+        }
+        return NotificationEvents.draftOpened(
+                windowId,
+                gameweekId,
+                type == TransferWindowType.SUPPLEMENTAL
+        );
+    }
+
+    private com.fantasy.domain.notification.NotificationEvent yourTurnNotification(
+            TransferWindowType type,
+            long windowId,
+            String phase,
+            int cursor) {
+        if (type == TransferWindowType.TRANSFER) {
+            return NotificationEvents.yourTurn(windowId, phase, cursor);
+        }
+        return NotificationEvents.yourDraftTurn(
+                windowId,
+                phase,
+                cursor,
+                type == TransferWindowType.SUPPLEMENTAL
         );
     }
 
@@ -925,6 +957,7 @@ public class TransferMarketService {
         state.put("leagueId", leagueId);
         state.put("isOpen", activeWindow.isPresent());
         if (activeWindow.isEmpty()) {
+            List<Integer> leagueUserIds = leagueRepo.findUserIdsByLeagueId(leagueId);
             state.put("gameWeekId", -1);
             state.put("isDraftMode", false);
             state.put("draftType", null);
@@ -936,7 +969,8 @@ public class TransferMarketService {
             state.put("turnsUsed", null);
             state.put("totalTurns", null);
             state.put("automaticUserIds", List.of());
-            state.put("onlineUserIds", List.of());
+            state.put("onlineUserIds", presenceService.onlineUserIds(leagueUserIds));
+            state.put("activeUserIds", presenceService.activeUserIds(leagueUserIds));
             return state;
         }
 
@@ -956,9 +990,9 @@ public class TransferMarketService {
         state.put("turnsUsed", window.turnsUsed());
         state.put("totalTurns", window.totalTurns());
         state.put("automaticUserIds", window.getAutomaticUserIds());
-        state.put("onlineUserIds", presenceService.onlineUserIds(
-                window.getLeague().getUsers().stream().map(UserEntity::getId).toList()
-        ));
+        List<Integer> leagueUserIds = window.getLeague().getUsers().stream().map(UserEntity::getId).toList();
+        state.put("onlineUserIds", presenceService.onlineUserIds(leagueUserIds));
+        state.put("activeUserIds", presenceService.activeUserIds(leagueUserIds));
         if (requestingUserId != null) {
             state.put("requestingUserAutomatic", window.isAutomaticForUser(requestingUserId));
         }
@@ -1501,10 +1535,12 @@ public class TransferMarketService {
         publishAfterCommit(() -> lifecycleEvents.publishEvent(new LifecycleScheduleChangedEvent(reason)));
     }
 
-    private void publishLeagueNotification(long leagueId,
-                                           com.fantasy.domain.notification.NotificationEvent notification) {
+    private void publishLeagueNotificationExcluding(
+            long leagueId,
+            java.util.Collection<Integer> excludedUserIds,
+            com.fantasy.domain.notification.NotificationEvent notification) {
         publishAfterCommit(() -> lifecycleEvents.publishEvent(
-                LeagueNotificationRequestedEvent.league(leagueId, notification)
+                LeagueNotificationRequestedEvent.leagueExcluding(leagueId, excludedUserIds, notification)
         ));
     }
 

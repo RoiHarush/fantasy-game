@@ -146,11 +146,10 @@ public class FantasyTeamService {
         UserGameData domain = UserMapper.toDomainGameData(entity, leaguePlayers);
         FantasyTeam team = domain.getNextFantasyTeam();
 
-        domain.useChip(ChipNames.IR);
-
         Player player = leaguePlayers.get(playerId);
         if (player == null) throw new PlayerNotFoundException("Player not found: " + playerId);
 
+        domain.useIrChipFor(player);
         team.setIR(player);
 
         saveGameDataChips(entity, domain);
@@ -431,7 +430,11 @@ public class FantasyTeamService {
         if (gameData.getLeague() == null) return;
         long leagueId = gameData.getLeague().getId();
         AfterCommitExecutor.run(() -> applicationEvents.publishEvent(
-                LeagueNotificationRequestedEvent.league(leagueId, notification)
+                LeagueNotificationRequestedEvent.leagueFrom(
+                        leagueId,
+                        gameData.getUser().getId(),
+                        notification
+                )
         ));
     }
 

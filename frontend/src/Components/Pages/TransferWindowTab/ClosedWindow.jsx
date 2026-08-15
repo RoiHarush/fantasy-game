@@ -11,6 +11,7 @@ import {
 import { findActiveGameweek, gameweekLabel } from "../../../features/gameweeks/availability";
 import { isSameTransferId } from "../../../features/transfer-window/model";
 import ClosedWindowView from "./ClosedWindowView";
+import CompletedTransferWindowView from "./CompletedTransferWindowView";
 import OpenTransferWindowDialog from "./OpenTransferWindowDialog";
 import TurnOrderModal from "./TurnOrderModal";
 
@@ -34,14 +35,16 @@ function ClosedWindow({ user, users, nextGameweek, gameweeks = [], currentGamewe
 
     const transferOrder = useMemo(() => (orderQuery.data ?? []).map((id, index) => {
         const manager = users.find((item) => String(item.id) === String(id));
+        const automaticUserIds = attendanceQuery.data?.automaticUserIds ?? [];
 
         return {
             id: `${index + 1}-${id}`,
             pickNumber: index + 1,
             managerName: manager?.name ?? manager?.fantasyTeamName ?? `User ${id}`,
             isCurrentUser: isSameTransferId(id, user?.id),
+            automatic: automaticUserIds.some((automaticUserId) => isSameTransferId(automaticUserId, id)),
         };
-    }), [orderQuery.data, user?.id, users]);
+    }), [attendanceQuery.data?.automaticUserIds, orderQuery.data, user?.id, users]);
 
     const automaticAttendance = Boolean(attendanceQuery.data?.automatic);
     const attendanceError = attendanceQuery.error ?? saveAttendance.error;
@@ -49,6 +52,10 @@ function ClosedWindow({ user, users, nextGameweek, gameweeks = [], currentGamewe
     const openBlockedReason = activeGameweek
         ? `Transfers cannot open while ${gameweekLabel(activeGameweek)} is active.`
         : "";
+
+    if (attendanceQuery.data?.windowStatus === "CLOSED") {
+        return <CompletedTransferWindowView gameweekId={nextGameweek?.id} />;
+    }
 
     return (
         <>

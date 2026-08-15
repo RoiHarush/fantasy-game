@@ -64,4 +64,35 @@ describe("apiRequest", () => {
         await expect(apiRequest("/api/protected")).rejects.toBeInstanceOf(ApiError);
         expect(sessionExpired).toHaveBeenCalledOnce();
     });
+
+    it("emits one centralized rate-limit event with the retry delay", async () => {
+        const rateLimited = vi.fn();
+        window.addEventListener("fantasy-api-rate-limited", rateLimited, { once: true });
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(
+            { code: "RATE_LIMITED", error: "Too many requests" },
+            { status: 429, headers: { "content-type": "application/json", "Retry-After": "7" } },
+        )));
+
+        await expect(apiRequest("/api/players")).rejects.toBeInstanceOf(ApiError);
+        expect(rateLimited).toHaveBeenCalledOnce();
+        expect(rateLimited.mock.calls[0][0].detail).toEqual({ retryAfterSeconds: 7 });
+    });
+
+    it("aborts a request that exceeds its timeout", async () => {
+        const fetchMock = vi.fn((_, options) => new Promise((_, reject) => {
+            options.signal.addEventListener("abort", () => {
+                reject(new DOMException("Aborted", "AbortError"));
+            }, { once: true });
+        }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        const request = apiRequest("/api/slow", { timeoutMs: 10 });
+
+        await expect(request).rejects.toMatchObject({
+            name: "ApiError",
+            status: 408,
+            message: "The server took too long to respond. Please try again.",
+        });
+        expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+    });
 });

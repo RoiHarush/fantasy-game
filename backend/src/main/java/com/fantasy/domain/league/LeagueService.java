@@ -51,7 +51,7 @@ public class LeagueService {
                 : userPointsRepo
                         .findByGameweekAndUser_League_Id(currentGameweek.getId(), league.getId()).stream()
                         .collect(Collectors.toMap(
-                                upe -> upe.getUser().getId(),
+                                upe -> upe.getUser().getUser().getId(),
                                 UserPointsEntity::getPoints
                         ));
 
@@ -71,12 +71,16 @@ public class LeagueService {
 
             int totalPoints = (gameData != null) ? gameData.getTotalPoints() : 0;
             String teamName = (gameData != null) ? gameData.getFantasyTeamName() : "N/A";
-            int gwPoints = (gameData != null) ? gwPointsMap.getOrDefault(gameData.getId(), 0) : 0;
+            String logoPath = gameData != null && gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0
+                    ? "/api/users/" + user.getId() + "/team-logo?v=" + gameData.getTeamLogoVersion()
+                    : "/UI/team-placeholder.svg";
+            int gwPoints = (gameData != null) ? gwPointsMap.getOrDefault(user.getId(), 0) : 0;
 
             summaries.add(new UserSummaryDto(
                     user.getId(),
                     user.getName(),
                     teamName,
+                    logoPath,
                     totalPoints,
                     gwPoints,
                     rank

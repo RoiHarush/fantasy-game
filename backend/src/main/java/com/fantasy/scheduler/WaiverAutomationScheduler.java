@@ -4,12 +4,14 @@ import com.fantasy.domain.transfer.TransferMarketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,13 +25,16 @@ public class WaiverAutomationScheduler {
 
     private final TransferMarketService transferMarketService;
     private final ThreadPoolTaskScheduler taskScheduler;
+    private final Duration automaticTurnDelay;
     private final Map<Long, ScheduledFuture<?>> pending = new ConcurrentHashMap<>();
 
     public WaiverAutomationScheduler(
             TransferMarketService transferMarketService,
-            @Qualifier("fantasyTransferAutomationTaskScheduler") ThreadPoolTaskScheduler taskScheduler) {
+            @Qualifier("fantasyTransferAutomationTaskScheduler") ThreadPoolTaskScheduler taskScheduler,
+            @Value("${app.transfer.automatic-turn-delay:2s}") Duration automaticTurnDelay) {
         this.transferMarketService = transferMarketService;
         this.taskScheduler = taskScheduler;
+        this.automaticTurnDelay = automaticTurnDelay.isNegative() ? Duration.ZERO : automaticTurnDelay;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -58,7 +63,9 @@ public class WaiverAutomationScheduler {
             if (existing != null && !existing.isDone() && !existing.isCancelled()) {
                 return existing;
             }
-            return taskScheduler.schedule(() -> processLeague(id), Instant.now());
+            Instant runAt = Instant.now().plus(automaticTurnDelay);
+            log.debug("Automatic waiver turn for league {} queued for {}", id, runAt);
+            return taskScheduler.schedule(() -> processLeague(id), runAt);
         });
     }
 

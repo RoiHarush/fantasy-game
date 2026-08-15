@@ -8,7 +8,7 @@ public final class NotificationEvents {
                 "league:" + leagueId + ":gw:" + gameweekId + ":window-opening-10m",
                 "TRANSFER_WINDOW_OPENING_SOON",
                 "Transfer window opens in 10 minutes",
-                "Your waiver plan is ready. Join the app if you plan to make your picks live.",
+                "The Gameweek " + gameweekId + " transfer window opens in 10 minutes. Your waiver plan is ready.",
                 "/transfer-window",
                 NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
         );
@@ -18,9 +18,25 @@ public final class NotificationEvents {
         return new NotificationEvent(
                 "league:" + leagueId + ":gw:" + gameweekId + ":lineup-lock-10m",
                 "LINEUP_LOCK_SOON",
-                "Lineups lock in 10 minutes",
-                "Save your final squad before the deadline.",
+                "Gameweek " + gameweekId + " lineups lock in 10 minutes",
+                "Save your final squad before the Gameweek " + gameweekId + " deadline.",
                 "/pick-team",
+                NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+        );
+    }
+
+    public static NotificationEvent draftOpeningSoon(long leagueId,
+                                                      long draftConfigId,
+                                                      long scheduledEpochSecond,
+                                                      boolean supplemental) {
+        String draftLabel = supplemental ? "Mid-season draft" : "Initial draft";
+        return new NotificationEvent(
+                "league:" + leagueId + ":draft:" + draftConfigId
+                        + ":at:" + scheduledEpochSecond + ":opening-10m",
+                supplemental ? "SUPPLEMENTAL_DRAFT_OPENING_SOON" : "INITIAL_DRAFT_OPENING_SOON",
+                draftLabel + " starts in 10 minutes",
+                "Open the Draft Room and get ready before the " + draftLabel.toLowerCase() + " begins.",
+                "/draft-room",
                 NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
         );
     }
@@ -36,17 +52,6 @@ public final class NotificationEvents {
         );
     }
 
-    public static NotificationEvent turnCompleted(long windowId, String phase, int completedCursor, String description) {
-        return new NotificationEvent(
-                "window:" + windowId + ":" + phase.toLowerCase() + ":turn:" + completedCursor + ":completed",
-                "TRANSFER_TURN_COMPLETED",
-                "Transfer turn completed",
-                description,
-                "/transfer-window",
-                NotificationAudiencePolicy.PUSH_WHEN_INACTIVE_ONLY
-        );
-    }
-
     public static NotificationEvent yourTurn(long windowId, String phase, int cursor) {
         return new NotificationEvent(
                 "window:" + windowId + ":" + phase.toLowerCase() + ":turn:" + cursor + ":started",
@@ -54,6 +59,36 @@ public final class NotificationEvents {
                 "It’s your turn!",
                 "Open the transfer window to make your move or pass.",
                 "/transfer-window",
+                NotificationAudiencePolicy.PUSH_WHEN_INACTIVE_ONLY
+        );
+    }
+
+    public static NotificationEvent draftOpened(long windowId, int gameweekId, boolean supplemental) {
+        String draftLabel = supplemental ? "Mid-season draft" : "Initial draft";
+        return new NotificationEvent(
+                "window:" + windowId + ":opened",
+                supplemental ? "SUPPLEMENTAL_DRAFT_OPENED" : "INITIAL_DRAFT_OPENED",
+                draftLabel + " is open",
+                supplemental
+                        ? "The Gameweek " + gameweekId + " mid-season draft is live."
+                        : "The league’s initial squad draft is live.",
+                "/draft-room",
+                NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+        );
+    }
+
+    public static NotificationEvent yourDraftTurn(long windowId,
+                                                   String phase,
+                                                   int cursor,
+                                                   boolean supplemental) {
+        return new NotificationEvent(
+                "window:" + windowId + ":" + phase.toLowerCase() + ":turn:" + cursor + ":started",
+                supplemental ? "YOUR_SUPPLEMENTAL_DRAFT_TURN" : "YOUR_INITIAL_DRAFT_TURN",
+                "It’s your draft turn!",
+                supplemental
+                        ? "Open the Draft Room to make your move or pass."
+                        : "Open the Draft Room to make your pick.",
+                "/draft-room",
                 NotificationAudiencePolicy.PUSH_WHEN_INACTIVE_ONLY
         );
     }

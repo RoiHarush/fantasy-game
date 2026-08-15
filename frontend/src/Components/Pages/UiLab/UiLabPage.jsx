@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Beaker, Play } from "@/src/shared/ui/icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../../../Context/AuthContext";
@@ -53,14 +53,26 @@ const NOTIFICATION_TOASTS = {
     "toast-window-soon": {
         type: "TRANSFER_WINDOW_OPENING_SOON",
         title: "Transfer window opens in 10 minutes",
-        body: "Your waiver plan is ready. Join the app if you plan to make your picks live.",
+        body: "The Gameweek 1 transfer window opens in 10 minutes. Your waiver plan is ready.",
         url: "/transfer-window",
     },
     "toast-lineup-soon": {
         type: "LINEUP_LOCK_SOON",
-        title: "Lineups lock in 10 minutes",
-        body: "Save your final squad before the deadline.",
+        title: "Gameweek 1 lineups lock in 10 minutes",
+        body: "Save your final squad before the Gameweek 1 deadline.",
         url: "/pick-team",
+    },
+    "toast-initial-draft-soon": {
+        type: "INITIAL_DRAFT_OPENING_SOON",
+        title: "Initial draft starts in 10 minutes",
+        body: "Open the Draft Room and get ready before the initial draft begins.",
+        url: "/draft-room",
+    },
+    "toast-supplemental-draft-soon": {
+        type: "SUPPLEMENTAL_DRAFT_OPENING_SOON",
+        title: "Mid-season draft starts in 10 minutes",
+        body: "Open the Draft Room and get ready before the mid-season draft begins.",
+        url: "/draft-room",
     },
     "toast-window-opened": {
         type: "TRANSFER_WINDOW_OPENED",
@@ -79,6 +91,30 @@ const NOTIFICATION_TOASTS = {
         title: "It’s your turn!",
         body: "Open the transfer window to make your move or pass.",
         url: "/transfer-window",
+    },
+    "toast-initial-draft-opened": {
+        type: "INITIAL_DRAFT_OPENED",
+        title: "Initial draft is open",
+        body: "The league’s initial squad draft is live.",
+        url: "/draft-room",
+    },
+    "toast-supplemental-draft-opened": {
+        type: "SUPPLEMENTAL_DRAFT_OPENED",
+        title: "Mid-season draft is open",
+        body: "The Gameweek 20 mid-season draft is live.",
+        url: "/draft-room",
+    },
+    "toast-draft-turn-completed": {
+        type: "SUPPLEMENTAL_DRAFT_PICK_COMPLETED",
+        title: "Draft pick completed",
+        body: "Roi FC selected Saka and released Palmer.",
+        url: "/draft-room",
+    },
+    "toast-your-draft-turn": {
+        type: "YOUR_SUPPLEMENTAL_DRAFT_TURN",
+        title: "It’s your draft turn!",
+        body: "Open the Draft Room to make your move or pass.",
+        url: "/draft-room",
     },
     "toast-ir-activated": {
         type: "IR_ACTIVATED",
@@ -105,7 +141,7 @@ const NOTIFICATION_TOASTS = {
         url: "/points",
     },
 };
-const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status"]);
+const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-server-error", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status"]);
 
 const GROUPS = [
     {
@@ -115,6 +151,7 @@ const GROUPS = [
             ["screen-loading", "Application loading", "The real loading surface used while league data is prepared"],
             ["screen-gameweek-update", "Gameweek rollover", "The locked state shown while scores and squads are finalized"],
             ["screen-not-found", "Not found", "The shared 404 route used by Next.js and application navigation"],
+            ["screen-server-error", "Internal server error", "The shared 500 boundary with safe preview actions"],
             ["screen-onboarding", "League onboarding", "Create and join presentation with isolated inputs"],
             ["screen-draft", "Active draft room", "Live supplemental draft with managers and squad"],
             ["screen-draft-closed", "Closed draft room", "The real lobby, countdown and league controls"],
@@ -180,9 +217,15 @@ const GROUPS = [
             ["toast-cookie", "Cookie preferences", "Cookie-consent notification"],
             ["toast-window-soon", "Window opens soon", "10-minute transfer-window reminder"],
             ["toast-lineup-soon", "Lineups lock soon", "10-minute lineup deadline reminder"],
+            ["toast-initial-draft-soon", "Initial draft starts soon", "10-minute initial-draft reminder"],
+            ["toast-supplemental-draft-soon", "Mid-season draft starts soon", "10-minute supplemental-draft reminder"],
             ["toast-window-opened", "Window opened", "Transfer window is live"],
             ["toast-turn-completed", "Turn completed", "A manager completed a transfer turn"],
             ["toast-your-turn", "Your turn", "The current pick belongs to you"],
+            ["toast-initial-draft-opened", "Initial draft opened", "The initial Draft Room is live"],
+            ["toast-supplemental-draft-opened", "Mid-season draft opened", "The supplemental Draft Room is live"],
+            ["toast-draft-turn-completed", "Draft pick completed", "A manager completed a draft turn"],
+            ["toast-your-draft-turn", "Your draft turn", "The current draft pick belongs to you"],
             ["toast-ir-activated", "IR activated", "A player was moved into IR"],
             ["toast-ir-released", "IR released", "A returning IR player was released"],
             ["toast-matchday-closed", "Matchday closed", "The day’s points were updated"],
@@ -192,6 +235,7 @@ const GROUPS = [
 ];
 
 export default function UiLabPage() {
+    const notificationPreviewSequence = useRef(0);
     const [activeDemo, setActiveDemo] = useState(null);
     const { user } = useAuth();
     const playersQuery = usePlayers();
@@ -246,10 +290,11 @@ export default function UiLabPage() {
         }
         const notification = NOTIFICATION_TOASTS[id];
         if (notification) {
+            notificationPreviewSequence.current += 1;
             showNotificationToast(
                 {
                     ...notification,
-                    eventId: `ui-lab:${notification.type}:${Date.now()}`,
+                    eventId: `ui-lab:${notification.type}:${notificationPreviewSequence.current}`,
                 },
                 {
                     onOpen: () => toast.info("UI Lab preview only — no navigation was performed."),

@@ -64,7 +64,7 @@ function PlayerCard({
             type="button"
             variant="ghost"
             className={cn(
-                "relative isolate m-1.5 flex h-full w-20 cursor-pointer flex-col items-center gap-0 border-0 bg-transparent p-0 text-center font-[inherit] text-inherit transition-[transform,opacity] duration-150 hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#00ff87] max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center",
+                "relative isolate m-1.5 flex h-full w-20 cursor-pointer flex-col items-center gap-0 border-0 bg-transparent p-0 text-center font-[inherit] text-inherit transition-[transform,opacity] duration-150 pointer-fine:hover:scale-105 pointer-fine:hover:bg-transparent focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#00ff87] max-md:m-0 max-md:h-auto max-md:w-full max-md:min-w-0 max-md:max-w-[72px] max-md:justify-self-center",
                 isDisabled && "pointer-events-none opacity-40",
             )}
             onClick={handleClick}
@@ -93,7 +93,7 @@ function PlayerCard({
             </div>
 
             {(captain || viceCaptain) && (
-                <div className="absolute top-1.5 -left-2.5 z-[3] max-md:-left-0.5">
+                <div className="absolute top-1.5 left-[10%] z-[3] max-md:top-1 max-md:left-[10%]">
                     {captain && (
                         <div className="flex size-[18px] items-center justify-center rounded-full bg-[#3c1053] text-[11px] font-bold text-white shadow-[0_2px_4px_rgba(0,0,0,0.25)] max-md:size-3 max-md:text-[9px]">
                             C

@@ -8,6 +8,8 @@ import { useAuth } from "./AuthContext";
 import { WebSocketContext } from "./WebSocketContext";
 import { getClientInstanceId } from "../features/notifications/clientInstance";
 
+const RESUME_RECONNECT_AFTER_MS = 10_000;
+
 export function WebSocketProvider({ children }) {
     const { user } = useAuth();
     const userId = user?.id;
@@ -178,13 +180,16 @@ export function WebSocketProvider({ children }) {
         const activeSubscriptions = activeSubscriptionsRef.current;
 
         let disposed = false;
+        let hiddenAt = document.visibilityState === "hidden" ? Date.now() : null;
+        let resumeReconnectPromise = null;
+        let lastResumeReconnectAt = 0;
 
-        const publishPresence = (stompClient) => {
+        const publishPresence = (stompClient, visible = document.visibilityState === "visible") => {
             if (!stompClient?.connected) return;
             stompClient.publish({
                 destination: "/app/presence",
                 body: JSON.stringify({
-                    visible: document.visibilityState === "visible",
+                    visible,
                     clientInstanceId: getClientInstanceId(),
                     page: window.location.pathname,
                 }),
@@ -193,6 +198,10 @@ export function WebSocketProvider({ children }) {
 
         let presenceInterval = null;
         const reportPresenceNow = () => publishPresence(stompClientRef.current);
+        const reportPageHidden = () => {
+            hiddenAt = Date.now();
+            publishPresence(stompClientRef.current, false);
+        };
 
         const client = new Client({
             /*
@@ -208,6 +217,47 @@ export function WebSocketProvider({ children }) {
             // Disable verbose STOMP console output.
             debug: () => { },
         });
+
+        const reconnectAfterResume = () => {
+            if (disposed || resumeReconnectPromise || !client.active) return;
+
+            const now = Date.now();
+            if (now - lastResumeReconnectAt < 2_000) return;
+            lastResumeReconnectAt = now;
+            activeSubscriptions.clear();
+            setConnected(false);
+
+            // iOS may keep a frozen socket looking connected after the PWA
+            // returns from the background. Rebuild the same STOMP client and
+            // let onConnect restore every desired subscription.
+            resumeReconnectPromise = client.deactivate({ force: true })
+                .then(() => {
+                    if (!disposed) client.activate();
+                })
+                .catch((error) => {
+                    console.error("Failed to recover WebSocket after app resume:", error);
+                })
+                .finally(() => {
+                    resumeReconnectPromise = null;
+                });
+        };
+
+        const recoverAfterResume = () => {
+            if (document.visibilityState !== "visible") return;
+
+            const backgroundDuration = hiddenAt == null ? 0 : Date.now() - hiddenAt;
+            hiddenAt = null;
+            reportPresenceNow();
+
+            if (backgroundDuration >= RESUME_RECONNECT_AFTER_MS) {
+                reconnectAfterResume();
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "hidden") reportPageHidden();
+            else recoverAfterResume();
+        };
 
         client.onConnect = () => {
             if (disposed) {
@@ -232,14 +282,16 @@ export function WebSocketProvider({ children }) {
                 activateSubscription(topic);
             }
 
-            document.removeEventListener("visibilitychange", reportPresenceNow);
-            window.removeEventListener("pageshow", reportPresenceNow);
-            window.removeEventListener("pagehide", reportPresenceNow);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("pageshow", recoverAfterResume);
+            window.removeEventListener("focus", recoverAfterResume);
+            window.removeEventListener("pagehide", reportPageHidden);
             if (presenceInterval) window.clearInterval(presenceInterval);
             publishPresence(client);
-            document.addEventListener("visibilitychange", reportPresenceNow);
-            window.addEventListener("pageshow", reportPresenceNow);
-            window.addEventListener("pagehide", reportPresenceNow);
+            document.addEventListener("visibilitychange", handleVisibilityChange);
+            window.addEventListener("pageshow", recoverAfterResume);
+            window.addEventListener("focus", recoverAfterResume);
+            window.addEventListener("pagehide", reportPageHidden);
             presenceInterval = window.setInterval(reportPresenceNow, 10_000);
         };
 
@@ -284,9 +336,10 @@ export function WebSocketProvider({ children }) {
             disposed = true;
             setConnected(false);
 
-            document.removeEventListener("visibilitychange", reportPresenceNow);
-            window.removeEventListener("pageshow", reportPresenceNow);
-            window.removeEventListener("pagehide", reportPresenceNow);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("pageshow", recoverAfterResume);
+            window.removeEventListener("focus", recoverAfterResume);
+            window.removeEventListener("pagehide", reportPageHidden);
             if (presenceInterval) window.clearInterval(presenceInterval);
 
             activeSubscriptions.clear();
@@ -295,6 +348,12 @@ export function WebSocketProvider({ children }) {
                 stompClientRef.current = null;
             }
 
+            if (client.connected) {
+                client.publish({
+                    destination: "/app/presence/disconnect",
+                    body: "{}",
+                });
+            }
             void client.deactivate().then(() => {
                 if (process.env.NODE_ENV === "development") {
                     console.info("WebSocket disconnected");

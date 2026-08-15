@@ -8,6 +8,7 @@ import { useDailyStatus } from "../../../features/status/useStatusData";
 import TransferActivityList from "./TransferActivityList";
 import UpcomingDeadlines from "./UpcomingDeadlines";
 import GameweekRoast from "./GameweekRoast";
+import LeaguePresenceStrip from "./LeaguePresenceStrip";
 
 function Status({
     user,
@@ -18,6 +19,9 @@ function Status({
     seasonComplete = false,
     transferHistoryGameweekId,
     refreshGameweeks,
+    presenceState,
+    presenceLoading = false,
+    presenceUnavailable = false,
     previewData,
 }) {
     const preview = previewData != null;
@@ -33,9 +37,30 @@ function Status({
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-5 overflow-x-clip">
-            <h1 className="text-balance break-words text-xl leading-tight font-bold tracking-tight text-app-foreground sm:text-3xl">
-                Current Team - {user.fantasyTeamName}
-            </h1>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                <h1 className="min-w-0 text-balance break-words text-xl leading-tight font-bold tracking-tight text-app-foreground sm:text-3xl">
+                    Current Team - {user.fantasyTeamName}
+                </h1>
+
+                {!preview && (
+                    <LeaguePresenceStrip
+                        members={league?.users}
+                        activeUserIds={presenceState?.activeUserIds}
+                        loading={presenceLoading}
+                        unavailable={presenceUnavailable}
+                    />
+                )}
+            </div>
+
+            {!preview && (
+                <GameweekRoast
+                    gameweekId={currentGameweek?.id}
+                    available={!preSeason && isCalculated}
+                    unavailableMessage={preSeason
+                        ? "The AI roast unlocks after Gameweek 1 is calculated."
+                        : "The AI roast unlocks when this gameweek is calculated."}
+                />
+            )}
 
             {preSeason ? (
                 <ColumnsBlock title="Before Gameweek 1" columns={1}>
@@ -79,10 +104,6 @@ function Status({
                     <h3 className="text-xl font-bold text-app-foreground">Upcoming deadlines</h3>
                     <UpcomingDeadlines gameweek={nextGameweek} onDeadlineReached={refreshGameweeks} />
                 </>
-            )}
-
-            {!preview && !preSeason && isCalculated && (
-                <GameweekRoast gameweekId={currentGameweek.id} />
             )}
 
             {!preSeason && <PlayerOfTheWeekBlock gameweekId={currentGameweek?.id} previewRecords={previewData?.playersOfTheWeek} previewPlayers={previewData?.players} />}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Pencil } from "@/src/shared/ui/icons";
 
-import ImageWithFallback from "../../shared/ui/ImageWithFallback";
+import TeamIdentityImage from "../../shared/ui/TeamIdentityImage";
 
 function UserClubBlock({ title = "My Club", logoPath, editable = false }) {
     return (
@@ -19,15 +19,11 @@ function UserClubBlock({ title = "My Club", logoPath, editable = false }) {
                     </Link>
                 )}
             </header>
-            <div className="flex min-h-44 items-center justify-center bg-app-surface-elevated px-5 py-6 sm:min-h-48">
-                <ImageWithFallback
+            <div className="flex min-h-52 items-center justify-center bg-app-surface-elevated px-4 py-4 sm:min-h-60 sm:px-5">
+                <TeamIdentityImage
                     src={logoPath}
-                    fallbackSrc="/UI/team-placeholder.svg"
                     alt={`${title} logo`}
-                    width={140}
-                    height={140}
-                    unoptimized
-                    className="size-32 object-contain drop-shadow-[0_4px_8px_rgb(0_0_0/0.15)] sm:size-36"
+                    className="w-full max-w-44 sm:max-w-52"
                 />
             </div>
         </section>

@@ -10,6 +10,9 @@ Thumbs.db
 # Logs
 *.log
 frontend/*.log
+backend/logs/
+exports/
+.sync-backup*/
 
 *.mv.db
 

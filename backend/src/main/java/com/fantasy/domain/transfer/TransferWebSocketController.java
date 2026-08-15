@@ -140,6 +140,16 @@ public class TransferWebSocketController {
         send(leagueId, event);
     }
 
+    public void sendPresenceChangedEvent(long leagueId, int userId, boolean online, boolean active) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("event", "presence_changed");
+        event.put("leagueId", leagueId);
+        event.put("userId", userId);
+        event.put("online", online);
+        event.put("active", active);
+        send(leagueId, event);
+    }
+
     private void send(long leagueId, Object event) {
         messagingTemplate.convertAndSend("/topic/leagues/" + leagueId + "/transfers", event);
     }

@@ -11,7 +11,8 @@ import { useAuth } from "../../../Context/AuthContext";
 import { removeTeamLogo, updateTeamProfile } from "../../../features/team-profile/api";
 import { teamProfileSchema } from "../../../features/team-profile/schema";
 import { Button } from "../../../shared/ui/Button";
-import ImageWithFallback from "../../../shared/ui/ImageWithFallback";
+import TeamIdentityImage from "../../../shared/ui/TeamIdentityImage";
+import TeamLogoCropDialog from "./TeamLogoCropDialog";
 
 const inputClassName = "h-12 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3.5 text-sm font-bold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface";
 
@@ -19,6 +20,8 @@ function TeamProfilePage() {
     const { user, updateUser } = useAuth();
     const [saving, setSaving] = useState(false);
     const [removing, setRemoving] = useState(false);
+    const [cropSource, setCropSource] = useState(null);
+    const [cropFileName, setCropFileName] = useState("team-logo");
     const form = useForm({
         resolver: zodResolver(teamProfileSchema),
         defaultValues: { teamName: user.fantasyTeamName || "", logo: null },
@@ -36,6 +39,29 @@ function TeamProfilePage() {
             if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
         };
     }, [selectedPreviewUrl]);
+
+    useEffect(() => () => {
+        if (cropSource) URL.revokeObjectURL(cropSource);
+    }, [cropSource]);
+
+    function clearCropSource() {
+        setCropSource((currentSource) => {
+            if (currentSource) URL.revokeObjectURL(currentSource);
+            return null;
+        });
+    }
+
+    function chooseLogo(file) {
+        if (!file) return;
+        clearCropSource();
+        setCropFileName(file.name);
+        setCropSource(URL.createObjectURL(file));
+    }
+
+    function acceptCroppedLogo(file) {
+        form.setValue("logo", file, { shouldDirty: true, shouldValidate: true });
+        clearCropSource();
+    }
 
     const submit = form.handleSubmit(async (values) => {
         setSaving(true);
@@ -83,9 +109,12 @@ function TeamProfilePage() {
 
                 <form onSubmit={submit} className="grid gap-6 p-4 sm:p-7 md:grid-cols-[16rem_minmax(0,1fr)] md:gap-8">
                     <div>
-                        <div className="relative grid aspect-square place-items-center overflow-hidden rounded-3xl border border-app-border bg-app-surface-elevated p-6">
-                            <ImageWithFallback src={previewUrl} fallbackSrc="/UI/team-placeholder.svg" alt="Team logo preview" width={220} height={220} unoptimized className="size-full object-contain" />
-                        </div>
+                        <TeamIdentityImage
+                            src={previewUrl}
+                            alt="Team logo preview"
+                            className="w-full rounded-3xl"
+                            sizes="(max-width: 767px) calc(100vw - 4rem), 16rem"
+                        />
                         <div className="mt-3 grid grid-cols-2 gap-2">
                             <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-app-accent-border bg-app-accent-surface px-3 text-xs font-black text-app-accent-foreground transition hover:bg-app-accent-hover">
                                 <ImagePlus className="size-4" aria-hidden="true" />
@@ -94,7 +123,10 @@ function TeamProfilePage() {
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp,image/gif"
                                     className="sr-only"
-                                    onChange={(event) => form.setValue("logo", event.target.files?.[0] ?? null, { shouldDirty: true, shouldValidate: true })}
+                                    onChange={(event) => {
+                                        chooseLogo(event.target.files?.[0]);
+                                        event.target.value = "";
+                                    }}
                                 />
                             </label>
                             <Button type="button" variant="danger" disabled={removing || !hasCustomLogo} onClick={removeLogo} className="min-h-11 px-3 text-xs font-black">
@@ -111,7 +143,7 @@ function TeamProfilePage() {
                         {form.formState.errors.teamName && <p className="mt-2 text-xs font-bold text-app-danger-foreground" role="alert">{form.formState.errors.teamName.message}</p>}
                         <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-app-muted">
                             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-app-accent" aria-hidden="true" />
-                            Images are validated and stored with your team data. PNG, JPEG, WebP and GIF are supported up to 3 MB.
+                            The editor saves a crisp square crop, so the same image stays consistent everywhere your team appears.
                         </p>
                         <Button type="submit" size="lg" className="mt-6 w-full sm:w-fit" disabled={saving || !form.formState.isDirty}>
                             <Save className="size-4" aria-hidden="true" />
@@ -120,6 +152,16 @@ function TeamProfilePage() {
                     </div>
                 </form>
             </section>
+
+            {cropSource && (
+                <TeamLogoCropDialog
+                    key={cropSource}
+                    source={cropSource}
+                    fileName={cropFileName}
+                    onCancel={clearCropSource}
+                    onComplete={acceptCroppedLogo}
+                />
+            )}
         </main>
     );
 }

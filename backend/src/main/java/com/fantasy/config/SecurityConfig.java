@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -36,7 +37,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, TokenAuthFilter tokenAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           TokenAuthFilter tokenAuthFilter,
+                                           ApiRateLimitFilter apiRateLimitFilter) throws Exception {
         CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokenRepository.setCookieCustomizer(cookie -> cookie
                 .path("/")
@@ -90,9 +93,22 @@ public class SecurityConfig {
                 .headers(headers ->
                         headers.frameOptions(frameOptions -> frameOptions.sameOrigin())
                 )
-                .addFilterBefore(tokenAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(tokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(apiRateLimitFilter, TokenAuthFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * The rate limiter belongs to the Spring Security chain (after JWT
+     * authentication). Disable servlet-container auto-registration so it is
+     * never executed a second time before the authenticated user is known.
+     */
+    @Bean
+    public FilterRegistrationBean<ApiRateLimitFilter> apiRateLimitFilterRegistration(ApiRateLimitFilter filter) {
+        FilterRegistrationBean<ApiRateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     private boolean requiresCsrfProtection(HttpServletRequest request) {

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PlayerInteractionProvider } from "../../Context/PlayerInteractionProvider";
@@ -25,6 +25,14 @@ function renderCard(props) {
 }
 
 describe("PlayerCard fixture summary", () => {
+    it("keeps the desktop card transparent on hover and anchors its captain badge", () => {
+        const { container } = renderCard({ captain: true });
+
+        expect(screen.getByRole("button", { name: /captain/i }))
+            .toHaveClass("pointer-fine:hover:bg-transparent");
+        expect(container.querySelector(".left-\\[10\\%\\]")).toHaveTextContent("C");
+    });
+
     it("renders double-gameweek fixtures on separate lines with a comma separator", () => {
         const { container } = renderCard({ nextFixtures: ["CHE (H)", "MCI (A)"] });
 
@@ -41,9 +49,9 @@ describe("PlayerCard fixture summary", () => {
     });
 
     it("keeps the fixture box visually empty and shows a postponement badge", () => {
-        renderCard({ fixturePostponed: true, nextFixtures: [] });
+        const { container } = renderCard({ fixturePostponed: true, nextFixtures: [] });
 
-        expect(screen.getByLabelText("Fixture postponed")).toBeInTheDocument();
-        expect(screen.queryByText("-")).not.toBeInTheDocument();
+        expect(within(container).getByLabelText("Fixture postponed")).toBeInTheDocument();
+        expect(within(container).queryByText("-")).not.toBeInTheDocument();
     });
 });

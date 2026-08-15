@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+/* Sonner is the single toast surface for the app. Semantic variants keep all
+   call sites consistent while live league notifications remain unmistakable. */
+[data-sonner-toast].app-toast {
+    border-width: 1px !important;
+    border-style: solid !important;
+    color: #1b1035 !important;
+    box-shadow: 0 18px 46px rgb(27 16 53 / 0.2) !important;
+}
+
+[data-sonner-toast].app-toast [data-description] {
+    color: currentColor !important;
+    opacity: 0.78;
+}
+
+[data-sonner-toast].app-toast--success {
+    border-color: #39c99a !important;
+    background: linear-gradient(135deg, #eafff7 0%, #d8fbed 100%) !important;
+    color: #075d46 !important;
+}
+
+[data-sonner-toast].app-toast--error {
+    border-color: #f36a78 !important;
+    background: linear-gradient(135deg, #fff0f2 0%, #ffe1e5 100%) !important;
+    color: #991b2f !important;
+}
+
+[data-sonner-toast].app-toast--notification {
+    border-color: #a94cff !important;
+    border-left-width: 4px !important;
+    background: linear-gradient(135deg, #f7efff 0%, #eee6ff 58%, #e6faff 100%) !important;
+    color: #3d1465 !important;
+}
+
+.dark [data-sonner-toast].app-toast {
+    color: #fff !important;
+    box-shadow: 0 20px 54px rgb(0 0 0 / 0.58) !important;
+}
+
+.dark [data-sonner-toast].app-toast--success {
+    border-color: #2fcb9a !important;
+    background: linear-gradient(135deg, #0b342b 0%, #10251f 100%) !important;
+    color: #9dffe0 !important;
+}
+
+.dark [data-sonner-toast].app-toast--error {
+    border-color: #ff5f72 !important;
+    background: linear-gradient(135deg, #421522 0%, #261118 100%) !important;
+    color: #ffd5da !important;
+}
+
+.dark [data-sonner-toast].app-toast--notification {
+    border-color: #b45dff !important;
+    background: linear-gradient(135deg, #4c176e 0%, #2b123f 55%, #112d38 100%) !important;
+    color: #fff !important;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant pointer-fine (@media (hover: hover) and (pointer: fine));
 
@@ -219,30 +275,11 @@ textarea {
     }
 }
 
-@keyframes bench-electric-cycle {
-    0%,
-    65% {
-        opacity: 0;
-    }
-
-    66%,
-    93% {
-        opacity: 1;
-    }
-
-    94%,
-    100% {
-        opacity: 0;
-    }
-}
-
 @keyframes bench-electric-run {
-    0%,
-    65% {
+    0% {
         stroke-dashoffset: 100;
     }
 
-    93%,
     100% {
         stroke-dashoffset: 0;
     }
@@ -277,43 +314,42 @@ textarea {
 }
 
 .bench-electric-cycle {
-    animation: bench-electric-cycle var(--bench-cycle-duration, 4.6s) linear infinite;
+    opacity: 1;
 }
 
 .bench-electric-bolt {
     will-change: stroke-dashoffset, stroke-opacity;
     animation:
-        bench-electric-run var(--bench-cycle-duration, 4.6s) linear infinite,
+        bench-electric-run 2.4s linear infinite,
         bench-electric-bolt-flicker 0.13s steps(1, end) infinite;
 }
 
 @keyframes bench-player-shock {
     0%,
-    65.9% {
+    100% {
         opacity: 0;
         transform: scaleY(0.2);
     }
 
-    66.1% {
+    2% {
         opacity: 1;
         transform: scaleY(1);
     }
 
-    68.2% {
+    8% {
         opacity: 0.16;
     }
 
-    69.4% {
+    13% {
         opacity: 1;
     }
 
-    71.2% {
+    23% {
         opacity: 0.68;
         transform: scaleY(0.98);
     }
 
-    72.5%,
-    100% {
+    30% {
         opacity: 0;
         transform: scaleY(0.88);
     }
@@ -321,31 +357,34 @@ textarea {
 
 @keyframes bench-player-impact {
     0%,
-    65.9%,
-    72.6%,
     100% {
         filter: brightness(1) drop-shadow(0 0 0 transparent);
         transform: scale(1);
     }
 
-    66.1% {
+    2% {
         filter: brightness(1.72) drop-shadow(0 0 8px rgb(103 232 249 / 0.95));
         transform: scale(1.035);
     }
 
-    68.2% {
+    8% {
         filter: brightness(1.08) drop-shadow(0 0 2px rgb(103 232 249 / 0.35));
         transform: scale(1.008);
     }
 
-    69.4% {
+    13% {
         filter: brightness(1.55) drop-shadow(0 0 6px rgb(236 254 255 / 0.9));
         transform: scale(1.025);
     }
 
-    71.2% {
+    23% {
         filter: brightness(1.22) drop-shadow(0 0 4px rgb(103 232 249 / 0.55));
         transform: scale(1.012);
+    }
+
+    30% {
+        filter: brightness(1) drop-shadow(0 0 0 transparent);
+        transform: scale(1);
     }
 }
 

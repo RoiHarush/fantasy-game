@@ -1,5 +1,8 @@
 package com.fantasy.domain.team;
 
+import com.fantasy.domain.player.Player;
+import com.fantasy.domain.team.Exceptions.IRException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -84,6 +87,26 @@ public class UserGameData {
             throw new IllegalStateException("This chip is already active: " + chip);
         chips.put(chip, count - 1);
         activeChips.put(chip, true);
+    }
+
+    public void useIrChipFor(Player player) {
+        if (player == null) {
+            throw new IRException("A player is required for the IR chip");
+        }
+
+        Squad nextSquad = nextFantasyTeam != null ? nextFantasyTeam.getSquad() : null;
+        Player firstPick = nextSquad != null ? nextSquad.getFirstPick() : null;
+        boolean firstPickCaptainActive = Boolean.TRUE.equals(
+                activeChips.get(ChipNames.FIRST_PICK_CAPTAIN)
+        );
+
+        if (firstPickCaptainActive && firstPick != null && firstPick.getId() == player.getId()) {
+            throw new IRException(
+                    "Cancel First Pick Captain before moving the first-pick player to IR"
+            );
+        }
+
+        useChip(ChipNames.IR);
     }
 
     public void deactivateChip(String chip){

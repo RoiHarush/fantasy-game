@@ -18,6 +18,9 @@ public interface LeagueRepository extends JpaRepository<LeagueEntity, Long> {
     @Query("select user.id from LeagueEntity league join league.users user where league.id = :leagueId")
     List<Integer> findUserIdsByLeagueId(@Param("leagueId") Long leagueId);
 
+    @Query("select distinct league.id from LeagueEntity league join league.users user where user.id = :userId")
+    List<Long> findIdsByUserId(@Param("userId") Integer userId);
+
     @Query("select league.id from LeagueEntity league where league.status = :status")
     List<Long> findIdsByStatus(@Param("status") LeagueStatus status);
 

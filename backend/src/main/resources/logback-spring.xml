@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context"
+                    name="APPLICATION_NAME"
+                    source="spring.application.name"
+                    defaultValue="fantasy-backend"/>
+
+    <!--
+        Keep production logs on stdout/stderr: Render collects those streams,
+        while a file inside the container would disappear on every restart.
+        The requestId is populated by RequestLoggingFilter and follows all log
+        lines produced while a request is handled.
+    -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level service=${APPLICATION_NAME} requestId=%X{requestId:-none} thread=&quot;%thread&quot; logger=%logger{40} - %msg%n%ex"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <springProfile name="dev">
+        <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/fantasy-backend.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/archive/fantasy-backend.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>10MB</maxFileSize>
+                <maxHistory>14</maxHistory>
+                <totalSizeCap>200MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <logger name="com.fantasy" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ROLLING_FILE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="prod">
+        <logger name="com.fantasy" level="${LOG_LEVEL_APP:-INFO}"/>
+        <root level="${LOG_LEVEL_ROOT:-INFO}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!dev &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+</configuration>

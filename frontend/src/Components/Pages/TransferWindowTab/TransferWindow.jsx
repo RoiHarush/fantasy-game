@@ -99,6 +99,7 @@ function TransferWindow({
     const managerSummaries = summarizeSnakeOrder(summaryOrder, allUsers, turnsUsed, totalTurnsMap, {
         automaticUserIds: windowState.automaticUserIds ?? [],
         onlineUserIds: windowState.onlineUserIds ?? [],
+        activeUserIds: windowState.activeUserIds ?? [],
     });
     const currentPickNumber = isIrRound ? null : getCurrentPickNumber(turnsUsed, canonicalOrder);
     const turnsLeft = getTurnsUntilUser(turnOrder, currentTurnUserId, user.id);

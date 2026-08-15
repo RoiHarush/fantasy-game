@@ -4,6 +4,7 @@ import { ArrowLeft } from "@/src/shared/ui/icons";
 import { useMemo, useState } from "react";
 
 import { Button } from "../../../shared/ui/Button";
+import RouteError from "../../../shared/ui/RouteError";
 import LoadingPage from "../../General/LoadingPage";
 import NotFoundPage from "../NotFoundPage";
 import { LeagueModeTabs, LeagueOnboardingShell, leagueInputClassName } from "../LeagueOnboarding/LeagueOnboardingUi";
@@ -28,6 +29,7 @@ const SCREEN_TITLES = {
     "screen-loading": "Application loading",
     "screen-gameweek-update": "Gameweek rollover",
     "screen-not-found": "Not found",
+    "screen-server-error": "Internal server error",
     "screen-onboarding": "League onboarding",
     "screen-draft": "Active draft room",
     "screen-draft-closed": "Closed draft room",
@@ -84,6 +86,8 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
         );
     } else if (id === "screen-not-found") {
         content = <NotFoundPage />;
+    } else if (id === "screen-server-error") {
+        content = <RouteError reset={() => {}} />;
     } else if (id === "screen-onboarding") {
         content = (
             <LeagueOnboardingShell

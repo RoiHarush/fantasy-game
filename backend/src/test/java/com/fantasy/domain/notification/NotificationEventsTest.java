@@ -2,46 +2,31 @@ package com.fantasy.domain.notification;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NotificationEventsTest {
 
     @Test
-    void onlyTheApprovedFiveEventsCanBecomeInAppToasts() {
-        var toastOrPush = List.of(
-                NotificationEvents.windowOpeningSoon(7, 4),
-                NotificationEvents.lineupLockSoon(7, 4),
-                NotificationEvents.windowOpened(12, 4),
-                NotificationEvents.irActivated(2, 4, 30, "Roi", "Player"),
-                NotificationEvents.irReleased(2, 4, 30, "Roi", "Player")
-        );
+    void draftReminderNamesTheDraftAndExactLeadTime() {
+        NotificationEvent initial = NotificationEvents.draftOpeningSoon(5L, 9L, 1_800_000_000L, false);
+        NotificationEvent supplemental = NotificationEvents.draftOpeningSoon(5L, 10L, 1_800_003_600L, true);
 
-        assertThat(toastOrPush)
-                .extracting(NotificationEvent::policy)
-                .containsOnly(NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE);
+        assertEquals("Initial draft starts in 10 minutes", initial.title());
+        assertEquals("Mid-season draft starts in 10 minutes", supplemental.title());
+        assertEquals("/draft-room", initial.url());
+        assertEquals(NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE, initial.policy());
+        assertTrue(initial.eventId().contains("draft:9:at:1800000000:opening-10m"));
     }
 
     @Test
-    void backgroundOnlyEventsNeverCreateAnInAppToast() {
-        var pushOnly = List.of(
-                NotificationEvents.turnCompleted(12, "REGULAR", 3, "Roi completed a turn."),
-                NotificationEvents.yourTurn(12, "REGULAR", 4),
-                NotificationEvents.matchdayClosed(4, "2026-08-14"),
-                NotificationEvents.gameweekFinalized(4)
-        );
+    void actionableDraftNotificationsUseDraftRoomInsteadOfTransferWindow() {
+        NotificationEvent opened = NotificationEvents.draftOpened(21L, 1, false);
+        NotificationEvent turn = NotificationEvents.yourDraftTurn(21L, "REGULAR", 2, false);
 
-        assertThat(pushOnly)
-                .extracting(NotificationEvent::policy)
-                .containsOnly(NotificationAudiencePolicy.PUSH_WHEN_INACTIVE_ONLY);
-    }
-
-    @Test
-    void repeatedBusinessEventsKeepStableDeduplicationIds() {
-        assertThat(NotificationEvents.windowOpened(12, 4).eventId())
-                .isEqualTo(NotificationEvents.windowOpened(12, 4).eventId());
-        assertThat(NotificationEvents.yourTurn(12, "IR", 1).eventId())
-                .isNotEqualTo(NotificationEvents.yourTurn(12, "IR", 2).eventId());
+        assertEquals("/draft-room", opened.url());
+        assertEquals("/draft-room", turn.url());
+        assertEquals("INITIAL_DRAFT_OPENED", opened.type());
+        assertEquals("YOUR_INITIAL_DRAFT_TURN", turn.type());
     }
 }

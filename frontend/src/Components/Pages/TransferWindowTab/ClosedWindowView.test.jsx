@@ -9,8 +9,8 @@ const BASE_PROPS = {
     gameweekId: 4,
     transferOpenTime: null,
     transferOrder: [
-        { id: "1-10", pickNumber: 1, managerName: "Roi", isCurrentUser: true },
-        { id: "2-11", pickNumber: 2, managerName: "Demo Manager" },
+        { id: "1-10", pickNumber: 1, managerName: "Roi", isCurrentUser: true, automatic: false },
+        { id: "2-11", pickNumber: 2, managerName: "Demo Manager", automatic: true },
     ],
     orderPending: false,
     orderError: null,
@@ -37,6 +37,8 @@ describe("ClosedWindowView", () => {
         expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Roi");
         expect(screen.getByRole("switch", { name: "I won’t attend this transfer window" })).not.toBeChecked();
         expect(screen.getByText("Off · You are expected to attend")).toBeInTheDocument();
+        expect(screen.getByText("Attending")).toBeInTheDocument();
+        expect(screen.getByText("Not attending · auto")).toBeInTheDocument();
     });
 
     it("describes automatic waivers only when absence is enabled", () => {

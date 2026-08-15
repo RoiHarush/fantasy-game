@@ -531,6 +531,80 @@ class TransferMarketServicePersistenceTest {
         assertEquals(Set.of(20), state.get("automaticUserIds"));
     }
 
+    @Test
+    void closedWindowStateStillIncludesLeaguePresence() {
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        com.fantasy.config.WebSocketPresenceService presence = mock(com.fantasy.config.WebSocketPresenceService.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class),
+                mock(GameWeekRepository.class),
+                mock(UserSquadRepository.class),
+                mock(UserGameDataRepository.class),
+                mock(UserRepository.class),
+                leagueRepo,
+                leagueAccess,
+                windowRepo,
+                mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class),
+                mock(LeagueTransferActionRepository.class),
+                mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class),
+                presence
+        );
+
+        when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
+        when(windowRepo.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(7L, TransferWindowStatus.OPEN))
+                .thenReturn(Optional.empty());
+        when(leagueRepo.findUserIdsByLeagueId(7L)).thenReturn(List.of(10, 20));
+        when(presence.onlineUserIds(List.of(10, 20))).thenReturn(List.of(10));
+        when(presence.activeUserIds(List.of(10, 20))).thenReturn(List.of(10));
+
+        var state = service.getCurrentWindowState(10);
+
+        assertFalse((Boolean) state.get("isOpen"));
+        assertEquals(List.of(10), state.get("onlineUserIds"));
+        assertEquals(List.of(10), state.get("activeUserIds"));
+    }
+
+    @Test
+    void attendanceStateDescribesEveryAbsentManagerAndACompletedWindow() {
+        LeagueAccessService leagueAccess = mock(LeagueAccessService.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class), mock(GameWeekRepository.class), mock(UserSquadRepository.class),
+                mock(UserGameDataRepository.class), mock(UserRepository.class), mock(LeagueRepository.class),
+                leagueAccess, windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), mock(LeagueTransferActionRepository.class),
+                mock(TransferWebSocketController.class), mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
+        );
+
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(4);
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setWindowType(TransferWindowType.TRANSFER);
+        window.setTurnOrder(List.of(10, 20));
+        window.setAutomaticForUser(20, true);
+        window.open(List.of());
+        window.close();
+
+        when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
+        when(windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(7L, 4, TransferWindowType.TRANSFER))
+                .thenReturn(Optional.of(window));
+
+        var attendance = service.getAttendancePreference(10, 4);
+
+        assertEquals(false, attendance.get("automatic"));
+        assertEquals(Set.of(20), attendance.get("automaticUserIds"));
+        assertEquals("CLOSED", attendance.get("windowStatus"));
+    }
+
     private PlayerEntity player(int id, PlayerPosition position, int teamId) {
         PlayerEntity player = new PlayerEntity();
         player.setId(id);

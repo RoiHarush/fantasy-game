@@ -6,8 +6,9 @@ import { Button } from "../../../../shared/ui/Button";
 import CloseButton from "../../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../../shared/ui/ResponsiveDialog";
 import PlayerKit from "../../../General/PlayerKit";
+import { getIrPlayerUnavailableReason } from "../../../../features/pick-team/model";
 
-function IRModal({ squad, players, onClose, onSelect }) {
+function IRModal({ squad, players, firstPickCaptainActive = false, onClose, onSelect }) {
     const eligiblePlayers = Object.values(squad.startingLineup)
         .flat()
         .concat(Object.values(squad.bench))
@@ -46,14 +47,23 @@ function IRModal({ squad, players, onClose, onSelect }) {
                             </div>
                         ) : (
                             <div className="divide-y divide-app-border border-y border-app-border">
-                                {eligiblePlayers.map((player) => (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        key={player.id}
-                                        onClick={() => onSelect(player)}
-                                        className="flex h-auto min-h-16 w-full min-w-0 items-center gap-3 px-1 py-3 text-left transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent sm:px-2"
-                                    >
+                                {eligiblePlayers.map((player) => {
+                                    const unavailableReason = getIrPlayerUnavailableReason({
+                                        playerId: player.id,
+                                        firstPickId: squad.firstPickId,
+                                        firstPickCaptainActive,
+                                    });
+
+                                    return (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            key={player.id}
+                                            onClick={() => onSelect(player)}
+                                            disabled={Boolean(unavailableReason)}
+                                            title={unavailableReason || `Move ${player.viewName} to IR`}
+                                            className="flex h-auto min-h-16 w-full min-w-0 items-center gap-3 px-1 py-3 text-left transition hover:bg-app-accent-hover focus-visible:outline-2 focus-visible:outline-app-accent disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-transparent sm:px-2"
+                                        >
                                         <PlayerKit
                                             teamId={player.teamId}
                                             type={player.position === "GK" ? "gk" : "field"}
@@ -63,9 +73,15 @@ function IRModal({ squad, players, onClose, onSelect }) {
                                         <span className="min-w-0 flex-1">
                                             <strong className="block truncate text-sm text-app-foreground">{player.viewName}</strong>
                                             <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-wide text-app-muted">{player.position}</span>
+                                            {unavailableReason && (
+                                                <span className="mt-1 block text-xs font-semibold leading-4 text-amber-700 dark:text-amber-300">
+                                                    {unavailableReason}
+                                                </span>
+                                            )}
                                         </span>
-                                    </Button>
-                                ))}
+                                        </Button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

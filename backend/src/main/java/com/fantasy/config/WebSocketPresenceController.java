@@ -29,4 +29,13 @@ public class WebSocketPresenceController {
                 message.page()
         );
     }
+
+    @MessageMapping("/presence/disconnect")
+    public void disconnect(SimpMessageHeaderAccessor headers, Principal principal) {
+        if (principal == null) return;
+        presenceService.disconnect(
+                headers.getSessionId(),
+                Integer.parseInt(principal.getName())
+        );
+    }
 }

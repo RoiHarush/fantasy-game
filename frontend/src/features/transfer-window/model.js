@@ -85,7 +85,7 @@ export function summarizeSnakeOrder(
     users = [],
     turnsUsed = {},
     totalTurns = {},
-    { automaticUserIds = [], onlineUserIds = [] } = {},
+    { automaticUserIds = [], onlineUserIds = [], activeUserIds = [] } = {},
 ) {
     const summaries = [];
     const byUserId = new Map();
@@ -103,6 +103,7 @@ export function summarizeSnakeOrder(
                 total: totalTurns[userId] ?? totalTurns[key] ?? 2,
                 automatic: automaticUserIds.some((id) => isSameTransferId(id, userId)),
                 online: onlineUserIds.some((id) => isSameTransferId(id, userId)),
+                active: activeUserIds.some((id) => isSameTransferId(id, userId)),
             };
             byUserId.set(key, summary);
             summaries.push(summary);
@@ -213,9 +214,28 @@ export function applyTransferWindowEvent(current = {}, event) {
                     [event.userId]: ((current.turnsUsed ?? {})[event.userId] ?? 0) + 1,
                 },
             };
+        case "presence_changed":
+            return {
+                ...current,
+                onlineUserIds: updatePresenceIds(
+                    current.onlineUserIds,
+                    event.userId,
+                    event.online,
+                ),
+                activeUserIds: updatePresenceIds(
+                    current.activeUserIds,
+                    event.userId,
+                    event.active,
+                ),
+            };
         default:
             return current;
     }
+}
+
+function updatePresenceIds(ids = [], userId, included) {
+    const withoutUser = ids.filter((id) => !isSameTransferId(id, userId));
+    return included ? [...withoutUser, userId] : withoutUser;
 }
 
 export function updatePlayerOwnership(players, event) {

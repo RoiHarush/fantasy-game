@@ -18,6 +18,9 @@ export function showNotificationToast(event, { onOpen } = {}) {
     toast(event.title, {
         id: event.eventId,
         description: event.body,
+        position: "top-center",
+        className: "app-toast--notification",
+        duration: 6_500,
         action: openNotification ? { label: "Open", onClick: openNotification } : undefined,
     });
 }

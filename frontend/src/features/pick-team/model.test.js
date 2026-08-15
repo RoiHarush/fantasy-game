@@ -5,6 +5,7 @@ import {
     countSquadPlayers,
     getGameweekChipUnavailableReason,
     getIrChipUnavailableReason,
+    getIrPlayerUnavailableReason,
     getUnsavedSquadActionReason,
     isFirstPickStarting,
 } from "./model";
@@ -82,6 +83,20 @@ describe("chip availability reasons", () => {
             playersCount: 15,
             transferWindowProcessed: false,
         })).toBe("No IR Chip uses remain.");
+    });
+
+    it("locks the first-pick player out of IR while First Pick Captain is active", () => {
+        expect(getIrPlayerUnavailableReason({
+            playerId: 2,
+            firstPickId: 2,
+            firstPickCaptainActive: true,
+        })).toBe("Cancel First Pick Captain before moving this player to IR.");
+
+        expect(getIrPlayerUnavailableReason({
+            playerId: 3,
+            firstPickId: 2,
+            firstPickCaptainActive: true,
+        })).toBe("");
     });
 });
 

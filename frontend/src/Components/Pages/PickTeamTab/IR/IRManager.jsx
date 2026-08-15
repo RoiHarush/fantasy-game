@@ -79,6 +79,7 @@ function IRManager({
                 <IRModal
                     squad={squad}
                     players={players}
+                    firstPickCaptainActive={chips.active?.FIRST_PICK_CAPTAIN === true}
                     onSelect={(player) => {
                         setConfirmIRPlayer(player);
                         setShowIRModal(false);

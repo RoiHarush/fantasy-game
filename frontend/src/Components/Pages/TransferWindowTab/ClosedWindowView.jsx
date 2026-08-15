@@ -227,11 +227,16 @@ function TransferOrderList({ order, pending, error }) {
                                 <span className={`min-w-0 truncate text-sm font-bold sm:text-base ${pick.isCurrentUser ? "text-app-accent-foreground" : "text-app-foreground"}`}>
                                     {pick.managerName}
                                 </span>
-                                {pick.isCurrentUser && (
-                                    <span className="ml-2 whitespace-nowrap text-[0.6rem] font-black uppercase tracking-[0.14em] text-brand-cyan sm:text-[0.65rem]">
-                                        You
+                                <span className="ml-2 flex flex-col items-end gap-0.5 whitespace-nowrap">
+                                    <span className={`text-[0.55rem] font-black uppercase tracking-[0.09em] ${pick.automatic ? "text-amber-600 dark:text-amber-300" : "text-app-positive-foreground"}`}>
+                                        {pick.automatic ? "Not attending · auto" : "Attending"}
                                     </span>
-                                )}
+                                    {pick.isCurrentUser && (
+                                        <span className="text-[0.55rem] font-black uppercase tracking-[0.14em] text-brand-cyan sm:text-[0.6rem]">
+                                            You
+                                        </span>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ol>

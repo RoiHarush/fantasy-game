@@ -1,6 +1,7 @@
 package com.fantasy.config;
 
 import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
@@ -24,6 +25,11 @@ public class WebSocketPresenceService {
     private final Map<String, ConnectionPresence> connections = new ConcurrentHashMap<>();
     private final Map<Integer, LocalDateTime> lastDisconnectedAt = new ConcurrentHashMap<>();
     private final LocalDateTime serviceStartedAt = LocalDateTime.now();
+    private final ApplicationEventPublisher eventPublisher;
+
+    public WebSocketPresenceService(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     @EventListener
     public void connected(SessionConnectedEvent event) {
@@ -33,22 +39,36 @@ public class WebSocketPresenceService {
         if (principal == null || sessionId == null) return;
 
         int userId = Integer.parseInt(principal.getName());
+        PresenceState before = stateFor(userId);
         // A transport connection is online, but not considered visibly active
         // until the browser sends its first application-level presence report.
         connections.put(sessionId, new ConnectionPresence(userId, false, null, null, Instant.now()));
         lastDisconnectedAt.remove(userId);
+        publishIfChanged(userId, before);
     }
 
     @EventListener
     public void disconnected(SessionDisconnectEvent event) {
-        ConnectionPresence removed = connections.remove(event.getSessionId());
+        disconnect(event.getSessionId(), null);
+    }
+
+    public void disconnect(String sessionId, Integer expectedUserId) {
+        if (sessionId == null) return;
+        ConnectionPresence existing = connections.get(sessionId);
+        if (existing == null || (expectedUserId != null && existing.userId() != expectedUserId)) return;
+        PresenceState before = existing == null ? null : stateFor(existing.userId());
+        ConnectionPresence removed = connections.remove(sessionId);
         if (removed != null && !isOnline(removed.userId())) {
             lastDisconnectedAt.put(removed.userId(), LocalDateTime.now());
+        }
+        if (removed != null) {
+            publishIfChanged(removed.userId(), before);
         }
     }
 
     public void report(String sessionId, int userId, boolean visible, String clientInstanceId, String page) {
         if (sessionId == null) return;
+        PresenceState before = stateFor(userId);
         connections.compute(sessionId, (ignored, current) -> {
             if (current != null && current.userId() != userId) {
                 return current;
@@ -56,6 +76,7 @@ public class WebSocketPresenceService {
             return new ConnectionPresence(userId, visible, trim(clientInstanceId, 128), trim(page, 256), Instant.now());
         });
         lastDisconnectedAt.remove(userId);
+        publishIfChanged(userId, before);
     }
 
     public boolean isActive(int userId) {
@@ -79,6 +100,21 @@ public class WebSocketPresenceService {
         return userIds.stream().filter(this::isOnline).toList();
     }
 
+    public List<Integer> activeUserIds(Collection<Integer> userIds) {
+        return userIds.stream().filter(this::isActive).toList();
+    }
+
+    private PresenceState stateFor(int userId) {
+        return new PresenceState(isOnline(userId), isActive(userId));
+    }
+
+    private void publishIfChanged(int userId, PresenceState before) {
+        PresenceState after = stateFor(userId);
+        if (!after.equals(before)) {
+            eventPublisher.publishEvent(new UserPresenceChangedEvent(userId, after.online(), after.active()));
+        }
+    }
+
     private String trim(String value, int maxLength) {
         if (value == null || value.isBlank()) return null;
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
@@ -91,4 +127,6 @@ public class WebSocketPresenceService {
             String page,
             Instant lastReportedAt
     ) {}
+
+    private record PresenceState(boolean online, boolean active) {}
 }

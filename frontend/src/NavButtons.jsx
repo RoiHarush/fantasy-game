@@ -1,6 +1,8 @@
 "use client";
 
 import {
+    Beaker,
+    CalendarDays,
     ChevronDown,
     LogOut,
     Menu,
@@ -9,11 +11,17 @@ import {
     MobileStatusIcon,
     MobileTeamIcon,
     MobileTransfersIcon,
+    Settings2,
+    ShieldCheck,
+    Shirt,
+    UserRound,
+    UsersRound,
+    WaiverAdd,
     X,
 } from "./shared/ui/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { useAuth } from "./Context/AuthContext";
 import {
@@ -42,19 +50,46 @@ const SECTION_LABELS = {
     management: "Management",
     account: "Account",
 };
+const SECONDARY_ICONS = {
+    "/league": UsersRound,
+    "/fixtures": CalendarDays,
+    "/draft-room": Shirt,
+    "/league-control": ShieldCheck,
+    "/settings": UserRound,
+    "/onboarding": WaiverAdd,
+    "/ui-lab": Beaker,
+};
+const SECTION_STYLES = {
+    league: {
+        section: "dark:bg-[#191022]",
+        heading: "text-app-accent-foreground dark:text-[#dfc4ff]",
+        icon: "border-app-accent-border bg-app-accent-surface text-app-accent-foreground dark:border-[#765299] dark:bg-[#321e44] dark:text-[#ead8ff]",
+        active: "border-app-accent-border bg-app-accent-surface text-app-accent-foreground dark:border-[#8d63b5] dark:bg-[#3a2350] dark:text-white",
+        marker: "bg-brand-purple",
+    },
+    management: {
+        section: "dark:bg-[#101e1d]",
+        heading: "text-app-positive-foreground dark:text-[#86f5cf]",
+        icon: "border-app-positive-border bg-app-positive-surface text-app-positive-foreground dark:border-[#2d806b] dark:bg-[#153b32] dark:text-[#8ff8d5]",
+        active: "border-app-positive-border bg-app-positive-surface text-app-positive-foreground dark:border-[#38a184] dark:bg-[#17493c] dark:text-white",
+        marker: "bg-brand-green",
+    },
+    account: {
+        section: "dark:bg-[#101b25]",
+        heading: "text-sky-800 dark:text-[#a9efff]",
+        icon: "border-sky-200 bg-sky-50 text-sky-800 dark:border-[#28758a] dark:bg-[#163744] dark:text-[#b9f4ff]",
+        active: "border-sky-200 bg-sky-50 text-sky-900 dark:border-[#3897ad] dark:bg-[#194554] dark:text-white",
+        marker: "bg-brand-cyan",
+    },
+};
 
 export default function NavButtons() {
     const { user, logout } = useAuth();
     const pathname = usePathname();
     const [isLoggingOut, startLogout] = useTransition();
     const [openMenuPath, setOpenMenuPath] = useState(null);
-    const [isQuickNavCompact, setIsQuickNavCompact] = useState(false);
-    const previousScrollY = useRef(0);
-    const scrollDirection = useRef(null);
-    const scrollDistance = useRef(0);
     const navigationItems = getSiteNavigation(user);
     const isMenuOpen = openMenuPath === pathname;
-    const showQuickNavCompact = isQuickNavCompact && !isMenuOpen;
 
     if (process.env.NODE_ENV === "development") {
         navigationItems.push({ href: "/ui-lab", label: "UI Lab", kind: "admin", mobilePrimary: false, section: "management" });
@@ -81,45 +116,6 @@ export default function NavButtons() {
         window.addEventListener("keydown", closeOnEscape);
         return () => window.removeEventListener("keydown", closeOnEscape);
     }, [isMenuOpen]);
-
-    useEffect(() => {
-        previousScrollY.current = Math.max(0, window.scrollY);
-        scrollDirection.current = null;
-        scrollDistance.current = 0;
-
-        const handleScroll = () => {
-            const currentScrollY = Math.max(0, window.scrollY);
-            const delta = currentScrollY - previousScrollY.current;
-            previousScrollY.current = currentScrollY;
-
-            if (currentScrollY <= 24) {
-                scrollDirection.current = null;
-                scrollDistance.current = 0;
-                setIsQuickNavCompact(false);
-                return;
-            }
-
-            if (Math.abs(delta) < 2) return;
-
-            const nextDirection = delta > 0 ? "down" : "up";
-            if (scrollDirection.current !== nextDirection) {
-                scrollDirection.current = nextDirection;
-                scrollDistance.current = 0;
-            }
-            scrollDistance.current += Math.abs(delta);
-
-            if (nextDirection === "down" && currentScrollY > 80 && scrollDistance.current >= 24) {
-                setIsQuickNavCompact(true);
-                scrollDistance.current = 0;
-            } else if (nextDirection === "up" && scrollDistance.current >= 10) {
-                setIsQuickNavCompact(false);
-                scrollDistance.current = 0;
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, [pathname]);
 
     function handleLogout() {
         setOpenMenuPath(null);
@@ -177,7 +173,7 @@ export default function NavButtons() {
                         <span className="block text-[0.58rem] font-black uppercase tracking-[0.15em] text-white/55">Current page</span>
                         <span className="block truncate text-sm font-extrabold">{activeItem?.label || "Navigation"}</span>
                     </span>
-                    <span className="flex shrink-0 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold">
+                    <span className="flex shrink-0 items-center gap-2 rounded-lg border border-white/35 bg-black/20 px-3 py-1.5 text-xs font-extrabold shadow-sm">
                         {isMenuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
                         Menu
                         <ChevronDown className={cn("size-3.5 transition-transform", isMenuOpen && "rotate-180")} aria-hidden="true" />
@@ -187,19 +183,35 @@ export default function NavButtons() {
                 {isMenuOpen && (
                     <nav
                         id="mobile-secondary-navigation"
-                        className="absolute left-2 right-2 top-[calc(100%+0.5rem)] z-50 max-h-[calc(100dvh-10rem)] overflow-y-auto rounded-2xl border border-white/20 bg-[#211236] p-3 text-white shadow-[0_22px_64px_rgba(0,0,0,0.58)] dark:bg-[#160b27]"
+                        className="absolute left-2 right-2 top-[calc(100%+0.5rem)] z-50 max-h-[calc(100dvh-10rem)] overflow-y-auto rounded-2xl border border-app-border bg-app-surface text-app-foreground shadow-[0_22px_64px_rgba(27,16,53,0.24)] dark:border-[#5d4172] dark:bg-[#100918] dark:shadow-[0_24px_72px_rgba(0,0,0,0.78)]"
                         aria-label="More navigation"
                     >
-                        <p className="px-1 pb-2 text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/55">More screens</p>
-                        <div className="space-y-3">
+                        <div className="border-b border-app-border bg-app-surface-muted/80 px-4 py-3 dark:border-[#503b60] dark:bg-[#26172f]">
+                            <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-app-muted dark:text-[#cbb8d8]">Navigation</p>
+                            <p className="mt-0.5 text-sm font-extrabold text-app-foreground dark:text-white">Choose a screen</p>
+                        </div>
+
+                        <div className="divide-y divide-app-border dark:divide-[#4a3857]">
                             {secondarySections.map(({ section, label, items }) => (
-                                <section key={section} aria-labelledby={`mobile-section-${section}`}>
-                                    <h2 id={`mobile-section-${section}`} className="mb-1 px-1 text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-brand-cyan/75">
+                                <section
+                                    key={section}
+                                    className={cn("px-2 py-3", SECTION_STYLES[section].section)}
+                                    aria-labelledby={`mobile-section-${section}`}
+                                >
+                                    <h2
+                                        id={`mobile-section-${section}`}
+                                        className={cn(
+                                            "px-2 pb-1.5 text-[0.64rem] font-black uppercase tracking-[0.16em]",
+                                            SECTION_STYLES[section].heading,
+                                        )}
+                                    >
                                         {label}
                                     </h2>
-                                    <div className="grid grid-cols-2 gap-1.5">
+                                    <div className="flex flex-col">
                                         {items.map(({ href, label: itemLabel, kind }) => {
                                             const isActive = isNavigationItemActive(pathname, href);
+                                            const ItemIcon = SECONDARY_ICONS[href] || Settings2;
+                                            const styles = SECTION_STYLES[section];
 
                                             return (
                                                 <Link
@@ -207,17 +219,32 @@ export default function NavButtons() {
                                                     href={href}
                                                     onClick={() => {
                                                         setOpenMenuPath(null);
-                                                        setIsQuickNavCompact(false);
                                                     }}
                                                     aria-current={isActive ? "page" : undefined}
                                                     className={cn(
-                                                        "flex min-h-11 items-center rounded-xl border border-transparent px-3 py-2 text-sm font-semibold text-white/82 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
-                                                        isActive && "border-white/18 bg-white/12 font-extrabold text-white shadow-sm",
-                                                        kind === "admin" && "text-[#7cf2e5]",
+                                                        "relative flex min-h-12 items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-sm font-bold text-app-foreground no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent dark:text-[#f5eff9]",
+                                                        "pointer-fine:hover:bg-app-accent-hover dark:pointer-fine:hover:border-white/10 dark:pointer-fine:hover:bg-white/8",
+                                                        isActive && cn("font-extrabold shadow-sm", styles.active),
+                                                        kind === "admin" && !isActive && "text-app-positive-foreground",
                                                     )}
                                                 >
-                                                    <span className={cn("mr-2 size-1.5 shrink-0 rounded-full bg-white/30", isActive && "bg-brand-cyan", kind === "admin" && "bg-brand-green")} aria-hidden="true" />
-                                                    <span className="min-w-0 leading-tight">{itemLabel}</span>
+                                                    <span
+                                                        className={cn(
+                                                            "absolute inset-y-2 left-0 w-0.5 rounded-full opacity-0",
+                                                            styles.marker,
+                                                            isActive && "opacity-100",
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
+                                                    <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg border", styles.icon)} aria-hidden="true">
+                                                        <ItemIcon className="size-4" />
+                                                    </span>
+                                                    <span className="min-w-0 flex-1 leading-tight">{itemLabel}</span>
+                                                    {isActive && (
+                                                        <span className="shrink-0 text-[0.6rem] font-black uppercase tracking-[0.12em] opacity-70">
+                                                            Current
+                                                        </span>
+                                                    )}
                                                 </Link>
                                             );
                                         })}
@@ -231,7 +258,7 @@ export default function NavButtons() {
                             variant="danger"
                             onClick={handleLogout}
                             disabled={isLoggingOut}
-                            className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm font-extrabold text-red-300 transition hover:bg-red-500/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:opacity-55"
+                            className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl border border-app-danger-border bg-app-danger-surface px-3 py-2 text-sm font-extrabold text-app-danger-foreground transition pointer-fine:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-danger-foreground disabled:opacity-55"
                         >
                             <LogOut className="size-4" aria-hidden="true" />
                             {isLoggingOut ? "Logging out…" : "Logout"}
@@ -242,17 +269,10 @@ export default function NavButtons() {
 
             {mobilePrimaryItems.length > 0 && (
                 <nav
-                    className={cn(
-                        "fixed left-1/2 bottom-2 z-[60] -translate-x-1/2 rounded-[1.35rem] border border-white/15 bg-[#160b27]/94 text-white shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-[width,padding,transform,opacity] duration-300 ease-out lg:hidden",
-                        showQuickNavCompact
-                            ? "w-[calc(100%_-_3rem)] max-w-[22rem] px-1.5 pt-1 pb-[max(0.2rem,env(safe-area-inset-bottom))]"
-                            : "w-[calc(100%_-_1rem)] max-w-lg px-1.5 pt-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))]",
-                        isMenuOpen && "pointer-events-none translate-y-3 opacity-0",
-                    )}
-                    data-compact={showQuickNavCompact ? "true" : "false"}
+                    className="fixed inset-x-0 bottom-0 z-[60] h-[calc(3.375rem+max(0.35rem,env(safe-area-inset-bottom)))] border-t border-white/15 bg-[#160b27]/96 px-1.5 pt-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] text-white shadow-[0_-12px_38px_rgba(0,0,0,0.42)] backdrop-blur-xl lg:hidden"
                     aria-label="Mobile quick navigation"
                 >
-                    <div className="grid grid-flow-col auto-cols-fr">
+                    <div className="grid h-12 grid-flow-col auto-cols-fr">
                         {mobilePrimaryItems.map(({ href, label }) => {
                             const isActive = isNavigationItemActive(pathname, href);
 
@@ -260,20 +280,19 @@ export default function NavButtons() {
                                 <Link
                                     key={href}
                                     href={href}
-                                    onClick={() => setIsQuickNavCompact(false)}
                                     aria-label={MOBILE_LABELS[href] || label}
                                     aria-current={isActive ? "page" : undefined}
                                     className={cn(
-                                        "relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 font-bold text-white/55 no-underline transition-[min-height,gap,background-color,color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
-                                        showQuickNavCompact ? "min-h-10 gap-0" : "min-h-12 gap-0.5",
+                                        "relative h-12 min-w-0 overflow-hidden rounded-2xl px-1 font-bold text-white/55 no-underline transition-[background-color,color] duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                         isActive && "bg-white/10 text-white",
                                     )}
                                 >
                                     {isActive && <span className="absolute top-0 h-0.5 w-7 rounded-full bg-linear-to-r from-brand-cyan to-brand-purple" aria-hidden="true" />}
-                                    <MobileNavigationIcon href={href} active={isActive} />
+                                    <span className="absolute top-1.5 left-1/2 grid size-5 -translate-x-1/2 place-items-center">
+                                        <MobileNavigationIcon href={href} active={isActive} />
+                                    </span>
                                     <span className={cn(
-                                        "max-w-full overflow-hidden truncate text-[0.62rem] leading-4 transition-[max-height,opacity,transform] duration-300 ease-out",
-                                        showQuickNavCompact ? "max-h-0 -translate-y-0.5 opacity-0" : "max-h-4 opacity-100",
+                                        "absolute inset-x-1 bottom-1 truncate text-center text-[0.62rem] leading-4",
                                     )}>
                                         {MOBILE_LABELS[href] || label}
                                     </span>

@@ -37,6 +37,9 @@ describe("NavButtons responsive navigation", () => {
         navigationMocks.pathname = "/status";
         navigationMocks.logout.mockReset();
         navigationMocks.logout.mockResolvedValue(undefined);
+        Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+        Object.defineProperty(window, "innerHeight", { configurable: true, writable: true, value: 600 });
+        Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, value: 1_200 });
     });
 
     afterEach(() => cleanup());
@@ -79,22 +82,15 @@ describe("NavButtons responsive navigation", () => {
         expect(screen.queryByRole("navigation", { name: "More navigation" })).not.toBeInTheDocument();
     });
 
-    it("compacts while scrolling down and expands after a short upward scroll", () => {
-        Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+    it("stays docked to the bottom without changing its layout while scrolling", () => {
         render(<NavButtons />);
 
         const quickNavigation = screen.getByRole("navigation", { name: "Mobile quick navigation" });
-        expect(quickNavigation).toHaveAttribute("data-compact", "false");
-        expect(quickNavigation).toHaveClass("w-[calc(100%_-_1rem)]");
+        expect(quickNavigation).toHaveClass("fixed", "inset-x-0", "bottom-0");
 
         window.scrollY = 120;
         fireEvent.scroll(window);
-        expect(quickNavigation).toHaveAttribute("data-compact", "true");
-        expect(quickNavigation).toHaveClass("w-[calc(100%_-_3rem)]");
-
-        window.scrollY = 108;
-        fireEvent.scroll(window);
-        expect(quickNavigation).toHaveAttribute("data-compact", "false");
-        expect(quickNavigation).toHaveClass("w-[calc(100%_-_1rem)]");
+        expect(quickNavigation).toHaveClass("fixed", "inset-x-0", "bottom-0");
+        expect(within(quickNavigation).getByText("Status")).toBeVisible();
     });
 });

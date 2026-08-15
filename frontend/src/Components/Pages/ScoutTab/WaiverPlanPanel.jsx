@@ -93,7 +93,7 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                             }}
                         >
                             <div className="grid justify-items-center gap-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-app-muted">
-                                <GripVertical aria-hidden="true" size={15} className="hidden sm:block" />
+                                <GripVertical aria-hidden="true" size={15} className="hidden lg:block" />
                                 <span className="sr-only">Priority for {playerName(entry.playerInId)}</span>
                                 <div className="flex h-12 w-full items-stretch gap-1.5">
                                     <span className="grid w-9 shrink-0 place-items-center text-xl font-black tabular-nums text-app-accent-foreground" aria-label={`Priority ${index + 1} for ${playerName(entry.playerInId)}`}>
@@ -104,23 +104,23 @@ function WaiverPlanPanel({ entries, playersById, onChange, onSave, hasChanges, s
                                             type="button"
                                             variant="secondary"
                                             size="icon"
-                                            className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
+                                            className="grid h-full w-full min-h-0 min-w-0 place-items-center rounded-md border border-app-border bg-app-surface-muted p-0 text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
                                             aria-label={`Move ${playerName(entry.playerInId)} up`}
                                             disabled={index === 0}
                                             onClick={() => move(index, index - 1)}
                                         >
-                                            <ChevronUp aria-hidden="true" size={19} strokeWidth={2.7} />
+                                            <ChevronUp aria-hidden="true" className="size-4 max-h-4 max-w-4" />
                                         </Button>
                                         <Button
                                             type="button"
                                             variant="secondary"
                                             size="icon"
-                                            className="grid min-h-0 place-items-center rounded-md border border-app-border bg-app-surface-muted text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
+                                            className="grid h-full w-full min-h-0 min-w-0 place-items-center rounded-md border border-app-border bg-app-surface-muted p-0 text-app-muted shadow-sm transition hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground disabled:opacity-25"
                                             aria-label={`Move ${playerName(entry.playerInId)} down`}
                                             disabled={index === entries.length - 1}
                                             onClick={() => move(index, index + 1)}
                                         >
-                                            <ChevronDown aria-hidden="true" size={19} strokeWidth={2.7} />
+                                            <ChevronDown aria-hidden="true" className="size-4 max-h-4 max-w-4" />
                                         </Button>
                                     </div>
                                 </div>

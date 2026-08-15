@@ -160,9 +160,31 @@ public class LifecycleScheduleCoordinator {
                 continue;
             }
             long leagueId = config.getLeague().getId();
+            Instant draftStart = toInstant(config.getScheduledTime());
+            if (scheduledNotificationService != null
+                    && Instant.now().isBefore(draftStart)
+                    && !scheduledNotificationService.draftOpeningSoonComplete(
+                            leagueId,
+                            config.getId(),
+                            draftStart.getEpochSecond(),
+                            config.getDraftType()
+                    )) {
+                tasks.add(new PlannedTask(
+                        "notification:draft-open-10m:" + config.getId(),
+                        draftStart.minus(Duration.ofMinutes(10)),
+                        NOTIFICATION_PRIORITY,
+                        SHORT_RETRY,
+                        () -> scheduledNotificationService.draftOpeningSoon(
+                                leagueId,
+                                config.getId(),
+                                draftStart.getEpochSecond(),
+                                config.getDraftType()
+                        )
+                ));
+            }
             tasks.add(new PlannedTask(
                     "draft:" + config.getId(),
-                    toInstant(config.getScheduledTime()),
+                    draftStart,
                     OPEN_DRAFT_PRIORITY,
                     DRAFT_RETRY,
                     () -> draftService.runScheduledDraft(config.getId(), leagueId)

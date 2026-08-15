@@ -43,6 +43,11 @@ public class NotificationRouter {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void route(int userId, NotificationEvent event) {
+        route(userId, event, false);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void route(int userId, NotificationEvent event, boolean suppressActiveToast) {
         if (event.eventId() == null || event.eventId().isBlank()) {
             throw new IllegalArgumentException("Notification eventId is required");
         }
@@ -50,7 +55,11 @@ public class NotificationRouter {
 
         boolean active = presenceService.isActive(userId);
         String channel;
-        if (active && event.policy() == NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE) {
+        if (active
+                && event.policy() == NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+                && suppressActiveToast) {
+            channel = "SOURCE_TOAST_SUPPRESSED";
+        } else if (active && event.policy() == NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE) {
             messagingTemplate.convertAndSendToUser(String.valueOf(userId), "/queue/notifications", event);
             channel = "WEBSOCKET";
         } else if (!active) {
@@ -58,6 +67,9 @@ public class NotificationRouter {
         } else {
             channel = "ACTIVE_UI_ONLY";
         }
+
+        log.info("Notification routed: eventId={}, type={}, userId={}, active={}, channel={}",
+                event.eventId(), event.type(), userId, active, channel);
 
         UserEntity user = userRepository.findById(userId).orElse(null);
         if (user == null) return;

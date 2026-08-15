@@ -61,6 +61,30 @@ class NotificationRouterTest {
     }
 
     @Test
+    void activeSourceUserDoesNotReceiveTheirOwnToast() {
+        when(presence.isActive(7)).thenReturn(true);
+        NotificationEvent event = event(NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE);
+
+        router.route(7, event, true);
+
+        verifyNoInteractions(messaging, push);
+        assertSavedChannel("SOURCE_TOAST_SUPPRESSED");
+    }
+
+    @Test
+    void inactiveSourceUserCanStillReceiveTheDevicePush() {
+        when(presence.isActive(7)).thenReturn(false);
+        when(push.send(7, event(NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE))).thenReturn(true);
+        NotificationEvent event = event(NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE);
+
+        router.route(7, event, true);
+
+        verify(push).send(7, event);
+        verifyNoInteractions(messaging);
+        assertSavedChannel("PUSH");
+    }
+
+    @Test
     void pushOnlyEventIsSilentWhileUserIsActive() {
         when(presence.isActive(7)).thenReturn(true);
 

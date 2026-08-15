@@ -31,7 +31,6 @@ import {
     faForwardStep,
     faFutbol,
     faGaugeHigh,
-    faGlasses,
     faGripVertical,
     faHeartPulse,
     faImage,
@@ -177,5 +176,5 @@ export const X = createAppIcon(faXmark, "CloseIcon");
 export const MobileStatusIcon = createAppIcon(faGaugeHigh, "MobileStatusIcon");
 export const MobilePointsIcon = Trophy;
 export const MobileTeamIcon = Users;
-export const MobileScoutIcon = createAppIcon(faGlasses, "MobileScoutIcon");
+export const MobileScoutIcon = Binoculars;
 export const MobileTransfersIcon = ArrowRightLeft;

@@ -4,8 +4,11 @@ import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
 import com.fantasy.domain.game.GameweekDailyStatusRepository;
+import com.fantasy.domain.league.LeagueEntity;
+import com.fantasy.domain.transfer.DraftConfig;
 import com.fantasy.domain.transfer.DraftConfigRepository;
 import com.fantasy.domain.transfer.DraftService;
+import com.fantasy.domain.transfer.DraftType;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -105,6 +108,36 @@ class LifecycleScheduleCoordinatorTest {
         order.verify(dependencies.gameweekAutoScheduler).finalizeDueGameweek();
         order.verify(dependencies.gameweekAutoScheduler).openDueGameweek();
         verify(dependencies.dataSyncScheduler, times(2)).syncFixtureScheduleOnly();
+    }
+
+    @Test
+    void schedulesDraftReminderTenMinutesBeforePersistedDraftDeadline() {
+        Dependencies dependencies = new Dependencies();
+        ScheduledNotificationService notifications = mock(ScheduledNotificationService.class);
+        dependencies.coordinator.setScheduledNotificationService(notifications);
+
+        LeagueEntity league = new LeagueEntity();
+        league.setId(12L);
+        DraftConfig config = mock(DraftConfig.class);
+        LocalDateTime scheduledTime = LocalDateTime.now(LEAGUE_ZONE).plusHours(1);
+        when(config.getId()).thenReturn(44L);
+        when(config.getLeague()).thenReturn(league);
+        when(config.getScheduledTime()).thenReturn(scheduledTime);
+        when(config.getDraftType()).thenReturn(DraftType.INITIAL);
+        when(dependencies.draftConfigRepository.findAllByProcessedFalse()).thenReturn(List.of(config));
+        long scheduledEpochSecond = scheduledTime.atZone(LEAGUE_ZONE).toEpochSecond();
+        when(notifications.draftOpeningSoonComplete(
+                12L, 44L, scheduledEpochSecond, DraftType.INITIAL
+        )).thenReturn(false);
+
+        dependencies.coordinator.reconcile("scheduled draft");
+
+        ArgumentCaptor<Instant> deadlines = ArgumentCaptor.forClass(Instant.class);
+        verify(dependencies.scheduler, times(2)).schedule(any(Runnable.class), deadlines.capture());
+        assertTrue(deadlines.getAllValues().contains(
+                scheduledTime.minusMinutes(10).atZone(LEAGUE_ZONE).toInstant()
+        ));
+        assertTrue(deadlines.getAllValues().contains(scheduledTime.atZone(LEAGUE_ZONE).toInstant()));
     }
 
     private static GameWeekEntity upcomingGameweek(LocalDateTime kickoff, LocalDateTime transferOpen) {

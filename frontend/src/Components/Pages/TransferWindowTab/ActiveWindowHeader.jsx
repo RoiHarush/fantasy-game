@@ -182,7 +182,7 @@ function SnakeOrder({ managerSummaries, currentUserId, isClosing }) {
                                 <strong className={`min-w-0 truncate text-xs sm:text-sm ${isCurrent ? "text-app-accent-foreground" : "text-app-foreground"}`}>{manager.name}</strong>
                             </div>
                             <div className="mt-2 flex min-w-0 items-center gap-1.5">
-                                <PresenceBadge online={manager.online} automatic={manager.automatic} />
+                                <PresenceBadge online={manager.online} active={manager.active} automatic={manager.automatic} />
                             </div>
                             <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[0.58rem] font-black tabular-nums text-app-muted sm:text-[0.65rem]">
                                 <span>{manager.pickNumbers.join(" · ")}</span>
@@ -196,19 +196,29 @@ function SnakeOrder({ managerSummaries, currentUserId, isClosing }) {
     );
 }
 
-function PresenceBadge({ online, automatic }) {
+function PresenceBadge({ active, automatic }) {
+    const presence = active
+        ? { label: "Online", text: "text-app-positive-foreground", dot: "bg-emerald-400" }
+        : { label: "Offline", text: "text-app-muted", dot: "bg-app-border" };
+
     return (
         <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={`inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] ${online ? "text-app-positive-foreground" : "text-app-muted"}`}>
-                <span className={`size-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-app-border"}`} aria-hidden="true" />
-                {online ? "Online" : "Offline"}
+            <span className={`inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] ${presence.text}`}>
+                <span className={`size-1.5 rounded-full ${presence.dot}`} aria-hidden="true" />
+                {presence.label}
             </span>
-            {automatic && (
-                <span className="inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] text-amber-600 dark:text-amber-300" title="This manager marked that they will not attend; their waiver plan will run automatically">
-                    <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                    Away · auto
-                </span>
-            )}
+            <span
+                className={`inline-flex items-center gap-1 text-[0.52rem] font-black uppercase tracking-[0.09em] ${automatic
+                    ? "text-amber-600 dark:text-amber-300"
+                    : "text-app-accent-foreground"
+                }`}
+                title={automatic
+                    ? "This manager marked that they will not attend; their waiver plan will run automatically"
+                    : "This manager plans to attend the transfer window"}
+            >
+                <span className={`size-1.5 rounded-full ${automatic ? "bg-amber-500" : "bg-brand-cyan"}`} aria-hidden="true" />
+                {automatic ? "Not attending · auto" : "Attending"}
+            </span>
         </span>
     );
 }

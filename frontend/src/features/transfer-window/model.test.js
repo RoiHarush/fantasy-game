@@ -93,11 +93,32 @@ describe("transfer-window event model", () => {
             [{ id: 1, name: "Roi" }, { id: 2, name: "Dana" }],
             {},
             {},
-            { onlineUserIds: ["1"], automaticUserIds: [2] },
+            { onlineUserIds: ["1", 2], activeUserIds: ["1"], automaticUserIds: [2] },
         );
 
-        expect(summary[0]).toMatchObject({ id: 1, online: true, automatic: false });
-        expect(summary[1]).toMatchObject({ id: 2, online: false, automatic: true });
+        expect(summary[0]).toMatchObject({ id: 1, online: true, active: true, automatic: false });
+        expect(summary[1]).toMatchObject({ id: 2, online: true, active: false, automatic: true });
+    });
+
+    it("updates connected and visible presence from realtime events", () => {
+        const background = applyTransferWindowEvent({
+            onlineUserIds: [1],
+            activeUserIds: [1],
+        }, {
+            event: "presence_changed",
+            userId: 1,
+            online: true,
+            active: false,
+        });
+        const offline = applyTransferWindowEvent(background, {
+            event: "presence_changed",
+            userId: 1,
+            online: false,
+            active: false,
+        });
+
+        expect(background).toMatchObject({ onlineUserIds: [1], activeUserIds: [] });
+        expect(offline).toMatchObject({ onlineUserIds: [], activeUserIds: [] });
     });
 
     it("opens and advances a window from server events", () => {

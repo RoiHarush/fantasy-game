@@ -68,3 +68,18 @@ export function getIrChipUnavailableReason({
     if (!isActive && (remaining ?? 0) <= 0) return "No IR Chip uses remain.";
     return "";
 }
+
+export function getIrPlayerUnavailableReason({
+    playerId,
+    firstPickId,
+    firstPickCaptainActive = false,
+}) {
+    if (
+        firstPickCaptainActive
+        && firstPickId != null
+        && String(playerId) === String(firstPickId)
+    ) {
+        return "Cancel First Pick Captain before moving this player to IR.";
+    }
+    return "";
+}
