@@ -4,24 +4,24 @@ This runbook is deliberately conservative. The application performs scheduled, s
 
 ## Target topology
 
-- Frontend: Vercel static Vite deployment from `frontend/`.
+- Frontend: Vercel-hosted Next.js application from `frontend/`.
 - Backend: one always-on Render Docker web service from `backend/Dockerfile`.
-- Database: managed PostgreSQL, preferably a separate Neon project for staging and production.
+- Database: managed Render PostgreSQL in the same region as the backend.
 - Health check: `GET /actuator/health` must return a 2xx response.
 
 Do not use an H2 file in production. Render service filesystems are ephemeral.
 
 ## Environment separation
 
-Use three separate databases:
+Local development remains isolated from the hosted database. For the 2026 launch,
+create a fresh hosted Render PostgreSQL database, use it for the deployment rehearsal,
+then reset it before real user registration and upgrade that same database to a paid
+season plan before enabling scheduling.
 
-| Environment | Scheduler | Data |
-| --- | --- | --- |
-| Local | Off | Local H2 copy/test data |
-| Staging | Off | Sanitized copy or isolated test data |
-| Production | On only after verification | Live league data |
-
-Never point a staging backend at the production database. Keep `SCHEDULING_ENABLED=false` on every new service until all checks below pass.
+Never point local development at the hosted database. Keep
+`SCHEDULING_ENABLED=false` on every new or resumed service until all checks below
+pass. The suspended database from the previous season is not a source for the new
+season unless it is explicitly backed up and migrated.
 
 ## Before the first production migration
 
@@ -67,12 +67,12 @@ Remove-Item Env:FANTASY_STAGING_URL
 
 Do not use `--clean` against production. A backup is only trusted after a restore drill succeeds and representative row counts/state queries match.
 
-Neon also provides point-in-time restore history, but the free retention window is short. Keep the explicit dump outside the database provider for the launch window.
+Render backup and recovery retention depends on the selected database plan. Keep the explicit dump outside the database provider for the launch window.
 
 ## Deploy backend
 
 1. Confirm CI is green for backend tests, frontend lint, and frontend build.
-2. Configure the `render.yaml` secret fields in Render. `DATABASE_URL` must be a Spring JDBC URL such as `jdbc:postgresql://HOST/DATABASE?sslmode=require`.
+2. Configure the existing Render service environment. `DATABASE_URL` must be a Spring JDBC URL such as `jdbc:postgresql://HOST/DATABASE?sslmode=require`.
 3. Deploy with `SCHEDULING_ENABLED=false`.
 4. Wait for `/actuator/health` to report `UP`. Do not route users to an unhealthy instance.
 5. Confirm Flyway applied the expected migration exactly once:
@@ -111,9 +111,11 @@ Never leave either destructive reset variable configured on a persistent service
 
 ## Deploy frontend
 
-Configure the Vercel project root as `frontend/` and set `VITE_API_URL` to the public HTTPS backend origin without a trailing slash. The checked-in `vercel.json` routes deep links such as `/status` back to the React application.
+Configure the Vercel project root as `frontend/` and set the server-side
+`BACKEND_URL` environment variable to the public HTTPS Render backend origin without
+a trailing slash. Next.js forwards same-origin `/api` requests to that backend.
 
-Deploy a preview first. Verify CORS and WebSocket origins before promoting it to production.
+Deploy a preview first. Verify the authenticated WebSocket origin before promoting it to production.
 
 ## Smoke checklist
 
@@ -123,8 +125,8 @@ Deploy a preview first. Verify CORS and WebSocket origins before promoting it to
 - A member cannot read or mutate another league's data by changing URL or request IDs.
 - The creator can edit only their league; a member cannot open league controls.
 - Only `ROLE_SUPER_ADMIN` can open global admin pages and endpoints.
-- A transfer persists after backend restart and cannot exceed two regular selections.
-- An offline waiver list tries valid priorities in order and passes when none can run.
+- Transfers persist after restart, follow the configured snake order, and never create duplicate player ownership.
+- A user who opted out is processed from saved waiver priorities in order and passes when none can run.
 - Any owned player can enter IR, regardless of injury metadata.
 - Scoring changes affect only the selected league.
 - WebSocket updates reach the correct league and reconnect after a backend restart.
@@ -154,4 +156,4 @@ Application rollback and data recovery are separate decisions.
 
 Render documents that free web services spin down after 15 minutes without inbound HTTP or WebSocket traffic and can take about a minute to wake. That makes in-process scheduled deadlines unreliable when nobody is connected. Keep the backend always-on for the season. A future zero-cost design can move timers to an external scheduler and make every scheduled operation idempotent, but that is a post-launch architecture change rather than a safe deadline optimization.
 
-References: [Render free service limits](https://render.com/docs/free), [Render health checks](https://render.com/docs/health-checks), [Vercel Vite SPA configuration](https://vercel.com/docs/frameworks/frontend/vite), [Neon pricing and restore window](https://neon.com/pricing).
+References: [Render free service limits](https://render.com/docs/free), [Render health checks](https://render.com/docs/health-checks), [Render Postgres](https://render.com/docs/databases), [Vercel Next.js](https://vercel.com/docs/frameworks/full-stack/nextjs).

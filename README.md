@@ -125,7 +125,7 @@ The production rollout and database recovery process is documented in [docs/OPER
 
 ## Hosting notes
 
-The frontend can remain a Vercel static deployment. The backend currently needs a continuously running process because it owns WebSocket sessions and scheduled gameweek work. Render's free web service sleeps after inactivity, so it is suitable for a demo but not a reliable season backend without redesigning scheduled execution. A free Neon database is a practical low-cost option while its storage and compute quotas remain sufficient.
+The frontend runs as a Next.js deployment on Vercel. The backend needs a continuously running process because it owns WebSocket sessions and scheduled gameweek work. Render's free web service sleeps after inactivity, so it is suitable for the initial rehearsal but not for the live season. The launch database is a fresh Render PostgreSQL instance that can begin on the free plan for rehearsal, then be reset and upgraded before real users register.
 
 Browser REST calls stay same-origin and are forwarded to the backend by the Next.js `/api` rewrite; the backend intentionally does not maintain a second REST CORS allowlist. Before every production launch, test the authenticated `/ws` path from at least two real devices: verify connection, a live cross-device update, automatic reconnection after temporarily disabling one device's network, and state recovery after refreshing the page.
 
