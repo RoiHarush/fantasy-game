@@ -9,18 +9,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("push", (event) => {
     if (!event.data) return;
     const payload = event.data.json();
-    const topic = typeof payload.title === "string" ? payload.title.trim() : "";
-    const details = typeof payload.body === "string" ? payload.body.trim() : "";
-    const normalizedTopic = topic.replace(/[.!?:]+$/, "");
-    const message = normalizedTopic && details
-        ? `${normalizedTopic}: ${details}`
-        : normalizedTopic || details;
+    const title = typeof payload.title === "string" && payload.title.trim()
+        ? payload.title.trim()
+        : "Fantasy";
+    const body = typeof payload.body === "string" ? payload.body.trim() : "";
 
-    // iOS replaces an empty Web Notification title with the installed PWA
-    // name, then renders its own "From <app>" label as well. A zero-width
-    // title keeps the required title argument visually empty.
-    event.waitUntil(self.registration.showNotification("\u200B", {
-        body: message,
+    event.waitUntil(self.registration.showNotification(title, {
+        body,
         icon: "/UI/pl-logo-lion.svg",
         badge: "/UI/pl-logo-lion.svg",
         tag: payload.eventId,
