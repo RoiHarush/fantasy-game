@@ -69,6 +69,7 @@ export async function getCurrentPushState() {
 export async function syncExistingPushSubscription() {
     if (!("serviceWorker" in navigator) || Notification.permission !== "granted") return false;
     const registration = await navigator.serviceWorker.getRegistration("/");
+    await registration?.update();
     const subscription = await registration?.pushManager?.getSubscription();
     if (!subscription) return false;
     await savePushSubscription(subscription);
