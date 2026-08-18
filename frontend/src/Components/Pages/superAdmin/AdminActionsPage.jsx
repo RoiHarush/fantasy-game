@@ -148,8 +148,8 @@ export default function AdminActionsPage() {
         requestConfirmation({
             title: forced ? "Force a device push to every user?" : "Test notification routing for every user?",
             description: forced
-                ? "Development only. This bypasses presence so registered devices receive an operating-system push."
-                : "Development only. Active users receive a toast and inactive users receive a device push.",
+                ? "This bypasses presence so registered devices receive an operating-system push."
+                : "Active users receive a toast and inactive users receive a device push.",
             endpoint: `/api/admin/dev/notifications/test?mode=${mode}`,
         });
     };
@@ -265,23 +265,21 @@ export default function AdminActionsPage() {
                 </div>
             </section>
 
-            {process.env.NODE_ENV === "development" && (
-                <section className={sectionClass}>
-                    <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-500">Development only</p>
-                    <h2 className="mt-1 text-lg font-black text-app-foreground">Notification delivery test</h2>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-app-muted">
-                        Send a harmless test event to every registered user. No league, squad, points, or transfer data is changed.
-                    </p>
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                        <Button type="button" variant="secondary" onClick={() => handleNotificationTest("route")} disabled={loading}>
-                            Test real routing
-                        </Button>
-                        <Button type="button" onClick={() => handleNotificationTest("push")} disabled={loading}>
-                            Force device push
-                        </Button>
-                    </div>
-                </section>
-            )}
+            <section className={sectionClass}>
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-500">Super admin test</p>
+                <h2 className="mt-1 text-lg font-black text-app-foreground">Notification delivery test</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-app-muted">
+                    Send a harmless test event to every registered user. No league, squad, points, or transfer data is changed.
+                </p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Button type="button" variant="secondary" onClick={() => handleNotificationTest("route")} disabled={loading}>
+                        Test real routing
+                    </Button>
+                    <Button type="button" onClick={() => handleNotificationTest("push")} disabled={loading}>
+                        Force device push
+                    </Button>
+                </div>
+            </section>
 
             <section className={`${sectionClass} border-red-400/35`}>
                 <div className="border-l-2 border-red-400 pl-3"><h2 className="text-lg font-black text-red-500 dark:text-red-300">Manual squad override</h2><p className="mt-1 text-sm text-app-muted">Last-resort repair. This directly replaces a saved squad.</p></div>

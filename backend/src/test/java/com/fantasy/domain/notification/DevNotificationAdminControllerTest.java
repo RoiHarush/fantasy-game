@@ -42,7 +42,7 @@ class DevNotificationAdminControllerTest {
     }
 
     @Test
-    void pushModeBypassesPresenceOnlyForDevelopmentDeliveryTesting() {
+    void pushModeBypassesPresenceForExplicitSuperAdminDeliveryTesting() {
         when(userRepository.findAll()).thenReturn(List.of(user(1), user(2)));
         when(webPushSender.send(anyInt(), any(NotificationEvent.class))).thenReturn(true, false);
 

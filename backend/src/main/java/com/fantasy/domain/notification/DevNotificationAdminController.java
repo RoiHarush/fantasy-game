@@ -1,7 +1,6 @@
 package com.fantasy.domain.notification;
 
 import com.fantasy.domain.user.UserRepository;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@Profile("dev")
 @RequestMapping("/api/admin/dev/notifications")
 @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class DevNotificationAdminController {
