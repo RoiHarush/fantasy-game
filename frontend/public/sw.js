@@ -1,8 +1,15 @@
 self.addEventListener("push", (event) => {
     if (!event.data) return;
     const payload = event.data.json();
-    event.waitUntil(self.registration.showNotification(payload.title || "Fantasy Draft", {
-        body: payload.body || "",
+    const topic = typeof payload.title === "string" ? payload.title.trim() : "";
+    const details = typeof payload.body === "string" ? payload.body.trim() : "";
+    const normalizedTopic = topic.replace(/[.!?:]+$/, "");
+    const message = normalizedTopic && details
+        ? `${normalizedTopic}: ${details}`
+        : normalizedTopic || details;
+
+    event.waitUntil(self.registration.showNotification("", {
+        body: message,
         icon: "/UI/pl-logo-lion.svg",
         badge: "/UI/pl-logo-lion.svg",
         tag: payload.eventId,
