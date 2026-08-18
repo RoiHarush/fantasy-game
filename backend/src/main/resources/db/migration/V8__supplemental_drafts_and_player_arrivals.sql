@@ -5,7 +5,7 @@ SET first_seen_at = CURRENT_TIMESTAMP
 WHERE first_seen_at IS NULL;
 
 ALTER TABLE league_transfer_windows
-    ALTER COLUMN window_type VARCHAR(24);
+    ALTER COLUMN window_type SET DATA TYPE VARCHAR(24);
 
 ALTER TABLE league_draft_config
     ADD COLUMN IF NOT EXISTS draft_type VARCHAR(24) DEFAULT 'INITIAL' NOT NULL;
