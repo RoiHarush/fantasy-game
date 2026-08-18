@@ -33,16 +33,26 @@ class SeasonResetServiceTest {
                 + "SELECT 'League', 'ABC123', id FROM users WHERE username = 'owner'");
         jdbc.update("INSERT INTO league_users (league_id, user_id) "
                 + "SELECT leagues.id, users.id FROM leagues CROSS JOIN users");
+        jdbc.update("INSERT INTO push_subscriptions "
+                + "(user_id, endpoint, p256dh, auth_secret, created_at, updated_at) "
+                + "SELECT id, 'https://push.example/subscription', 'p256dh', 'auth', "
+                + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM users WHERE username = 'owner'");
+        jdbc.update("INSERT INTO notification_deliveries "
+                + "(event_id, user_id, channel, delivered_at) "
+                + "SELECT 'test-event', id, 'PUSH', CURRENT_TIMESTAMP "
+                + "FROM users WHERE username = 'owner'");
 
         var summary = new SeasonResetService(jdbc).resetAllData();
 
-        assertEquals(39, summary.clearedTables());
+        assertEquals(41, summary.clearedTables());
         assertEquals(0, count(jdbc, "teams"));
         assertEquals(0, count(jdbc, "players"));
         assertEquals(0, count(jdbc, "fixtures"));
         assertEquals(0, count(jdbc, "gameweeks"));
         assertEquals(0, count(jdbc, "users"));
         assertEquals(0, count(jdbc, "leagues"));
+        assertEquals(0, count(jdbc, "push_subscriptions"));
+        assertEquals(0, count(jdbc, "notification_deliveries"));
         assertEquals(21, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL",
                 Integer.class
