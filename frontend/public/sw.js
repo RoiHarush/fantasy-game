@@ -16,7 +16,10 @@ self.addEventListener("push", (event) => {
         ? `${normalizedTopic}: ${details}`
         : normalizedTopic || details;
 
-    event.waitUntil(self.registration.showNotification("", {
+    // iOS replaces an empty Web Notification title with the installed PWA
+    // name, then renders its own "From <app>" label as well. A zero-width
+    // title keeps the required title argument visually empty.
+    event.waitUntil(self.registration.showNotification("\u200B", {
         body: message,
         icon: "/UI/pl-logo-lion.svg",
         badge: "/UI/pl-logo-lion.svg",
