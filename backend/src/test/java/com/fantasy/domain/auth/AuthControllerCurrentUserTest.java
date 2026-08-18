@@ -87,6 +87,27 @@ class AuthControllerCurrentUserTest {
         assertTrue(response.getHeaders().getFirst("Set-Cookie").contains("fantasy_session=verification-session-token"));
     }
 
+    @Test
+    void issuesANonCacheableWebSocketTicketForTheAuthenticatedUser() {
+        WebSocketTicketResponse ticket = new WebSocketTicketResponse("short-lived-ticket", 30_000);
+        when(authService.issueWebSocketTicket(21)).thenReturn(ticket);
+
+        ResponseEntity<WebSocketTicketResponse> response = controller.webSocketTicket(21);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertSame(ticket, response.getBody());
+        assertTrue(response.getHeaders().getCacheControl().contains("no-store"));
+        verify(authService).issueWebSocketTicket(21);
+    }
+
+    @Test
+    void refusesToIssueAWebSocketTicketWithoutAnAuthenticatedPrincipal() {
+        ResponseEntity<WebSocketTicketResponse> response = controller.webSocketTicket(null);
+
+        assertEquals(401, response.getStatusCode().value());
+        assertNull(response.getBody());
+    }
+
     private void assertCurrentUser(int userId, String role, boolean leagueAdmin) {
         UserDto expected = new UserDto();
         expected.setId(userId);

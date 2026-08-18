@@ -1,6 +1,7 @@
 package com.fantasy.domain.auth;
 
 import com.fantasy.domain.user.UserDto;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -100,6 +101,18 @@ public class AuthController {
             // Treat that token as an expired session and remove it from the browser.
             return expiredSessionResponse();
         }
+    }
+
+    @PostMapping("/websocket-ticket")
+    public ResponseEntity<WebSocketTicketResponse> webSocketTicket(
+            @AuthenticationPrincipal Integer userId) {
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(authService.issueWebSocketTicket(userId));
     }
 
     private ResponseEntity<UserDto> expiredSessionResponse() {

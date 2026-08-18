@@ -19,8 +19,22 @@ class JwtServiceTest {
         String token = service.generateToken(42, "ROLE_USER");
 
         assertTrue(service.isTokenValid(token));
+        assertFalse(service.isWebSocketTicketValid(token));
         assertEquals(42, service.extractUserId(token));
         assertEquals("ROLE_USER", service.extractRole(token));
+    }
+
+    @Test
+    void createsShortLivedWebSocketOnlyTickets() {
+        JwtService service = new JwtService(TEST_SECRET, 60_000);
+
+        String ticket = service.generateWebSocketTicket(42, "ROLE_USER");
+
+        assertTrue(service.isWebSocketTicketValid(ticket));
+        assertFalse(service.isTokenValid(ticket));
+        assertEquals(42, service.extractUserId(ticket));
+        assertEquals("ROLE_USER", service.extractRole(ticket));
+        assertEquals(30_000, service.getWebSocketTicketExpirationMillis());
     }
 
     @Test

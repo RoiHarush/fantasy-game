@@ -80,6 +80,16 @@ public class AuthService {
         return buildUserDto(user);
     }
 
+    @Transactional(readOnly = true)
+    public WebSocketTicketResponse issueWebSocketTicket(int userId) {
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user was not found"));
+        return new WebSocketTicketResponse(
+                jwtService.generateWebSocketTicket(user.getId(), user.getRole().name()),
+                jwtService.getWebSocketTicketExpirationMillis()
+        );
+    }
+
     @Transactional
     public AuthMessageResponse register(RegisterRequest request) {
         NameParts nameParts = resolveName(request);

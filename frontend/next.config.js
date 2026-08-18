@@ -1,8 +1,16 @@
 const backendUrl = (process.env.BACKEND_URL ?? "http://localhost:8080").replace(/\/$/, "");
+const webSocketUrl = (
+    process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? `${backendUrl}/ws`
+).replace(/\/$/, "");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactCompiler: true,
+    // The browser connects directly to Spring for WebSocket upgrades. Vercel's
+    // external rewrite remains appropriate for ordinary REST requests only.
+    env: {
+        NEXT_PUBLIC_WEBSOCKET_URL: webSocketUrl,
+    },
     allowedDevOrigins: [
         '192.168.1.181',
         '192.168.68.69',
@@ -27,14 +35,6 @@ const nextConfig = {
             {
                 source: "/api/:path*",
                 destination: `${backendUrl}/api/:path*`,
-            },
-            {
-                source: "/ws/:path*",
-                destination: `${backendUrl}/ws/:path*`,
-            },
-            {
-                source: "/ws",
-                destination: `${backendUrl}/ws`,
             },
         ];
     },

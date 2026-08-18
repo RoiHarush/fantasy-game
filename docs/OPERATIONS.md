@@ -115,6 +115,14 @@ Configure the Vercel project root as `frontend/` and set the server-side
 `BACKEND_URL` environment variable to the public HTTPS Render backend origin without
 a trailing slash. Next.js forwards same-origin `/api` requests to that backend.
 
+The browser connects directly to `${BACKEND_URL}/ws` for WebSocket upgrades. The
+public endpoint is derived from `BACKEND_URL` during the Vercel build; an optional
+`NEXT_PUBLIC_WEBSOCKET_URL` can override the complete endpoint. Do not route `/ws`
+through a Vercel external rewrite. Before every STOMP connection, the browser obtains
+a 30-second WebSocket-only ticket through the authenticated same-origin API. The
+long-lived session JWT remains in its HttpOnly cookie and is never exposed to client
+JavaScript.
+
 Deploy a preview first. Verify the authenticated WebSocket origin before promoting it to production.
 
 ## Smoke checklist

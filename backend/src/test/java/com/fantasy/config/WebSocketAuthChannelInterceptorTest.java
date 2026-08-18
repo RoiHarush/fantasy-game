@@ -24,18 +24,18 @@ import static org.mockito.Mockito.when;
 class WebSocketAuthChannelInterceptorTest {
 
     @Test
-    void authenticatesConnectFrameFromJwt() {
+    void authenticatesConnectFrameFromWebSocketTicket() {
         JwtService jwtService = mock(JwtService.class);
-        when(jwtService.isTokenValid("valid-token")).thenReturn(true);
-        when(jwtService.extractUserId("valid-token")).thenReturn(12);
-        when(jwtService.extractRole("valid-token")).thenReturn("ROLE_USER");
+        when(jwtService.isWebSocketTicketValid("valid-ticket")).thenReturn(true);
+        when(jwtService.extractUserId("valid-ticket")).thenReturn(12);
+        when(jwtService.extractRole("valid-ticket")).thenReturn("ROLE_USER");
         WebSocketAuthChannelInterceptor interceptor = new WebSocketAuthChannelInterceptor(
                 jwtService,
                 mock(LeagueAccessService.class)
         );
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setLeaveMutable(true);
-        accessor.addNativeHeader("Authorization", "Bearer valid-token");
+        accessor.addNativeHeader("Authorization", "Bearer valid-ticket");
         Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
 
         Message<?> result = interceptor.preSend(message, mock(org.springframework.messaging.MessageChannel.class));
@@ -44,6 +44,25 @@ class WebSocketAuthChannelInterceptorTest {
         assertNotNull(resultAccessor);
         assertNotNull(resultAccessor.getUser());
         assertEquals("12", resultAccessor.getUser().getName());
+    }
+
+    @Test
+    void rejectsARegularSessionJwtAsAWebSocketTicket() {
+        JwtService jwtService = mock(JwtService.class);
+        when(jwtService.isWebSocketTicketValid("session-token")).thenReturn(false);
+        WebSocketAuthChannelInterceptor interceptor = new WebSocketAuthChannelInterceptor(
+                jwtService,
+                mock(LeagueAccessService.class)
+        );
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setLeaveMutable(true);
+        accessor.addNativeHeader("Authorization", "Bearer session-token");
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> interceptor.preSend(message, mock(org.springframework.messaging.MessageChannel.class))
+        );
     }
 
     @Test

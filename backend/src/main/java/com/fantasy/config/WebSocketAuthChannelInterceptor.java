@@ -52,8 +52,8 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
             throw new AccessDeniedException("WebSocket authentication is required");
         }
         String token = authorization.substring(7);
-        if (!jwtService.isTokenValid(token)) {
-            throw new AccessDeniedException("Invalid WebSocket token");
+        if (!jwtService.isWebSocketTicketValid(token)) {
+            throw new AccessDeniedException("Invalid or expired WebSocket ticket");
         }
 
         int userId = jwtService.extractUserId(token);

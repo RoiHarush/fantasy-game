@@ -7,8 +7,11 @@ import { Client } from "@stomp/stompjs";
 import { useAuth } from "./AuthContext";
 import { WebSocketContext } from "./WebSocketContext";
 import { getClientInstanceId } from "../features/notifications/clientInstance";
+import { apiRequest } from "../services/apiClient";
 
 const RESUME_RECONNECT_AFTER_MS = 10_000;
+const TICKET_RETRY_DELAY_MS = 5_000;
+const WEB_SOCKET_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:8080/ws";
 
 export function WebSocketProvider({ children }) {
     const { user } = useAuth();
@@ -183,6 +186,21 @@ export function WebSocketProvider({ children }) {
         let hiddenAt = document.visibilityState === "hidden" ? Date.now() : null;
         let resumeReconnectPromise = null;
         let lastResumeReconnectAt = 0;
+        let ticketFailureLogged = false;
+        const ticketRequestController = new AbortController();
+
+        const waitForTicketRetry = () => new Promise((resolve) => {
+            if (ticketRequestController.signal.aborted) {
+                resolve();
+                return;
+            }
+
+            const timeoutId = window.setTimeout(resolve, TICKET_RETRY_DELAY_MS);
+            ticketRequestController.signal.addEventListener("abort", () => {
+                window.clearTimeout(timeoutId);
+                resolve();
+            }, { once: true });
+        });
 
         const publishPresence = (stompClient, visible = document.visibilityState === "visible") => {
             if (!stompClient?.connected) return;
@@ -205,9 +223,46 @@ export function WebSocketProvider({ children }) {
 
         const client = new Client({
             /*
-             * Next.js should rewrite `/ws` to the Spring Boot backend.
+             * WebSocket upgrades connect directly to Spring. Ordinary REST
+             * requests continue through the same-origin Next.js `/api` rewrite.
              */
-            webSocketFactory: () => new SockJS("/ws"),
+            webSocketFactory: () => new SockJS(WEB_SOCKET_URL),
+
+            // The browser never receives the long-lived HttpOnly session JWT.
+            // Before every initial connection or reconnect it exchanges that
+            // session for a dedicated 30-second WebSocket-only ticket.
+            beforeConnect: async (stompClient) => {
+                while (!disposed
+                    && !ticketRequestController.signal.aborted
+                    && stompClient.active) {
+                    try {
+                        const response = await apiRequest("/api/auth/websocket-ticket", {
+                            method: "POST",
+                            body: {},
+                            signal: ticketRequestController.signal,
+                            timeoutMs: 10_000,
+                        });
+                        if (!response?.ticket) {
+                            throw new Error("The server returned an empty WebSocket ticket");
+                        }
+
+                        stompClient.connectHeaders = {
+                            Authorization: `Bearer ${response.ticket}`,
+                        };
+                        ticketFailureLogged = false;
+                        return;
+                    } catch (error) {
+                        if (disposed || ticketRequestController.signal.aborted || !stompClient.active) {
+                            return;
+                        }
+                        if (!ticketFailureLogged) {
+                            console.warn("Unable to obtain a WebSocket ticket; retrying.", error);
+                            ticketFailureLogged = true;
+                        }
+                        await waitForTicketRetry();
+                    }
+                }
+            },
 
             reconnectDelay: 5000,
             heartbeatIncoming: 10000,
@@ -335,6 +390,7 @@ export function WebSocketProvider({ children }) {
         return () => {
             disposed = true;
             setConnected(false);
+            ticketRequestController.abort();
 
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("pageshow", recoverAfterResume);
