@@ -6,7 +6,7 @@ import {
     findGameweekScheduleConflict,
     gameweekLabel,
 } from "../../../features/gameweeks/availability";
-import { validateTransferOrder } from "../../../features/transfer-window/model";
+import { validateDraftOrder } from "../../../features/draft/model";
 import DraftLobbyView from "./DraftLobbyView";
 
 function DraftLobby({
@@ -45,19 +45,30 @@ function DraftLobby({
     const scheduleBlockedReason = scheduleConflict
         ? `Choose a time outside ${gameweekLabel(scheduleConflict)}.`
         : "";
-    const pickCount = users.length * 2;
+    const rawDate = config?.scheduledTime || config?.scheduled_time;
+    const hasScheduledDraft = Boolean(rawDate && !config?.processed);
+    const configuredOrderSource = config?.orderSource ?? config?.order_source ?? "TRANSFER_ORDER";
+    const configuredManualOrder = config?.manualOrder ?? config?.manual_order ?? [];
+    const effectiveOrderSource = hasScheduledDraft ? configuredOrderSource : orderSource;
+    const effectiveManualOrder = hasScheduledDraft ? configuredManualOrder : manualOrder;
+    const draftRoundCount = supplementalDraft ? 2 : 1;
+    const pickCount = users.length * draftRoundCount;
     const manualPicks = Array.from({ length: pickCount }, (_, index) => (
-        manualOrder[index] == null ? "" : String(manualOrder[index])
+        effectiveManualOrder[index] == null ? "" : String(effectiveManualOrder[index])
     ));
 
     const getDraftOrder = () => {
-        if (!supplementalDraft || orderSource !== "MANUAL") {
+        if (effectiveOrderSource !== "MANUAL") {
             setOrderError("");
             return { orderSource: "TRANSFER_ORDER", order: [] };
         }
 
         const cleanOrder = manualPicks.filter(Boolean).map(Number);
-        const error = validateTransferOrder(cleanOrder, users.map(user => user.id));
+        const error = validateDraftOrder(
+            cleanOrder,
+            users.map(user => user.id),
+            draftRoundCount,
+        );
         if (error) {
             setOrderError(error);
             return null;
@@ -103,8 +114,6 @@ function DraftLobby({
         setOrderError("");
     };
 
-    const rawDate = config?.scheduledTime || config?.scheduled_time;
-
     return (
         <DraftLobbyView
             isAdmin={isAdmin}
@@ -112,9 +121,9 @@ function DraftLobby({
             league={league}
             users={users}
             rawDate={rawDate}
-            hasScheduledDraft={Boolean(rawDate && !config?.processed)}
+            hasScheduledDraft={hasScheduledDraft}
             scheduledTime={scheduledTime}
-            orderSource={orderSource}
+            orderSource={effectiveOrderSource}
             manualPicks={manualPicks}
             orderError={orderError}
             actionError={draftAction.error}

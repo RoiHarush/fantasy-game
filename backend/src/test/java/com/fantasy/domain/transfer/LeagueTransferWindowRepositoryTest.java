@@ -10,6 +10,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,5 +70,70 @@ class LeagueTransferWindowRepositoryTest {
         assertEquals(1, reloaded.getRegularCursor());
         assertEquals(List.of(admin.getId()), reloaded.remainingOrder());
         assertEquals(1, reloaded.turnsUsed().get(admin.getId()));
+    }
+
+    @Test
+    void reloadsTheFullInitialSnakeOrderAtTheExactPersistedTurn() {
+        List<UserEntity> managers = new ArrayList<>();
+        for (int index = 1; index <= 7; index++) {
+            UserEntity manager = new UserEntity();
+            manager.setUsername("manager" + index + "@example.com");
+            manager.setEmail("manager" + index + "@example.com");
+            manager.setEmailVerified(true);
+            manager.setPassword("encoded-password");
+            manager.setName("Manager " + index);
+            manager.setRegisteredAt(LocalDateTime.now());
+            manager.setRole(UserRole.ROLE_USER);
+            managers.add(entityManager.persist(manager));
+        }
+
+        LeagueEntity league = new LeagueEntity();
+        league.setName("Seven Manager League");
+        league.setLeagueCode("SNAKE7");
+        league.setAdmin(managers.getFirst());
+        league.setUsers(managers);
+        entityManager.persist(league);
+
+        GameWeekEntity gameWeek = new GameWeekEntity();
+        gameWeek.setId(8);
+        gameWeek.setName("Gameweek 8");
+        gameWeek.setStatus("UPCOMING");
+        entityManager.persist(gameWeek);
+
+        List<Integer> baseOrder = List.of(
+                managers.get(3).getId(), managers.get(0).getId(), managers.get(6).getId(),
+                managers.get(1).getId(), managers.get(5).getId(), managers.get(2).getId(),
+                managers.get(4).getId()
+        );
+        List<Integer> snakeOrder = new ArrayList<>();
+        for (int round = 0; round < 15; round++) {
+            List<Integer> roundOrder = new ArrayList<>(baseOrder);
+            if (round % 2 == 1) Collections.reverse(roundOrder);
+            snakeOrder.addAll(roundOrder);
+        }
+
+        LeagueTransferWindowEntity window = new LeagueTransferWindowEntity();
+        window.setLeague(league);
+        window.setGameWeek(gameWeek);
+        window.setWindowType(TransferWindowType.DRAFT);
+        window.setTurnOrder(snakeOrder);
+        window.setCanonicalOrder(snakeOrder);
+        window.open(List.of());
+        for (int completedPicks = 0; completedPicks < 23; completedPicks++) {
+            window.advanceTurn();
+        }
+        entityManager.persistAndFlush(window);
+        entityManager.clear();
+
+        LeagueTransferWindowEntity reloaded = repository
+                .findByLeagueAndStatusForUpdate(league.getId(), TransferWindowStatus.OPEN)
+                .getFirst();
+
+        assertEquals(105, reloaded.getTurnOrder().size());
+        assertEquals(snakeOrder, reloaded.getTurnOrder());
+        assertEquals(snakeOrder, reloaded.getCanonicalOrder());
+        assertEquals(23, reloaded.getRegularCursor());
+        assertEquals(snakeOrder.get(23), reloaded.currentUserId().orElseThrow());
+        assertEquals(snakeOrder.subList(23, 105), reloaded.remainingOrder());
     }
 }

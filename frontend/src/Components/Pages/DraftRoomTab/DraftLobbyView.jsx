@@ -76,7 +76,7 @@ export default function DraftLobbyView({
                         <p className="mt-3 max-w-xl text-sm leading-6 text-app-muted sm:text-base sm:leading-7">
                             {supplementalDraft
                                 ? "Set the order and start time for the next two-round draft."
-                                : "Schedule the opening draft when the league is ready."}
+                                : "Choose the draw order and schedule the opening draft when the league is ready."}
                         </p>
                     </div>
 
@@ -216,35 +216,42 @@ function AdminSetup({
 }) {
     return (
         <div className="mt-7 space-y-7">
-            {supplementalDraft && (
-                <section className="border-t border-app-border pt-5" aria-labelledby="draft-order-label">
-                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,0.75fr)_minmax(15rem,1fr)] sm:items-center">
-                        <div>
-                            <p id="draft-order-label" className="text-xs font-black uppercase tracking-[0.14em] text-app-accent-foreground">Selection order</p>
-                            <p className="mt-1 text-xs leading-5 text-app-muted">Reuse the next order or set one.</p>
-                        </div>
-                        <SelectField
-                            id="supplemental-order-source"
-                            value={orderSource}
-                            onValueChange={onOrderSourceChange}
-                            options={[
-                                { value: "TRANSFER_ORDER", label: "Use upcoming transfer-window order" },
-                                { value: "MANUAL", label: "Set order manually" },
-                            ]}
-                            ariaLabel="Draft order"
-                            className="h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface"
-                        />
+            <section className="border-t border-app-border pt-5" aria-labelledby="draft-order-label">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,0.75fr)_minmax(15rem,1fr)] sm:items-center">
+                    <div>
+                        <p id="draft-order-label" className="text-xs font-black uppercase tracking-[0.14em] text-app-accent-foreground">Selection order</p>
+                        <p className="mt-1 text-xs leading-5 text-app-muted">
+                            {supplementalDraft
+                                ? "Reuse the next order or set one."
+                                : "Run a random draw or enter your own first-round order."}
+                        </p>
                     </div>
+                    <SelectField
+                        id="draft-order-source"
+                        value={orderSource}
+                        onValueChange={onOrderSourceChange}
+                        options={[
+                            {
+                                value: "TRANSFER_ORDER",
+                                label: supplementalDraft ? "Use upcoming transfer-window order" : "Random draw",
+                            },
+                            { value: "MANUAL", label: "Set order manually" },
+                        ]}
+                        ariaLabel="Draft order"
+                        disabled={hasScheduledDraft}
+                        className="h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface"
+                    />
+                </div>
 
-                    {orderSource === "MANUAL" && (
-                        <ManualOrder
-                            manualPicks={manualPicks}
-                            users={users}
-                            onManualPickChange={onManualPickChange}
-                        />
-                    )}
-                </section>
-            )}
+                {orderSource === "MANUAL" && (
+                    <ManualOrder
+                        manualPicks={manualPicks}
+                        users={users}
+                        onManualPickChange={onManualPickChange}
+                        disabled={hasScheduledDraft}
+                    />
+                )}
+            </section>
 
             {orderError && (
                 <p className="border-l-2 border-app-danger-border py-2 pl-4 text-xs font-semibold text-app-danger-foreground sm:text-sm" role="alert">
@@ -319,7 +326,7 @@ function AdminSetup({
     );
 }
 
-function ManualOrder({ manualPicks, users, onManualPickChange }) {
+function ManualOrder({ manualPicks, users, onManualPickChange, disabled = false }) {
     return (
         <div className="mt-5 border-y border-app-border py-4">
             <div className="mb-3 flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.12em] text-app-muted">
@@ -338,6 +345,7 @@ function ManualOrder({ manualPicks, users, onManualPickChange }) {
                                 ...users.map((manager) => ({ value: manager.id, label: manager.name })),
                             ]}
                             ariaLabel={`Manager for pick ${index + 1}`}
+                            disabled={disabled}
                             className="h-9 min-w-0 rounded-lg border border-app-border bg-app-surface-elevated px-2.5 text-xs font-semibold text-app-foreground outline-none focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface"
                         />
                     </label>
@@ -422,7 +430,7 @@ function DraftFormat({ supplementalDraft }) {
             <p className="mt-1 text-xs leading-5 text-app-muted">
                 {supplementalDraft
                     ? "Pick a new arrival, replace or pass."
-                    : "A random order reverses every round."}
+                    : "The selected first-round order reverses every round."}
             </p>
         </section>
     );

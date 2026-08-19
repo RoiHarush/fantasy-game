@@ -57,6 +57,87 @@ class DraftServiceTest {
     }
 
     @Test
+    void expandsASevenManagerManualBaseOrderIntoFifteenSnakeRounds() {
+        List<UserGameDataEntity> managers = List.of(
+                manager(10), manager(20), manager(30), manager(40),
+                manager(50), manager(60), manager(70)
+        );
+        Fixture fixture = fixture(7, managers);
+        when(fixture.gameWeekService.getNextGameweek())
+                .thenReturn(new GameWeekDto(1, "Gameweek 1", null, null, "UPCOMING", null, false, false));
+        List<Integer> manualBaseOrder = List.of(40, 10, 70, 20, 60, 30, 50);
+        DraftConfig config = new DraftConfig();
+        config.setLeague(fixture.league);
+        config.setDraftType(DraftType.INITIAL);
+        config.setOrderSource(DraftOrderSource.MANUAL);
+        config.setManualOrder(manualBaseOrder);
+        when(fixture.configRepo.findByLeague_Id(7L)).thenReturn(Optional.of(config));
+
+        fixture.service.runSnakeDraft(7L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Integer>> orderCaptor = ArgumentCaptor.forClass(List.class);
+        verify(fixture.marketService).openDraftWindow(eq(7L), eq(1), orderCaptor.capture());
+        List<Integer> snakeOrder = orderCaptor.getValue();
+
+        assertEquals(105, snakeOrder.size());
+        for (int round = 0; round < 15; round++) {
+            List<Integer> expectedRound = new ArrayList<>(manualBaseOrder);
+            if (round % 2 == 1) {
+                java.util.Collections.reverse(expectedRound);
+            }
+            assertEquals(
+                    expectedRound,
+                    snakeOrder.subList(round * 7, (round + 1) * 7),
+                    "Unexpected manager order in snake round " + (round + 1)
+            );
+        }
+        manualBaseOrder.forEach(userId ->
+                assertEquals(15, snakeOrder.stream().filter(id -> id.equals(userId)).count()));
+    }
+
+    @Test
+    void storesAValidManualOrderWhenSchedulingTheInitialDraft() {
+        Fixture fixture = fixture(2, List.of(manager(10), manager(20)));
+        LocalDateTime scheduledTime = LocalDateTime.now().plusMinutes(30);
+
+        fixture.service.scheduleDraftForLeague(
+                7L,
+                scheduledTime,
+                DraftOrderSource.MANUAL,
+                List.of(20, 10)
+        );
+
+        ArgumentCaptor<DraftConfig> configCaptor = ArgumentCaptor.forClass(DraftConfig.class);
+        verify(fixture.configRepo).save(configCaptor.capture());
+        DraftConfig saved = configCaptor.getValue();
+        assertEquals(DraftOrderSource.MANUAL, saved.getOrderSource());
+        assertEquals(List.of(20, 10), saved.getManualOrder());
+        assertEquals(DraftType.INITIAL, saved.getDraftType());
+    }
+
+    @Test
+    void rejectsDuplicateManagersInAnInitialManualOrder() {
+        Fixture fixture = fixture(3, List.of(manager(10), manager(20), manager(30)));
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> fixture.service.scheduleDraftForLeague(
+                        7L,
+                        LocalDateTime.now().plusMinutes(30),
+                        DraftOrderSource.MANUAL,
+                        List.of(10, 10, 20)
+                )
+        );
+
+        assertEquals(
+                "Every league manager must appear exactly once in the initial draft order",
+                error.getMessage()
+        );
+        verify(fixture.configRepo, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void refusesToStartUntilConfiguredNumberOfManagersHaveJoined() {
         Fixture fixture = fixture(3, List.of(manager(10), manager(20)));
 

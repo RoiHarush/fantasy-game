@@ -7,3 +7,25 @@ export function toDateTimeLocalInput(value) {
     }
     return typeof value === "string" ? value.slice(0, 16) : "";
 }
+
+export function validateDraftOrder(order, leagueUserIds, roundCount = 1) {
+    const expectedLength = leagueUserIds.length * roundCount;
+    if (order.length !== expectedLength) {
+        return `Choose a manager for all ${expectedLength} draft positions.`;
+    }
+
+    const knownManagerIds = new Set(leagueUserIds.map(String));
+    if (order.some((id) => !knownManagerIds.has(String(id)))) {
+        return "The draft order contains an unknown manager.";
+    }
+
+    const invalidManagerId = leagueUserIds.find((userId) => (
+        order.filter((id) => String(id) === String(userId)).length !== roundCount
+    ));
+    if (invalidManagerId !== undefined) {
+        const frequency = roundCount === 1 ? "once" : `${roundCount} times`;
+        return `Each manager must appear exactly ${frequency}.`;
+    }
+
+    return null;
+}

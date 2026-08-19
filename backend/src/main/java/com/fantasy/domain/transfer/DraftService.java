@@ -154,6 +154,8 @@ public class DraftService {
             if (orderSource == DraftOrderSource.MANUAL) {
                 validateTwoRoundOrder(league, manualOrder);
             }
+        } else if (orderSource == DraftOrderSource.MANUAL) {
+            validateInitialOrder(league, manualOrder);
         }
         DraftConfig config = draftConfigRepo.findByLeague_Id(leagueId).orElseGet(() -> {
             DraftConfig created = new DraftConfig();
@@ -221,11 +223,11 @@ public class DraftService {
             return;
         }
 
-        openInitialDraft(league);
+        openInitialDraft(league, config);
         markProcessed(config);
     }
 
-    private void openInitialDraft(LeagueEntity league) {
+    private void openInitialDraft(LeagueEntity league, DraftConfig config) {
         long leagueId = league.getId();
         List<UserGameDataEntity> managers = gameDataRepo.findByLeague_Id(leagueId).stream()
                 .filter(data -> data.getUser() != null)
@@ -241,8 +243,22 @@ public class DraftService {
         }
         int nextGwId = nextGameweek.getId();
         prepareInitialSquads(managers, nextGwId);
-        List<Integer> baseOrder = managers.stream().map(data -> data.getUser().getId()).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-        Collections.shuffle(baseOrder, secureRandom);
+        List<Integer> baseOrder;
+        if (config != null && config.getOrderSource() == DraftOrderSource.MANUAL) {
+            baseOrder = new ArrayList<>(config.getManualOrder());
+            validateInitialOrder(
+                    managers.stream()
+                            .map(data -> data.getUser().getId())
+                            .collect(java.util.stream.Collectors.toSet()),
+                    league.getMaxParticipants(),
+                    baseOrder
+            );
+        } else {
+            baseOrder = managers.stream()
+                    .map(data -> data.getUser().getId())
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+            Collections.shuffle(baseOrder, secureRandom);
+        }
         List<Integer> snakeOrder = buildInitialSnakeOrder(baseOrder, managers);
 
         league.setStatus(LeagueStatus.DRAFT_LIVE);
@@ -286,6 +302,8 @@ public class DraftService {
             if (orderSource == DraftOrderSource.MANUAL) {
                 validateTwoRoundOrder(league, manualOrder);
             }
+        } else if (orderSource == DraftOrderSource.MANUAL) {
+            validateInitialOrder(league, manualOrder);
         }
 
         DraftConfig config = draftConfigRepo.findByLeague_Id(leagueId).orElseGet(() -> {
@@ -326,6 +344,34 @@ public class DraftService {
         if (!counts.keySet().equals(leagueUserIds)
                 || counts.values().stream().anyMatch(count -> count != 2)) {
             throw new IllegalArgumentException("Every league manager must appear exactly twice in the supplemental draft order");
+        }
+    }
+
+    private void validateInitialOrder(LeagueEntity league, List<Integer> order) {
+        Set<Integer> leagueUserIds = league.getUsers().stream()
+                .map(user -> user.getId())
+                .collect(java.util.stream.Collectors.toSet());
+        validateInitialOrder(leagueUserIds, league.getMaxParticipants(), order);
+    }
+
+    private void validateInitialOrder(Set<Integer> managerIds,
+                                      int requiredManagerCount,
+                                      List<Integer> order) {
+        if (managerIds.size() != requiredManagerCount) {
+            throw new IllegalStateException(
+                    "All " + requiredManagerCount + " managers must join before setting a manual draft order"
+            );
+        }
+        if (order == null || order.size() != requiredManagerCount) {
+            throw new IllegalArgumentException(
+                    "Initial draft order must contain exactly one position per manager"
+            );
+        }
+        Set<Integer> orderedManagerIds = new HashSet<>(order);
+        if (!orderedManagerIds.equals(managerIds) || orderedManagerIds.size() != order.size()) {
+            throw new IllegalArgumentException(
+                    "Every league manager must appear exactly once in the initial draft order"
+            );
         }
     }
 

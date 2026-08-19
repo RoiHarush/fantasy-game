@@ -53,7 +53,39 @@ describe("DraftLobbyView", () => {
         expect(screen.getByText("Not scheduled yet")).toBeInTheDocument();
         expect(screen.getByText("League ready")).toBeInTheDocument();
         expect(screen.getByText("FPL-2026")).toBeInTheDocument();
+        expect(screen.getByText("Selection order")).toBeInTheDocument();
+        expect(screen.getByRole("combobox", { name: "Draft order" })).toHaveTextContent("Random draw");
         expect(screen.getByRole("button", { name: "Open draft now" })).toBeInTheDocument();
+    });
+
+    it("shows one manual position per manager for the initial draft", () => {
+        render(
+            <DraftLobbyView
+                {...BASE_PROPS}
+                orderSource="MANUAL"
+                manualPicks={["", ""]}
+            />,
+        );
+
+        expect(screen.getByLabelText("Manager for pick 1")).toBeInTheDocument();
+        expect(screen.getByLabelText("Manager for pick 2")).toBeInTheDocument();
+        expect(screen.queryByLabelText("Manager for pick 3")).not.toBeInTheDocument();
+    });
+
+    it("locks the saved manual order while an initial draft is scheduled", () => {
+        render(
+            <DraftLobbyView
+                {...BASE_PROPS}
+                rawDate="2027-01-26T20:30"
+                hasScheduledDraft
+                orderSource="MANUAL"
+                manualPicks={["2", "1"]}
+            />,
+        );
+
+        expect(screen.getByRole("combobox", { name: "Draft order" })).toBeDisabled();
+        expect(screen.getByLabelText("Manager for pick 1")).toBeDisabled();
+        expect(screen.getByLabelText("Manager for pick 2")).toBeDisabled();
     });
 
     it("keeps scheduling, copying and opening wired through callbacks", () => {
