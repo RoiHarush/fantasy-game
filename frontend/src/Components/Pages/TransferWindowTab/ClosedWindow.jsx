@@ -81,6 +81,7 @@ function ClosedWindow({ user, users, nextGameweek, gameweeks = [], currentGamewe
                 <TurnOrderModal
                     onClose={() => setIsOrderModalOpen(false)}
                     usersList={users}
+                    gameweek={nextGameweek}
                 />
             )}
 

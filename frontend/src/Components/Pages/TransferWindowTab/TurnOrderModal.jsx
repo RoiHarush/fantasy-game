@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { useAuth } from "../../../Context/AuthContext";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
+import { getNextTransferGameweek } from "../../../features/gameweeks/model";
 import {
     useSaveTransferOrder,
     useTransferOrder,
@@ -16,13 +17,14 @@ import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import SelectField from "../../../shared/ui/SelectField";
 
-export default function TurnOrderModal({ onClose, usersList, previewMode = false }) {
-    const { nextGameweek } = useGameweek();
+export default function TurnOrderModal({ onClose, usersList, gameweek, previewMode = false }) {
+    const { gameweeks, nextGameweek } = useGameweek();
+    const transferGameweek = gameweek ?? getNextTransferGameweek({ gameweeks, nextGameweek });
     const { user } = useAuth();
     const pickCount = usersList.length * 2;
     const [editedPicks, setEditedPicks] = useState(null);
     const [validationError, setValidationError] = useState("");
-    const orderQuery = useTransferOrder(user?.leagueId, nextGameweek?.id);
+    const orderQuery = useTransferOrder(user?.leagueId, transferGameweek?.id);
     const previewOrder = Array.from({ length: pickCount }, (_, index) => (
         String(usersList[index % usersList.length]?.id ?? "")
     ));
@@ -31,7 +33,7 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
         index < orderData.length ? String(orderData[index]) : ""
     ));
     const picks = editedPicks ?? initialPicks;
-    const saveOrder = useSaveTransferOrder(user?.leagueId, nextGameweek?.id, {
+    const saveOrder = useSaveTransferOrder(user?.leagueId, transferGameweek?.id, {
         onSuccess: onClose,
     });
 
@@ -79,7 +81,7 @@ export default function TurnOrderModal({ onClose, usersList, previewMode = false
                             </span>
                             <div className="min-w-0">
                                 <Dialog.Title className="text-lg font-black sm:text-2xl">
-                                    Transfer order <span className="whitespace-nowrap text-app-accent">GW {nextGameweek?.id}</span>
+                                    Transfer order <span className="whitespace-nowrap text-app-accent">GW {transferGameweek?.id}</span>
                                 </Dialog.Title>
                                 <Dialog.Description className="mt-0.5 text-xs leading-5 text-app-muted sm:mt-1 sm:text-sm">
                             Reassign existing picks after trades. The total number of picks stays unchanged.

@@ -2,6 +2,7 @@ package com.fantasy.scheduler;
 
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.transfer.TransferMarketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,14 @@ public class TransferWindowScheduler {
 
         if (upcomingGwOpt.isPresent()) {
             GameWeekEntity nextGw = upcomingGwOpt.get();
+
+            if (!GameweekActivityPolicy.supportsRegularTransferWindow(nextGw)) {
+                if (!nextGw.isTransferWindowProcessed()) {
+                    nextGw.setTransferWindowProcessed(true);
+                    gameWeekRepository.save(nextGw);
+                }
+                return;
+            }
 
             if (nextGw.getTransferOpenTime() == null) {
                 return;

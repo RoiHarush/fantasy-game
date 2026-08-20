@@ -129,6 +129,9 @@ public class TransferMarketService {
 
     @Transactional
     public void openTransferWindowForAllLeagues(int gameWeekId) {
+        if (!GameweekActivityPolicy.supportsRegularTransferWindow(gameWeekId)) {
+            return;
+        }
         for (LeagueEntity league : leagueRepo.findAll()) {
             if (league.getUsers().isEmpty() || league.getStatus() != LeagueStatus.ACTIVE) continue;
             boolean alreadyConfigured = windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
@@ -154,6 +157,11 @@ public class TransferMarketService {
         // rollover, or rollover marks the gameweek LIVE and this request fails.
         GameWeekEntity gameWeek = gameWeekRepo.findByIdWithLock(gameWeekId)
                 .orElseThrow(() -> new IllegalArgumentException("GameWeek not found: " + gameWeekId));
+
+        if (type == TransferWindowType.TRANSFER
+                && !GameweekActivityPolicy.supportsRegularTransferWindow(gameWeek)) {
+            throw new IllegalStateException("Regular transfer windows start from Gameweek 2");
+        }
 
         GameweekActivityPolicy.requireCanOpenNow(
                 gameWeekRepo.findAll(),
@@ -1291,17 +1299,19 @@ public class TransferMarketService {
     }
 
     private Optional<List<Integer>> firstTransferOrderFromDraft(long leagueId, int gameWeekId) {
+        if (!GameweekActivityPolicy.supportsRegularTransferWindow(gameWeekId)) {
+            return Optional.empty();
+        }
         return windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                         leagueId,
-                        gameWeekId,
+                        gameWeekId - 1,
                         TransferWindowType.DRAFT
                 )
                 .filter(window -> window.getStatus() == TransferWindowStatus.CLOSED)
                 .map(LeagueTransferWindowEntity::initialOrder)
                 .filter(order -> !order.isEmpty())
                 .map(order -> {
-                    Integer firstDraftPicker = order.removeFirst();
-                    order.add(firstDraftPicker);
+                    Collections.reverse(order);
                     return snakeOrder(order);
                 });
     }
@@ -1345,7 +1355,11 @@ public class TransferMarketService {
     }
 
     private void prepareFirstTransferOrder(LeagueTransferWindowEntity completedDraft) {
-        int firstGameWeekId = completedDraft.getGameWeek().getId();
+        int firstGameWeekId = completedDraft.getGameWeek().getId() + 1;
+        Optional<GameWeekEntity> firstGameWeek = gameWeekRepo.findById(firstGameWeekId);
+        if (firstGameWeek.isEmpty()) {
+            return;
+        }
         long leagueId = completedDraft.getLeague().getId();
         if (windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                 leagueId,
@@ -1356,14 +1370,11 @@ public class TransferMarketService {
         }
 
         List<Integer> baseOrder = completedDraft.initialOrder();
-        if (!baseOrder.isEmpty()) {
-            Integer firstDraftPicker = baseOrder.removeFirst();
-            baseOrder.add(firstDraftPicker);
-        }
+        Collections.reverse(baseOrder);
 
         LeagueTransferWindowEntity firstWindow = new LeagueTransferWindowEntity();
         firstWindow.setLeague(completedDraft.getLeague());
-        firstWindow.setGameWeek(completedDraft.getGameWeek());
+        firstWindow.setGameWeek(firstGameWeek.get());
         firstWindow.setWindowType(TransferWindowType.TRANSFER);
         List<Integer> firstOrder = snakeOrder(baseOrder);
         firstWindow.setTurnOrder(firstOrder);

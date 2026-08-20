@@ -315,13 +315,13 @@ class TransferMarketServicePersistenceTest {
 
         when(leagueAccess.requireLeagueIdForUser(10)).thenReturn(7L);
         when(windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
-                7L, 1, TransferWindowType.TRANSFER
+                7L, 2, TransferWindowType.TRANSFER
         )).thenReturn(Optional.empty());
         when(windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                 7L, 1, TransferWindowType.DRAFT
         )).thenReturn(Optional.of(completedDraft));
 
-        assertEquals(List.of(20, 30, 10, 10, 30, 20), service.getCurrentTurnOrder(10, 1));
+        assertEquals(List.of(30, 20, 10, 10, 20, 30), service.getCurrentTurnOrder(10, 2));
     }
 
     @Test
@@ -394,7 +394,10 @@ class TransferMarketServicePersistenceTest {
         window.setGameWeek(currentGameWeek);
         window.setWindowType(TransferWindowType.TRANSFER);
         window.setTurnOrder(List.of(10, 10, 10, 20));
-        window.setCanonicalOrder(List.of(10, 20, 20, 10));
+        window.setCanonicalOrder(List.of(
+                10, 20, 30, 40, 50, 60, 70,
+                70, 60, 50, 40, 30, 20, 10
+        ));
         window.open(List.of());
 
         when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
@@ -410,8 +413,12 @@ class TransferMarketServicePersistenceTest {
         verify(windowRepo).save(captor.capture());
         LeagueTransferWindowEntity preparedNextWindow = captor.getValue();
         assertEquals(5, preparedNextWindow.getGameWeek().getId());
-        assertEquals(List.of(20, 10, 10, 20), preparedNextWindow.getTurnOrder());
-        assertEquals(List.of(20, 10, 10, 20), preparedNextWindow.getCanonicalOrder());
+        List<Integer> expectedRotatedSnake = List.of(
+                20, 30, 40, 50, 60, 70, 10,
+                10, 70, 60, 50, 40, 30, 20
+        );
+        assertEquals(expectedRotatedSnake, preparedNextWindow.getTurnOrder());
+        assertEquals(expectedRotatedSnake, preparedNextWindow.getCanonicalOrder());
     }
 
     @Test

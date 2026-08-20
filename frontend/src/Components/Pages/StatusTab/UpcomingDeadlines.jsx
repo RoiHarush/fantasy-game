@@ -12,13 +12,13 @@ import { formatAppDateTime, toAppTimestamp } from "../../../lib/dateTime";
 import { useClock } from "../../../shared/hooks/useClock";
 import SplitBlock from "../../Blocks/SplitBlock";
 
-export default function UpcomingDeadlines({ gameweek, onDeadlineReached }) {
+export default function UpcomingDeadlines({ lineupGameweek, transferGameweek, onDeadlineReached }) {
     const now = useClock();
     const previousDeadline = useRef(undefined);
     const deadlines = useMemo(() => ({
-        transferWindow: toAppTimestamp(gameweek?.transferOpenTime),
-        lineupLock: toAppTimestamp(gameweek?.firstKickoffTime),
-    }), [gameweek?.firstKickoffTime, gameweek?.transferOpenTime]);
+        transferWindow: toAppTimestamp(transferGameweek?.transferOpenTime),
+        lineupLock: toAppTimestamp(lineupGameweek?.firstKickoffTime),
+    }), [lineupGameweek?.firstKickoffTime, transferGameweek?.transferOpenTime]);
 
     const activeDeadline = now === null ? null : getUpcomingDeadline(deadlines, now);
     const activeKind = activeDeadline?.kind ?? null;
@@ -40,19 +40,23 @@ export default function UpcomingDeadlines({ gameweek, onDeadlineReached }) {
             items={[
                 {
                     id: "transfer-window",
-                    title: "Transfer Window",
+                    title: transferGameweek?.name
+                        ? `Transfer Window - ${transferGameweek.name}`
+                        : "Transfer Window",
                     content: (
                         <DeadlineContent
-                            date={gameweek?.transferOpenTime}
+                            date={transferGameweek?.transferOpenTime}
                         />
                     ),
                 },
                 {
                     id: "lineup-lock",
-                    title: "Lineup Lock",
+                    title: lineupGameweek?.name
+                        ? `Lineup Lock - ${lineupGameweek.name}`
+                        : "Lineup Lock",
                     content: (
                         <DeadlineContent
-                            date={gameweek?.firstKickoffTime}
+                            date={lineupGameweek?.firstKickoffTime}
                         />
                     ),
                 },

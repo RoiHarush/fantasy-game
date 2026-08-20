@@ -15,6 +15,7 @@ function Status({
     league,
     currentGameweek,
     nextGameweek,
+    nextTransferGameweek,
     preSeason = false,
     seasonComplete = false,
     transferHistoryGameweekId,
@@ -102,7 +103,11 @@ function Status({
             {!seasonComplete && (
                 <>
                     <h3 className="text-xl font-bold text-app-foreground">Upcoming deadlines</h3>
-                    <UpcomingDeadlines gameweek={nextGameweek} onDeadlineReached={refreshGameweeks} />
+                    <UpcomingDeadlines
+                        lineupGameweek={nextGameweek}
+                        transferGameweek={nextTransferGameweek ?? nextGameweek}
+                        onDeadlineReached={refreshGameweeks}
+                    />
                 </>
             )}
 

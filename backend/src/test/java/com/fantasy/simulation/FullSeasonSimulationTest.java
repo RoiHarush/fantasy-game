@@ -182,19 +182,7 @@ class FullSeasonSimulationTest {
                 () -> assertEquals(firstPickId, requireGameData(adminId).getNextSquad().getCaptainId())
         );
 
-        IrCycle firstIrCycle = assignIrToBenchPlayer(adminId);
         seedSyntheticSeasonStats(firstPickId);
-
-        Integer firstIrReplacement = completeTransferWindow(
-                leagueId,
-                1,
-                WindowScenario.DIRECT_TRANSFER_AND_IR,
-                adminId,
-                firstIrCycle
-        );
-        assertNotNull(firstIrReplacement);
-        fantasyTeamService.releaseIR(adminId, firstIrReplacement);
-        verifyIrChip(adminId, 1, false);
         UserSquadEntity squadBeforeGameweekOne = requireGameData(adminId).getNextSquad();
         int captainBeforeGameweekOne = squadBeforeGameweekOne.getCaptainId();
         int expectedCaptainAfterAutosubs = captainBeforeGameweekOne == firstPickId
@@ -206,15 +194,19 @@ class FullSeasonSimulationTest {
                 if (gameweek == 2) {
                     assertThrows(RuntimeException.class,
                             () -> fantasyTeamService.assignFirstPickCaptain(adminId));
-                    prepareWaiverPlan(leagueId, gameweek, adminId);
                 }
                 if (gameweek == 3) {
+                    prepareWaiverPlan(leagueId, gameweek, adminId);
                     verifyManualTransferOrder(adminId, gameweek, managerIds);
                 }
 
                 IrCycle irCycle = null;
                 WindowScenario scenario = WindowScenario.PASS_ONLY;
-                if (gameweek == 2) scenario = WindowScenario.WAIVER;
+                if (gameweek == 2) {
+                    irCycle = assignIrToBenchPlayer(adminId);
+                    scenario = WindowScenario.DIRECT_TRANSFER_AND_IR;
+                }
+                if (gameweek == 3) scenario = WindowScenario.WAIVER;
                 if (gameweek == 5) scenario = WindowScenario.CLUB_LIMIT_REJECTION;
                 if (gameweek == 6) scenario = WindowScenario.LOCKED_PLAYER_REJECTION;
                 if (gameweek == 10) {
@@ -229,6 +221,11 @@ class FullSeasonSimulationTest {
                         adminId,
                         irCycle
                 );
+                if (gameweek == 2) {
+                    assertNotNull(replacement);
+                    fantasyTeamService.releaseIR(adminId, replacement);
+                    verifyIrChip(adminId, 1, false);
+                }
                 if (gameweek == 10) {
                     assertNotNull(replacement);
                     fantasyTeamService.releaseIR(adminId, replacement);
@@ -495,12 +492,12 @@ class FullSeasonSimulationTest {
         assertTrue(duplicateRejectionChecked);
 
         List<Integer> expectedFirstRound = new ArrayList<>(draftBaseOrder);
-        expectedFirstRound.add(expectedFirstRound.removeFirst());
+        Collections.reverse(expectedFirstRound);
         List<Integer> expectedWindowOrder = new ArrayList<>(expectedFirstRound);
         List<Integer> reverseRound = new ArrayList<>(expectedFirstRound);
         Collections.reverse(reverseRound);
         expectedWindowOrder.addAll(reverseRound);
-        assertEquals(expectedWindowOrder, transferMarketService.getCurrentTurnOrder(adminId, 1));
+        assertEquals(expectedWindowOrder, transferMarketService.getCurrentTurnOrder(adminId, 2));
         assertEquals(15, rosterIds(requireGameData(adminId).getNextSquad(), false).size());
         assertNotNull(fantasyTeamService.getSquadForGameweek(adminId, 1));
     }
@@ -910,7 +907,7 @@ class FullSeasonSimulationTest {
                 () -> assertEquals((long) MANAGER_COUNT * GAMEWEEK_COUNT, userPointsRepository.count()),
                 () -> assertEquals(GAMEWEEK_COUNT, dailyStatusRepository.count()),
                 () -> assertEquals((long) playerRepository.count() * GAMEWEEK_COUNT, statsRepository.count()),
-                () -> assertEquals(GAMEWEEK_COUNT + 1L, windowRepository.count()),
+                () -> assertEquals(GAMEWEEK_COUNT, windowRepository.count()),
                 () -> assertEquals((long) MANAGER_COUNT * (GAMEWEEK_COUNT + 1), squadRepository.count()),
                 () -> assertEquals("FINISHED", gameWeekRepository.findById(37).orElseThrow().getStatus()),
                 () -> assertEquals("LIVE", gameWeekRepository.findById(38).orElseThrow().getStatus()),

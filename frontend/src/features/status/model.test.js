@@ -22,15 +22,27 @@ describe("status model", () => {
     });
 
     it("uses the full schedule when cached boundary fields are empty", () => {
-        const nextGameweek = { id: 1, status: "UPCOMING" };
+        const nextGameweek = {
+            id: 1,
+            status: "UPCOMING",
+            transferWindowProcessed: true,
+            transferOpenTime: null,
+        };
+        const firstTransferGameweek = {
+            id: 2,
+            status: "UPCOMING",
+            transferWindowProcessed: false,
+            transferOpenTime: "2026-08-28T18:00:00",
+        };
 
         expect(deriveStatusGameweekView({
-            gameweeks: [nextGameweek, { id: 2, status: "UPCOMING" }],
+            gameweeks: [nextGameweek, firstTransferGameweek],
             currentGameweek: null,
             nextGameweek: null,
             lastGameweek: null,
         })).toMatchObject({
             displayedGameweek: nextGameweek,
+            nextTransferGameweek: firstTransferGameweek,
             preSeason: true,
             transferHistoryGameweekId: 1,
         });

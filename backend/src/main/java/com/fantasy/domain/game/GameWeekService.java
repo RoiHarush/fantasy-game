@@ -87,6 +87,9 @@ public class GameWeekService {
             gw.setLastKickoffTime(kickoffs.last);
             gw.setStatus(status);
             gw.setTransferOpenTime(calculateTransferOpenTime(id, kickoffs.first));
+            if (!GameweekActivityPolicy.supportsRegularTransferWindow(id)) {
+                gw.setTransferWindowProcessed(true);
+            }
 
             gameWeeksToSave.add(gw);
         }
@@ -106,13 +109,18 @@ public class GameWeekService {
 
             boolean isFirstKickoffChanged = !Objects.equals(kickoffs.first, gw.getFirstKickoffTime());
             boolean isLastKickoffChanged = !Objects.equals(kickoffs.last, gw.getLastKickoffTime());
+            LocalDateTime expectedTransferOpenTime = calculateTransferOpenTime(gw.getId(), kickoffs.first);
+            boolean isTransferOpenTimeChanged = !Objects.equals(
+                    expectedTransferOpenTime,
+                    gw.getTransferOpenTime()
+            );
 
-            if (isFirstKickoffChanged || isLastKickoffChanged) {
+            if (isFirstKickoffChanged || isLastKickoffChanged || isTransferOpenTimeChanged) {
                 gw.setFirstKickoffTime(kickoffs.first);
                 gw.setLastKickoffTime(kickoffs.last);
-
-                if (isFirstKickoffChanged) {
-                    gw.setTransferOpenTime(calculateTransferOpenTime(gw.getId(), kickoffs.first));
+                gw.setTransferOpenTime(expectedTransferOpenTime);
+                if (!GameweekActivityPolicy.supportsRegularTransferWindow(gw)) {
+                    gw.setTransferWindowProcessed(true);
                 }
 
                 gameWeeksToUpdate.add(gw);
@@ -154,6 +162,9 @@ public class GameWeekService {
     }
 
     private LocalDateTime calculateTransferOpenTime(int gameweekId, LocalDateTime firstKickoff) {
+        if (!GameweekActivityPolicy.supportsRegularTransferWindow(gameweekId)) {
+            return null;
+        }
         List<FixtureEntity> fixtures = fixtureRepo.findByGameweekId(gameweekId);
         LocalDateTime chosenTime = firstKickoff.minusMinutes(75);
 

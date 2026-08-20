@@ -1,3 +1,5 @@
+import { getNextTransferGameweek } from "../gameweeks/model";
+
 export function getRankLabel(rank) {
     if (!Number.isInteger(rank) || rank < 1) return "-";
 
@@ -39,9 +41,14 @@ export function deriveStatusGameweekView({
         : resolvedNext?.transferWindowProcessed
             ? resolvedNext.id
             : resolvedCurrent?.id ?? resolvedLast?.id ?? resolvedNext?.id ?? null;
+    const nextTransferGameweek = getNextTransferGameweek({
+        gameweeks,
+        nextGameweek: resolvedNext,
+    });
 
     return {
         displayedGameweek,
+        nextTransferGameweek,
         preSeason,
         seasonComplete,
         transferHistoryGameweekId,

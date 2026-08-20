@@ -1,9 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeGameweekResponses } from "./model";
+import { getNextTransferGameweek, normalizeGameweekResponses } from "./model";
 
 const fulfilled = (value) => ({ status: "fulfilled", value });
 const rejected = (reason) => ({ status: "rejected", reason });
+
+describe("getNextTransferGameweek", () => {
+    it("skips gameweek one and selects gameweek two for transfer features", () => {
+        const gameweekOne = {
+            id: 1,
+            status: "UPCOMING",
+            transferWindowProcessed: true,
+            transferOpenTime: null,
+        };
+        const gameweekTwo = {
+            id: 2,
+            status: "UPCOMING",
+            transferWindowProcessed: false,
+            transferOpenTime: "2026-08-28T18:00:00",
+        };
+
+        expect(getNextTransferGameweek({
+            gameweeks: [gameweekOne, gameweekTwo],
+            nextGameweek: gameweekOne,
+        })).toBe(gameweekTwo);
+    });
+});
 
 describe("normalizeGameweekResponses", () => {
     it("sorts the season and preserves the current boundaries", () => {

@@ -20,6 +20,14 @@ public final class GameweekActivityPolicy {
     private GameweekActivityPolicy() {
     }
 
+    public static boolean supportsRegularTransferWindow(GameWeekEntity gameweek) {
+        return gameweek != null && supportsRegularTransferWindow(gameweek.getId());
+    }
+
+    public static boolean supportsRegularTransferWindow(int gameweekId) {
+        return gameweekId >= 2;
+    }
+
     public static void requireCanOpenNow(Collection<GameWeekEntity> gameweeks,
                                          LocalDateTime now,
                                          String operation) {

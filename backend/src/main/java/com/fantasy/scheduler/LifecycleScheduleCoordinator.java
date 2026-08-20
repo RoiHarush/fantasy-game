@@ -4,6 +4,7 @@ import com.fantasy.domain.game.FixtureEntity;
 import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.game.GameweekDailyStatusRepository;
 import com.fantasy.domain.transfer.DraftConfig;
 import com.fantasy.domain.transfer.DraftConfigRepository;
@@ -284,7 +285,9 @@ public class LifecycleScheduleCoordinator {
                     gameweekAutoScheduler::openDueGameweek
             ));
         }
-        if (!gameweek.isTransferWindowProcessed() && gameweek.getTransferOpenTime() != null) {
+        if (GameweekActivityPolicy.supportsRegularTransferWindow(gameweek)
+                && !gameweek.isTransferWindowProcessed()
+                && gameweek.getTransferOpenTime() != null) {
             Instant transferOpen = toInstant(gameweek.getTransferOpenTime());
             if (scheduledNotificationService != null
                     && Instant.now().isBefore(transferOpen)

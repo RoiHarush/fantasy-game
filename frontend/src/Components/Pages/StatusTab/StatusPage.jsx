@@ -68,6 +68,7 @@ function StatusPage() {
                     league={league}
                     currentGameweek={gameweekView.displayedGameweek}
                     nextGameweek={gameweekState.nextGameweek}
+                    nextTransferGameweek={gameweekView.nextTransferGameweek}
                     preSeason={gameweekView.preSeason}
                     seasonComplete={gameweekView.seasonComplete}
                     transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}

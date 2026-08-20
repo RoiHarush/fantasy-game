@@ -56,6 +56,27 @@ class LifecycleScheduleCoordinatorTest {
     }
 
     @Test
+    void gameweekOneSchedulesLineupLifecycleButNeverATransferWindow() {
+        Dependencies dependencies = new Dependencies();
+        GameWeekEntity upcoming = upcomingGameweek(
+                LocalDateTime.now(LEAGUE_ZONE).plusHours(2),
+                LocalDateTime.now(LEAGUE_ZONE).plusHours(1)
+        );
+        upcoming.setId(1);
+        when(dependencies.gameWeekRepository.findFirstByStatusOrderByIdAsc("UPCOMING"))
+                .thenReturn(Optional.of(upcoming));
+
+        dependencies.coordinator.reconcile("gameweek one");
+
+        ArgumentCaptor<Instant> deadlines = ArgumentCaptor.forClass(Instant.class);
+        verify(dependencies.scheduler, times(2)).schedule(any(Runnable.class), deadlines.capture());
+        assertTrue(deadlines.getAllValues().contains(
+                upcoming.getFirstKickoffTime().atZone(LEAGUE_ZONE).toInstant()
+        ));
+        verify(dependencies.transferWindowScheduler, times(0)).checkAndOpenTransferWindow();
+    }
+
+    @Test
     void fplDeadlineChangeCancelsTheOldTaskAndSchedulesTheNewInstant() {
         Dependencies dependencies = new Dependencies();
         LocalDateTime original = LocalDateTime.now(LEAGUE_ZONE).plusHours(2);

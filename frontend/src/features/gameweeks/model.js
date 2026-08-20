@@ -28,3 +28,17 @@ export function normalizeGameweekResponses([all, current, next, last]) {
             ?? null,
     };
 }
+
+export function getNextTransferGameweek({ gameweeks = [], nextGameweek = null } = {}) {
+    return [...gameweeks]
+        .filter(gameweek => gameweek.status === "UPCOMING"
+            && Number(gameweek.id) >= 2
+            && gameweek.transferWindowProcessed !== true
+            && gameweek.transferOpenTime)
+        .sort((left, right) => Number(left.id) - Number(right.id))[0]
+        ?? (Number(nextGameweek?.id) >= 2
+            && nextGameweek?.transferWindowProcessed !== true
+            && nextGameweek?.transferOpenTime
+            ? nextGameweek
+            : null);
+}

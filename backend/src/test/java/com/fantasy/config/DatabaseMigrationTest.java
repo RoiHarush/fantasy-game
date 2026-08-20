@@ -19,7 +19,7 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(21, flyway.migrate().migrationsExecuted);
+        assertEquals(22, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
