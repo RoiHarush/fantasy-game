@@ -441,6 +441,7 @@ public class TransferMarketService {
                     return ids.stream();
                 })
                 .collect(java.util.stream.Collectors.toSet());
+        Set<Integer> supplementalDraftPlayerIds = supplementalDraftPoolService.playerIds(leagueId);
 
         Comparator<AdministrativePlayerReplacementOptions.PlayerOption> optionOrder = Comparator
                 .comparing(AdministrativePlayerReplacementOptions.PlayerOption::position)
@@ -449,14 +450,23 @@ public class TransferMarketService {
                 .thenComparingInt(AdministrativePlayerReplacementOptions.PlayerOption::id);
         List<AdministrativePlayerReplacementOptions.PlayerOption> rosterPlayers = playerRepo
                 .findAllById(rosterIds).stream()
-                .map(player -> toAdministrativePlayerOption(league, player, squad))
+                .map(player -> toAdministrativePlayerOption(
+                        league,
+                        player,
+                        squad,
+                        supplementalDraftPlayerIds.contains(player.getId())
+                ))
                 .sorted(optionOrder)
                 .toList();
         List<AdministrativePlayerReplacementOptions.PlayerOption> availablePlayers = playerRepo.findAll().stream()
                 .filter(player -> !ownedIds.contains(player.getId()))
                 .filter(player -> !league.isPlayerLocked(player.getId()))
-                .filter(player -> !supplementalDraftPoolService.isEligible(leagueId, player.getId()))
-                .map(player -> toAdministrativePlayerOption(league, player, null))
+                .map(player -> toAdministrativePlayerOption(
+                        league,
+                        player,
+                        null,
+                        supplementalDraftPlayerIds.contains(player.getId())
+                ))
                 .sorted(optionOrder)
                 .toList();
 
@@ -508,7 +518,8 @@ public class TransferMarketService {
         PlayerEntity incoming = playerRepo.findById(playerInId)
                 .orElseThrow(() -> new FantasyTeamException("Incoming player was not found"));
 
-        performTransfer(leagueId, userId, playerOutId, playerInId, false);
+        performTransfer(leagueId, userId, playerOutId, playerInId, false, true);
+        supplementalDraftPoolService.releasePlayer(leagueId, playerInId);
         recordAdministrativeAction(league, gameData, squad.getGameweek(), playerInId, playerOutId);
 
         String managerName = gameData.getUser() == null ? "Manager" : gameData.getUser().getFullName();
@@ -618,6 +629,15 @@ public class TransferMarketService {
                                  int playerOutId,
                                  int playerInId,
                                  boolean supplementalDraft) {
+        performTransfer(leagueId, userId, playerOutId, playerInId, supplementalDraft, false);
+    }
+
+    private void performTransfer(long leagueId,
+                                 int userId,
+                                 int playerOutId,
+                                 int playerInId,
+                                 boolean supplementalDraft,
+                                 boolean allowSupplementalDraftReservedPlayer) {
         if (playerOutId == playerInId) {
             throw new FantasyTeamException("Incoming and outgoing player must be different");
         }
@@ -646,7 +666,8 @@ public class TransferMarketService {
                     playerInId,
                     supplementalWindow.getOpenedAt()
             );
-        } else if (supplementalDraftPoolService.isEligible(leagueId, playerInId)) {
+        } else if (!allowSupplementalDraftReservedPlayer
+                && supplementalDraftPoolService.isEligible(leagueId, playerInId)) {
             throw new FantasyTeamException("Incoming player is reserved for the next supplemental draft");
         }
 
@@ -1438,7 +1459,8 @@ public class TransferMarketService {
 
     private AdministrativePlayerReplacementOptions.PlayerOption toAdministrativePlayerOption(LeagueEntity league,
                                                                                                PlayerEntity player,
-                                                                                               UserSquadEntity squad) {
+                                                                                               UserSquadEntity squad,
+                                                                                               boolean supplementalDraftReserved) {
         return new AdministrativePlayerReplacementOptions.PlayerOption(
                 player.getId(),
                 playerName(player),
@@ -1448,6 +1470,7 @@ public class TransferMarketService {
                 player.isInjured(),
                 player.getNews(),
                 player.getPhoto(),
+                supplementalDraftReserved,
                 squad != null && Objects.equals(squad.getCaptainId(), player.getId()),
                 squad != null && Objects.equals(squad.getViceCaptainId(), player.getId()),
                 squad != null && Objects.equals(squad.getFirstPickId(), player.getId())

@@ -76,4 +76,9 @@ public class SupplementalDraftPoolService {
         if (cutoff == null) return;
         poolRepository.deleteByLeague_IdAndDiscoveredAtLessThanEqual(leagueId, cutoff);
     }
+
+    @Transactional
+    public void releasePlayer(long leagueId, int playerId) {
+        poolRepository.deleteByLeague_IdAndPlayer_Id(leagueId, playerId);
+    }
 }

@@ -19,5 +19,6 @@ public interface SupplementalDraftPoolRepository
             Long leagueId,
             LocalDateTime cutoff
     );
+    void deleteByLeague_IdAndPlayer_Id(Long leagueId, Integer playerId);
     void deleteByLeague_IdAndDiscoveredAtLessThanEqual(Long leagueId, LocalDateTime cutoff);
 }

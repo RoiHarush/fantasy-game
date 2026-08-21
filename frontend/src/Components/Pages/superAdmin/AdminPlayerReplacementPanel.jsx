@@ -44,6 +44,7 @@ function PlayerCard({ player, tone = "neutral" }) {
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-app-muted">
                 <span className="rounded-full border border-app-border px-2 py-1">ID {player.id}</span>
                 <span className="rounded-full border border-app-border px-2 py-1">{player.points} pts</span>
+                {player.supplementalDraftReserved && <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-400">NEW</span>}
                 {player.injured && <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-amber-500">Flagged</span>}
                 {player.captain && <span className="rounded-full border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-cyan-500">Captain</span>}
                 {player.viceCaptain && <span className="rounded-full border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-cyan-500">Vice captain</span>}
@@ -227,7 +228,10 @@ export default function AdminPlayerReplacementPanel() {
                                             }}
                                             className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-app-accent-hover"
                                         >
-                                            <span className="font-bold text-app-foreground">{player.viewName}</span>
+                                            <span className="flex items-center gap-2 font-bold text-app-foreground">
+                                                {player.viewName}
+                                                {player.supplementalDraftReserved && <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-1.5 py-0.5 text-[0.6rem] font-black text-fuchsia-400">NEW</span>}
+                                            </span>
                                             <span className="shrink-0 text-xs font-semibold text-app-muted">Team {player.teamId ?? "—"} · {player.points} pts</span>
                                         </button>
                                     )) : <p className="px-3 py-4 text-center text-sm text-app-muted">No matching free players.</p>}

@@ -626,11 +626,12 @@ class TransferMarketServicePersistenceTest {
         LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
         LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
         TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
+        SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
         TransferMarketService service = new TransferMarketService(
                 playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
                 mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
                 mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
-                mock(SupplementalDraftPoolService.class),
+                poolService,
                 mock(com.fantasy.config.WebSocketPresenceService.class)
         );
 
@@ -667,6 +668,7 @@ class TransferMarketServicePersistenceTest {
         when(playerRepo.findById(100)).thenReturn(Optional.of(outgoing));
         when(playerRepo.findById(200)).thenReturn(Optional.of(incoming));
         when(playerRepo.findAllById(any())).thenReturn(List.of(incoming));
+        when(poolService.isEligible(7L, 200)).thenReturn(true);
 
         AdministrativePlayerReplacementResult result = service.replacePlayerAdministratively(
                 7L, 10, 100, 200, 99
@@ -679,7 +681,60 @@ class TransferMarketServicePersistenceTest {
         verify(actionRepo).save(action.capture());
         assertEquals(TransferActionSource.ADMIN_CORRECTION, action.getValue().getSource());
         assertEquals(TransferWindowType.TRANSFER, action.getValue().getWindowType());
+        verify(poolService).releasePlayer(7L, 200);
         verify(webSocket).sendTransferDoneEvent(7L, 10, 100, 200, "Manager");
+    }
+
+    @Test
+    void administrativeReplacementOptionsIncludePlayersReservedForTheSupplementalDraft() {
+        PlayerRepository playerRepo = mock(PlayerRepository.class);
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        SupplementalDraftPoolService poolService = mock(SupplementalDraftPoolService.class);
+        TransferMarketService service = new TransferMarketService(
+                playerRepo, gameWeekRepo, mock(UserSquadRepository.class), gameDataRepo,
+                mock(UserRepository.class), leagueRepo, mock(LeagueAccessService.class), windowRepo,
+                mock(WaiverPreferenceRepository.class), mock(WaiverPlanProgressRepository.class),
+                mock(LeagueTransferActionRepository.class), mock(TransferWebSocketController.class),
+                poolService, mock(com.fantasy.config.WebSocketPresenceService.class)
+        );
+
+        UserEntity manager = new UserEntity();
+        manager.setId(10);
+        manager.setName("Manager");
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(2);
+        squad.setStartingLineup(new ArrayList<>(List.of(100)));
+        squad.setBenchMap(new LinkedHashMap<>());
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setLeague(league);
+        gameData.setUser(manager);
+        gameData.setNextSquad(squad);
+        PlayerEntity outgoing = player(100, PlayerPosition.GOALKEEPER, 1);
+        outgoing.setViewName("Existing keeper");
+        PlayerEntity newKeeper = player(200, PlayerPosition.GOALKEEPER, 2);
+        newKeeper.setViewName("New keeper");
+
+        when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
+        when(gameDataRepo.findByUserId(10)).thenReturn(Optional.of(gameData));
+        when(gameDataRepo.findAllByLeagueIdWithSquads(7L)).thenReturn(List.of(gameData));
+        when(gameWeekRepo.findAll()).thenReturn(List.of());
+        when(playerRepo.findAllById(any())).thenReturn(List.of(outgoing));
+        when(playerRepo.findAll()).thenReturn(List.of(outgoing, newKeeper));
+        when(poolService.playerIds(7L)).thenReturn(Set.of(200));
+
+        AdministrativePlayerReplacementOptions options = service
+                .getAdministrativeReplacementOptions(7L, 10);
+
+        assertTrue(options.allowed());
+        assertEquals(List.of(200), options.availablePlayers().stream()
+                .map(AdministrativePlayerReplacementOptions.PlayerOption::id)
+                .toList());
+        assertTrue(options.availablePlayers().getFirst().supplementalDraftReserved());
     }
 
     @Test

@@ -22,6 +22,7 @@ public record AdministrativePlayerReplacementOptions(
             boolean injured,
             String news,
             String photo,
+            boolean supplementalDraftReserved,
             boolean captain,
             boolean viceCaptain,
             boolean firstPick
