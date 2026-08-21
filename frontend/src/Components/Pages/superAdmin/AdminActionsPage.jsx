@@ -9,6 +9,7 @@ import {
 import { manualSquadOverrideSchema } from "../../../features/super-admin/schemas";
 import { Button } from "../../../shared/ui/Button";
 import SelectField from "../../../shared/ui/SelectField";
+import AdminPlayerReplacementPanel from "./AdminPlayerReplacementPanel";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-app-border bg-app-surface-muted px-3 text-sm text-app-foreground outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/15 sm:w-auto sm:min-w-40";
 const sectionClass = "border-t border-app-border py-6 first:border-t-0";
@@ -280,6 +281,10 @@ export default function AdminActionsPage() {
                     </Button>
                 </div>
             </section>
+
+            <div className="py-6">
+                <AdminPlayerReplacementPanel />
+            </div>
 
             <section className={`${sectionClass} border-red-400/35`}>
                 <div className="border-l-2 border-red-400 pl-3"><h2 className="text-lg font-black text-red-500 dark:text-red-300">Manual squad override</h2><p className="mt-1 text-sm text-app-muted">Last-resort repair. This directly replaces a saved squad.</p></div>

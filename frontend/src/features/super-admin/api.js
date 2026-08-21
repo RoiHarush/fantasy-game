@@ -22,3 +22,14 @@ export function getAdminPlayers({ signal } = {}) {
 export function runAdminAction({ endpoint, method, body }) {
     return apiRequest(endpoint, { method, body });
 }
+
+export function getPlayerReplacementOptions(leagueId, userId, { signal } = {}) {
+    return apiRequest(`/api/admin/leagues/${leagueId}/users/${userId}/player-replacement`, { signal });
+}
+
+export function replacePlayerForManager({ leagueId, userId, playerOutId, playerInId }) {
+    return apiRequest(`/api/admin/leagues/${leagueId}/users/${userId}/player-replacement`, {
+        method: "POST",
+        body: { playerOutId, playerInId },
+    });
+}

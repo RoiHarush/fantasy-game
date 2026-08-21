@@ -93,4 +93,19 @@ describe("NavButtons responsive navigation", () => {
         expect(quickNavigation).toHaveClass("fixed", "inset-x-0", "bottom-0");
         expect(within(quickNavigation).getByText("Status")).toBeVisible();
     });
+
+    it("reuses the manager navigation with observer-safe links and an exit action", () => {
+        render(<NavButtons
+            userOverride={{ id: 17, leagueId: 4, leagueStatus: "ACTIVE", leagueAdmin: false }}
+            navigationBase="/observe/4/17"
+            activePath="/pick-team"
+            observerMode
+        />);
+
+        const quickNavigation = screen.getByRole("navigation", { name: "Mobile quick navigation" });
+        expect(within(quickNavigation).getByRole("link", { name: "Team" })).toHaveAttribute("href", "/observe/4/17/pick-team");
+        expect(within(quickNavigation).getByRole("link", { name: "Team" })).toHaveAttribute("aria-current", "page");
+        expect(screen.getByRole("link", { name: "Exit read-only view" })).toHaveAttribute("href", "/admin/observe");
+        expect(screen.queryByRole("button", { name: "Logout" })).not.toBeInTheDocument();
+    });
 });

@@ -118,7 +118,9 @@ function RegularTransfer({ action, playerName }) {
                 <strong className="min-w-0 truncate text-app-positive-foreground">{playerName(action.playerInId)}</strong>
                 <ArrowRight className="size-3.5 shrink-0 text-app-muted" aria-hidden="true" />
                 <span className="min-w-0 truncate font-semibold text-app-danger-foreground">{playerName(action.playerOutId)}</span>
-                <small className="ml-auto text-[0.62rem] font-black uppercase tracking-wide text-app-muted">{action.source === "WAIVER" ? "Waiver" : "Manual"}</small>
+                <small className="ml-auto text-[0.62rem] font-black uppercase tracking-wide text-app-muted">
+                    {action.source === "WAIVER" ? "Waiver" : action.source === "ADMIN_CORRECTION" ? "Admin correction" : "Manual"}
+                </small>
             </div>
         </>
     );

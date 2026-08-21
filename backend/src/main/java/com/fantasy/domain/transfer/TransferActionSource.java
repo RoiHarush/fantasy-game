@@ -6,5 +6,6 @@ public enum TransferActionSource {
     WAIVER,
     IR,
     IR_MANUAL,
-    IR_WAIVER
+    IR_WAIVER,
+    ADMIN_CORRECTION
 }

@@ -2,6 +2,7 @@ package com.fantasy.domain.transfer;
 
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.GameweekActivityPolicy;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -610,6 +613,110 @@ class TransferMarketServicePersistenceTest {
         assertEquals(false, attendance.get("automatic"));
         assertEquals(Set.of(20), attendance.get("automaticUserIds"));
         assertEquals("CLOSED", attendance.get("windowStatus"));
+    }
+
+    @Test
+    void administrativeReplacementUsesTheNormalOwnershipRulesAndRecordsTheCorrection() {
+        PlayerRepository playerRepo = mock(PlayerRepository.class);
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        UserSquadRepository squadRepo = mock(UserSquadRepository.class);
+        UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        LeagueTransferActionRepository actionRepo = mock(LeagueTransferActionRepository.class);
+        TransferWebSocketController webSocket = mock(TransferWebSocketController.class);
+        TransferMarketService service = new TransferMarketService(
+                playerRepo, gameWeekRepo, squadRepo, gameDataRepo, userRepo, leagueRepo,
+                mock(LeagueAccessService.class), windowRepo, mock(WaiverPreferenceRepository.class),
+                mock(WaiverPlanProgressRepository.class), actionRepo, webSocket,
+                mock(SupplementalDraftPoolService.class),
+                mock(com.fantasy.config.WebSocketPresenceService.class)
+        );
+
+        UserEntity manager = new UserEntity();
+        manager.setId(10);
+        manager.setName("Manager");
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        league.setUsers(List.of(manager));
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(2);
+        squad.setStartingLineup(new ArrayList<>(List.of(100)));
+        squad.setBenchMap(new LinkedHashMap<>());
+        squad.setCaptainId(100);
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setLeague(league);
+        gameData.setUser(manager);
+        gameData.setNextSquad(squad);
+        PlayerEntity outgoing = player(100, PlayerPosition.DEFENDER, 1);
+        outgoing.setViewName("Outgoing");
+        PlayerEntity incoming = player(200, PlayerPosition.DEFENDER, 2);
+        incoming.setViewName("Incoming");
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(2);
+
+        when(leagueRepo.findByIdWithLock(7L)).thenReturn(Optional.of(league));
+        when(leagueRepo.findById(7L)).thenReturn(Optional.of(league));
+        when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN)).thenReturn(List.of());
+        when(gameWeekRepo.findAll()).thenReturn(List.of());
+        when(gameWeekRepo.findById(2)).thenReturn(Optional.of(gameweek));
+        when(gameDataRepo.findByUserIdForUpdate(10)).thenReturn(Optional.of(gameData));
+        when(gameDataRepo.findByUserId(10)).thenReturn(Optional.of(gameData));
+        when(gameDataRepo.findAllByLeagueIdWithSquads(7L)).thenReturn(List.of(gameData));
+        when(playerRepo.findById(100)).thenReturn(Optional.of(outgoing));
+        when(playerRepo.findById(200)).thenReturn(Optional.of(incoming));
+        when(playerRepo.findAllById(any())).thenReturn(List.of(incoming));
+
+        AdministrativePlayerReplacementResult result = service.replacePlayerAdministratively(
+                7L, 10, 100, 200, 99
+        );
+
+        assertEquals(List.of(200), squad.getStartingLineup());
+        assertEquals(200, squad.getCaptainId());
+        assertEquals("Outgoing was replaced by Incoming.", result.message());
+        ArgumentCaptor<LeagueTransferActionEntity> action = ArgumentCaptor.forClass(LeagueTransferActionEntity.class);
+        verify(actionRepo).save(action.capture());
+        assertEquals(TransferActionSource.ADMIN_CORRECTION, action.getValue().getSource());
+        assertEquals(TransferWindowType.TRANSFER, action.getValue().getWindowType());
+        verify(webSocket).sendTransferDoneEvent(7L, 10, 100, 200, "Manager");
+    }
+
+    @Test
+    void administrativeReplacementIsBlockedByAnOpenWindowOrLiveGameweek() {
+        GameWeekRepository gameWeekRepo = mock(GameWeekRepository.class);
+        LeagueRepository leagueRepo = mock(LeagueRepository.class);
+        LeagueTransferWindowRepository windowRepo = mock(LeagueTransferWindowRepository.class);
+        UserGameDataRepository gameDataRepo = mock(UserGameDataRepository.class);
+        TransferMarketService service = new TransferMarketService(
+                mock(PlayerRepository.class), gameWeekRepo, mock(UserSquadRepository.class), gameDataRepo,
+                mock(UserRepository.class), leagueRepo, mock(LeagueAccessService.class), windowRepo,
+                mock(WaiverPreferenceRepository.class), mock(WaiverPlanProgressRepository.class),
+                mock(LeagueTransferActionRepository.class), mock(TransferWebSocketController.class),
+                mock(SupplementalDraftPoolService.class), mock(com.fantasy.config.WebSocketPresenceService.class)
+        );
+        LeagueEntity league = new LeagueEntity();
+        league.setId(7L);
+        when(leagueRepo.findByIdWithLock(7L)).thenReturn(Optional.of(league));
+        when(windowRepo.findByLeagueAndStatusForUpdate(7L, TransferWindowStatus.OPEN))
+                .thenReturn(List.of(new LeagueTransferWindowEntity()))
+                .thenReturn(List.of());
+
+        assertThrows(IllegalStateException.class,
+                () -> service.replacePlayerAdministratively(7L, 10, 100, 200, 99));
+        verify(gameDataRepo, never()).findByUserIdForUpdate(10);
+
+        GameWeekEntity liveGameweek = new GameWeekEntity();
+        liveGameweek.setId(2);
+        liveGameweek.setName("Gameweek 2");
+        liveGameweek.setStatus("LIVE");
+        liveGameweek.setCalculated(false);
+        liveGameweek.setFirstKickoffTime(LocalDateTime.now().minusHours(1));
+        when(gameWeekRepo.findAll()).thenReturn(List.of(liveGameweek));
+
+        assertThrows(GameweekActivityPolicy.GameweekActiveException.class,
+                () -> service.replacePlayerAdministratively(7L, 10, 100, 200, 99));
+        verify(gameDataRepo, never()).findByUserIdForUpdate(10);
     }
 
     private PlayerEntity player(int id, PlayerPosition position, int teamId) {

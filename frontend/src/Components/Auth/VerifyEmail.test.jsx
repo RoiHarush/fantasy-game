@@ -1,8 +1,8 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authApi = vi.hoisted(() => ({ verifyEmail: vi.fn() }));
-const authContext = vi.hoisted(() => ({ login: vi.fn() }));
+const authContext = vi.hoisted(() => ({ login: vi.fn(), prepareForAccountSwitch: vi.fn() }));
 const verificationSync = vi.hoisted(() => ({ publish: vi.fn(), subscribe: vi.fn(() => () => {}) }));
 
 vi.mock("next/image", () => ({
@@ -29,10 +29,15 @@ vi.mock("../../features/auth/emailVerificationSync", () => ({
 import VerifyEmail from "./VerifyEmail";
 
 describe("VerifyEmail", () => {
+    beforeEach(() => {
+        authContext.prepareForAccountSwitch.mockResolvedValue(undefined);
+    });
+
     afterEach(() => {
         cleanup();
         authApi.verifyEmail.mockReset();
         authContext.login.mockReset();
+        authContext.prepareForAccountSwitch.mockReset();
         verificationSync.publish.mockReset();
         verificationSync.subscribe.mockClear();
     });
@@ -48,6 +53,9 @@ describe("VerifyEmail", () => {
         expect(screen.getByText("Verifying your email…")).toBeInTheDocument();
         await waitFor(() => expect(screen.getByText("Email verified. Your account is ready.")).toBeInTheDocument());
         expect(authApi.verifyEmail).toHaveBeenCalledWith("valid-token", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+        expect(authContext.prepareForAccountSwitch).toHaveBeenCalledTimes(1);
+        expect(authContext.prepareForAccountSwitch.mock.invocationCallOrder[0])
+            .toBeLessThan(authApi.verifyEmail.mock.invocationCallOrder[0]);
         expect(verificationSync.publish).toHaveBeenCalledWith("verified", "manager@example.com");
     });
 

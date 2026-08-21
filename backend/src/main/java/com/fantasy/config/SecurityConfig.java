@@ -94,7 +94,8 @@ public class SecurityConfig {
                         headers.frameOptions(frameOptions -> frameOptions.sameOrigin())
                 )
                 .addFilterBefore(tokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(apiRateLimitFilter, TokenAuthFilter.class);
+                .addFilterAfter(apiRateLimitFilter, TokenAuthFilter.class)
+                .addFilterAfter(new ReadOnlyObserverFilter(), ApiRateLimitFilter.class);
 
         return http.build();
     }

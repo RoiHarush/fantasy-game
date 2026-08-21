@@ -13,6 +13,7 @@ function jsonResponse(body, init = {}) {
 afterEach(() => {
     vi.unstubAllGlobals();
     document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/";
+    window.history.replaceState(null, "", "/");
 });
 
 describe("apiRequest", () => {
@@ -51,6 +52,32 @@ describe("apiRequest", () => {
         expect(request.body).toBe(JSON.stringify({ name: "Manager" }));
         expect(request.headers.get("Content-Type")).toBe("application/json");
         expect(request.headers.get("X-XSRF-TOKEN")).toBe("csrf-token");
+    });
+
+    it("blocks mutations before they leave a read-only observer route", async () => {
+        window.history.replaceState(null, "", "/observe/4/17/pick-team");
+        const fetchMock = vi.fn();
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(apiRequest("/api/teams/17/save", {
+            method: "POST",
+            body: { captainId: 4 },
+        })).rejects.toMatchObject({
+            name: "ApiError",
+            status: 403,
+            body: { code: "READ_ONLY_OBSERVER" },
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("marks observer reads while allowing them to use the dedicated read-only APIs", async () => {
+        window.history.replaceState(null, "", "/observe/4/17/status");
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 4 }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        await apiRequest("/api/admin/observe/leagues/4");
+
+        expect(fetchMock.mock.calls[0][1].headers.get("X-Fantasy-Observer-Mode")).toBe("read-only");
     });
 
     it("emits a session-expired event for authenticated 401 responses", async () => {

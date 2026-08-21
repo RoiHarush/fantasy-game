@@ -10,7 +10,7 @@ import { Button } from "../../shared/ui/Button";
 import AuthActionCard from "./AuthActionCard";
 
 export default function VerifyEmail({ token }) {
-    const auth = useAuth();
+    const { login, prepareForAccountSwitch } = useAuth();
     const [attempt, setAttempt] = useState(0);
     const [state, setState] = useState({ status: token ? "loading" : "error", message: "" });
     const verifiedEmail = useRef("");
@@ -35,7 +35,8 @@ export default function VerifyEmail({ token }) {
             }
         });
 
-        verifyEmail(token, { signal: controller.signal })
+        prepareForAccountSwitch()
+            .then(() => verifyEmail(token, { signal: controller.signal }))
             .then(({ message, user }) => {
                 if (!active) return;
                 const email = user?.email?.trim().toLowerCase() || "";
@@ -43,7 +44,7 @@ export default function VerifyEmail({ token }) {
                 setState({ status: "success", message, user, email, handedOff: false });
                 publishEmailVerificationEvent("verified", email);
                 fallbackTimer = window.setTimeout(() => {
-                    if (active) auth.login(user);
+                    if (active) login(user);
                 }, 2_500);
             })
             .catch((error) => {
@@ -64,7 +65,7 @@ export default function VerifyEmail({ token }) {
             unsubscribe();
             controller.abort();
         };
-    }, [attempt, auth, token]);
+    }, [attempt, login, prepareForAccountSwitch, token]);
 
     const missingToken = !token;
     const successful = state.status === "success";

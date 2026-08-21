@@ -12,12 +12,15 @@ import com.fantasy.domain.player.UpdatePenaltyRequest;
 import com.fantasy.domain.player.UpdatePositionRequest;
 import com.fantasy.domain.transfer.DraftConfig;
 import com.fantasy.domain.transfer.DraftService;
+import com.fantasy.domain.transfer.AdministrativePlayerReplacementOptions;
+import com.fantasy.domain.transfer.AdministrativePlayerReplacementResult;
 import com.fantasy.domain.transfer.SaveWaiverPlanRequest;
 import com.fantasy.domain.transfer.TransferMarketService;
 import com.fantasy.domain.transfer.TurnOrderDto;
 import com.fantasy.domain.transfer.WaiverEntryDto;
 import com.fantasy.domain.transfer.WaiverPlanService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -114,6 +117,26 @@ public class SuperAdminLeagueController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/{leagueId}/users/{userId}/player-replacement")
+    public AdministrativePlayerReplacementOptions getPlayerReplacementOptions(@PathVariable long leagueId,
+                                                                                @PathVariable int userId) {
+        return transferMarketService.getAdministrativeReplacementOptions(leagueId, userId);
+    }
+
+    @PostMapping("/{leagueId}/users/{userId}/player-replacement")
+    public AdministrativePlayerReplacementResult replacePlayer(@PathVariable long leagueId,
+                                                                 @PathVariable int userId,
+                                                                 @RequestBody PlayerReplacementRequest request,
+                                                                 Authentication authentication) {
+        return transferMarketService.replacePlayerAdministratively(
+                leagueId,
+                userId,
+                request.playerOutId(),
+                request.playerInId(),
+                (Integer) authentication.getPrincipal()
+        );
+    }
+
     @GetMapping("/{leagueId}/draft")
     public DraftConfig getDraft(@PathVariable long leagueId) {
         return draftService.getDraftConfigForLeague(leagueId);
@@ -170,4 +193,5 @@ public class SuperAdminLeagueController {
     }
 
     public record DraftScheduleRequest(LocalDateTime scheduledTime) {}
+    public record PlayerReplacementRequest(int playerOutId, int playerInId) {}
 }

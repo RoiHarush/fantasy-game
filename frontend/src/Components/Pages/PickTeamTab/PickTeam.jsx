@@ -25,10 +25,12 @@ function PickTeam({
     saveError,
     isDirty,
     setIsDirty,
-    refreshPlayerData
+    refreshPlayerData,
+    readOnly = false,
+    previewPlayers = null,
 }) {
     const playersQuery = usePlayers();
-    const { players } = playersQuery;
+    const players = previewPlayers ?? playersQuery.players;
     const captainIsFirstPick = squad.captainId != null
         && squad.firstPickId != null
         && String(squad.captainId) === String(squad.firstPickId);
@@ -37,8 +39,8 @@ function PickTeam({
         await saveTeam().catch(() => undefined);
     };
 
-    if (playersQuery.isPending) return <p role="status">Loading player data…</p>;
-    if (playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
+    if (!previewPlayers && playersQuery.isPending) return <p role="status">Loading player data…</p>;
+    if (!previewPlayers && playersQuery.error) return <p role="alert">Player data is temporarily unavailable.</p>;
 
     return (
         <div className="flex min-w-0 flex-col gap-5">
@@ -46,7 +48,13 @@ function PickTeam({
                 My Team – {nextGameweek.name}
             </h3>
 
-            <div className="mx-auto mb-1 grid w-full max-w-[760px] grid-cols-1 gap-2 sm:grid-cols-2">
+            {readOnly && (
+                <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-app-foreground">
+                    Squad snapshot. Formation, captaincy and chips cannot be changed from observer mode.
+                </div>
+            )}
+
+            {!readOnly && <div className="mx-auto mb-1 grid w-full max-w-[760px] grid-cols-1 gap-2 sm:grid-cols-2">
                 <IRManager
                     userId={user.id}
                     gameweekId={nextGameweek.id}
@@ -109,18 +117,19 @@ function PickTeam({
                     hasUnsavedChanges={isDirty}
                     squadSavePending={savePending}
                 />
-            </div>
+            </div>}
 
             <div className="relative flex w-full max-w-[1000px] flex-col gap-5">
                 <div className="w-full">
                     <PlayerInteractionProvider
-                        mode="pick"
+                        mode={readOnly ? "points" : "pick"}
                         squad={squad}
                         setSquad={setSquad}
                         setIsDirty={setIsDirty}
                         players={players}
                         chips={chips}
                         user={user}
+                        gameweek={nextGameweek}
                     >
                         <PitchWrapperBase
                             squad={squad}
@@ -138,7 +147,7 @@ function PickTeam({
                     </PlayerInteractionProvider>
                 </div>
 
-                <div className="mt-4 flex flex-col items-center">
+                {!readOnly && <div className="mt-4 flex flex-col items-center">
                     <Button
                         type="button"
                         variant="primary"
@@ -163,7 +172,7 @@ function PickTeam({
                         </p>
                     )}
 
-                </div>
+                </div>}
 
                 <div className="w-full">
                     <FixturesTable

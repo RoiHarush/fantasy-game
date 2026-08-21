@@ -4,6 +4,7 @@ const SESSION_EXPIRED_EVENT = "fantasy-auth-session-expired";
 const CSRF_COOKIE_NAME = "XSRF-TOKEN";
 const CSRF_HEADER_NAME = "X-XSRF-TOKEN";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+const OBSERVER_MUTATION_ALLOWLIST = new Set(["/api/auth/websocket-ticket"]);
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 let csrfRequest = null;
 
@@ -20,6 +21,10 @@ export class ApiError extends Error {
 
 function isBrowser() {
     return typeof window !== "undefined";
+}
+
+function isReadOnlyObserverRoute() {
+    return isBrowser() && window.location.pathname.startsWith("/observe/");
 }
 
 async function withRequestTimeout(url, sourceSignal, timeoutMs, request) {
@@ -185,8 +190,21 @@ export async function apiRequest(path, options = {}) {
 
     const requestHeaders = new Headers(headers || {});
     let requestBody = body;
+    const normalizedMethod = method.toUpperCase();
 
-    if (!SAFE_METHODS.has(method.toUpperCase()) && isBrowser()) {
+    if (isReadOnlyObserverRoute()) {
+        requestHeaders.set("X-Fantasy-Observer-Mode", "read-only");
+        if (!SAFE_METHODS.has(normalizedMethod) && !OBSERVER_MUTATION_ALLOWLIST.has(path)) {
+            throw new ApiError({
+                status: 403,
+                message: "This action is blocked while using the read-only league view.",
+                body: { code: "READ_ONLY_OBSERVER" },
+                url: path,
+            });
+        }
+    }
+
+    if (!SAFE_METHODS.has(normalizedMethod) && isBrowser()) {
         const csrfToken = await getCsrfToken();
         if (csrfToken) requestHeaders.set(CSRF_HEADER_NAME, csrfToken);
     }
@@ -206,7 +224,7 @@ export async function apiRequest(path, options = {}) {
 
     return withRequestTimeout(path, signal, timeoutMs, async (requestSignal) => {
         const response = await fetch(path, {
-            method,
+            method: normalizedMethod,
             headers: requestHeaders,
             body: requestBody,
             signal: requestSignal,

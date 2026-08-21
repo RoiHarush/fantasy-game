@@ -91,6 +91,7 @@ export default function TransferActivityTable({
 
 function getActionSourceLabel(source) {
     if (source === "WAIVER") return "Waiver";
+    if (source === "ADMIN_CORRECTION") return "Admin correction";
     if (source === "IR_WAIVER") return "IR · Waiver";
     if (source === "IR_MANUAL") return "IR · Manual";
     if (source === "IR") return "IR";

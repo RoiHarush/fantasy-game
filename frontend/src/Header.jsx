@@ -3,7 +3,7 @@ import Image from "next/image";
 import NavButtons from "./NavButtons";
 import ThemeToggle from "./Components/Theme/ThemeToggle";
 
-function Header() {
+function Header({ navigationProps = undefined }) {
     return (
         <header className="relative z-40 w-full bg-brand-gradient text-white">
             <div className="relative flex min-h-17 w-full items-center overflow-hidden px-3 py-2 sm:min-h-20 sm:px-5 lg:min-h-23">
@@ -28,7 +28,7 @@ function Header() {
                     className="pointer-events-none absolute inset-y-0 right-0 h-full w-auto max-w-[65%] object-contain object-right opacity-35 sm:opacity-50 lg:opacity-60"
                 />
             </div>
-            <NavButtons />
+            <NavButtons {...navigationProps} />
         </header>
     );
 }

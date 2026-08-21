@@ -56,13 +56,18 @@ public class SuperAdminObserverController {
                     return new ObservedManager(
                             user.getId(),
                             user.getFullName(),
+                            user.getFirstName(),
+                            user.getLastName(),
                             user.getUsername(),
+                            user.getEmail(),
+                            user.isEmailVerified(),
                             data == null ? user.getName() : data.getFantasyTeamName(),
                             data == null ? 0 : data.getTotalPoints(),
                             league.getAdmin() != null && league.getAdmin().getId().equals(user.getId())
                     );
                 })
-                .sorted(Comparator.comparing(ObservedManager::managerName, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparingInt(ObservedManager::totalPoints).reversed()
+                        .thenComparing(ObservedManager::managerName, String.CASE_INSENSITIVE_ORDER))
                 .toList();
         return new ObservedLeague(
                 league.getId(), league.getName(), league.getStatus().name(),
@@ -134,7 +139,11 @@ public class SuperAdminObserverController {
     public record ObservedManager(
             int userId,
             String managerName,
+            String firstName,
+            String lastName,
             String username,
+            String email,
+            boolean emailVerified,
             String fantasyTeamName,
             int totalPoints,
             boolean leagueAdmin

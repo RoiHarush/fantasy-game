@@ -83,19 +83,27 @@ const SECTION_STYLES = {
     },
 };
 
-export default function NavButtons() {
-    const { user, logout } = useAuth();
+export default function NavButtons({
+    userOverride = null,
+    navigationBase = "",
+    activePath = null,
+    observerMode = false,
+} = {}) {
+    const { user: authenticatedUser, logout } = useAuth();
     const pathname = usePathname();
+    const user = userOverride ?? authenticatedUser;
+    const navigationPathname = activePath ?? pathname;
     const [isLoggingOut, startLogout] = useTransition();
     const [openMenuPath, setOpenMenuPath] = useState(null);
     const navigationItems = getSiteNavigation(user);
     const isMenuOpen = openMenuPath === pathname;
+    const buildHref = (href) => navigationBase ? `${navigationBase}${href}` : href;
 
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && !observerMode) {
         navigationItems.push({ href: "/ui-lab", label: "UI Lab", kind: "admin", mobilePrimary: false, section: "management" });
     }
 
-    const activeItem = navigationItems.find(({ href }) => isNavigationItemActive(pathname, href));
+    const activeItem = navigationItems.find(({ href }) => isNavigationItemActive(navigationPathname, href));
     const mobilePrimaryItems = getMobilePrimaryNavigation(navigationItems);
     const mobileSecondaryItems = getMobileSecondaryNavigation(navigationItems);
     const secondarySections = Object.entries(SECTION_LABELS)
@@ -129,12 +137,12 @@ export default function NavButtons() {
             <nav className="hidden h-12 w-full items-center overflow-x-auto rounded-b-xl bg-black/25 px-4 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.3)_rgba(0,0,0,0.1)] lg:flex" aria-label="Primary navigation">
                 <div className="flex h-full min-w-max flex-1 items-center gap-1">
                     {navigationItems.map(({ href, label, kind }) => {
-                        const isActive = isNavigationItemActive(pathname, href);
+                        const isActive = isNavigationItemActive(navigationPathname, href);
 
                         return (
                             <Link
                                 key={href}
-                                href={href}
+                                href={buildHref(href)}
                                 aria-current={isActive ? "page" : undefined}
                                 className={cn(
                                     DESKTOP_LINK_CLASS,
@@ -147,15 +155,21 @@ export default function NavButtons() {
                         );
                     })}
 
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={handleLogout}
-                        disabled={isLoggingOut}
-                        className={cn(DESKTOP_LINK_CLASS, "ml-auto border-0 bg-transparent text-red-400 hover:text-red-300 after:bg-red-400 disabled:opacity-55")}
-                    >
-                        {isLoggingOut ? "Logging out…" : "Logout"}
-                    </Button>
+                    {observerMode ? (
+                        <Button asChild variant="ghost" className={cn(DESKTOP_LINK_CLASS, "ml-auto border-0 bg-transparent text-cyan-200 hover:text-white after:bg-cyan-300")}>
+                            <Link href="/admin/observe">Exit read-only view</Link>
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className={cn(DESKTOP_LINK_CLASS, "ml-auto border-0 bg-transparent text-red-400 hover:text-red-300 after:bg-red-400 disabled:opacity-55")}
+                        >
+                            {isLoggingOut ? "Logging out…" : "Logout"}
+                        </Button>
+                    )}
                 </div>
             </nav>
 
@@ -209,14 +223,14 @@ export default function NavButtons() {
                                     </h2>
                                     <div className="flex flex-col">
                                         {items.map(({ href, label: itemLabel, kind }) => {
-                                            const isActive = isNavigationItemActive(pathname, href);
+                                            const isActive = isNavigationItemActive(navigationPathname, href);
                                             const ItemIcon = SECONDARY_ICONS[href] || Settings2;
                                             const styles = SECTION_STYLES[section];
 
                                             return (
                                                 <Link
                                                     key={href}
-                                                    href={href}
+                                                    href={buildHref(href)}
                                                     onClick={() => {
                                                         setOpenMenuPath(null);
                                                     }}
@@ -253,16 +267,25 @@ export default function NavButtons() {
                             ))}
                         </div>
 
-                        <Button
-                            type="button"
-                            variant="danger"
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl border border-app-danger-border bg-app-danger-surface px-3 py-2 text-sm font-extrabold text-app-danger-foreground transition pointer-fine:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-danger-foreground disabled:opacity-55"
-                        >
-                            <LogOut className="size-4" aria-hidden="true" />
-                            {isLoggingOut ? "Logging out…" : "Logout"}
-                        </Button>
+                        {observerMode ? (
+                            <Button asChild variant="secondary" className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl text-sm font-extrabold">
+                                <Link href="/admin/observe" onClick={() => setOpenMenuPath(null)}>
+                                    <LogOut className="size-4" aria-hidden="true" />
+                                    Exit read-only view
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                variant="danger"
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
+                                className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl border border-app-danger-border bg-app-danger-surface px-3 py-2 text-sm font-extrabold text-app-danger-foreground transition pointer-fine:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-danger-foreground disabled:opacity-55"
+                            >
+                                <LogOut className="size-4" aria-hidden="true" />
+                                {isLoggingOut ? "Logging out…" : "Logout"}
+                            </Button>
+                        )}
                     </nav>
                 )}
             </div>
@@ -274,12 +297,12 @@ export default function NavButtons() {
                 >
                     <div className="grid h-12 grid-flow-col auto-cols-fr">
                         {mobilePrimaryItems.map(({ href, label }) => {
-                            const isActive = isNavigationItemActive(pathname, href);
+                            const isActive = isNavigationItemActive(navigationPathname, href);
 
                             return (
                                 <Link
                                     key={href}
-                                    href={href}
+                                    href={buildHref(href)}
                                     aria-label={MOBILE_LABELS[href] || label}
                                     aria-current={isActive ? "page" : undefined}
                                     className={cn(

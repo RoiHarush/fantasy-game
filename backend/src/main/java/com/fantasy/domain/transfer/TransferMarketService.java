@@ -396,6 +396,144 @@ public class TransferMarketService {
         advanceTurn(window);
     }
 
+    @Transactional(readOnly = true)
+    public AdministrativePlayerReplacementOptions getAdministrativeReplacementOptions(long leagueId,
+                                                                                         int userId) {
+        LeagueEntity league = leagueRepo.findById(leagueId)
+                .orElseThrow(() -> new FantasyTeamException("League was not found"));
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new FantasyTeamException("User game data was not found"));
+        requireGameDataInLeague(gameData, leagueId);
+
+        List<String> blockingReasons = new ArrayList<>();
+        if (windowRepo.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
+                leagueId,
+                TransferWindowStatus.OPEN
+        ).isPresent()) {
+            blockingReasons.add("A draft or transfer window is currently open for this league.");
+        }
+        GameweekActivityPolicy.findActiveNow(gameWeekRepo.findAll(), LocalDateTime.now(LEAGUE_TIME_ZONE))
+                .ifPresent(gameweek -> blockingReasons.add(
+                        (gameweek.getName() == null || gameweek.getName().isBlank()
+                                ? "Gameweek " + gameweek.getId()
+                                : gameweek.getName()) + " is currently active."
+                ));
+
+        UserSquadEntity squad = gameData.getNextSquad();
+        if (squad == null) {
+            blockingReasons.add("The manager does not have a squad for the next gameweek.");
+        }
+
+        Set<Integer> rosterIds = squad == null ? Set.of() : rosterPlayerIds(squad);
+        Set<Integer> ownedIds = gameDataRepo.findAllByLeagueIdWithSquads(leagueId).stream()
+                .map(UserGameDataEntity::getNextSquad)
+                .filter(Objects::nonNull)
+                .flatMap(ownedSquad -> {
+                    Set<Integer> ids = rosterPlayerIds(ownedSquad);
+                    if (ownedSquad.getIrId() != null) ids.add(ownedSquad.getIrId());
+                    return ids.stream();
+                })
+                .collect(java.util.stream.Collectors.toSet());
+
+        Comparator<AdministrativePlayerReplacementOptions.PlayerOption> optionOrder = Comparator
+                .comparing(AdministrativePlayerReplacementOptions.PlayerOption::position)
+                .thenComparing(AdministrativePlayerReplacementOptions.PlayerOption::viewName,
+                        String.CASE_INSENSITIVE_ORDER)
+                .thenComparingInt(AdministrativePlayerReplacementOptions.PlayerOption::id);
+        List<AdministrativePlayerReplacementOptions.PlayerOption> rosterPlayers = playerRepo
+                .findAllById(rosterIds).stream()
+                .map(player -> toAdministrativePlayerOption(league, player, squad))
+                .sorted(optionOrder)
+                .toList();
+        List<AdministrativePlayerReplacementOptions.PlayerOption> availablePlayers = playerRepo.findAll().stream()
+                .filter(player -> !ownedIds.contains(player.getId()))
+                .filter(player -> !league.isPlayerLocked(player.getId()))
+                .filter(player -> !supplementalDraftPoolService.isEligible(leagueId, player.getId()))
+                .map(player -> toAdministrativePlayerOption(league, player, null))
+                .sorted(optionOrder)
+                .toList();
+
+        UserEntity manager = gameData.getUser();
+        return new AdministrativePlayerReplacementOptions(
+                leagueId,
+                userId,
+                manager == null ? "Unknown manager" : manager.getFullName(),
+                gameData.getFantasyTeamName(),
+                squad == null ? null : squad.getGameweek(),
+                blockingReasons.isEmpty(),
+                List.copyOf(blockingReasons),
+                rosterPlayers,
+                availablePlayers
+        );
+    }
+
+    @Transactional
+    public AdministrativePlayerReplacementResult replacePlayerAdministratively(long leagueId,
+                                                                                 int userId,
+                                                                                 int playerOutId,
+                                                                                 int playerInId,
+                                                                                 int actingAdminId) {
+        if (playerOutId == playerInId) {
+            throw new FantasyTeamException("Incoming and outgoing player must be different");
+        }
+
+        LeagueEntity league = leagueRepo.findByIdWithLock(leagueId)
+                .orElseThrow(() -> new FantasyTeamException("League was not found"));
+        List<LeagueTransferWindowEntity> openWindows = windowRepo.findByLeagueAndStatusForUpdate(
+                leagueId,
+                TransferWindowStatus.OPEN
+        );
+        if (!openWindows.isEmpty()) {
+            throw new IllegalStateException("Administrative replacement is unavailable while a draft or transfer window is open");
+        }
+        GameweekActivityPolicy.requireCanOpenNow(
+                gameWeekRepo.findAll(),
+                LocalDateTime.now(LEAGUE_TIME_ZONE),
+                "Administrative player replacement"
+        );
+
+        UserGameDataEntity gameData = gameDataRepo.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new FantasyTeamException("User game data was not found"));
+        requireGameDataInLeague(gameData, leagueId);
+        UserSquadEntity squad = requireNextSquad(gameData);
+        PlayerEntity outgoing = playerRepo.findById(playerOutId)
+                .orElseThrow(() -> new FantasyTeamException("Outgoing player was not found"));
+        PlayerEntity incoming = playerRepo.findById(playerInId)
+                .orElseThrow(() -> new FantasyTeamException("Incoming player was not found"));
+
+        performTransfer(leagueId, userId, playerOutId, playerInId, false);
+        recordAdministrativeAction(league, gameData, squad.getGameweek(), playerInId, playerOutId);
+
+        String managerName = gameData.getUser() == null ? "Manager" : gameData.getUser().getFullName();
+        publishAfterCommit(() -> webSocketController.sendTransferDoneEvent(
+                leagueId,
+                userId,
+                playerOutId,
+                playerInId,
+                managerName
+        ));
+        log.info(
+                "Administrative player replacement completed: admin={} league={} user={} gameweek={} {} -> {}",
+                actingAdminId,
+                leagueId,
+                userId,
+                squad.getGameweek(),
+                playerOutId,
+                playerInId
+        );
+
+        return new AdministrativePlayerReplacementResult(
+                leagueId,
+                userId,
+                squad.getGameweek(),
+                playerOutId,
+                playerName(outgoing),
+                playerInId,
+                playerName(incoming),
+                playerName(outgoing) + " was replaced by " + playerName(incoming) + "."
+        );
+    }
+
     @Transactional
     public void processDraftPick(int userId, int playerId) {
         LeagueTransferWindowEntity window = activeWindowForUser(userId);
@@ -1271,6 +1409,50 @@ public class TransferMarketService {
         action.setPlayerInId(playerInId);
         action.setPlayerOutId(playerOutId);
         transferActionRepo.save(action);
+    }
+
+    private void recordAdministrativeAction(LeagueEntity league,
+                                            UserGameDataEntity gameData,
+                                            int gameweekId,
+                                            int playerInId,
+                                            int playerOutId) {
+        GameWeekEntity gameweek = gameWeekRepo.findById(gameweekId)
+                .orElseThrow(() -> new FantasyTeamException("Squad gameweek was not found"));
+        LeagueTransferActionEntity action = new LeagueTransferActionEntity();
+        action.setLeague(league);
+        action.setGameWeek(gameweek);
+        action.setUser(gameData.getUser());
+        action.setWindowType(TransferWindowType.TRANSFER);
+        action.setSource(TransferActionSource.ADMIN_CORRECTION);
+        action.setPlayerInId(playerInId);
+        action.setPlayerOutId(playerOutId);
+        transferActionRepo.save(action);
+    }
+
+    private AdministrativePlayerReplacementOptions.PlayerOption toAdministrativePlayerOption(LeagueEntity league,
+                                                                                               PlayerEntity player,
+                                                                                               UserSquadEntity squad) {
+        return new AdministrativePlayerReplacementOptions.PlayerOption(
+                player.getId(),
+                playerName(player),
+                league.effectivePosition(player).name(),
+                player.getTeamId(),
+                player.getTotalPoints(),
+                player.isInjured(),
+                player.getNews(),
+                player.getPhoto(),
+                squad != null && Objects.equals(squad.getCaptainId(), player.getId()),
+                squad != null && Objects.equals(squad.getViceCaptainId(), player.getId()),
+                squad != null && Objects.equals(squad.getFirstPickId(), player.getId())
+        );
+    }
+
+    private String playerName(PlayerEntity player) {
+        if (player.getViewName() != null && !player.getViewName().isBlank()) {
+            return player.getViewName();
+        }
+        return (Objects.toString(player.getFirstName(), "") + " "
+                + Objects.toString(player.getLastName(), "")).trim();
     }
 
     private List<Integer> defaultOrderForLeague(LeagueEntity league,

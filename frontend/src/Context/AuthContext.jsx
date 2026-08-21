@@ -17,6 +17,11 @@ export const AuthProvider = ({ children, initialUser = null, invalidSession = fa
     const router = useRouter();
     const queryClient = useQueryClient();
     const invalidSessionCleanupStarted = useRef(false);
+    const userRef = useRef(initialUser);
+
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
 
     const refreshCurrentUser = useCallback(async () => {
         const currentUser = await getCurrentUser();
@@ -94,6 +99,27 @@ export const AuthProvider = ({ children, initialUser = null, invalidSession = fa
         }
     }, [resetSession, router]);
 
+    const prepareForAccountSwitch = useCallback(async () => {
+        const hadAuthenticatedUser = Boolean(userRef.current);
+
+        // Clear the local identity first. WebSocketProvider observes this change
+        // and immediately tears down subscriptions belonging to the old user.
+        userRef.current = null;
+        resetSession();
+        setSessionMessage("");
+
+        try {
+            if (hadAuthenticatedUser) {
+                await disablePushForCurrentDevice().catch((error) => {
+                    console.warn("Unable to remove the previous account's push subscription.", error);
+                });
+            }
+            await endSession();
+        } catch (error) {
+            console.warn("Unable to clear the previous server session before switching accounts.", error);
+        }
+    }, [resetSession]);
+
     const updateUser = useCallback((updates) => {
         setUser((currentUser) => {
             if (!currentUser) return currentUser;
@@ -109,6 +135,7 @@ export const AuthProvider = ({ children, initialUser = null, invalidSession = fa
         user,
         login,
         logout,
+        prepareForAccountSwitch,
         updateUser,
         refreshCurrentUser,
         sessionMessage,
@@ -117,6 +144,7 @@ export const AuthProvider = ({ children, initialUser = null, invalidSession = fa
         clearSessionMessage,
         login,
         logout,
+        prepareForAccountSwitch,
         refreshCurrentUser,
         sessionMessage,
         updateUser,
