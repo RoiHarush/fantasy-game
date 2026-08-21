@@ -44,7 +44,7 @@ function SectionHeader({ icon: Icon, title, description }) {
     );
 }
 
-function PasswordField({ id, label, register, error, autoComplete, visible, onToggle }) {
+function PasswordField({ id, label, register, error, autoComplete, visible, onToggle, disabled = false }) {
     return (
         <div>
             <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor={id}>{label}</label>
@@ -55,6 +55,7 @@ function PasswordField({ id, label, register, error, autoComplete, visible, onTo
                     autoComplete={autoComplete}
                     className={`${inputClassName} pr-11`}
                     aria-invalid={Boolean(error)}
+                    disabled={disabled}
                     {...register(id)}
                 />
                 <Button
@@ -65,6 +66,7 @@ function PasswordField({ id, label, register, error, autoComplete, visible, onTo
                     aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`}
                     aria-pressed={visible}
                     onClick={onToggle}
+                    disabled={disabled}
                 >
                     {visible ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
                 </Button>
@@ -92,7 +94,7 @@ function Feedback({ message }) {
     );
 }
 
-function SettingsForm({ user, updateUser }) {
+function SettingsForm({ user, updateUser, readOnly = false }) {
     const notifications = useNotifications();
     const [message, setMessage] = useState(null);
     const [passwordVisibility, setPasswordVisibility] = useState({ currentPassword: false, newPassword: false });
@@ -122,6 +124,7 @@ function SettingsForm({ user, updateUser }) {
     });
 
     const submit = form.handleSubmit((values) => {
+        if (readOnly) return;
         setMessage(null);
         const payload = buildSettingsPayload(values, user);
 
@@ -159,17 +162,17 @@ function SettingsForm({ user, updateUser }) {
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor="firstName">First name</label>
-                                <input id="firstName" autoComplete="given-name" className={inputClassName} aria-invalid={Boolean(form.formState.errors.firstName)} {...form.register("firstName")} />
+                                <input id="firstName" autoComplete="given-name" className={inputClassName} aria-invalid={Boolean(form.formState.errors.firstName)} disabled={readOnly} {...form.register("firstName")} />
                                 <FieldError error={form.formState.errors.firstName} />
                             </div>
                             <div>
                                 <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor="lastName">Last name</label>
-                                <input id="lastName" autoComplete="family-name" className={inputClassName} aria-invalid={Boolean(form.formState.errors.lastName)} {...form.register("lastName")} />
+                                <input id="lastName" autoComplete="family-name" className={inputClassName} aria-invalid={Boolean(form.formState.errors.lastName)} disabled={readOnly} {...form.register("lastName")} />
                                 <FieldError error={form.formState.errors.lastName} />
                             </div>
                             <div className="sm:col-span-2">
                                 <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted" htmlFor="username">Username</label>
-                                <input id="username" autoComplete="username" spellCheck="false" className={inputClassName} aria-invalid={Boolean(form.formState.errors.username)} {...form.register("username")} />
+                                <input id="username" autoComplete="username" spellCheck="false" className={inputClassName} aria-invalid={Boolean(form.formState.errors.username)} disabled={readOnly} {...form.register("username")} />
                                 <FieldError error={form.formState.errors.username} />
                             </div>
                             <div className="sm:col-span-2">
@@ -194,6 +197,7 @@ function SettingsForm({ user, updateUser }) {
                                 autoComplete="current-password"
                                 visible={passwordVisibility.currentPassword}
                                 onToggle={() => togglePassword("currentPassword")}
+                                disabled={readOnly}
                             />
                             <PasswordField
                                 id="newPassword"
@@ -203,6 +207,7 @@ function SettingsForm({ user, updateUser }) {
                                 autoComplete="new-password"
                                 visible={passwordVisibility.newPassword}
                                 onToggle={() => togglePassword("newPassword")}
+                                disabled={readOnly}
                             />
                             <p className="flex items-start gap-2 border-l-2 border-app-accent-border pl-3 text-xs leading-5 text-app-muted sm:col-span-2">
                                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-app-accent" aria-hidden="true" />
@@ -226,13 +231,13 @@ function SettingsForm({ user, updateUser }) {
                                 {notifications.pushState === "loading" && "Checking this device…"}
                             </p>
                             {notifications.pushState === "enabled" ? (
-                                <Button type="button" variant="secondary" disabled={notifications.busy} onClick={notifications.disable}>
+                                <Button type="button" variant="secondary" disabled={readOnly || notifications.busy} onClick={notifications.disable}>
                                     Disable on this device
                                 </Button>
                             ) : (
                                 <Button
                                     type="button"
-                                    disabled={notifications.busy || ["blocked", "unsupported", "loading"].includes(notifications.pushState)}
+                                    disabled={readOnly || notifications.busy || ["blocked", "unsupported", "loading"].includes(notifications.pushState)}
                                     onClick={() => notifications.enable().catch((error) => setMessage({ type: "error", text: error.message }))}
                                 >
                                     <Bell className="size-4" aria-hidden="true" />
@@ -249,7 +254,7 @@ function SettingsForm({ user, updateUser }) {
                         <p className="text-center text-xs font-semibold text-app-muted sm:text-left">
                             {form.formState.isDirty ? "You have unsaved changes." : "Your saved profile is up to date."}
                         </p>
-                        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={mutation.isPending}>
+                        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={readOnly || mutation.isPending}>
                             <Save className="size-4" aria-hidden="true" />
                             {mutation.isPending ? "Updating…" : "Save changes"}
                         </Button>
@@ -260,9 +265,10 @@ function SettingsForm({ user, updateUser }) {
     );
 }
 
-function SettingsPage() {
-    const { user, updateUser } = useAuth();
-    return <SettingsForm key={user.id} user={user} updateUser={updateUser} />;
+function SettingsPage({ userOverride = null, readOnly = false }) {
+    const { user: authenticatedUser, updateUser } = useAuth();
+    const user = userOverride ?? authenticatedUser;
+    return <SettingsForm key={user.id} user={user} updateUser={readOnly ? () => {} : updateUser} readOnly={readOnly} />;
 }
 
 export default SettingsPage;

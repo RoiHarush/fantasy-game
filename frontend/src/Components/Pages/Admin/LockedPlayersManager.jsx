@@ -19,7 +19,7 @@ function PlayerIdentity({ player, position }) {
     );
 }
 
-function LockedPlayersManager({ maintenanceLeagueId = null }) {
+function LockedPlayersManager({ maintenanceLeagueId = null, readOnly = false }) {
     const playersQuery = usePlayers();
     const { players } = playersQuery;
     const [searchTerm, setSearchTerm] = useState("");
@@ -34,6 +34,7 @@ function LockedPlayersManager({ maintenanceLeagueId = null }) {
         || toggleLock.error?.message;
 
     function handleToggleLock(player, shouldLock) {
+        if (readOnly) return;
         toggleLock.mutate(
             { player, shouldLock },
             { onSuccess: () => shouldLock && setSearchTerm("") },
@@ -64,7 +65,7 @@ function LockedPlayersManager({ maintenanceLeagueId = null }) {
                             {searchResults.map((player) => (
                                 <div key={player.id} className="flex items-center gap-3 px-3 py-2.5">
                                     <div className="min-w-0 flex-1"><PlayerIdentity player={player} position={player.position} /></div>
-                                    <Button type="button" variant="danger" size="sm" onClick={() => handleToggleLock(player, true)} disabled={toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
+                                    <Button type="button" variant="danger" size="sm" onClick={() => handleToggleLock(player, true)} disabled={readOnly || toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
                                         <LockKeyhole className="size-3.5" aria-hidden="true" /> Lock
                                     </Button>
                                 </div>
@@ -104,7 +105,7 @@ function LockedPlayersManager({ maintenanceLeagueId = null }) {
                             return (
                                 <div key={player.id} className="flex items-center gap-3 px-3 py-3 sm:px-5">
                                     <div className="min-w-0 flex-1"><PlayerIdentity player={player} position={position} /></div>
-                                    <Button type="button" variant="success" size="sm" onClick={() => handleToggleLock(player, false)} disabled={toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
+                                    <Button type="button" variant="success" size="sm" onClick={() => handleToggleLock(player, false)} disabled={readOnly || toggleLock.isPending} className="gap-1.5 text-xs font-extrabold">
                                         <UnlockKeyhole className="size-3.5" aria-hidden="true" /> Unlock
                                     </Button>
                                 </div>

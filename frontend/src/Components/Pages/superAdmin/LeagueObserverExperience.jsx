@@ -8,21 +8,30 @@ import Header from "../../../Header";
 import HeaderCollage from "../../../HeaderCollage";
 import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixtures";
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
-import { useLeagueObserver } from "../../../features/super-admin/useLeagueObserver";
+import { findActiveGameweek, gameweekLabel } from "../../../features/gameweeks/availability";
+import { getNextTransferGameweek } from "../../../features/gameweeks/model";
+import { useLeagueObserver, useObservedManagerSquad } from "../../../features/super-admin/useLeagueObserver";
 import { useTeams } from "../../../features/teams/useTeams";
+import { isSameTransferId } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
 import { Eye, LockKeyhole, ShieldCheck } from "../../../shared/ui/icons";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
 import SidebarContainer from "../../Sidebar/SidebarContainer";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
+import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
 import UserSidebar from "../../Sidebar/UserSidebar";
+import DraftLobby from "../DraftRoomTab/DraftLobby";
 import Fixtures from "../FixturesTab/Fixtures";
+import LeagueControlPage from "../Admin/LeagueControlPage";
 import LeagueTable from "../LeagueTab/LeagueTable";
 import PickTeam from "../PickTeamTab/PickTeam";
 import Points from "../PointsTab/Points";
 import Scout from "../ScoutTab/Scout";
+import SettingsPage from "../SettingsTab/SettingsPage";
 import Status from "../StatusTab/Status";
+import ClosedWindowView from "../TransferWindowTab/ClosedWindowView";
+import CompletedTransferWindowView from "../TransferWindowTab/CompletedTransferWindowView";
 import TransferWindow from "../TransferWindowTab/TransferWindow";
 
 const SCREEN_LABELS = {
@@ -100,65 +109,34 @@ function ObservedPickTeam({ user, nextGameweek, gameweeks, squad, players, playe
     );
 }
 
-function ReadOnlySettings({ user }) {
-    return (
-        <main className="mx-auto w-full max-w-4xl px-3 py-5 text-app-foreground sm:px-6 sm:py-9 lg:py-12">
-            <section className="overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-sm">
-                <header className="border-b border-app-border px-4 py-5 sm:px-7 sm:py-7">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-500">Read-only profile</p>
-                    <h1 className="mt-1 text-xl font-black tracking-tight text-app-foreground sm:text-2xl">Account settings</h1>
-                    <p className="mt-1 text-sm text-app-muted">This is how the selected manager&apos;s identity is represented. Editing controls are intentionally unavailable.</p>
-                </header>
-                <dl className="grid gap-px bg-app-border sm:grid-cols-2">
-                    {[
-                        ["First name", user.firstName || "—"],
-                        ["Last name", user.lastName || "—"],
-                        ["Username", user.username],
-                        ["Verified email", user.email || "—"],
-                        ["Fantasy team", user.fantasyTeamName],
-                        ["Access", user.leagueAdmin ? "League manager" : "Manager"],
-                    ].map(([label, value]) => (
-                        <div key={label} className="bg-app-surface px-4 py-5 sm:px-7">
-                            <dt className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-app-muted">{label}</dt>
-                            <dd className="mt-1 break-words text-sm font-extrabold text-app-foreground">{value}</dd>
-                        </div>
-                    ))}
-                </dl>
-            </section>
-        </main>
-    );
-}
-
-function ReadOnlyLeagueControl({ league, manager }) {
-    return (
-        <main className="mx-auto w-full max-w-5xl px-3 py-5 sm:px-6 sm:py-9 lg:py-12">
-            <section className="overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-sm">
-                <header className="border-b border-app-border px-4 py-5 sm:px-7">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-500">League manager view</p>
-                    <h1 className="mt-1 text-2xl font-black text-app-foreground">League Control</h1>
-                    <p className="mt-1 text-sm text-app-muted">Configuration is visible, but scheduling, membership and scoring actions are blocked.</p>
-                </header>
-                <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-7">
-                    <div className="rounded-2xl border border-app-border bg-app-surface-muted p-4"><p className="text-xs font-black uppercase tracking-wider text-app-muted">Status</p><p className="mt-2 font-black text-app-foreground">{league.status?.replaceAll("_", " ")}</p></div>
-                    <div className="rounded-2xl border border-app-border bg-app-surface-muted p-4"><p className="text-xs font-black uppercase tracking-wider text-app-muted">Managers</p><p className="mt-2 font-black text-app-foreground">{league.managers?.length}/{league.maxParticipants}</p></div>
-                    <div className="rounded-2xl border border-app-border bg-app-surface-muted p-4"><p className="text-xs font-black uppercase tracking-wider text-app-muted">Viewed as</p><p className="mt-2 font-black text-app-foreground">{manager.managerName}</p></div>
-                </div>
-                <div className="border-t border-app-border px-4 py-5 sm:px-7">
-                    <h2 className="text-sm font-black text-app-foreground">Scoring rules</h2>
-                    <pre className="mt-3 overflow-auto rounded-2xl border border-app-border bg-app-surface-muted p-4 text-xs text-app-foreground">{JSON.stringify(league.scoringRules ?? {}, null, 2)}</pre>
-                </div>
-            </section>
-        </main>
-    );
-}
-
 export default function LeagueObserverExperience({ leagueId, managerId, screen }) {
     const gameweeks = useGameweek();
     const [selectedGameweekId, setSelectedGameweekId] = useState(null);
+    const [selectedTransferUserId, setSelectedTransferUserId] = useState(Number(managerId));
     const defaultGameweek = gameweeks.currentGameweek ?? gameweeks.nextGameweek ?? gameweeks.gameweeks[0] ?? null;
     const selectedGameweek = gameweeks.gameweeks.find((item) => String(item.id) === String(selectedGameweekId)) ?? defaultGameweek;
-    const requestedGameweek = screen === "pick-team" ? gameweeks.nextGameweek ?? selectedGameweek : selectedGameweek;
+    const scheduledTransferGameweek = getNextTransferGameweek({
+        gameweeks: gameweeks.gameweeks,
+        nextGameweek: gameweeks.nextGameweek,
+    });
+    const requestedGameweek = screen === "pick-team"
+        ? gameweeks.nextGameweek ?? selectedGameweek
+        : screen === "transfer-window"
+            ? scheduledTransferGameweek ?? selectedGameweek
+            : selectedGameweek;
     const observer = useLeagueObserver({ leagueId, managerId, gameweekId: requestedGameweek?.id });
+    const activeWindowGameweek = gameweeks.gameweeks.find(
+        (item) => Number(item.id) === Number(observer.windowState.data?.gameWeekId),
+    ) ?? requestedGameweek;
+    const selectedTransferSquad = useObservedManagerSquad({
+        leagueId,
+        managerId: selectedTransferUserId,
+        gameweekId: activeWindowGameweek?.id,
+        enabled: Boolean(
+            (screen === "transfer-window" || screen === "draft-room")
+            && observer.windowState.data?.isOpen,
+        ),
+    });
     const teams = useTeams();
     const teamFixtures = useAllTeamFixtures(teams.teams);
     const league = observer.league.data;
@@ -179,6 +157,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
     } : null, [league, leagueId, manager]);
     const observedLeague = useMemo(() => league ? {
         ...league,
+        participantCount: league.managers.length,
         users: league.managers.map((item, index) => ({
             id: item.userId,
             name: item.managerName,
@@ -189,6 +168,11 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
             points: item.totalPoints,
         })),
     } : null, [league]);
+    const observedManagers = useMemo(() => (league?.managers ?? []).map((item) => ({
+        ...item,
+        id: item.userId,
+        name: item.managerName,
+    })), [league]);
     const gameweekView = useMemo(() => {
         const visibleGameweeks = gameweeks.gameweeks ?? [];
         const selectedIndex = Math.max(0, visibleGameweeks.findIndex((item) => item.id === requestedGameweek?.id));
@@ -292,26 +276,91 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
     } else if (screen === "transfer-window" || screen === "draft-room") {
         const isDraft = screen === "draft-room";
         const correctWindowType = isDraft ? observer.windowState.data?.isDraftMode : !observer.windowState.data?.isDraftMode;
-        content = observer.windowState.data?.isOpen && correctWindowType ? (
-            <TransferWindow
-                user={observedUser}
-                allUsers={league.managers.map((item) => ({ ...item, id: item.userId, name: item.managerName }))}
-                windowState={observer.windowState.data}
-                nextGameweek={gameweeks.nextGameweek ?? requestedGameweek}
-                players={observer.players.data ?? []}
-                teams={teams.teams}
-                fixturesByTeam={teamFixtures.fixturesByTeam ?? {}}
-                previewMode
-                previewSquad={observer.squad.data}
-                previewDraftActions={observer.history.data ?? []}
-                previewTransferActions={observer.history.data ?? []}
+        if (observer.windowState.data?.isOpen && correctWindowType) {
+            content = <PageLayout
+                left={<TransferWindow
+                    user={observedUser}
+                    allUsers={observedManagers}
+                    windowState={observer.windowState.data}
+                    nextGameweek={activeWindowGameweek}
+                    players={observer.players.data ?? []}
+                    teams={teams.teams}
+                    fixturesByTeam={teamFixtures.fixturesByTeam ?? {}}
+                    isClosing={Boolean(observer.windowState.data?.isClosing)}
+                    previewMode
+                    previewSquad={observer.squad.data}
+                    previewDraftActions={observer.history.data ?? []}
+                    previewTransferActions={observer.history.data ?? []}
+                    readOnly
+                />}
+                right={<TransferUserSidebar
+                    users={observedManagers}
+                    currentUserId={selectedTransferUserId}
+                    onUserChange={setSelectedTransferUserId}
+                    squad={selectedTransferSquad.data ?? null}
+                    players={observer.players.data ?? []}
+                    fixturesByTeam={teamFixtures.fixturesByTeam ?? {}}
+                    nextGameweek={activeWindowGameweek}
+                    isLoading={selectedTransferSquad.isPending}
+                    error={selectedTransferSquad.error}
+                />}
+            />;
+        } else if (isDraft) {
+            content = observer.draft.isPending
+                ? <ObserverPageState>Loading the draft lobby…</ObserverPageState>
+                : <DraftLobby
+                    isAdmin={Boolean(manager.leagueAdmin)}
+                    config={observer.draft.data}
+                    league={observedLeague}
+                    users={observedManagers}
+                    gameweeks={gameweeks.gameweeks}
+                    currentGameweek={gameweeks.currentGameweek}
+                    onDraftTimeElapsed={() => observer.draft.refetch()}
+                    readOnly
+                />;
+        } else if (observer.attendance.data?.windowStatus === "CLOSED") {
+            content = <CompletedTransferWindowView gameweekId={requestedGameweek?.id} />;
+        } else {
+            const automaticUserIds = observer.attendance.data?.automaticUserIds ?? [];
+            const transferOrder = (observer.order.data ?? []).map((id, index) => {
+                const orderManager = observedManagers.find((item) => isSameTransferId(item.id, id));
+                return {
+                    id: `${index + 1}-${id}`,
+                    pickNumber: index + 1,
+                    managerName: orderManager?.name ?? orderManager?.fantasyTeamName ?? `User ${id}`,
+                    isCurrentUser: isSameTransferId(id, observedUser.id),
+                    automatic: automaticUserIds.some((automaticUserId) => isSameTransferId(automaticUserId, id)),
+                };
+            });
+            const activeGameweek = findActiveGameweek(gameweeks.gameweeks, gameweeks.currentGameweek);
+            content = <ClosedWindowView
+                gameweekId={requestedGameweek?.id}
+                transferOpenTime={requestedGameweek?.transferOpenTime}
+                transferOrder={transferOrder}
+                orderPending={observer.order.isPending}
+                orderError={observer.order.error}
+                automaticAttendance={Boolean(observer.attendance.data?.automatic)}
+                attendancePending={observer.attendance.isPending}
+                attendanceError={observer.attendance.error}
+                isLeagueAdmin={Boolean(manager.leagueAdmin)}
+                openBlockedReason={activeGameweek
+                    ? `Transfers cannot open while ${gameweekLabel(activeGameweek)} is active.`
+                    : ""}
+                onAttendanceChange={() => {}}
+                onManageOrder={() => {}}
+                onOpenWindow={() => {}}
                 readOnly
-            />
-        ) : <ObserverPageState>No {isDraft ? "draft" : "transfer window"} is open right now. You are still viewing the same screen state the manager would encounter.</ObserverPageState>;
+            />;
+        }
     } else if (screen === "league-control") {
-        content = <ReadOnlyLeagueControl league={league} manager={manager} />;
+        content = <LeagueControlPage
+            leagueOverride={observedLeague}
+            managersOverride={observedManagers}
+            apiLeagueId={Number(leagueId)}
+            readOnly
+        />;
     } else if (screen === "settings") {
-        content = <ReadOnlySettings user={observedUser} />;
+        content = <SettingsPage userOverride={observedUser} readOnly />;
     } else {
         content = <ObserverPageState>{SCREEN_LABELS[screen] ?? "This screen"} has no data available for the selected manager yet.</ObserverPageState>;
     }

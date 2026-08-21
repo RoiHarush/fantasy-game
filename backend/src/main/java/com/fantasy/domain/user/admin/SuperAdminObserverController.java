@@ -10,6 +10,8 @@ import com.fantasy.domain.team.FantasyTeamService;
 import com.fantasy.domain.team.SquadDto;
 import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.team.UserGameDataRepository;
+import com.fantasy.domain.transfer.DraftConfig;
+import com.fantasy.domain.transfer.DraftService;
 import com.fantasy.domain.transfer.TransferActionDto;
 import com.fantasy.domain.transfer.TransferMarketService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +29,7 @@ public class SuperAdminObserverController {
     private final UserGameDataRepository gameDataRepository;
     private final FantasyTeamService fantasyTeamService;
     private final TransferMarketService transferMarketService;
+    private final DraftService draftService;
     private final PlayerService playerService;
     private final PointsService pointsService;
 
@@ -34,12 +37,14 @@ public class SuperAdminObserverController {
                                         UserGameDataRepository gameDataRepository,
                                         FantasyTeamService fantasyTeamService,
                                         TransferMarketService transferMarketService,
+                                        DraftService draftService,
                                         PlayerService playerService,
                                         PointsService pointsService) {
         this.leagueRepository = leagueRepository;
         this.gameDataRepository = gameDataRepository;
         this.fantasyTeamService = fantasyTeamService;
         this.transferMarketService = transferMarketService;
+        this.draftService = draftService;
         this.playerService = playerService;
         this.pointsService = pointsService;
     }
@@ -70,7 +75,8 @@ public class SuperAdminObserverController {
                         .thenComparing(ObservedManager::managerName, String.CASE_INSENSITIVE_ORDER))
                 .toList();
         return new ObservedLeague(
-                league.getId(), league.getName(), league.getStatus().name(),
+                league.getId(), league.getName(), league.getLeagueCode(), league.getStatus().name(),
+                league.getAdmin() == null ? null : league.getAdmin().getId(),
                 league.getMaxParticipants(), Map.copyOf(league.getScoringRules()), managers
         );
     }
@@ -111,6 +117,26 @@ public class SuperAdminObserverController {
         return transferMarketService.getCurrentWindowStateForLeague(leagueId);
     }
 
+    @GetMapping("/leagues/{leagueId}/draft")
+    public DraftConfig draft(@PathVariable long leagueId) {
+        requireLeague(leagueId);
+        return draftService.getDraftConfigForLeague(leagueId);
+    }
+
+    @GetMapping("/leagues/{leagueId}/order/{gameweekId}")
+    public List<Integer> order(@PathVariable long leagueId, @PathVariable int gameweekId) {
+        requireLeague(leagueId);
+        return transferMarketService.getConfiguredTransferOrderForLeague(leagueId, gameweekId);
+    }
+
+    @GetMapping("/leagues/{leagueId}/users/{userId}/attendance/{gameweekId}")
+    public Map<String, Object> attendance(@PathVariable long leagueId,
+                                          @PathVariable int userId,
+                                          @PathVariable int gameweekId) {
+        requireLeagueMember(leagueId, userId);
+        return transferMarketService.getAttendancePreferenceForLeague(leagueId, userId, gameweekId);
+    }
+
     @GetMapping("/leagues/{leagueId}/history/{gameweekId}")
     public List<TransferActionDto> history(@PathVariable long leagueId, @PathVariable int gameweekId) {
         requireLeague(leagueId);
@@ -130,7 +156,9 @@ public class SuperAdminObserverController {
     public record ObservedLeague(
             long id,
             String name,
+            String leagueCode,
             String status,
+            Integer adminId,
             int maxParticipants,
             Map<String, Integer> scoringRules,
             List<ObservedManager> managers

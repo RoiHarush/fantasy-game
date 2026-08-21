@@ -48,6 +48,7 @@ export default function DraftLobbyView({
     onConfirmedAction,
     onCopyCode,
     onDraftTimeElapsed,
+    readOnly = false,
 }) {
     const participantCount = league?.participantCount ?? users.length;
     const maxParticipants = league?.maxParticipants ?? users.length;
@@ -128,6 +129,7 @@ export default function DraftLobbyView({
                             onManualPickChange={onManualPickChange}
                             onSchedule={onSchedule}
                             onPendingAction={onPendingAction}
+                            readOnly={readOnly}
                         />
                     ) : (
                         <ManagerGuidance supplementalDraft={supplementalDraft} />
@@ -213,6 +215,7 @@ function AdminSetup({
     onManualPickChange,
     onSchedule,
     onPendingAction,
+    readOnly,
 }) {
     return (
         <div className="mt-7 space-y-7">
@@ -238,7 +241,7 @@ function AdminSetup({
                             { value: "MANUAL", label: "Set order manually" },
                         ]}
                         ariaLabel="Draft order"
-                        disabled={hasScheduledDraft}
+                        disabled={hasScheduledDraft || readOnly}
                         className="h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface"
                     />
                 </div>
@@ -248,7 +251,7 @@ function AdminSetup({
                         manualPicks={manualPicks}
                         users={users}
                         onManualPickChange={onManualPickChange}
-                        disabled={hasScheduledDraft}
+                        disabled={hasScheduledDraft || readOnly}
                     />
                 )}
             </section>
@@ -284,7 +287,7 @@ function AdminSetup({
                                     />
                                 </span>
                             </label>
-                            <Button type="submit" disabled={actionPending || !scheduledTime || Boolean(scheduleBlockedReason)} className="w-full justify-between">
+                            <Button type="submit" disabled={readOnly || actionPending || !scheduledTime || Boolean(scheduleBlockedReason)} className="w-full justify-between">
                                 Schedule draft
                                 <Save aria-hidden="true" size={17} />
                             </Button>
@@ -296,7 +299,7 @@ function AdminSetup({
                         </form>
                     ) : (
                         <div>
-                            <Button variant="danger" className="w-full justify-between" onClick={() => onPendingAction("delete")} disabled={actionPending}>
+                            <Button variant="danger" className="w-full justify-between" onClick={() => onPendingAction("delete")} disabled={readOnly || actionPending}>
                                 Cancel scheduled draft
                                 <Trash2 aria-hidden="true" size={17} />
                             </Button>
@@ -311,7 +314,7 @@ function AdminSetup({
 
                 <div className="mt-4 flex items-center gap-3 border-t border-dashed border-app-border pt-4">
                     <span className="hidden text-xs leading-5 text-app-muted sm:block sm:flex-1">Opens the live room for everyone.</span>
-                    <Button variant="success" className="w-full justify-between sm:w-auto" onClick={() => onPendingAction("open")} disabled={actionPending || Boolean(openBlockedReason)}>
+                    <Button variant="success" className="w-full justify-between sm:w-auto" onClick={() => onPendingAction("open")} disabled={readOnly || actionPending || Boolean(openBlockedReason)}>
                         Open draft now
                         <Play aria-hidden="true" size={17} fill="currentColor" />
                     </Button>

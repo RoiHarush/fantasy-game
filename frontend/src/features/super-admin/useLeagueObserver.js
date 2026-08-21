@@ -5,8 +5,11 @@ import { useEffect } from "react";
 
 import { useWebSocket } from "../../Context/WebSocketContext";
 import {
+    getObservedAttendance,
+    getObservedDraft,
     getObservedHistory,
     getObservedLeague,
+    getObservedOrder,
     getObservedPlayers,
     getObservedPoints,
     getObservedSquad,
@@ -28,6 +31,13 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
         queryFn: () => getObservedWindow(leagueId),
         enabled: Boolean(leagueId),
         refetchInterval: (query) => query.state.data?.isOpen ? 3_000 : 10_000,
+    });
+    const draft = useQuery({
+        queryKey: ["admin", "observe", "draft", leagueId],
+        queryFn: () => getObservedDraft(leagueId),
+        enabled: Boolean(leagueId),
+        refetchInterval: (query) => query.state.data?.processed ? false : 10_000,
+        retry: false,
     });
     const effectiveManagerId = managerId || league.data?.managers?.[0]?.userId || "";
     const squadGameweekId = windowState.data?.isOpen && windowState.data?.gameWeekId > 0
@@ -64,6 +74,18 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
         enabled: Boolean(leagueId),
         refetchInterval: windowState.data?.isOpen ? 10_000 : false,
     });
+    const order = useQuery({
+        queryKey: ["admin", "observe", "order", leagueId, gameweekId],
+        queryFn: () => getObservedOrder(leagueId, gameweekId),
+        enabled: Boolean(leagueId && gameweekId),
+        refetchInterval: windowState.data?.isOpen ? 3_000 : 30_000,
+    });
+    const attendance = useQuery({
+        queryKey: ["admin", "observe", "attendance", leagueId, effectiveManagerId, gameweekId],
+        queryFn: () => getObservedAttendance(leagueId, effectiveManagerId, gameweekId),
+        enabled: Boolean(leagueId && effectiveManagerId && gameweekId),
+        refetchInterval: windowState.data?.isOpen ? 3_000 : 30_000,
+    });
 
     useEffect(() => {
         if (!leagueId) return undefined;
@@ -72,5 +94,26 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
         });
     }, [leagueId, queryClient, subscribe]);
 
-    return { league, windowState, squad, players, squadData, points, history, effectiveManagerId };
+    return {
+        league,
+        windowState,
+        draft,
+        squad,
+        players,
+        squadData,
+        points,
+        history,
+        order,
+        attendance,
+        effectiveManagerId,
+    };
+}
+
+export function useObservedManagerSquad({ leagueId, managerId, gameweekId, enabled = true }) {
+    return useQuery({
+        queryKey: ["admin", "observe", "sidebar-squad", leagueId, managerId, gameweekId],
+        queryFn: () => getObservedSquad(leagueId, managerId, gameweekId),
+        enabled: Boolean(enabled && leagueId && managerId && gameweekId),
+        refetchInterval: 10_000,
+    });
 }

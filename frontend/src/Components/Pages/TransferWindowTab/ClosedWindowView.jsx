@@ -24,6 +24,7 @@ export default function ClosedWindowView({
     onAttendanceChange,
     onManageOrder,
     onOpenWindow,
+    readOnly = false,
 }) {
     return (
         <main className="mx-auto w-full max-w-5xl px-4 py-7 text-app-foreground sm:px-7 sm:py-11 lg:py-14">
@@ -102,7 +103,7 @@ export default function ClosedWindowView({
                                 role="switch"
                                 aria-label="I won’t attend this transfer window"
                                 aria-checked={automaticAttendance}
-                                disabled={attendancePending}
+                                disabled={readOnly || attendancePending}
                                 onClick={onAttendanceChange}
                                 className="mt-5 flex min-h-12 w-full items-center justify-between gap-4 border-y border-app-border py-3 text-left text-sm font-bold text-app-foreground transition disabled:cursor-wait disabled:opacity-60 pointer-fine:hover:text-app-accent-foreground"
                             >
@@ -134,11 +135,11 @@ export default function ClosedWindowView({
                                 </h2>
                             </div>
                             <div className="mt-4 grid gap-2">
-                                <Button variant="secondary" onClick={onManageOrder} className="w-full justify-between">
+                                <Button variant="secondary" onClick={onManageOrder} disabled={readOnly} className="w-full justify-between">
                                     Manage order
                                     <Settings2 className="size-4" aria-hidden="true" />
                                 </Button>
-                                <Button variant="danger" onClick={onOpenWindow} disabled={Boolean(openBlockedReason)} className="w-full justify-between">
+                                <Button variant="danger" onClick={onOpenWindow} disabled={readOnly || Boolean(openBlockedReason)} className="w-full justify-between">
                                     Open now
                                     <Play className="size-4" fill="currentColor" aria-hidden="true" />
                                 </Button>

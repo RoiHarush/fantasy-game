@@ -17,6 +17,7 @@ function DraftLobby({
     gameweeks = [],
     currentGameweek = null,
     onDraftTimeElapsed,
+    readOnly = false,
 }) {
     const [scheduledTime, setScheduledTime] = useState("");
     const [copied, setCopied] = useState(false);
@@ -79,6 +80,7 @@ function DraftLobby({
     };
 
     const handleSchedule = () => {
+        if (readOnly) return;
         if (!scheduledTime || scheduleBlockedReason) return;
         const orderOptions = getDraftOrder();
         if (!orderOptions) return;
@@ -86,6 +88,7 @@ function DraftLobby({
     };
 
     const handleConfirmedAction = () => {
+        if (readOnly) return;
         if (!pendingAction) return;
         if (pendingAction === "open") {
             if (openBlockedReason) return;
@@ -148,6 +151,7 @@ function DraftLobby({
             onConfirmedAction={handleConfirmedAction}
             onCopyCode={handleCopyCode}
             onDraftTimeElapsed={onDraftTimeElapsed}
+            readOnly={readOnly}
         />
     );
 }

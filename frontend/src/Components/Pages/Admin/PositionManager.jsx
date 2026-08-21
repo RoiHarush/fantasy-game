@@ -14,7 +14,7 @@ const POSITIONS = [
     { id: 4, code: "FWD", label: "Forward" },
 ];
 
-function PositionManager({ maintenanceLeagueId = null }) {
+function PositionManager({ maintenanceLeagueId = null, readOnly = false }) {
     const playersQuery = usePlayers();
     const { players } = playersQuery;
     const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +26,7 @@ function PositionManager({ maintenanceLeagueId = null }) {
     const error = playersQuery.error?.message || updatePosition.error?.message;
 
     function handleChangePosition(player, position) {
+        if (readOnly) return;
         updatePosition.mutate({
             playerId: player.id,
             positionId: position.id,
@@ -80,7 +81,7 @@ function PositionManager({ maintenanceLeagueId = null }) {
                                         type="button"
                                         variant={active ? "success" : "secondary"}
                                         key={position.id}
-                                        disabled={pending}
+                                        disabled={readOnly || pending}
                                         onClick={() => handleChangePosition(player, position)}
                                         className={`h-10 rounded-xl border px-1 text-[0.68rem] font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent sm:text-xs ${active ? "border-app-accent bg-app-accent-surface text-app-accent-foreground shadow-sm" : "border-app-border bg-app-surface text-app-muted hover:border-app-accent-border hover:bg-app-accent-hover hover:text-app-foreground"}`}
                                         aria-pressed={active}

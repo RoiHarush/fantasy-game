@@ -9,6 +9,13 @@ export const getObservedSquad = (leagueId, userId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/users/${userId}/squad${gameweek ? `?gw=${gameweek}` : ""}`
 );
 export const getObservedWindow = (leagueId) => readOnlyRequest(`/api/admin/observe/leagues/${leagueId}/window`);
+export const getObservedDraft = (leagueId) => readOnlyRequest(`/api/admin/observe/leagues/${leagueId}/draft`);
+export const getObservedOrder = (leagueId, gameweek) => readOnlyRequest(
+    `/api/admin/observe/leagues/${leagueId}/order/${gameweek}`
+);
+export const getObservedAttendance = (leagueId, userId, gameweek) => readOnlyRequest(
+    `/api/admin/observe/leagues/${leagueId}/users/${userId}/attendance/${gameweek}`
+);
 export const getObservedPlayers = (leagueId, userId) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/users/${userId}/players`
 );

@@ -77,7 +77,7 @@ function Feedback({ error, message }) {
     );
 }
 
-function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
+function LeagueControlContent({ league, managers, maintenanceLeagueId, apiLeagueId = null, readOnly = false }) {
     const [activeTab, setActiveTab] = useState("settings");
     const [message, setMessage] = useState("");
     const [managerToRemove, setManagerToRemove] = useState(null);
@@ -112,8 +112,10 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
         },
     });
     const error = saveSettings.error ?? removeManager.error;
-    const capacityLocked = !maintenanceLeagueId
-        && (league.status === "DRAFT_LIVE" || league.status === "ACTIVE");
+    const capacityLocked = readOnly || (
+        !maintenanceLeagueId
+        && (league.status === "DRAFT_LIVE" || league.status === "ACTIVE")
+    );
     const visibleTabs = [
         "settings",
         ...(!maintenanceLeagueId && league.status !== "DRAFT_LIVE" && league.status !== "ACTIVE" ? ["managers"] : []),
@@ -124,6 +126,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
     ];
 
     function handleRemoveManager() {
+        if (readOnly) return;
         if (!managerToRemove) return;
         setMessage("");
         removeManager.mutate(managerToRemove);
@@ -199,6 +202,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                         <form
                             className="space-y-5"
                             onSubmit={form.handleSubmit((values) => {
+                                if (readOnly) return;
                                 setMessage("");
                                 saveSettings.mutate(values);
                             })}
@@ -217,7 +221,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                 <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
                                     <label className="grid gap-1.5 text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted">
                                         League name
-                                        <input className={fieldClassName} aria-invalid={Boolean(form.formState.errors.name)} {...form.register("name")} />
+                                        <input className={fieldClassName} aria-invalid={Boolean(form.formState.errors.name)} disabled={readOnly} {...form.register("name")} />
                                         {form.formState.errors.name && <span className="normal-case tracking-normal text-app-danger-foreground">{form.formState.errors.name.message}</span>}
                                     </label>
                                     <label className="grid gap-1.5 text-xs font-extrabold uppercase tracking-[0.08em] text-app-muted">
@@ -249,6 +253,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                                 max="100"
                                                 aria-label={`${formatScoringRule(field.rule)} points`}
                                                 aria-invalid={Boolean(form.formState.errors.scoringRules?.[index]?.points)}
+                                                disabled={readOnly}
                                                 {...form.register(`scoringRules.${index}.points`, { valueAsNumber: true })}
                                             />
                                         </label>
@@ -258,7 +263,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
 
                             <Feedback error={error} message={message} />
                             <div className="flex justify-end">
-                                <Button type="submit" className="w-full sm:w-auto" disabled={saveSettings.isPending}>
+                                <Button type="submit" className="w-full sm:w-auto" disabled={readOnly || saveSettings.isPending}>
                                     <Save className="size-4" aria-hidden="true" />
                                     {saveSettings.isPending ? "Saving…" : "Save league settings"}
                                 </Button>
@@ -287,7 +292,7 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                                             {isAdmin ? (
                                                 <span className="whitespace-nowrap rounded-full border border-app-accent-border bg-app-accent-surface px-2.5 py-1 text-[0.65rem] font-extrabold text-app-accent-foreground sm:text-xs">League admin</span>
                                             ) : (
-                                                <Button variant="danger" size="sm" disabled={removeManager.isPending} onClick={() => setManagerToRemove(manager)}>
+                                                <Button variant="danger" size="sm" disabled={readOnly || removeManager.isPending} onClick={() => setManagerToRemove(manager)}>
                                                     <Trash2 className="size-4" aria-hidden="true" />
                                                     <span className="hidden sm:inline">Remove</span>
                                                 </Button>
@@ -301,10 +306,10 @@ function LeagueControlContent({ league, managers, maintenanceLeagueId }) {
                     )}
 
                     <div className="mx-auto max-w-4xl" hidden={activeTab === "settings" || activeTab === "managers"}>
-                        {activeTab === "assists" && <AssistManager maintenanceLeagueId={maintenanceLeagueId} />}
-                        {activeTab === "penalties" && <PenaltyManager maintenanceLeagueId={maintenanceLeagueId} />}
-                        {activeTab === "locks" && <LockedPlayersManager maintenanceLeagueId={maintenanceLeagueId} />}
-                        {activeTab === "positions" && <PositionManager maintenanceLeagueId={maintenanceLeagueId} />}
+                        {activeTab === "assists" && <AssistManager maintenanceLeagueId={maintenanceLeagueId ?? apiLeagueId} readOnly={readOnly} />}
+                        {activeTab === "penalties" && <PenaltyManager maintenanceLeagueId={maintenanceLeagueId ?? apiLeagueId} readOnly={readOnly} />}
+                        {activeTab === "locks" && <LockedPlayersManager maintenanceLeagueId={maintenanceLeagueId ?? apiLeagueId} readOnly={readOnly} />}
+                        {activeTab === "positions" && <PositionManager maintenanceLeagueId={maintenanceLeagueId ?? apiLeagueId} readOnly={readOnly} />}
                     </div>
                 </div>
             </section>
@@ -329,29 +334,41 @@ function PageState({ children, error = false }) {
     );
 }
 
-function LeagueControlPage({ maintenanceLeagueId = null }) {
+function LeagueControlPage({
+    maintenanceLeagueId = null,
+    leagueOverride = null,
+    managersOverride = null,
+    apiLeagueId = null,
+    readOnly = false,
+}) {
     const { user } = useAuth();
     const currentLeagueQuery = useCurrentLeague(user?.leagueId, {
-        enabled: !maintenanceLeagueId,
+        enabled: !maintenanceLeagueId && !leagueOverride,
     });
     const maintenanceLeagueQuery = useMaintenanceLeague(maintenanceLeagueId);
     const leagueQuery = maintenanceLeagueId ? maintenanceLeagueQuery : currentLeagueQuery;
-    const managersQuery = useLeagueUsers(user?.leagueId, { enabled: !maintenanceLeagueId });
+    const managersQuery = useLeagueUsers(user?.leagueId, {
+        enabled: !maintenanceLeagueId && !leagueOverride,
+    });
+    const league = leagueOverride ?? leagueQuery.data;
+    const managers = managersOverride ?? managersQuery.data ?? [];
 
-    if (leagueQuery.isPending || (!maintenanceLeagueId && managersQuery.isPending)) {
+    if (!leagueOverride && (leagueQuery.isPending || (!maintenanceLeagueId && managersQuery.isPending))) {
         return <PageState>Loading league settings…</PageState>;
     }
     const error = leagueQuery.error ?? managersQuery.error;
-    if (error || !leagueQuery.data) {
+    if ((!leagueOverride && error) || !league) {
         return <PageState error>{error?.message || "League is unavailable."}</PageState>;
     }
 
     return (
         <LeagueControlContent
-            key={`${maintenanceLeagueId ?? "league"}-${leagueQuery.data.id}`}
-            league={leagueQuery.data}
-            managers={managersQuery.data ?? []}
+            key={`${maintenanceLeagueId ?? "league"}-${league.id}`}
+            league={league}
+            managers={managers}
             maintenanceLeagueId={maintenanceLeagueId}
+            apiLeagueId={apiLeagueId}
+            readOnly={readOnly}
         />
     );
 }

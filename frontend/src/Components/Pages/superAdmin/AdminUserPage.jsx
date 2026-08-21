@@ -18,7 +18,7 @@ export default function AdminUsersPage() {
             <header>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-500">Account directory</p>
                 <h1 className="mt-1 text-2xl font-black text-app-foreground sm:text-3xl">Users Management</h1>
-                <p className="mt-2 text-sm text-app-muted">Review registered managers and open an account only when an administrative correction is required.</p>
+                <p className="mt-2 text-sm text-app-muted">Review managers and use <strong className="text-app-foreground">Manage</strong> to correct account details, chips or saved gameweek points.</p>
             </header>
 
             <div className="overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-panel">
@@ -32,7 +32,7 @@ export default function AdminUsersPage() {
                                 <th scope="col" className="px-4 py-3">Role</th>
                                 <th scope="col" className="px-4 py-3">Fantasy Team</th>
                                 <th scope="col" className="px-4 py-3 text-right">Total Points</th>
-                                <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                                <th scope="col" className="px-4 py-3 text-right">Account / scoring</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-app-border">
@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
                                     <td className="px-4 py-3 font-semibold text-app-foreground">{user.fantasyTeamName || <span className="text-app-muted">No team</span>}</td>
                                     <td className="px-4 py-3 text-right font-black tabular-nums text-app-foreground">{user.totalPoints ?? 0}</td>
                                     <td className="px-4 py-3 text-right">
-                                        <Button size="sm" onClick={() => setEditingUserId(user.userId)}>Edit</Button>
+                                        <Button size="sm" onClick={() => setEditingUserId(user.userId)}>Manage</Button>
                                     </td>
                                 </tr>
                             ))}

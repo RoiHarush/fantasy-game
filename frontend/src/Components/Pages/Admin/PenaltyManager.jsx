@@ -11,7 +11,7 @@ import { Button } from "../../../shared/ui/Button";
 
 const fieldClassName = "h-11 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-sm font-semibold text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface disabled:cursor-not-allowed disabled:opacity-55";
 
-function PenaltyManager({ maintenanceLeagueId = null }) {
+function PenaltyManager({ maintenanceLeagueId = null, readOnly = false }) {
     const playersQuery = usePlayers();
     const { players } = playersQuery;
     const gameweekState = useGameweek();
@@ -23,7 +23,7 @@ function PenaltyManager({ maintenanceLeagueId = null }) {
     const punishedPlayers = penaltiesQuery.data ?? [];
     const isCurrentGW = currentGameweek && gameweek === currentGameweek.id;
     const isPastGW = currentGameweek && gameweek < currentGameweek.id;
-    const canEdit = isPastGW || (isCurrentGW && currentGameweek.calculated);
+    const canEdit = !readOnly && (isPastGW || (isCurrentGW && currentGameweek.calculated));
     const searchResults = useMemo(() => findPlayers(players, searchTerm), [players, searchTerm]);
     const error = playersQuery.error?.message
         || penaltiesQuery.error?.message
@@ -31,6 +31,7 @@ function PenaltyManager({ maintenanceLeagueId = null }) {
         || gameweekState.error;
 
     function handlePunish(playerId, action) {
+        if (readOnly) return;
         if (!canEdit) return;
         updatePenalty.mutate(
             { playerId, action },

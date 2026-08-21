@@ -300,6 +300,13 @@ public class TransferMarketService {
     @Transactional(readOnly = true)
     public Map<String, Object> getAttendancePreference(int requestingUserId, int gameWeekId) {
         long leagueId = leagueAccessService.requireLeagueIdForUser(requestingUserId);
+        return getAttendancePreferenceForLeague(leagueId, requestingUserId, gameWeekId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAttendancePreferenceForLeague(long leagueId,
+                                                                 int userId,
+                                                                 int gameWeekId) {
         Optional<LeagueTransferWindowEntity> configuredWindow = windowRepo.findByLeague_IdAndGameWeek_IdAndWindowType(
                         leagueId,
                         gameWeekId,
@@ -309,7 +316,7 @@ public class TransferMarketService {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("gameWeekId", gameWeekId);
         response.put("automatic", configuredWindow
-                .map(window -> window.isAutomaticForUser(requestingUserId))
+                .map(window -> window.isAutomaticForUser(userId))
                 .orElse(false));
         response.put("automaticUserIds", configuredWindow
                 .map(LeagueTransferWindowEntity::getAutomaticUserIds)
