@@ -4,15 +4,34 @@
     "id": "/",
     "description": "Live fantasy draft, transfers and gameweek scoring.",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#5a1b8c",
+    "background_color": "#f8fbfa",
     "theme_color": "#5a1b8c",
     "icons": [
+        {
+            "src": "/UI/app-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/UI/app-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/UI/app-icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
         {
             "src": "/UI/pl-logo-lion.svg",
             "sizes": "any",
             "type": "image/svg+xml",
-            "purpose": "any"
+            "purpose": "monochrome"
         }
     ]
 }

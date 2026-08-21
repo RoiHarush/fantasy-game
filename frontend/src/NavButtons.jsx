@@ -3,7 +3,6 @@
 import {
     Beaker,
     CalendarDays,
-    ChevronDown,
     LogOut,
     Menu,
     MobilePointsIcon,
@@ -173,43 +172,39 @@ export default function NavButtons({
                 </div>
             </nav>
 
-            <div className="relative h-12 w-full rounded-b-xl bg-black/25 px-2 lg:hidden">
+            <div className="relative flex h-14 w-full items-center gap-3 rounded-b-xl bg-black/25 px-3 lg:hidden">
+                <div className="min-w-0 flex-1 text-left text-white">
+                    <span className="block text-[0.58rem] font-black uppercase tracking-[0.15em] text-white/55">Current page</span>
+                    <span className="block truncate text-sm font-extrabold">{activeItem?.label || "Navigation"}</span>
+                </div>
                 <Button
                     type="button"
                     variant="ghost"
                     onClick={() => setOpenMenuPath(isMenuOpen ? null : pathname)}
-                    className="flex h-full w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-white transition hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/75"
+                    className="ml-auto grid size-11 shrink-0 place-items-center rounded-xl border border-white/30 bg-black/20 p-0 text-white shadow-sm transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
                     aria-expanded={isMenuOpen}
                     aria-controls="mobile-secondary-navigation"
                     aria-label={`${isMenuOpen ? "Close" : "Open"} navigation menu. Current page: ${activeItem?.label || "Navigation"}`}
                 >
-                    <span className="min-w-0">
-                        <span className="block text-[0.58rem] font-black uppercase tracking-[0.15em] text-white/55">Current page</span>
-                        <span className="block truncate text-sm font-extrabold">{activeItem?.label || "Navigation"}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2 rounded-lg border border-white/35 bg-black/20 px-3 py-1.5 text-xs font-extrabold shadow-sm">
-                        {isMenuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
-                        Menu
-                        <ChevronDown className={cn("size-3.5 transition-transform", isMenuOpen && "rotate-180")} aria-hidden="true" />
-                    </span>
+                    {isMenuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
                 </Button>
 
                 {isMenuOpen && (
                     <nav
                         id="mobile-secondary-navigation"
-                        className="absolute left-2 right-2 top-[calc(100%+0.5rem)] z-50 max-h-[calc(100dvh-10rem)] overflow-y-auto rounded-2xl border border-app-border bg-app-surface text-app-foreground shadow-[0_22px_64px_rgba(27,16,53,0.24)] dark:border-[#5d4172] dark:bg-[#100918] dark:shadow-[0_24px_72px_rgba(0,0,0,0.78)]"
+                        className="mobile-secondary-menu absolute right-2 top-[calc(100%+0.35rem)] z-[80] flex max-h-[calc(100dvh-9rem)] w-[min(17rem,calc(100vw-1rem))] origin-top-right flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface text-app-foreground shadow-[0_18px_48px_rgba(27,16,53,0.3)] dark:border-[#5d4172] dark:bg-[#100918] dark:shadow-[0_20px_54px_rgba(0,0,0,0.72)]"
                         aria-label="More navigation"
                     >
-                        <div className="border-b border-app-border bg-app-surface-muted/80 px-4 py-3 dark:border-[#503b60] dark:bg-[#26172f]">
-                            <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-app-muted dark:text-[#cbb8d8]">Navigation</p>
-                            <p className="mt-0.5 text-sm font-extrabold text-app-foreground dark:text-white">Choose a screen</p>
+                        <div className="shrink-0 border-b border-app-border bg-app-surface-muted/80 px-3 py-2.5 dark:border-[#503b60] dark:bg-[#26172f]">
+                            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-app-muted dark:text-[#cbb8d8]">Navigation</p>
+                            <p className="mt-0.5 truncate text-sm font-extrabold text-app-foreground dark:text-white">Choose a screen</p>
                         </div>
 
-                        <div className="divide-y divide-app-border dark:divide-[#4a3857]">
+                        <div className="flex-1 overflow-y-auto divide-y divide-app-border dark:divide-[#4a3857]">
                             {secondarySections.map(({ section, label, items }) => (
                                 <section
                                     key={section}
-                                    className={cn("px-2 py-3", SECTION_STYLES[section].section)}
+                                    className={cn("px-2 py-2.5", SECTION_STYLES[section].section)}
                                     aria-labelledby={`mobile-section-${section}`}
                                 >
                                     <h2
@@ -236,7 +231,7 @@ export default function NavButtons({
                                                     }}
                                                     aria-current={isActive ? "page" : undefined}
                                                     className={cn(
-                                                        "relative flex min-h-12 items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-sm font-bold text-app-foreground no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent dark:text-[#f5eff9]",
+                                                        "relative flex min-h-12 items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-sm font-bold text-app-foreground no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent dark:text-[#f5eff9]",
                                                         "pointer-fine:hover:bg-app-accent-hover dark:pointer-fine:hover:border-white/10 dark:pointer-fine:hover:bg-white/8",
                                                         isActive && cn("font-extrabold shadow-sm", styles.active),
                                                         kind === "admin" && !isActive && "text-app-positive-foreground",
@@ -268,7 +263,7 @@ export default function NavButtons({
                         </div>
 
                         {observerMode ? (
-                            <Button asChild variant="secondary" className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl text-sm font-extrabold">
+                            <Button asChild variant="secondary" className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-extrabold">
                                 <Link href="/admin/observe" onClick={() => setOpenMenuPath(null)}>
                                     <LogOut className="size-4" aria-hidden="true" />
                                     Exit read-only view
@@ -280,7 +275,7 @@ export default function NavButtons({
                                 variant="danger"
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}
-                                className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] items-center justify-center gap-2 rounded-xl border border-app-danger-border bg-app-danger-surface px-3 py-2 text-sm font-extrabold text-app-danger-foreground transition pointer-fine:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-danger-foreground disabled:opacity-55"
+                                className="m-2 mt-1 flex min-h-11 w-[calc(100%-1rem)] shrink-0 items-center justify-center gap-2 rounded-xl border border-app-danger-border bg-app-danger-surface px-3 py-2 text-sm font-extrabold text-app-danger-foreground transition pointer-fine:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-danger-foreground disabled:opacity-55"
                             >
                                 <LogOut className="size-4" aria-hidden="true" />
                                 {isLoggingOut ? "Logging out…" : "Logout"}
@@ -292,10 +287,10 @@ export default function NavButtons({
 
             {mobilePrimaryItems.length > 0 && (
                 <nav
-                    className="fixed inset-x-0 bottom-0 z-[60] h-[calc(3.375rem+max(0.35rem,env(safe-area-inset-bottom)))] border-t border-white/15 bg-[#160b27]/96 px-1.5 pt-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] text-white shadow-[0_-12px_38px_rgba(0,0,0,0.42)] backdrop-blur-xl lg:hidden"
+                    className="fixed inset-x-0 bottom-0 z-[60] h-[calc(4.5rem+max(0.35rem,env(safe-area-inset-bottom)))] border-t border-white/15 bg-[#160b27]/96 px-1.5 pt-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] text-white shadow-[0_-12px_38px_rgba(0,0,0,0.42)] backdrop-blur-xl lg:hidden"
                     aria-label="Mobile quick navigation"
                 >
-                    <div className="grid h-12 grid-flow-col auto-cols-fr">
+                    <div className="grid h-16 grid-flow-col auto-cols-fr gap-0.5">
                         {mobilePrimaryItems.map(({ href, label }) => {
                             const isActive = isNavigationItemActive(navigationPathname, href);
 
@@ -306,16 +301,16 @@ export default function NavButtons({
                                     aria-label={MOBILE_LABELS[href] || label}
                                     aria-current={isActive ? "page" : undefined}
                                     className={cn(
-                                        "relative h-12 min-w-0 overflow-hidden rounded-2xl px-1 font-bold text-white/55 no-underline transition-[background-color,color] duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+                                        "relative h-16 min-w-0 overflow-hidden rounded-2xl px-1 font-bold text-white/60 no-underline transition-[background-color,color] duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
                                         isActive && "bg-white/10 text-white",
                                     )}
                                 >
-                                    {isActive && <span className="absolute top-0 h-0.5 w-7 rounded-full bg-linear-to-r from-brand-cyan to-brand-purple" aria-hidden="true" />}
-                                    <span className="absolute top-1.5 left-1/2 grid size-5 -translate-x-1/2 place-items-center">
+                                    {isActive && <span className="absolute top-0 left-1/2 h-0.5 w-9 -translate-x-1/2 rounded-full bg-linear-to-r from-brand-cyan to-brand-purple" aria-hidden="true" />}
+                                    <span className="absolute top-2 left-1/2 grid size-7 -translate-x-1/2 place-items-center">
                                         <MobileNavigationIcon href={href} active={isActive} />
                                     </span>
                                     <span className={cn(
-                                        "absolute inset-x-1 bottom-1 truncate text-center text-[0.62rem] leading-4",
+                                        "absolute inset-x-1 bottom-1.5 truncate text-center text-[0.7rem] leading-4",
                                     )}>
                                         {MOBILE_LABELS[href] || label}
                                     </span>
@@ -330,7 +325,7 @@ export default function NavButtons({
                 <Button
                     type="button"
                     variant="ghost"
-                    className="fixed inset-0 z-30 h-auto w-auto cursor-default rounded-none bg-black/50 p-0 backdrop-blur-[1px] lg:hidden"
+                    className="fixed inset-0 z-[70] h-auto w-auto cursor-default rounded-none bg-black/40 p-0 backdrop-blur-[1px] lg:hidden"
                     onClick={() => setOpenMenuPath(null)}
                     aria-label="Close navigation menu"
                 />
@@ -343,6 +338,6 @@ function MobileNavigationIcon({ href, active }) {
     const Icon = MOBILE_ICONS[href];
     if (!Icon) return null;
 
-    const iconClass = cn("size-[1.15rem] shrink-0", active && "text-brand-cyan");
+    const iconClass = cn("size-[1.45rem] shrink-0", active && "text-brand-cyan");
     return <Icon className={iconClass} aria-hidden="true" />;
 }

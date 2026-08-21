@@ -14,14 +14,28 @@ export const metadata = {
     },
     description: "A multi-league fantasy football draft game.",
     icons: {
-        icon: "/UI/pl-logo-lion.svg",
+        icon: [
+            { url: "/UI/app-icon-192.png", sizes: "192x192", type: "image/png" },
+            { url: "/UI/app-icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
+        shortcut: "/UI/app-icon-192.png",
+        apple: [{ url: "/UI/apple-touch-icon-180.png", sizes: "180x180", type: "image/png" }],
     },
     manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        title: "Fantasy",
+        statusBarStyle: "default",
+    },
 };
 
 export const viewport = {
     width: "device-width",
     initialScale: 1,
+    themeColor: [
+        { media: "(prefers-color-scheme: light)", color: "#f8fbfa" },
+        { media: "(prefers-color-scheme: dark)", color: "#0d0815" },
+    ],
 };
 
 export default async function RootLayout({ children }) {

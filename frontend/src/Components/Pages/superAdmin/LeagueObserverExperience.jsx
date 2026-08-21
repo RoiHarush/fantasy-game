@@ -187,7 +187,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
 
     const navigationBase = `/observe/${leagueId}/${managerId}`;
     const shell = (content) => (
-        <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
             <HeaderCollage />
             <Header navigationProps={{
                 userOverride: observedUser,
