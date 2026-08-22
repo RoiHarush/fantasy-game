@@ -103,6 +103,7 @@ public class LiveScoreManager {
 
                 JsonNode explanations = apiPlayer.get("explain");
                 if (explanations != null && explanations.isArray()) {
+                    boolean hasSinglePlayedFixture = explanations.size() == 1;
                     for (JsonNode explanation : explanations) {
                         int fixtureId = explanation.path("fixture").asInt(0);
                         FixtureEntity fixture = fixturesById.get(fixtureId);
@@ -118,11 +119,13 @@ public class LiveScoreManager {
                             fixtureStatsMap.put(key, fixtureStats);
                         }
 
-                        RawGameStats fixtureRawStats = parseFixtureRawStats(
-                                explanation.path("stats"),
-                                playerEntity.getTeamId(),
-                                fixture
-                        );
+                        RawGameStats fixtureRawStats = hasSinglePlayedFixture
+                                ? withFixtureContext(rawStats, playerEntity.getTeamId(), fixture)
+                                : parseFixtureRawStats(
+                                        explanation.path("stats"),
+                                        playerEntity.getTeamId(),
+                                        fixture
+                                );
                         statsUpdater.update(fixtureStats, fixtureRawStats);
                         currentPlayerFixtureStats.add(fixtureStats);
                         fixtureStatsToUpdate.add(fixtureStats);
@@ -246,6 +249,27 @@ public class LiveScoreManager {
                 values.getOrDefault("penalties_missed", 0),
                 values.getOrDefault("own_goals", 0),
                 values.getOrDefault("starts", minutes > 0 ? 1 : 0) > 0,
+                opponentTeamId,
+                wasHome
+        );
+    }
+
+    static RawGameStats withFixtureContext(RawGameStats aggregateStats,
+                                           int playerTeamId,
+                                           FixtureEntity fixture) {
+        boolean wasHome = fixture.getHomeTeamId() == playerTeamId;
+        int opponentTeamId = wasHome ? fixture.getAwayTeamId() : fixture.getHomeTeamId();
+        return new RawGameStats(
+                aggregateStats.minutes(),
+                aggregateStats.goals(),
+                aggregateStats.assists(),
+                aggregateStats.goalsConceded(),
+                aggregateStats.yellowCards(),
+                aggregateStats.redCards(),
+                aggregateStats.penaltiesSaved(),
+                aggregateStats.penaltiesMissed(),
+                aggregateStats.ownGoals(),
+                aggregateStats.started(),
                 opponentTeamId,
                 wasHome
         );
