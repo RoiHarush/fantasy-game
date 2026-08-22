@@ -4,6 +4,7 @@ import com.fantasy.config.AfterCommitExecutor;
 import com.fantasy.domain.game.*;
 import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
 import com.fantasy.domain.notification.NotificationEvents;
+import com.fantasy.domain.score.LiveScoreManager;
 import com.fantasy.domain.score.PointsService;
 
 import com.fantasy.domain.team.UserGameDataRepository;
@@ -35,6 +36,7 @@ public class DailyPointsScheduler {
     private final UserGameDataRepository userGameDataRepository;
     private final FixtureService fixtureService;
     private final GameWeekService gameWeekService;
+    private final LiveScoreManager liveScoreManager;
     private ApplicationEventPublisher applicationEvents = event -> { };
 
     public DailyPointsScheduler(GameWeekRepository gameweekRepository,
@@ -43,7 +45,8 @@ public class DailyPointsScheduler {
                                 PointsService pointsService,
                                 UserGameDataRepository userGameDataRepository,
                                 FixtureService fixtureService,
-                                GameWeekService gameWeekService) {
+                                GameWeekService gameWeekService,
+                                LiveScoreManager liveScoreManager) {
         this.gameweekRepository = gameweekRepository;
         this.fixtureRepository = fixtureRepository;
         this.dailyStatusRepository = dailyStatusRepository;
@@ -51,6 +54,7 @@ public class DailyPointsScheduler {
         this.userGameDataRepository = userGameDataRepository;
         this.fixtureService = fixtureService;
         this.gameWeekService = gameWeekService;
+        this.liveScoreManager = liveScoreManager;
     }
 
     @Autowired
@@ -129,6 +133,14 @@ public class DailyPointsScheduler {
 
 
         log.info("Safe time passed for Date {} in GW {}. Starting calculation...", date, gwId);
+
+        try {
+            liveScoreManager.updateLiveScores(gwId);
+        } catch (RuntimeException exception) {
+            log.error("Daily point calculation for GW {} on {} could not refresh final player scores; date remains pending",
+                    gwId, date, exception);
+            return;
+        }
 
         if (!performBulkCalculation(gwId)) {
             log.error("Daily point calculation for GW {} on {} had failures; date remains pending", gwId, date);

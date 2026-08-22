@@ -106,7 +106,7 @@ public class FixtureService {
                     : null;
 
             boolean started = fixture.has("started") && fixture.get("started").asBoolean();
-            boolean finished = fixture.has("finished") && fixture.get("finished").asBoolean();
+            boolean finished = isEffectivelyFinished(fixture);
             int minutes = fixture.has("minutes") ? fixture.get("minutes").asInt() : 0;
 
             FixtureEntity entity = new FixtureEntity(id, gameweekId, homeTeamId, awayTeamId, kickoff, scoreHome, scoreAway);
@@ -180,7 +180,7 @@ public class FixtureService {
                 }
 
                 boolean started = node.get("started").asBoolean();
-                boolean finished = node.get("finished").asBoolean();
+                boolean finished = isEffectivelyFinished(node);
                 int minutes = node.get("minutes").asInt();
 
                 if (entity.isStarted() != started) {
@@ -192,7 +192,7 @@ public class FixtureService {
                 if (entity.isFinished() != finished) {
                     changed = true;
                     entity.setFinished(finished);
-                    log.info("Game ID {} finished.", id);
+                    log.info("Game ID {} finished status changed to: {}", id, finished);
                 }
 
                 if (entity.getMinutes() != minutes) {
@@ -233,6 +233,11 @@ public class FixtureService {
     public List<FixtureEntity> getAllFixtures() {
         log.debug("Fetching all fixtures...");
         return fixtureRepo.findAll();
+    }
+
+    private boolean isEffectivelyFinished(JsonNode fixture) {
+        return fixture.path("finished").asBoolean(false)
+                || fixture.path("finished_provisional").asBoolean(false);
     }
 
     public List<FixtureEntity> getFixturesByGameweek(int gw) {
