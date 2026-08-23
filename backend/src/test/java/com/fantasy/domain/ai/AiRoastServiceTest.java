@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -96,6 +97,7 @@ class AiRoastServiceTest {
         assertEquals("Already roasted.", result.roasts().getFirst().content());
         assertEquals(30, result.rotationSeconds());
         verify(aiClient, never()).complete(any(), any(), anyInt());
+        verify(aiClient, never()).completeJson(any(), any(), anyInt(), any(), any());
         verify(roastRepository, never()).save(any());
     }
 
@@ -128,7 +130,7 @@ class AiRoastServiceTest {
         gameweek.setId(1);
         gameweek.setCalculated(true);
         UserPointsEntity userPoints = points(gameData, 44);
-        UserPointsEntity leaderPoints = points(gameData, 61);
+        UserPointsEntity leaderPoints = points(otherGameData(), 61);
         UserSquadEntity squad = new UserSquadEntity();
         squad.setGameweek(1);
         squad.setUser(gameData);
@@ -148,7 +150,8 @@ class AiRoastServiceTest {
         when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
         when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(2);
         when(scoringService.calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any())).thenReturn(9);
-        when(aiClient.complete(any(), any(), eq(160))).thenReturn(Optional.empty());
+        when(aiClient.completeJson(any(), any(), anyInt(), eq("fantasy_gameweek_roasts"), any()))
+                .thenReturn(Optional.empty());
         AtomicReference<AiRoastEntity> generated = new AtomicReference<>();
         when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
                 .thenAnswer(ignored -> generated.get() == null ? List.of() : List.of(generated.get()));
@@ -164,6 +167,54 @@ class AiRoastServiceTest {
         assertEquals(1, result.gameweek());
         assertEquals(true, result.roasts().getFirst().content().contains("Bench Hero"));
         verify(scoringService).calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any());
+        verify(aiClient).completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any());
+        verify(aiClient, never()).complete(any(), any(), anyInt());
+    }
+
+    @Test
+    void acceptsAValidatedStructuredRoastAndMarksItAsAiGenerated() {
+        UserGameDataEntity gameData = gameData();
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(1);
+        gameweek.setCalculated(true);
+        UserPointsEntity userPoints = points(gameData, 72);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(1);
+        squad.setUser(gameData);
+        squad.setStartingLineup(List.of(10));
+        squad.setBenchMap(Map.of());
+        squad.setCaptainId(10);
+        PlayerGameweekStatsEntity captainStats = stats(10, "Captain Choice");
+
+        when(gameDataRepository.findByUserId(7)).thenReturn(Optional.of(gameData));
+        when(gameDataRepository.findAllByLeagueIdForUpdate(3L)).thenReturn(List.of(gameData));
+        when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
+        when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints));
+        when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
+        when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
+        when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(8);
+        when(aiClient.completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any()))
+                .thenReturn(Optional.of("""
+                        {"roasts":[{"userGameDataId":70,"content":"Roi United נתנה הצגה של 72 נקודות; אפילו הקפטן נראה כאילו קיבל הוראות."}]}
+                        """));
+        when(aiClient.providerName()).thenReturn("groq");
+        when(aiClient.modelName()).thenReturn("openai/gpt-oss-20b");
+        AtomicReference<AiRoastEntity> generated = new AtomicReference<>();
+        when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
+                .thenAnswer(ignored -> generated.get() == null ? List.of() : List.of(generated.get()));
+        when(roastRepository.save(any())).thenAnswer(invocation -> {
+            AiRoastEntity entity = invocation.getArgument(0);
+            generated.set(entity);
+            return entity;
+        });
+
+        AiRoastDto result = service.generate(7, 1);
+
+        assertTrue(result.roasts().getFirst().generatedByAi());
+        assertTrue(result.roasts().getFirst().content().contains("72"));
+        assertEquals("groq", generated.get().getProvider());
+        verify(aiClient).completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any());
     }
 
     private UserGameDataEntity gameData() {
@@ -181,6 +232,23 @@ class AiRoastServiceTest {
         gameData.setUser(user);
         gameData.setLeague(league);
         gameData.setFantasyTeamName("Roi United");
+        return gameData;
+    }
+
+    private UserGameDataEntity otherGameData() {
+        UserEntity user = new UserEntity();
+        user.setId(8);
+        user.setName("Dana");
+        user.setFirstName("Dana");
+        user.setLastName("Levy");
+        LeagueEntity league = new LeagueEntity();
+        league.setId(3L);
+        league.setName("Friends League");
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setId(80);
+        gameData.setUser(user);
+        gameData.setLeague(league);
+        gameData.setFantasyTeamName("Dana FC");
         return gameData;
     }
 

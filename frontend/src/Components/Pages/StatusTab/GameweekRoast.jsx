@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sparkles } from "@/src/shared/ui/icons";
 import { Button } from "../../../shared/ui/Button";
-import { aiFeaturesEnabled } from "../../../features/ai/useAlexCoach";
+import { roastFeaturesEnabled } from "../../../features/ai/useAlexCoach";
 import { useGameweekRoast, useGenerateGameweekRoast } from "../../../features/status/useStatusData";
 
-export default function GameweekRoast({ gameweekId, available = false, unavailableMessage = "ה-roast ייפתח בסיום המחזור.", featureEnabled = aiFeaturesEnabled, readOnly = false, previewFeed }) {
+export default function GameweekRoast({ gameweekId, available = false, unavailableMessage = "ה-roast ייפתח בסיום המחזור.", featureEnabled = roastFeaturesEnabled, readOnly = false, previewFeed }) {
     const hasPreviewFeed = previewFeed !== undefined;
     const query = useGameweekRoast(gameweekId, featureEnabled && available && !hasPreviewFeed);
     const generate = useGenerateGameweekRoast(gameweekId);

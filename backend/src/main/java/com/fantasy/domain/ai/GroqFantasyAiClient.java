@@ -46,6 +46,20 @@ public class GroqFantasyAiClient implements FantasyAiClient {
 
     @Override
     public Optional<String> complete(String systemPrompt, String userPrompt, int maxTokens) {
+        return complete(systemPrompt, userPrompt, maxTokens, null, null);
+    }
+
+    @Override
+    public Optional<String> completeJson(String systemPrompt, String userPrompt, int maxTokens,
+                                         String schemaName, JsonNode schema) {
+        if (schemaName == null || schemaName.isBlank() || schema == null || schema.isMissingNode()) {
+            return Optional.empty();
+        }
+        return complete(systemPrompt, userPrompt, maxTokens, schemaName, schema);
+    }
+
+    private Optional<String> complete(String systemPrompt, String userPrompt, int maxTokens,
+                                      String schemaName, JsonNode schema) {
         if (!enabled || !"groq".equalsIgnoreCase(provider) || apiKey.isBlank()) {
             return Optional.empty();
         }
@@ -55,6 +69,15 @@ public class GroqFantasyAiClient implements FantasyAiClient {
             requestBody.put("model", model);
             requestBody.put("temperature", 0.85);
             requestBody.put("max_tokens", maxTokens);
+            requestBody.put("store", false);
+            if (schema != null) {
+                ObjectNode responseFormat = requestBody.putObject("response_format");
+                responseFormat.put("type", "json_schema");
+                ObjectNode jsonSchema = responseFormat.putObject("json_schema");
+                jsonSchema.put("name", schemaName);
+                jsonSchema.put("strict", true);
+                jsonSchema.set("schema", schema);
+            }
             ArrayNode messages = requestBody.putArray("messages");
             messages.addObject().put("role", "system").put("content", systemPrompt);
             messages.addObject().put("role", "user").put("content", userPrompt);

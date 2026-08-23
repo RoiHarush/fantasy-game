@@ -4,7 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query/keys";
 import { askAlex, generateAlexAnalysis, getAlexAnalysis } from "./api";
 
-export const aiFeaturesEnabled = process.env.NEXT_PUBLIC_AI_FEATURES_ENABLED === "true";
+const legacyAiFeaturesEnabled = process.env.NEXT_PUBLIC_AI_FEATURES_ENABLED === "true";
+export const coachFeaturesEnabled = process.env.NEXT_PUBLIC_AI_COACH_ENABLED == null
+    ? legacyAiFeaturesEnabled
+    : process.env.NEXT_PUBLIC_AI_COACH_ENABLED === "true";
+export const roastFeaturesEnabled = process.env.NEXT_PUBLIC_AI_ROAST_ENABLED == null
+    ? legacyAiFeaturesEnabled
+    : process.env.NEXT_PUBLIC_AI_ROAST_ENABLED === "true";
+// Backwards-compatible name for the coach UI while environments migrate to split flags.
+export const aiFeaturesEnabled = coachFeaturesEnabled;
 
 export function useAlexCoach(gameweekId, enabled = true) {
     const queryClient = useQueryClient();
@@ -12,7 +20,7 @@ export function useAlexCoach(gameweekId, enabled = true) {
     const query = useQuery({
         queryKey: key,
         queryFn: ({ signal }) => getAlexAnalysis(gameweekId, { signal }),
-        enabled: Boolean(aiFeaturesEnabled && enabled && gameweekId),
+        enabled: Boolean(coachFeaturesEnabled && enabled && gameweekId),
         staleTime: 60_000,
         retry: false,
     });
