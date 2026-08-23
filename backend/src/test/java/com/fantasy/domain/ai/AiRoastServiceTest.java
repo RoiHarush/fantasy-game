@@ -272,9 +272,11 @@ class AiRoastServiceTest {
         assertEquals("string", roastsSchema.path("properties").path("70").path("type").asText());
         assertEquals("70", roastsSchema.path("required").path(0).asText());
         assertTrue(requestedSystemPrompt.get().contains("עברית ישראלית"));
-        assertTrue(requestedSystemPrompt.get().contains("דוגמאות לטון הרצוי"));
-        assertTrue(requestedFacts.get().contains("\"manager\":\"Roi\""));
-        assertFalse(requestedFacts.get().contains("\"manager\":\"Roi Harush\""));
+        assertTrue(requestedSystemPrompt.get().contains("דוגמאות שמגדירות את הקול הרצוי"));
+        assertTrue(requestedFacts.get().contains("המנהל: Roi"));
+        assertFalse(requestedFacts.get().contains("המנהל: Roi Harush"));
+        assertTrue(requestedFacts.get().contains("המחזור עדיין לא הסתיים"));
+        assertFalse(requestedFacts.get().contains("bestPlayer"));
         verify(roastRepository, never()).save(any());
         verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());
     }
