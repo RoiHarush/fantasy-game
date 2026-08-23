@@ -68,7 +68,7 @@ public class GroqFantasyAiClient implements FantasyAiClient {
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("model", model);
             requestBody.put("temperature", 0.85);
-            requestBody.put("max_tokens", maxTokens);
+            requestBody.put("max_completion_tokens", maxTokens);
             requestBody.put("store", false);
             if (schema != null) {
                 ObjectNode responseFormat = requestBody.putObject("response_format");
@@ -90,7 +90,7 @@ public class GroqFantasyAiClient implements FantasyAiClient {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("AI provider returned HTTP {}", response.statusCode());
+                log.warn("AI provider returned HTTP {}: {}", response.statusCode(), providerError(response.body()));
                 return Optional.empty();
             }
 
@@ -115,5 +115,26 @@ public class GroqFantasyAiClient implements FantasyAiClient {
 
     @Override
     public String modelName() { return model; }
+
+    private String providerError(String responseBody) {
+        try {
+            JsonNode error = objectMapper.readTree(responseBody).path("error");
+            String type = safeErrorPart(error.path("type").asText(""));
+            String code = safeErrorPart(error.path("code").asText(""));
+            String message = safeErrorPart(error.path("message").asText(""));
+            String summary = (type.isBlank() ? "" : "type=" + type + ", ")
+                    + (code.isBlank() ? "" : "code=" + code + ", ")
+                    + (message.isBlank() ? "request rejected" : message);
+            return summary.length() <= 400 ? summary : summary.substring(0, 400);
+        } catch (Exception ignored) {
+            return "request rejected (unreadable provider response)";
+        }
+    }
+
+    private String safeErrorPart(String value) {
+        return value.replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll("\\s{2,}", " ")
+                .trim();
+    }
 }
 

@@ -1,5 +1,6 @@
 package com.fantasy.domain.ai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
@@ -245,10 +246,14 @@ class AiRoastServiceTest {
         when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
         when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
         when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(4);
+        AtomicReference<JsonNode> requestedSchema = new AtomicReference<>();
         when(aiClient.completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any()))
-                .thenReturn(Optional.of("""
+                .thenAnswer(invocation -> {
+                    requestedSchema.set(invocation.getArgument(4));
+                    return Optional.of("""
                         {"roasts":[{"userGameDataId":70,"content":"Roi United עם 23 נקודות כרגע; אפילו Live Captain מחכה שהמחזור יתעורר."}]}
-                        """));
+                        """);
+                });
         when(aiClient.providerName()).thenReturn("groq");
         when(aiClient.modelName()).thenReturn("openai/gpt-oss-20b");
 
@@ -257,6 +262,11 @@ class AiRoastServiceTest {
         assertEquals(1, result.roasts().size());
         assertTrue(result.roasts().getFirst().generatedByAi());
         assertTrue(result.roasts().getFirst().content().contains("23"));
+        JsonNode roastsSchema = requestedSchema.get().path("properties").path("roasts");
+        assertFalse(roastsSchema.has("minItems"));
+        assertFalse(roastsSchema.has("maxItems"));
+        assertFalse(roastsSchema.path("items").path("properties").path("content").has("minLength"));
+        assertFalse(roastsSchema.path("items").path("properties").path("content").has("maxLength"));
         verify(roastRepository, never()).save(any());
         verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());
     }

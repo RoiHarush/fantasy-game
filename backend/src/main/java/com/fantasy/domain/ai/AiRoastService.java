@@ -251,8 +251,6 @@ public class AiRoastService {
         root.put("additionalProperties", false);
         ObjectNode roastsNode = root.putObject("properties").putObject("roasts");
         roastsNode.put("type", "array");
-        roastsNode.put("minItems", facts.size());
-        roastsNode.put("maxItems", facts.size());
         ObjectNode item = roastsNode.putObject("items");
         item.put("type", "object");
         item.put("additionalProperties", false);
@@ -263,8 +261,6 @@ public class AiRoastService {
         facts.forEach(fact -> allowedIds.add(fact.userGameDataId()));
         ObjectNode content = itemProperties.putObject("content");
         content.put("type", "string");
-        content.put("minLength", 18);
-        content.put("maxLength", 600);
         item.putArray("required").add("userGameDataId").add("content");
         root.putArray("required").add("roasts");
         return root;
