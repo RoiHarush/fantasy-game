@@ -90,6 +90,45 @@ public class AiRoastService {
         return feed.isEmpty() ? Optional.empty() : Optional.of(toFeed(gameweek, feed));
     }
 
+    /**
+     * Builds an ephemeral roast from the league's current data for the super-admin preview.
+     * This deliberately ignores the public feature flag and never writes to ai_roasts.
+     */
+    @Transactional(readOnly = true)
+    public AiRoastDto previewForLeague(long leagueId, int gameweek) {
+        gameweeks.findById(gameweek)
+                .orElseThrow(() -> new IllegalArgumentException("Gameweek was not found"));
+        List<UserGameDataEntity> members = gameData.findByLeague_Id(leagueId).stream()
+                .filter(member -> member.getUser() != null && member.getLeague() != null)
+                .toList();
+        if (members.isEmpty()) throw new IllegalStateException("The selected league has no fantasy managers");
+
+        LeagueRoundContext context = buildRoundContext(members.getFirst(), gameweek);
+        List<RoastFacts> facts = members.stream()
+                .map(target -> buildFacts(target, gameweek, context))
+                .sorted(Comparator.comparingInt(RoastFacts::rank).thenComparingInt(RoastFacts::userGameDataId))
+                .toList();
+        Map<Integer, String> generated = generateBatch(facts);
+        LocalDateTime generatedAt = LocalDateTime.now();
+        List<AiRoastDto.Item> items = new ArrayList<>();
+        for (int index = 0; index < facts.size(); index++) {
+            RoastFacts fact = facts.get(index);
+            UserGameDataEntity member = members.stream()
+                    .filter(candidate -> candidate.getId() == fact.userGameDataId())
+                    .findFirst()
+                    .orElseThrow();
+            String prose = generated.get(fact.userGameDataId());
+            items.add(new AiRoastDto.Item(
+                    member.getUser().getId(), member.getUser().getFullName(), member.getFantasyTeamName(),
+                    prose == null ? fallback(fact) : prose, prose != null, generatedAt, index
+            ));
+        }
+        log.info("Private roast preview generated: leagueId={}, gameweek={}, aiItems={}, fallbackItems={}, provider={}, model={}",
+                leagueId, gameweek, generated.size(), facts.size() - generated.size(), ai.providerName(), ai.modelName());
+        long anchor = toEpochMillis(generatedAt);
+        return new AiRoastDto(gameweek, System.currentTimeMillis(), anchor, rotationSeconds, items);
+    }
+
     /** Generates all missing league roasts in one provider call. Saved rows make retries quota-free. */
     @Transactional
     public AiRoastDto generate(int actualUserId, int gameweek) {

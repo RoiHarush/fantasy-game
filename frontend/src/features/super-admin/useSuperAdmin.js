@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "../../lib/query/keys";
-import { getObservedLeague } from "./observerApi";
+import { getObservedLeague, previewObservedRoast } from "./observerApi";
 import {
     getAdminPlayers,
     getAdminUserDetails,
@@ -89,6 +89,12 @@ export function useObservedLeague(leagueId, queryKey = ["admin", "observe", "lea
         queryFn: () => getObservedLeague(leagueId),
         enabled: Boolean(leagueId),
         staleTime: 30_000,
+    });
+}
+
+export function usePreviewLeagueRoast() {
+    return useMutation({
+        mutationFn: ({ leagueId, gameweekId }) => previewObservedRoast(leagueId, gameweekId),
     });
 }
 

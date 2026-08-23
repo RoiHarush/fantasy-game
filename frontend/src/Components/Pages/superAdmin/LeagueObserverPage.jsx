@@ -3,19 +3,31 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import GameweekRoast from "../StatusTab/GameweekRoast";
+import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { useMaintenanceLeagues } from "../../../features/league/useLeague";
-import { useObservedLeague } from "../../../features/super-admin/useSuperAdmin";
+import { useObservedLeague, usePreviewLeagueRoast } from "../../../features/super-admin/useSuperAdmin";
 import { Button } from "../../../shared/ui/Button";
 import SelectField from "../../../shared/ui/SelectField";
-import { Eye, LockKeyhole, ShieldCheck } from "../../../shared/ui/icons";
+import { Eye, LockKeyhole, ShieldCheck, Sparkles } from "../../../shared/ui/icons";
 
 export default function LeagueObserverPage() {
     const [leagueId, setLeagueId] = useState("");
     const [managerId, setManagerId] = useState("");
+    const [roastGameweekId, setRoastGameweekId] = useState("");
     const leagues = useMaintenanceLeagues();
     const league = useObservedLeague(leagueId);
+    const gameweekState = useGameweek();
+    const roastPreview = usePreviewLeagueRoast();
     const effectiveManagerId = managerId || league.data?.managers?.[0]?.userId || "";
+    const effectiveRoastGameweekId = roastGameweekId
+        || gameweekState.currentGameweek?.id
+        || gameweekState.lastGameweek?.id
+        || gameweekState.gameweeks?.[0]?.id
+        || "";
     const manager = league.data?.managers?.find((item) => String(item.userId) === String(effectiveManagerId));
+    const aiPreviewCount = roastPreview.data?.roasts?.filter((item) => item.generatedByAi).length ?? 0;
+    const previewCount = roastPreview.data?.roasts?.length ?? 0;
 
     return (
         <div className="mx-auto max-w-5xl space-y-6">
@@ -46,6 +58,7 @@ export default function LeagueObserverPage() {
                         <SelectField ariaLabel="League to observe" value={leagueId} onValueChange={(value) => {
                             setLeagueId(String(value));
                             setManagerId("");
+                            roastPreview.reset();
                         }} options={[
                             { value: "", label: "Choose a league" },
                             ...(leagues.data ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.participantCount} managers` })),
@@ -81,6 +94,73 @@ export default function LeagueObserverPage() {
                     Ready to view <b>{manager.fantasyTeamName}</b> ({manager.managerName}) inside <b>{league.data?.name}</b>.
                 </div>
             )}
+
+            <section className="overflow-hidden rounded-3xl border border-brand-purple/30 bg-app-surface shadow-panel">
+                <div className="border-b border-app-border bg-app-surface-muted px-4 py-5 sm:px-6">
+                    <div className="flex items-center gap-3">
+                        <span className="grid size-11 place-items-center rounded-2xl border border-brand-purple/30 bg-brand-purple/10 text-brand-purple dark:text-brand-cyan">
+                            <Sparkles className="size-5" aria-hidden="true" />
+                        </span>
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-purple dark:text-brand-cyan">Private preview</p>
+                            <h2 className="mt-0.5 font-black text-app-foreground">Taste the league roast with current data</h2>
+                            <p className="mt-1 text-xs leading-5 text-app-muted">Only your super-admin session can request this preview. It is not saved, published or shown to league managers.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
+                    <div>
+                        <label className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-app-muted">Data snapshot</label>
+                        <SelectField
+                            ariaLabel="Gameweek for private roast preview"
+                            value={String(effectiveRoastGameweekId)}
+                            onValueChange={(value) => {
+                                setRoastGameweekId(String(value));
+                                roastPreview.reset();
+                            }}
+                            disabled={!gameweekState.gameweeks?.length}
+                            options={[
+                                { value: "", label: gameweekState.loading ? "Loading gameweeks…" : "Choose a gameweek" },
+                                ...(gameweekState.gameweeks ?? []).map((item) => ({
+                                    value: item.id,
+                                    label: `Gameweek ${item.id}${item.id === gameweekState.currentGameweek?.id ? " · current live data" : item.calculated ? " · calculated" : ""}`,
+                                })),
+                            ]}
+                        />
+                    </div>
+                    <Button
+                        type="button"
+                        size="lg"
+                        disabled={!leagueId || !effectiveRoastGameweekId || roastPreview.isPending}
+                        onClick={() => roastPreview.mutate({ leagueId, gameweekId: effectiveRoastGameweekId })}
+                    >
+                        <Sparkles className="size-4" aria-hidden="true" />
+                        {roastPreview.isPending ? "Alex is writing…" : "Generate private preview"}
+                    </Button>
+                </div>
+
+                {roastPreview.error && (
+                    <p role="alert" className="mx-4 mb-5 rounded-xl border border-app-danger-border bg-app-danger-surface px-4 py-3 text-sm text-app-danger-foreground sm:mx-6">
+                        {roastPreview.error.message}
+                    </p>
+                )}
+
+                {roastPreview.data && (
+                    <div className="border-t border-app-border px-4 pb-5 sm:px-6">
+                        <GameweekRoast
+                            gameweekId={Number(effectiveRoastGameweekId)}
+                            available
+                            featureEnabled
+                            readOnly
+                            previewFeed={roastPreview.data}
+                        />
+                        <p className="mt-3 text-xs leading-5 text-app-muted">
+                            Generated privately for {previewCount} managers · {aiPreviewCount} by Groq AI · {previewCount - aiPreviewCount} local fallback. Refreshing generates a fresh unsaved version.
+                        </p>
+                    </div>
+                )}
+            </section>
         </div>
     );
 }

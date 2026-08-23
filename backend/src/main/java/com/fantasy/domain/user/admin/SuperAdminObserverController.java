@@ -142,6 +142,16 @@ public class SuperAdminObserverController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @PostMapping("/leagues/{leagueId}/roasts/{gameweekId}/preview")
+    public AiRoastDto previewRoast(@PathVariable long leagueId,
+                                   @PathVariable int gameweekId) {
+        requireLeague(leagueId);
+        if (gameweekId < 1 || gameweekId > 38) {
+            throw new IllegalArgumentException("Gameweek must be between 1 and 38");
+        }
+        return aiRoastService.previewForLeague(leagueId, gameweekId);
+    }
+
     @GetMapping("/leagues/{leagueId}/window")
     public Map<String, Object> window(@PathVariable long leagueId) {
         requireLeague(leagueId);

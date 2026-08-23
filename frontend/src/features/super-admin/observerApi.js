@@ -31,6 +31,10 @@ export const getObservedPlayersOfTheWeek = (leagueId, userId, gameweek) => readO
 export const getObservedRoast = (leagueId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/roasts/${gameweek}`
 );
+export const previewObservedRoast = (leagueId, gameweek) => apiRequest(
+    `/api/admin/observe/leagues/${leagueId}/roasts/${gameweek}/preview`,
+    { method: "POST", timeoutMs: 30_000 }
+);
 export const getObservedHistory = (leagueId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/history/${gameweek}`
 );

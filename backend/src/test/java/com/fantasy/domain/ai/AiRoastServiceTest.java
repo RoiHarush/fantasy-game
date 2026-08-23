@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -215,6 +216,49 @@ class AiRoastServiceTest {
         assertTrue(result.roasts().getFirst().content().contains("72"));
         assertEquals("groq", generated.get().getProvider());
         verify(aiClient).completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any());
+    }
+
+    @Test
+    void superAdminPreviewUsesCurrentDataWithoutSavingOrEnablingThePublicFeature() {
+        service = new AiRoastService(
+                false, 30, roastRepository, gameDataRepository, pointsRepository, squadRepository,
+                gameWeekRepository, statsRepository, fixtureStatsRepository, scoringService, aiClient,
+                new ObjectMapper()
+        );
+        UserGameDataEntity gameData = gameData();
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(1);
+        gameweek.setCalculated(false);
+        UserPointsEntity userPoints = points(gameData, 23);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(1);
+        squad.setUser(gameData);
+        squad.setStartingLineup(List.of(10));
+        squad.setBenchMap(Map.of());
+        squad.setCaptainId(10);
+        PlayerGameweekStatsEntity captainStats = stats(10, "Live Captain");
+
+        when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
+        when(gameDataRepository.findByLeague_Id(3L)).thenReturn(List.of(gameData));
+        when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints));
+        when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
+        when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
+        when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(4);
+        when(aiClient.completeJson(any(), any(), eq(320), eq("fantasy_gameweek_roasts"), any()))
+                .thenReturn(Optional.of("""
+                        {"roasts":[{"userGameDataId":70,"content":"Roi United עם 23 נקודות כרגע; אפילו Live Captain מחכה שהמחזור יתעורר."}]}
+                        """));
+        when(aiClient.providerName()).thenReturn("groq");
+        when(aiClient.modelName()).thenReturn("openai/gpt-oss-20b");
+
+        AiRoastDto result = service.previewForLeague(3L, 1);
+
+        assertEquals(1, result.roasts().size());
+        assertTrue(result.roasts().getFirst().generatedByAi());
+        assertTrue(result.roasts().getFirst().content().contains("23"));
+        verify(roastRepository, never()).save(any());
+        verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());
     }
 
     private UserGameDataEntity gameData() {
