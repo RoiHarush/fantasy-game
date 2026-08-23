@@ -69,6 +69,8 @@ public class GroqFantasyAiClient implements FantasyAiClient {
             requestBody.put("model", model);
             requestBody.put("temperature", 0.85);
             requestBody.put("max_completion_tokens", maxTokens);
+            requestBody.put("reasoning_effort", "low");
+            requestBody.put("include_reasoning", false);
             requestBody.put("store", false);
             if (schema != null) {
                 ObjectNode responseFormat = requestBody.putObject("response_format");

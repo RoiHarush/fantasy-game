@@ -53,6 +53,8 @@ class GroqFantasyAiClientTest {
         assertEquals("{\"roasts\":[]}", result.orElseThrow());
         assertFalse(requestBody.get().path("store").asBoolean(true));
         assertEquals(400, requestBody.get().path("max_completion_tokens").asInt());
+        assertEquals("low", requestBody.get().path("reasoning_effort").asText());
+        assertFalse(requestBody.get().path("include_reasoning").asBoolean(true));
         assertFalse(requestBody.get().has("max_tokens"));
         assertEquals("json_schema", requestBody.get().path("response_format").path("type").asText());
         assertTrue(requestBody.get().path("response_format").path("json_schema").path("strict").asBoolean());

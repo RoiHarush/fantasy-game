@@ -3,7 +3,6 @@ package com.fantasy.domain.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
@@ -239,7 +238,7 @@ public class AiRoastService {
 
     private Map<Integer, String> generateBatch(List<RoastFacts> facts) {
         if (facts.isEmpty()) return Map.of();
-        int maxTokens = Math.min(1100, Math.max(320, facts.size() * 125));
+        int maxTokens = Math.min(2400, Math.max(480, facts.size() * 220));
         Optional<String> response = ai.completeJson(SYSTEM_PROMPT, serialize(facts), maxTokens,
                 "fantasy_gameweek_roasts", responseSchema(facts));
         return response.map(json -> parseBatch(json, facts)).orElseGet(Map::of);
@@ -250,18 +249,15 @@ public class AiRoastService {
         root.put("type", "object");
         root.put("additionalProperties", false);
         ObjectNode roastsNode = root.putObject("properties").putObject("roasts");
-        roastsNode.put("type", "array");
-        ObjectNode item = roastsNode.putObject("items");
-        item.put("type", "object");
-        item.put("additionalProperties", false);
-        ObjectNode itemProperties = item.putObject("properties");
-        ObjectNode id = itemProperties.putObject("userGameDataId");
-        id.put("type", "integer");
-        ArrayNode allowedIds = id.putArray("enum");
-        facts.forEach(fact -> allowedIds.add(fact.userGameDataId()));
-        ObjectNode content = itemProperties.putObject("content");
-        content.put("type", "string");
-        item.putArray("required").add("userGameDataId").add("content");
+        roastsNode.put("type", "object");
+        roastsNode.put("additionalProperties", false);
+        ObjectNode roastProperties = roastsNode.putObject("properties");
+        var requiredRoasts = roastsNode.putArray("required");
+        facts.forEach(fact -> {
+            String id = Integer.toString(fact.userGameDataId());
+            roastProperties.putObject(id).put("type", "string");
+            requiredRoasts.add(id);
+        });
         root.putArray("required").add("roasts");
         return root;
     }
@@ -271,11 +267,25 @@ public class AiRoastService {
         Map<Integer, String> parsed = new HashMap<>();
         try {
             JsonNode items = mapper.readTree(json).path("roasts");
-            if (!items.isArray()) return Map.of();
-            for (JsonNode item : items) {
-                int id = item.path("userGameDataId").asInt(Integer.MIN_VALUE);
-                String content = item.path("content").isTextual() ? sanitize(item.path("content").asText()) : "";
-                if (expected.contains(id) && !content.isBlank()) parsed.putIfAbsent(id, content);
+            if (items.isObject()) {
+                items.fields().forEachRemaining(entry -> {
+                    int id;
+                    try {
+                        id = Integer.parseInt(entry.getKey());
+                    } catch (NumberFormatException ignored) {
+                        return;
+                    }
+                    String content = entry.getValue().isTextual() ? sanitize(entry.getValue().asText()) : "";
+                    if (expected.contains(id) && !content.isBlank()) parsed.putIfAbsent(id, content);
+                });
+            } else if (items.isArray()) {
+                for (JsonNode item : items) {
+                    int id = item.path("userGameDataId").asInt(Integer.MIN_VALUE);
+                    String content = item.path("content").isTextual() ? sanitize(item.path("content").asText()) : "";
+                    if (expected.contains(id) && !content.isBlank()) parsed.putIfAbsent(id, content);
+                }
+            } else {
+                return Map.of();
             }
         } catch (JsonProcessingException exception) {
             log.warn("AI roast response was not valid JSON; using local fallback");
@@ -313,7 +323,9 @@ public class AiRoastService {
 
     private String serialize(List<RoastFacts> facts) {
         try {
-            return "עובדות המחזור לכל חברי הליגה. צור פריט אחד לכל userGameDataId:\n"
+            return "עובדות המחזור לכל חברי הליגה. בשדה roasts החזר אובייקט שבו המפתחות הם "
+                    + "ערכי userGameDataId המדויקים, וכל ערך הוא טקסט ה-roast של אותו מנהל. "
+                    + "חובה להחזיר מפתח אחד לכל מנהל, ללא מפתחות נוספים:\n"
                     + mapper.writeValueAsString(Map.of("managers", facts));
         } catch (JsonProcessingException exception) {
             return facts.toString();
