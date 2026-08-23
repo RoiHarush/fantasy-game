@@ -247,8 +247,12 @@ class AiRoastServiceTest {
         when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
         when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(4);
         AtomicReference<JsonNode> requestedSchema = new AtomicReference<>();
+        AtomicReference<String> requestedSystemPrompt = new AtomicReference<>();
+        AtomicReference<String> requestedFacts = new AtomicReference<>();
         when(aiClient.completeJson(any(), any(), eq(480), eq("fantasy_gameweek_roasts"), any()))
                 .thenAnswer(invocation -> {
+                    requestedSystemPrompt.set(invocation.getArgument(0));
+                    requestedFacts.set(invocation.getArgument(1));
                     requestedSchema.set(invocation.getArgument(4));
                     return Optional.of("""
                         {"roasts":{"70":"Roi United עם 23 נקודות כרגע; אפילו Live Captain מחכה שהמחזור יתעורר."}}
@@ -267,6 +271,10 @@ class AiRoastServiceTest {
         assertFalse(roastsSchema.path("additionalProperties").asBoolean(true));
         assertEquals("string", roastsSchema.path("properties").path("70").path("type").asText());
         assertEquals("70", roastsSchema.path("required").path(0).asText());
+        assertTrue(requestedSystemPrompt.get().contains("עברית ישראלית"));
+        assertTrue(requestedSystemPrompt.get().contains("דוגמאות לטון הרצוי"));
+        assertTrue(requestedFacts.get().contains("\"manager\":\"Roi\""));
+        assertFalse(requestedFacts.get().contains("\"manager\":\"Roi Harush\""));
         verify(roastRepository, never()).save(any());
         verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());
     }
