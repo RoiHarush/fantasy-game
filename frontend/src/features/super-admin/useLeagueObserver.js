@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { useWebSocket } from "../../Context/WebSocketContext";
+import { getDailyStatus } from "../status/api";
 import {
     getObservedAttendance,
     getObservedDraft,
@@ -13,12 +14,13 @@ import {
     getObservedPlayers,
     getObservedPlayersOfTheWeek,
     getObservedPoints,
+    getObservedRoast,
     getObservedSquad,
     getObservedSquadData,
     getObservedWindow,
 } from "./observerApi";
 
-export function useLeagueObserver({ leagueId, managerId, gameweekId, includePlayersOfTheWeek = false }) {
+export function useLeagueObserver({ leagueId, managerId, gameweekId, includeStatusDetails = false }) {
     const { subscribe } = useWebSocket();
     const queryClient = useQueryClient();
     const league = useQuery({
@@ -71,8 +73,21 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId, includePlay
     const playersOfTheWeek = useQuery({
         queryKey: ["admin", "observe", "players-of-the-week", leagueId, effectiveManagerId, gameweekId],
         queryFn: () => getObservedPlayersOfTheWeek(leagueId, effectiveManagerId, gameweekId),
-        enabled: Boolean(includePlayersOfTheWeek && leagueId && effectiveManagerId && gameweekId),
+        enabled: Boolean(includeStatusDetails && leagueId && effectiveManagerId && gameweekId),
         staleTime: 5 * 60_000,
+    });
+    const dailyStatus = useQuery({
+        queryKey: ["admin", "observe", "daily-status", gameweekId],
+        queryFn: ({ signal }) => getDailyStatus(gameweekId, { signal }),
+        enabled: Boolean(includeStatusDetails && gameweekId),
+        refetchInterval: 60_000,
+    });
+    const roast = useQuery({
+        queryKey: ["admin", "observe", "roast", leagueId, gameweekId],
+        queryFn: () => getObservedRoast(leagueId, gameweekId),
+        enabled: Boolean(includeStatusDetails && leagueId && gameweekId),
+        staleTime: 60_000,
+        retry: false,
     });
     const historyGameweek = windowState.data?.gameWeekId > 0 ? windowState.data.gameWeekId : gameweekId || 1;
     const history = useQuery({
@@ -110,6 +125,8 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId, includePlay
         squadData,
         points,
         playersOfTheWeek,
+        dailyStatus,
+        roast,
         history,
         order,
         attendance,

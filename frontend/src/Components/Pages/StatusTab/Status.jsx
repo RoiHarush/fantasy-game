@@ -53,15 +53,15 @@ function Status({
                 )}
             </div>
 
-            {!preview && (
-                <GameweekRoast
-                    gameweekId={currentGameweek?.id}
-                    available={!preSeason && isCalculated}
-                    unavailableMessage={preSeason
-                        ? "The AI roast unlocks after Gameweek 1 is calculated."
-                        : "The AI roast unlocks when this gameweek is calculated."}
-                />
-            )}
+            <GameweekRoast
+                gameweekId={currentGameweek?.id}
+                available={!preSeason && isCalculated}
+                unavailableMessage={preSeason
+                    ? "The AI roast unlocks after Gameweek 1 is calculated."
+                    : "The AI roast unlocks when this gameweek is calculated."}
+                readOnly={preview}
+                previewFeed={preview ? previewData?.roastFeed ?? null : undefined}
+            />
 
             {preSeason ? (
                 <ColumnsBlock title="Before Gameweek 1" columns={1}>

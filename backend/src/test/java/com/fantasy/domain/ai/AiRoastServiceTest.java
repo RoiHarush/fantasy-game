@@ -100,6 +100,28 @@ class AiRoastServiceTest {
     }
 
     @Test
+    void superAdminCanReadTheSavedFeedByLeagueWithoutBecomingAMember() {
+        UserGameDataEntity gameData = gameData();
+        AiRoastEntity saved = new AiRoastEntity();
+        saved.setUser(gameData);
+        saved.setLeague(gameData.getLeague());
+        saved.setGameweek(1);
+        saved.setContent("Observer-safe roast.");
+        saved.setProvider("fallback");
+        saved.setGeneratedAt(LocalDateTime.now());
+        saved.setRotationIndex(0);
+
+        when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
+                .thenReturn(List.of(saved));
+
+        AiRoastDto result = service.findForLeague(3L, 1).orElseThrow();
+
+        assertEquals("Observer-safe roast.", result.roasts().getFirst().content());
+        verify(gameDataRepository, never()).findByUserId(anyInt());
+        verify(roastRepository, never()).save(any());
+    }
+
+    @Test
     void usesLeagueScoringFactsAndFallsBackCleanlyWhenAiIsDisabled() {
         UserGameDataEntity gameData = gameData();
         GameWeekEntity gameweek = new GameWeekEntity();

@@ -57,8 +57,13 @@ public class AiRoastService {
         if (!enabled) return Optional.empty();
         UserGameDataEntity viewer = requireGameData(actualUserId);
         if (viewer.getLeague() == null) return Optional.empty();
-        List<AiRoastEntity> feed = roasts.findByLeague_IdAndGameweekOrderByRotationIndexAsc(
-                viewer.getLeague().getId(), gameweek);
+        return findForLeague(viewer.getLeague().getId(), gameweek);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AiRoastDto> findForLeague(long leagueId, int gameweek) {
+        if (!enabled) return Optional.empty();
+        List<AiRoastEntity> feed = roasts.findByLeague_IdAndGameweekOrderByRotationIndexAsc(leagueId, gameweek);
         return feed.isEmpty() ? Optional.empty() : Optional.of(toFeed(gameweek, feed));
     }
 

@@ -28,6 +28,9 @@ export const getObservedPoints = (leagueId, userId, gameweek) => readOnlyRequest
 export const getObservedPlayersOfTheWeek = (leagueId, userId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/users/${userId}/players-of-the-week/${gameweek}`
 );
+export const getObservedRoast = (leagueId, gameweek) => readOnlyRequest(
+    `/api/admin/observe/leagues/${leagueId}/roasts/${gameweek}`
+);
 export const getObservedHistory = (leagueId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/history/${gameweek}`
 );

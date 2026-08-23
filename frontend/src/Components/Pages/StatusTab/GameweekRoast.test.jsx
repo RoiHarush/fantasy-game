@@ -15,4 +15,11 @@ describe("GameweekRoast", () => {
         expect(screen.getByText(/ייפתח/)).toBeInTheDocument();
         expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
+
+    it("never offers generation in read-only observer mode", () => {
+        render(<GameweekRoast gameweekId={4} available featureEnabled readOnly previewFeed={null} />);
+
+        expect(screen.getByText(/אותו roast/)).toBeInTheDocument();
+        expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    });
 });

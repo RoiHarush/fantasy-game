@@ -1,5 +1,7 @@
 package com.fantasy.domain.user.admin;
 
+import com.fantasy.domain.ai.AiRoastDto;
+import com.fantasy.domain.ai.AiRoastService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.player.PlayerDataDto;
@@ -16,6 +18,7 @@ import com.fantasy.domain.transfer.DraftService;
 import com.fantasy.domain.transfer.TransferActionDto;
 import com.fantasy.domain.transfer.TransferMarketService;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Comparator;
@@ -33,6 +36,7 @@ public class SuperAdminObserverController {
     private final DraftService draftService;
     private final PlayerService playerService;
     private final PointsService pointsService;
+    private final AiRoastService aiRoastService;
 
     public SuperAdminObserverController(LeagueRepository leagueRepository,
                                         UserGameDataRepository gameDataRepository,
@@ -40,7 +44,8 @@ public class SuperAdminObserverController {
                                         TransferMarketService transferMarketService,
                                         DraftService draftService,
                                         PlayerService playerService,
-                                        PointsService pointsService) {
+                                        PointsService pointsService,
+                                        AiRoastService aiRoastService) {
         this.leagueRepository = leagueRepository;
         this.gameDataRepository = gameDataRepository;
         this.fantasyTeamService = fantasyTeamService;
@@ -48,6 +53,7 @@ public class SuperAdminObserverController {
         this.draftService = draftService;
         this.playerService = playerService;
         this.pointsService = pointsService;
+        this.aiRoastService = aiRoastService;
     }
 
     @GetMapping("/leagues/{leagueId}")
@@ -68,6 +74,7 @@ public class SuperAdminObserverController {
                             user.getEmail(),
                             user.isEmailVerified(),
                             data == null ? user.getName() : data.getFantasyTeamName(),
+                            teamLogoPath(user.getId(), data),
                             data == null ? 0 : data.getTotalPoints(),
                             league.getAdmin() != null && league.getAdmin().getId().equals(user.getId())
                     );
@@ -123,6 +130,18 @@ public class SuperAdminObserverController {
         return playerService.getCrownSummary(userId, gameweekId);
     }
 
+    @GetMapping("/leagues/{leagueId}/roasts/{gameweekId}")
+    public ResponseEntity<AiRoastDto> roast(@PathVariable long leagueId,
+                                            @PathVariable int gameweekId) {
+        requireLeague(leagueId);
+        if (gameweekId < 1 || gameweekId > 38) {
+            throw new IllegalArgumentException("Gameweek must be between 1 and 38");
+        }
+        return aiRoastService.findForLeague(leagueId, gameweekId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/leagues/{leagueId}/window")
     public Map<String, Object> window(@PathVariable long leagueId) {
         requireLeague(leagueId);
@@ -165,6 +184,13 @@ public class SuperAdminObserverController {
         if (!member) throw new IllegalArgumentException("Manager is not in the selected league");
     }
 
+    private String teamLogoPath(int userId, UserGameDataEntity data) {
+        if (data == null || data.getTeamLogoBytes() == null || data.getTeamLogoBytes().length == 0) {
+            return "/UI/team-placeholder.svg";
+        }
+        return "/api/users/" + userId + "/team-logo?v=" + data.getTeamLogoVersion();
+    }
+
     public record ObservedLeague(
             long id,
             String name,
@@ -185,6 +211,7 @@ public class SuperAdminObserverController {
             String email,
             boolean emailVerified,
             String fantasyTeamName,
+            String logoPath,
             int totalPoints,
             boolean leagueAdmin
     ) {}

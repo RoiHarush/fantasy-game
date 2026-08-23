@@ -152,7 +152,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
         leagueId,
         managerId,
         gameweekId: requestedGameweek?.id,
-        includePlayersOfTheWeek: screen === "status" && Boolean(gameweeks.currentGameweek),
+        includeStatusDetails: screen === "status" && Boolean(gameweeks.currentGameweek),
     });
     const activeWindowGameweek = gameweeks.gameweeks.find(
         (item) => Number(item.id) === Number(observer.windowState.data?.gameWeekId),
@@ -182,6 +182,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
         emailVerified: manager.emailVerified,
         username: manager.username,
         fantasyTeamName: manager.fantasyTeamName,
+        logoPath: manager.logoPath,
         totalPoints: manager.totalPoints,
     } : null, [league, leagueId, manager]);
     const observedLeague = useMemo(() => league ? {
@@ -192,6 +193,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
             name: item.managerName,
             username: item.username,
             fantasyTeamName: item.fantasyTeamName,
+            logoPath: item.logoPath,
             rank: index + 1,
             gwPoints: 0,
             points: item.totalPoints,
@@ -257,7 +259,8 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
                 refreshGameweeks={() => {}}
                 previewData={{
                     points: observer.points.data ?? 0,
-                    dailyStatus: [],
+                    dailyStatus: observer.dailyStatus.data ?? [],
+                    roastFeed: observer.roast.data ?? null,
                     players: observer.players.data ?? [],
                     playersOfTheWeek: observer.playersOfTheWeek.data?.playersOfTheWeek ?? [],
                     crownStandings: observer.playersOfTheWeek.data?.crownStandings ?? [],
