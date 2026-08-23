@@ -29,11 +29,11 @@ export function useIrStatuses(enabled = true) {
     });
 }
 
-export function usePlayersOfTheWeek(enabled = true) {
+export function usePlayersOfTheWeek(userId, enabled = true) {
     return useQuery({
-        queryKey: queryKeys.playersOfTheWeek,
-        queryFn: ({ signal }) => getPlayersOfTheWeek({ signal }),
-        enabled,
+        queryKey: queryKeys.playersOfTheWeek(userId),
+        queryFn: ({ signal }) => getPlayersOfTheWeek(userId, { signal }),
+        enabled: Boolean(enabled && userId),
         staleTime: 5 * 60_000,
     });
 }

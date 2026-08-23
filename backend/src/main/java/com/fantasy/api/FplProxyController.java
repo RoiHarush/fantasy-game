@@ -24,14 +24,17 @@ public class FplProxyController {
     private final GameWeekService gameWeekService;
     private final PlayerRepository playerRepository;
     private final PlayerPointsRepository pointsRepo;
+    private final PlayerService playerService;
 
     public FplProxyController(GameWeekService gameWeekService,
                               PlayerRepository playerRepository,
                               PlayerPointsRepository pointsRepo,
+                              PlayerService playerService,
                               RestTemplate restTemplate) {
         this.gameWeekService = gameWeekService;
         this.playerRepository = playerRepository;
         this.pointsRepo = pointsRepo;
+        this.playerService = playerService;
         this.restTemplate = restTemplate;
     }
 
@@ -76,33 +79,13 @@ public class FplProxyController {
     }
 
     @GetMapping("/players-of-the-week")
-    public ResponseEntity<?> getPlayersOfTheWeek() {
+    public ResponseEntity<?> getPlayersOfTheWeek(@RequestParam int userId) {
         try {
-            List<Map<String, Object>> result = new ArrayList<>();
-
             int currentGw = gameWeekService.getCurrentGameweek().getId();
-
-            for (int gw = 1; gw <= currentGw; gw++) {
-
-                PlayerPointsEntity topScorerPoints = pointsRepo.findFirstByGameweekOrderByPointsDesc(gw);
-
-                if (topScorerPoints != null) {
-                    PlayerEntity player = topScorerPoints.getPlayer();
-
-                    Map<String, Object> entry = new LinkedHashMap<>();
-                    entry.put("id", player.getId());
-                    entry.put("gameweek", gw);
-                    entry.put("playerName", player.getViewName());
-                    entry.put("teamId", player.getTeamId());
-                    entry.put("points", topScorerPoints.getPoints());
-                    entry.put("photo", player.getPhoto());
-                    entry.put("position", player.getPosition().getCode());
-
-                    result.add(entry);
-                }
-            }
-
-            return ResponseEntity.ok(Map.of("playersOfTheWeek", result));
+            return ResponseEntity.ok(Map.of(
+                    "playersOfTheWeek",
+                    playerService.getPlayersOfTheWeek(userId, currentGw)
+            ));
 
         } catch (Exception e) {
             log.error("Error fetching players of the week internally", e);

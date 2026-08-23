@@ -14,6 +14,7 @@ import PageLayout from "../../PageLayout";
 import UserSquadSidebar from "../../Sidebar/UserSquadSidebar";
 import Scout from "./Scout";
 import LoadingPage from "../../General/LoadingPage";
+import AlexCoachPanel from "../../AI/AlexCoachPanel";
 
 function ScoutPage() {
     const { user } = useAuth();
@@ -154,6 +155,19 @@ function ScoutPage() {
     return (
         <PageLayout
             left={
+                <div className="flex min-w-0 flex-col gap-5">
+                <AlexCoachPanel
+                    gameweekId={transferGameweek?.id ?? nextGameweek?.id}
+                    mode="transfer"
+                    draftSquad={squadQuery.data ?? null}
+                    onUseTransfer={waiversEnabled ? (transfer) => {
+                        const candidate = { playerInId: transfer.playerInId, playerOutId: transfer.playerOutId };
+                        updateWaiverEntries([
+                            candidate,
+                            ...waiverPlan.entries.filter((entry) => String(entry.playerInId) !== String(candidate.playerInId)),
+                        ]);
+                    } : undefined}
+                />
                 <Scout
                     user={user}
                     players={playersQuery.players}
@@ -173,7 +187,7 @@ function ScoutPage() {
                     irWaiverDirty={irWaiverDirty}
                     irWaiverSaving={irWaiverPlan.saving}
                     irWaiverMessage={irWaiverMessage}
-                />
+                /></div>
             }
             right={sidebar}
         />

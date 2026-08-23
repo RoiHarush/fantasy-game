@@ -38,6 +38,20 @@ public class PlayerEntity {
 
     private LocalDateTime firstSeenAt;
 
+    private double form;
+    private double pointsPerGame;
+    private double selectedByPercent;
+    private double expectedGoals;
+    private double expectedAssists;
+    private double expectedGoalInvolvements;
+    private double expectedGoalsConceded;
+    private double influence;
+    private double creativity;
+    private double threat;
+    private double ictIndex;
+    private int nowCost;
+    private LocalDateTime metricsUpdatedAt;
+
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -79,4 +93,30 @@ public class PlayerEntity {
     public void setPhoto(String photo) { this.photo = photo; }
     public LocalDateTime getFirstSeenAt() { return firstSeenAt; }
     public void setFirstSeenAt(LocalDateTime firstSeenAt) { this.firstSeenAt = firstSeenAt; }
+    public double getForm() { return form; }
+    public void setForm(double form) { this.form = form; }
+    public double getPointsPerGame() { return pointsPerGame; }
+    public void setPointsPerGame(double pointsPerGame) { this.pointsPerGame = pointsPerGame; }
+    public double getSelectedByPercent() { return selectedByPercent; }
+    public void setSelectedByPercent(double selectedByPercent) { this.selectedByPercent = selectedByPercent; }
+    public double getExpectedGoals() { return expectedGoals; }
+    public void setExpectedGoals(double expectedGoals) { this.expectedGoals = expectedGoals; }
+    public double getExpectedAssists() { return expectedAssists; }
+    public void setExpectedAssists(double expectedAssists) { this.expectedAssists = expectedAssists; }
+    public double getExpectedGoalInvolvements() { return expectedGoalInvolvements; }
+    public void setExpectedGoalInvolvements(double expectedGoalInvolvements) { this.expectedGoalInvolvements = expectedGoalInvolvements; }
+    public double getExpectedGoalsConceded() { return expectedGoalsConceded; }
+    public void setExpectedGoalsConceded(double expectedGoalsConceded) { this.expectedGoalsConceded = expectedGoalsConceded; }
+    public double getInfluence() { return influence; }
+    public void setInfluence(double influence) { this.influence = influence; }
+    public double getCreativity() { return creativity; }
+    public void setCreativity(double creativity) { this.creativity = creativity; }
+    public double getThreat() { return threat; }
+    public void setThreat(double threat) { this.threat = threat; }
+    public double getIctIndex() { return ictIndex; }
+    public void setIctIndex(double ictIndex) { this.ictIndex = ictIndex; }
+    public int getNowCost() { return nowCost; }
+    public void setNowCost(int nowCost) { this.nowCost = nowCost; }
+    public LocalDateTime getMetricsUpdatedAt() { return metricsUpdatedAt; }
+    public void setMetricsUpdatedAt(LocalDateTime metricsUpdatedAt) { this.metricsUpdatedAt = metricsUpdatedAt; }
 }

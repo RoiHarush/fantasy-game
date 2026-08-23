@@ -1,13 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import GameweekRoast from "./GameweekRoast";
 
-describe("GameweekRoast", () => {
-    it("clearly presents the postponed feature without an inactive action", () => {
-        render(<GameweekRoast gameweekId={4} />);
+vi.mock("../../../features/status/useStatusData", () => ({
+    useGameweekRoast: () => ({ data: null, error: null }),
+    useGenerateGameweekRoast: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+}));
 
-        expect(screen.getByText("AI Roast — Coming soon")).toBeInTheDocument();
+describe("GameweekRoast", () => {
+    it("explains that the league roast unlocks after the gameweek", () => {
+        render(<GameweekRoast gameweekId={4} featureEnabled />);
+
+        expect(screen.getByText(/ייפתח/)).toBeInTheDocument();
         expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
 });

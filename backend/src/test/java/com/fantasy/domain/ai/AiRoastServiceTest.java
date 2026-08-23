@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,6 +60,8 @@ class AiRoastServiceTest {
         scoringService = mock(LeagueScoringService.class);
         aiClient = mock(FantasyAiClient.class);
         service = new AiRoastService(
+                true,
+                30,
                 roastRepository,
                 gameDataRepository,
                 pointsRepository,
@@ -73,21 +76,25 @@ class AiRoastServiceTest {
     }
 
     @Test
-    void reusesTheSavedRoastWithoutCallingTheProviderAgain() {
+    void everyLeagueMemberReadsTheSameSavedFeed() {
         UserGameDataEntity gameData = gameData();
         AiRoastEntity saved = new AiRoastEntity();
         saved.setUser(gameData);
+        saved.setLeague(gameData.getLeague());
         saved.setGameweek(1);
         saved.setContent("Already roasted.");
         saved.setProvider("groq");
         saved.setGeneratedAt(LocalDateTime.now());
+        saved.setRotationIndex(0);
 
-        when(gameDataRepository.findByUserIdForUpdate(7)).thenReturn(Optional.of(gameData));
-        when(roastRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(saved));
+        when(gameDataRepository.findByUserId(7)).thenReturn(Optional.of(gameData));
+        when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
+                .thenReturn(List.of(saved));
 
-        AiRoastDto result = service.generate(7, 1);
+        AiRoastDto result = service.find(7, 1).orElseThrow();
 
-        assertEquals("Already roasted.", result.content());
+        assertEquals("Already roasted.", result.roasts().getFirst().content());
+        assertEquals(30, result.rotationSeconds());
         verify(aiClient, never()).complete(any(), any(), anyInt());
         verify(roastRepository, never()).save(any());
     }
@@ -109,8 +116,8 @@ class AiRoastServiceTest {
         PlayerGameweekStatsEntity captainStats = stats(10, "Captain Choice");
         PlayerGameweekStatsEntity benchStats = stats(20, "Bench Hero");
 
-        when(gameDataRepository.findByUserIdForUpdate(7)).thenReturn(Optional.of(gameData));
-        when(roastRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.empty());
+        when(gameDataRepository.findByUserId(7)).thenReturn(Optional.of(gameData));
+        when(gameDataRepository.findAllByLeagueIdForUpdate(3L)).thenReturn(List.of(gameData));
         when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
         when(pointsRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(userPoints));
         when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints, leaderPoints));
@@ -120,13 +127,20 @@ class AiRoastServiceTest {
         when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(2);
         when(scoringService.calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any())).thenReturn(9);
         when(aiClient.complete(any(), any(), eq(160))).thenReturn(Optional.empty());
-        when(roastRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        AtomicReference<AiRoastEntity> generated = new AtomicReference<>();
+        when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
+                .thenAnswer(ignored -> generated.get() == null ? List.of() : List.of(generated.get()));
+        when(roastRepository.save(any())).thenAnswer(invocation -> {
+            AiRoastEntity entity = invocation.getArgument(0);
+            generated.set(entity);
+            return entity;
+        });
 
         AiRoastDto result = service.generate(7, 1);
 
-        assertFalse(result.generatedByAi());
+        assertFalse(result.roasts().getFirst().generatedByAi());
         assertEquals(1, result.gameweek());
-        assertEquals(true, result.content().contains("Bench Hero"));
+        assertEquals(true, result.roasts().getFirst().content().contains("Bench Hero"));
         verify(scoringService).calculatePlayerGameweekPoints(eq(benchStats), eq(List.of()), any());
     }
 

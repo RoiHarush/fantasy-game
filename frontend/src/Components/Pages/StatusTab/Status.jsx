@@ -111,7 +111,7 @@ function Status({
                 </>
             )}
 
-            {!preSeason && <PlayerOfTheWeekBlock gameweekId={currentGameweek?.id} previewRecords={previewData?.playersOfTheWeek} previewPlayers={previewData?.players} />}
+            {!preSeason && <PlayerOfTheWeekBlock userId={user?.id} gameweekId={currentGameweek?.id} previewRecords={previewData?.playersOfTheWeek} previewPlayers={previewData?.players} />}
             <TransferActivityList gameWeekId={transferHistoryGameweekId} previewActions={previewData?.transferActions} previewPlayers={previewData?.players} />
             <IRStatusTable previewStatuses={previewData?.irStatuses} />
         </div>

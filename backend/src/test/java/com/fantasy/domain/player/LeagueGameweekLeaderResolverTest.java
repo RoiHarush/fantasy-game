@@ -36,14 +36,63 @@ class LeagueGameweekLeaderResolverTest {
     }
 
     @Test
-    void crownsEveryPlayerSharingTheLeagueHighScore() {
+    void breaksEqualContributionUsingPositionWeightedImpact() {
         UserSquadEntity first = squad(1, List.of(10), null, false);
         UserSquadEntity second = squad(2, List.of(20), null, false);
 
-        assertEquals(Set.of(10, 20), LeagueGameweekLeaderResolver.resolve(
+        assertEquals(20, LeagueGameweekLeaderResolver.resolve(
                 List.of(first, second),
-                Map.of(10, 9, 20, 9)
-        ));
+                Map.of(10, 9, 20, 9),
+                Map.of(
+                        10, performance(9, 4, 4, 0, 0, 0),
+                        20, performance(9, 6, 6, 0, 0, 0)
+                )
+        ).orElseThrow().playerId());
+    }
+
+    @Test
+    void penaltySaveCanBeatALowerValueForwardGoal() {
+        UserSquadEntity first = squad(1, List.of(10), null, false);
+        UserSquadEntity second = squad(2, List.of(20), null, false);
+
+        assertEquals(20, LeagueGameweekLeaderResolver.resolve(
+                List.of(first, second),
+                Map.of(10, 9, 20, 9),
+                Map.of(
+                        10, performance(9, 4, 4, 0, 0, 0),
+                        20, performance(9, 5, 0, 5, 0, 0)
+                )
+        ).orElseThrow().playerId());
+    }
+
+    @Test
+    void defenderCleanSheetCanBeatMidfielderCleanSheet() {
+        UserSquadEntity first = squad(1, List.of(10), null, false);
+        UserSquadEntity second = squad(2, List.of(20), null, false);
+
+        assertEquals(20, LeagueGameweekLeaderResolver.resolve(
+                List.of(first, second),
+                Map.of(10, 9, 20, 9),
+                Map.of(
+                        10, performance(9, 1, 0, 0, 1, 0),
+                        20, performance(9, 4, 0, 0, 4, 0)
+                )
+        ).orElseThrow().playerId());
+    }
+
+    @Test
+    void usesStablePlayerIdFallbackWhenEveryActionIsEqual() {
+        UserSquadEntity first = squad(1, List.of(20), null, false);
+        UserSquadEntity second = squad(2, List.of(10), null, false);
+
+        assertEquals(10, LeagueGameweekLeaderResolver.resolve(
+                List.of(first, second),
+                Map.of(10, 9, 20, 9),
+                Map.of(
+                        10, performance(9, 6, 6, 0, 0, 0),
+                        20, performance(9, 6, 6, 0, 0, 0)
+                )
+        ).orElseThrow().playerId());
     }
 
     @Test
@@ -68,5 +117,24 @@ class LeagueGameweekLeaderResolverTest {
         squad.setCaptainId(captainId);
         squad.setTripleCaptainActive(tripleCaptain);
         return squad;
+    }
+
+    private LeagueGameweekLeaderResolver.PerformanceTieBreak performance(
+            int rawPoints,
+            int positiveImpactPoints,
+            int goalImpactPoints,
+            int penaltySaveImpactPoints,
+            int cleanSheetImpactPoints,
+            int assistImpactPoints) {
+        return new LeagueGameweekLeaderResolver.PerformanceTieBreak(
+                rawPoints,
+                positiveImpactPoints,
+                goalImpactPoints,
+                penaltySaveImpactPoints,
+                cleanSheetImpactPoints,
+                assistImpactPoints,
+                90,
+                0
+        );
     }
 }

@@ -6,5 +6,6 @@ import java.util.Optional;
 public interface FantasyAiClient {
     Optional<String> complete(String systemPrompt, String userPrompt, int maxTokens);
     String providerName();
+    default String modelName() { return "unknown"; }
 }
 

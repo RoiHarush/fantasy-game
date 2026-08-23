@@ -28,6 +28,7 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
     return (
         <PageLayout
             left={
+                <div className="flex min-w-0 flex-col gap-5">
                 <PickTeam
                     user={user}
                     nextGameweek={nextGameweek}
@@ -44,7 +45,7 @@ function PickTeamEditor({ user, nextGameweek, gameweeks, initialSquad, initialCh
                     isDirty={isDirty}
                     setIsDirty={setIsDirty}
                     refreshPlayerData={refreshPlayerData}
-                />
+                /></div>
             }
             right={<UserSidebar user={user} editable />}
         />

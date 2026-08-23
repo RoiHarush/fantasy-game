@@ -307,6 +307,19 @@ public class PlayerSyncService {
         entity.setTeamId(node.get("team").asInt());
         entity.setInjured(!node.get("status").asText().equals("a"));
         entity.setNews(node.hasNonNull("news") ? node.get("news").asText() : null);
+        entity.setForm(decimal(node, "form"));
+        entity.setPointsPerGame(decimal(node, "points_per_game"));
+        entity.setSelectedByPercent(decimal(node, "selected_by_percent"));
+        entity.setExpectedGoals(decimal(node, "expected_goals"));
+        entity.setExpectedAssists(decimal(node, "expected_assists"));
+        entity.setExpectedGoalInvolvements(decimal(node, "expected_goal_involvements"));
+        entity.setExpectedGoalsConceded(decimal(node, "expected_goals_conceded"));
+        entity.setInfluence(decimal(node, "influence"));
+        entity.setCreativity(decimal(node, "creativity"));
+        entity.setThreat(decimal(node, "threat"));
+        entity.setIctIndex(decimal(node, "ict_index"));
+        entity.setNowCost(node.path("now_cost").asInt(0));
+        entity.setMetricsUpdatedAt(LocalDateTime.now());
 
         String code = node.get("code").asText();
         entity.setPhoto(code);
@@ -316,6 +329,15 @@ public class PlayerSyncService {
         }
         if (node.has("chance_of_playing_next_round") && !node.get("chance_of_playing_next_round").isNull()) {
             entity.setChanceOfPlayingNextRound(node.get("chance_of_playing_next_round").asInt());
+        }
+    }
+
+    private double decimal(JsonNode node, String field) {
+        String value = node.path(field).asText("0");
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException ignored) {
+            return 0;
         }
     }
 

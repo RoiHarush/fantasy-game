@@ -14,7 +14,9 @@ function PitchWrapperBase({
     playerData,
     players,
     block,
-    gwControl
+    gwControl,
+    assistant,
+    previewActive = false,
 }) {
     const [activeButton, setActiveButton] = useState("Pitch View");
     const irPlayer = squad?.irId
@@ -22,8 +24,8 @@ function PitchWrapperBase({
         : null;
 
     return (
-        <div className="relative block w-full min-w-0">
-            <div className="relative flex h-full w-full min-w-0 max-w-[1000px] flex-col items-center gap-4 overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-[0_2px_8px_rgba(27,16,53,0.1)] max-md:gap-2.5 max-md:rounded-[10px]">
+        <div className={`relative block w-full min-w-0 ${previewActive ? "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500" : ""}`}>
+            <div className={`relative flex h-full w-full min-w-0 max-w-[1000px] flex-col items-center gap-4 overflow-hidden rounded-xl border bg-[var(--app-surface)] shadow-[0_2px_8px_rgba(27,16,53,0.1)] transition-[border-color,box-shadow] duration-500 max-md:gap-2.5 max-md:rounded-[10px] ${previewActive ? "border-brand-cyan shadow-[0_0_0_2px_color-mix(in_srgb,var(--app-accent)_35%,transparent),0_18px_42px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]" : "border-[var(--app-border)]"}`}>
                 <div className="relative w-full overflow-hidden rounded-t-[10px] py-5 [background:var(--component-gradient)]">
                     <Image
                         src="/UI/pattern-2.png"
@@ -36,6 +38,8 @@ function PitchWrapperBase({
                     <div className="relative z-[2] mx-auto flex w-[90%] items-center justify-center">{block}</div>
                     <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full [background:linear-gradient(to_bottom,transparent_0%,var(--app-surface)_100%)]" />
                 </div>
+
+                {assistant && <div className="w-full px-3 max-md:px-2">{assistant}</div>}
 
                 <div className="flex w-full justify-center px-3">
                     <Switcher

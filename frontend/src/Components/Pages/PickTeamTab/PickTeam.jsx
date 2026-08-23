@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Check } from "@/src/shared/ui/icons";
 
 import FixturesTable from "../FixturesTab/FixturesTable";
@@ -9,6 +10,9 @@ import GameweekChipManager from "./GameweekChip/GameweekChipManager";
 import PitchWrapperBase from "../../General/Pitch/PitchWrapperBase";
 import { PlayerInteractionProvider } from "../../../Context/PlayerInteractionProvider";
 import { Button } from "../../../shared/ui/Button";
+import AlexLineupDock from "../../AI/AlexLineupDock";
+import AlexChipHint from "../../AI/AlexChipHint";
+import { aiFeaturesEnabled, useAlexCoach } from "../../../features/ai/useAlexCoach";
 
 function PickTeam({
     user,
@@ -31,12 +35,43 @@ function PickTeam({
 }) {
     const playersQuery = usePlayers();
     const players = previewPlayers ?? playersQuery.players;
+    const coach = useAlexCoach(nextGameweek.id, !readOnly);
+    const [alexPreviewActive, setAlexPreviewActive] = useState(false);
+    const [alexCopyPending, setAlexCopyPending] = useState(false);
+    const [alexChatOpen, setAlexChatOpen] = useState(false);
+    const [alexQuestion, setAlexQuestion] = useState("");
+    const alexAnalysis = coach.analysis;
+    const alexBusy = coach.analyze.isPending || coach.ask.isPending;
+    const alexError = coach.analyze.error || coach.ask.error || coach.error;
+    const alexPreviewSquad = alexPreviewActive ? alexAnalysis?.recommendedSquad : null;
+    const displayedSquad = alexPreviewSquad ?? squad;
     const captainIsFirstPick = squad.captainId != null
         && squad.firstPickId != null
         && String(squad.captainId) === String(squad.firstPickId);
 
     const handleSave = async () => {
         await saveTeam().catch(() => undefined);
+    };
+
+    const analyzeWithAlex = () => {
+        setAlexPreviewActive(false);
+        setAlexCopyPending(false);
+        coach.analyze.mutate({ mode: "lineup", draftSquad: squad });
+    };
+
+    const confirmAlexCopy = () => {
+        if (!alexAnalysis?.recommendedSquad) return;
+        setSquad(alexAnalysis.recommendedSquad);
+        setIsDirty(true);
+        setAlexPreviewActive(false);
+        setAlexCopyPending(false);
+    };
+
+    const sendAlexQuestion = async (event) => {
+        event.preventDefault();
+        if (!alexQuestion.trim()) return;
+        await coach.ask.mutateAsync(alexQuestion.trim()).catch(() => undefined);
+        setAlexQuestion("");
     };
 
     if (!previewPlayers && playersQuery.isPending) return <p role="status">Loading player data…</p>;
@@ -55,6 +90,7 @@ function PickTeam({
             )}
 
             {!readOnly && <div className="mx-auto mb-1 grid w-full max-w-[760px] grid-cols-1 gap-2 sm:grid-cols-2">
+                {aiFeaturesEnabled && <AlexChipHint suggestion={alexAnalysis?.chipSuggestion} />}
                 <IRManager
                     userId={user.id}
                     gameweekId={nextGameweek.id}
@@ -122,8 +158,8 @@ function PickTeam({
             <div className="relative flex w-full max-w-[1000px] flex-col gap-5">
                 <div className="w-full">
                     <PlayerInteractionProvider
-                        mode={readOnly ? "points" : "pick"}
-                        squad={squad}
+                        mode={readOnly || alexPreviewActive ? "points" : "pick"}
+                        squad={displayedSquad}
                         setSquad={setSquad}
                         setIsDirty={setIsDirty}
                         players={players}
@@ -132,7 +168,8 @@ function PickTeam({
                         gameweek={nextGameweek}
                     >
                         <PitchWrapperBase
-                            squad={squad}
+                            key={alexPreviewActive ? "alex-preview" : "manager-squad"}
+                            squad={displayedSquad}
                             view="pick"
                             currentGw={nextGameweek.id}
                             playerData={playerData}
@@ -143,6 +180,31 @@ function PickTeam({
                                     kickoffTime={nextGameweek.firstKickoffTime}
                                 />
                             }
+                            previewActive={alexPreviewActive}
+                            assistant={!readOnly && aiFeaturesEnabled ? <AlexLineupDock
+                                analysis={alexAnalysis}
+                                busy={alexBusy}
+                                error={alexError}
+                                previewActive={alexPreviewActive}
+                                confirmCopy={alexCopyPending}
+                                question={alexQuestion}
+                                chatOpen={alexChatOpen}
+                                onAnalyze={analyzeWithAlex}
+                                onPreview={() => {
+                                    setAlexPreviewActive(true);
+                                    setAlexCopyPending(false);
+                                }}
+                                onCancelPreview={() => {
+                                    setAlexPreviewActive(false);
+                                    setAlexCopyPending(false);
+                                }}
+                                onRequestCopy={() => setAlexCopyPending(true)}
+                                onConfirmCopy={confirmAlexCopy}
+                                onCancelCopy={() => setAlexCopyPending(false)}
+                                onChatOpenChange={setAlexChatOpen}
+                                onQuestionChange={setAlexQuestion}
+                                onQuestionSubmit={sendAlexQuestion}
+                            /> : null}
                         />
                     </PlayerInteractionProvider>
                 </div>

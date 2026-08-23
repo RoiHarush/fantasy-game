@@ -49,6 +49,15 @@ public interface UserGameDataRepository extends JpaRepository<UserGameDataEntity
 
     List<UserGameDataEntity> findByLeague_Id(Long leagueId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT DISTINCT g FROM UserGameDataEntity g
+    JOIN FETCH g.user
+    WHERE g.league.id = :leagueId
+    ORDER BY g.id
+    """)
+    List<UserGameDataEntity> findAllByLeagueIdForUpdate(@Param("leagueId") Long leagueId);
+
     List<UserGameDataEntity> findByLeagueIsNull();
 
     @Query("SELECT g.user.id FROM UserGameDataEntity g WHERE g.user IS NOT NULL AND g.league IS NOT NULL")

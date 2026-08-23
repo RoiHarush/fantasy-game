@@ -1,53 +1,37 @@
 package com.fantasy.domain.ai;
 
-import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.league.LeagueEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import com.fantasy.domain.team.UserGameDataEntity;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "ai_roasts",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"league_id", "gameweek", "user_id"})
-)
-public class AiRoastEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Table(name = "ai_coach_threads", uniqueConstraints =
+        @UniqueConstraint(columnNames = {"user_id", "gameweek"}))
+public class AiCoachThreadEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private UserGameDataEntity user;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "league_id", nullable = false)
     private LeagueEntity league;
-
     @Column(nullable = false)
     private int gameweek;
-
-    @Column(nullable = false, length = 1000)
-    private String content;
-
+    @Column(name = "snapshot_hash", nullable = false, length = 96)
+    private String snapshotHash;
+    @Column(name = "analysis_json", nullable = false, columnDefinition = "TEXT")
+    private String analysisJson;
     @Column(nullable = false, length = 64)
     private String provider;
-
+    @Column(nullable = false, length = 128)
+    private String model;
     @Column(name = "generated_at", nullable = false)
     private LocalDateTime generatedAt;
-
-    @Column(name = "rotation_index", nullable = false)
-    private int rotationIndex;
+    @Column(name = "data_as_of", nullable = false)
+    private LocalDateTime dataAsOf;
 
     public Long getId() { return id; }
     public UserGameDataEntity getUser() { return user; }
@@ -56,13 +40,16 @@ public class AiRoastEntity {
     public void setLeague(LeagueEntity league) { this.league = league; }
     public int getGameweek() { return gameweek; }
     public void setGameweek(int gameweek) { this.gameweek = gameweek; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public String getSnapshotHash() { return snapshotHash; }
+    public void setSnapshotHash(String snapshotHash) { this.snapshotHash = snapshotHash; }
+    public String getAnalysisJson() { return analysisJson; }
+    public void setAnalysisJson(String analysisJson) { this.analysisJson = analysisJson; }
     public String getProvider() { return provider; }
     public void setProvider(String provider) { this.provider = provider; }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
     public LocalDateTime getGeneratedAt() { return generatedAt; }
     public void setGeneratedAt(LocalDateTime generatedAt) { this.generatedAt = generatedAt; }
-    public int getRotationIndex() { return rotationIndex; }
-    public void setRotationIndex(int rotationIndex) { this.rotationIndex = rotationIndex; }
+    public LocalDateTime getDataAsOf() { return dataAsOf; }
+    public void setDataAsOf(LocalDateTime dataAsOf) { this.dataAsOf = dataAsOf; }
 }
-

@@ -10,6 +10,8 @@ const nextConfig = {
     // external rewrite remains appropriate for ordinary REST requests only.
     env: {
         NEXT_PUBLIC_WEBSOCKET_URL: webSocketUrl,
+        NEXT_PUBLIC_AI_FEATURES_ENABLED: process.env.NEXT_PUBLIC_AI_FEATURES_ENABLED
+            ?? (process.env.NODE_ENV === "production" ? "false" : "true"),
     },
     allowedDevOrigins: [
         '192.168.1.181',

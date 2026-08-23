@@ -33,7 +33,7 @@ public class GroqFantasyAiClient implements FantasyAiClient {
                                @Value("${app.ai.enabled:false}") boolean enabled,
                                @Value("${app.ai.provider:groq}") String provider,
                                @Value("${app.ai.api-key:}") String apiKey,
-                               @Value("${app.ai.model:llama-3.1-8b-instant}") String model,
+                               @Value("${app.ai.model:openai/gpt-oss-20b}") String model,
                                @Value("${app.ai.base-url:https://api.groq.com/openai/v1/chat/completions}") String baseUrl) {
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
@@ -89,5 +89,8 @@ public class GroqFantasyAiClient implements FantasyAiClient {
     public String providerName() {
         return "groq";
     }
+
+    @Override
+    public String modelName() { return model; }
 }
 

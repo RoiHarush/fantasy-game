@@ -2,9 +2,9 @@ package com.fantasy.domain.ai;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface AiRoastRepository extends JpaRepository<AiRoastEntity, Long> {
-    Optional<AiRoastEntity> findByUser_IdAndGameweek(int userId, int gameweek);
+    List<AiRoastEntity> findByLeague_IdAndGameweekOrderByRotationIndexAsc(long leagueId, int gameweek);
 }
 

@@ -2,7 +2,6 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { usePlayers } from "../../../features/players/usePlayers";
 import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
-import { cn } from "../../../lib/cn";
 import { ArrowLeft, ArrowRight, Star } from "../../../shared/ui/icons";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
@@ -19,11 +18,22 @@ function getMobileSnapshot() {
     return window.matchMedia("(max-width: 767px)").matches;
 }
 
+export function initialCarouselStart(gameweekId, visibleCount, total = 38) {
+    const currentIndex = Math.max(0, Math.min((gameweekId ?? 1) - 1, total - 1));
+    return Math.max(0, currentIndex - (visibleCount - 1));
+}
+
+export function carouselGameweeks(windowStart, visibleCount, total = 38) {
+    return Array.from(
+        { length: visibleCount },
+        (_, offset) => ((windowStart + offset) % total) + 1,
+    );
+}
+
 function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
     const visibleCount = mobile ? 3 : 5;
-    const cardWidth = mobile ? 100 : 120;
-    const topPlayers = useMemo(() => {
-        const full = Array.from({ length: 38 }, (_, index) => {
+    const allGameweeks = useMemo(() => (
+        Array.from({ length: 38 }, (_, index) => {
             const gameweek = index + 1;
             return records.find(player => player.gameweek === gameweek) || {
                 gameweek,
@@ -31,48 +41,53 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                 teamId: null,
                 points: null,
             };
-        });
-        return [...full.slice(-visibleCount), ...full, ...full.slice(0, visibleCount)];
-    }, [records, visibleCount]);
-    const initialIndex = gameweekId
-        ? visibleCount + Math.min(gameweekId - 1, 37) - (visibleCount - 1)
-        : visibleCount;
-    const [currentIndex, setCurrentIndex] = useState(initialIndex);
+        })
+    ), [records]);
+    const carouselTrack = useMemo(() => (
+        [
+            ...allGameweeks.slice(-visibleCount),
+            ...allGameweeks,
+            ...allGameweeks.slice(0, visibleCount),
+        ]
+    ), [allGameweeks, visibleCount]);
+    const initialStart = initialCarouselStart(gameweekId, visibleCount);
+    const [currentIndex, setCurrentIndex] = useState(visibleCount + initialStart);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
     function move(direction) {
+        if (isTransitioning) return;
         setIsTransitioning(true);
         setCurrentIndex(current => current + direction);
     }
 
     function handleTransitionEnd() {
-        const total = 38;
         setIsTransitioning(false);
-        if (currentIndex >= total + visibleCount) setCurrentIndex(currentIndex - total);
-        else if (currentIndex < visibleCount) setCurrentIndex(currentIndex + total);
+        if (currentIndex >= allGameweeks.length + visibleCount) {
+            setCurrentIndex(currentIndex - allGameweeks.length);
+        } else if (currentIndex < visibleCount) {
+            setCurrentIndex(currentIndex + allGameweeks.length);
+        }
     }
 
     return (
-        <div className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 py-3 sm:gap-2">
-            <Button type="button" variant="secondary" size="icon" className="size-9 justify-self-center" onClick={() => move(-1)} aria-label="Previous gameweek"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
-            <div className="mx-auto w-[min(300px,100%)] min-w-0 overflow-hidden md:w-[600px]">
+        <div className="grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-0.5 px-1 py-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] sm:gap-2 sm:px-0">
+            <Button type="button" variant="secondary" size="icon" className="size-8 justify-self-center sm:size-9" onClick={() => move(-1)} aria-label="Previous gameweek"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
+            <div className="min-w-0 overflow-hidden">
                 <div
                     className="flex will-change-transform"
                     style={{
-                        transform: `translateX(${currentIndex * cardWidth * -1}px)`,
+                        transform: `translateX(-${currentIndex * (100 / visibleCount)}%)`,
                         transition: isTransitioning ? "transform 0.4s ease-in-out" : "none",
                     }}
                     onTransitionEnd={handleTransitionEnd}
                 >
-                    {topPlayers.map((player, index) => (
+                    {carouselTrack.map((player, index) => (
                         <Button
                             type="button"
                             variant="ghost"
-                            key={`player-${player?.gameweek ?? index}-${index}`}
-                            className={cn(
-                                "flex h-auto shrink-0 justify-center px-1.5 py-0",
-                                mobile ? "w-[100px]" : "w-[120px]",
-                            )}
+                            key={`player-${player.gameweek}-${index}`}
+                            className="flex h-auto min-w-0 shrink-0 justify-center px-0 py-0 sm:px-1"
+                            style={{ width: `${100 / visibleCount}%` }}
                             onClick={() => player?.id && onSelect(player)}
                         >
                             <PlayerOfWeekCard player={player} size={mobile ? "small" : "normal"} />
@@ -80,18 +95,18 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
                     ))}
                 </div>
             </div>
-            <Button type="button" variant="secondary" size="icon" className="size-9 justify-self-center" onClick={() => move(1)} aria-label="Next gameweek"><ArrowRight className="size-4" aria-hidden="true" /></Button>
+            <Button type="button" variant="secondary" size="icon" className="size-8 justify-self-center sm:size-9" onClick={() => move(1)} aria-label="Next gameweek"><ArrowRight className="size-4" aria-hidden="true" /></Button>
         </div>
     );
 }
 
-function PlayerOfTheWeekBlock({ gameweekId, previewRecords, previewPlayers }) {
+function PlayerOfTheWeekBlock({ userId, gameweekId, previewRecords, previewPlayers }) {
     const playersQuery = usePlayers();
     const players = previewPlayers ?? playersQuery.players;
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const mobile = useSyncExternalStore(subscribeToMobileViewport, getMobileSnapshot, () => false);
     const preview = Array.isArray(previewRecords);
-    const playersOfWeekQuery = usePlayersOfTheWeek(!preview);
+    const playersOfWeekQuery = usePlayersOfTheWeek(userId, !preview);
     const records = preview ? previewRecords : playersOfWeekQuery.data?.playersOfTheWeek ?? [];
     const pending = !preview && playersOfWeekQuery.isPending;
     const error = !preview && playersOfWeekQuery.error;
