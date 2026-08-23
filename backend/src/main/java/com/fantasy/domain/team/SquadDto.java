@@ -14,6 +14,8 @@ public class SquadDto {
     private boolean tripleCaptainActive;
     private boolean benchBoostActive;
     private List<AutoSubstitutionDto> autoSubstitutions = List.of();
+    private Integer crownPlayerId;
+    private Integer crownPoints;
 
     public Map<String, List<Integer>> getStartingLineup() { return startingLineup; }
     public void setStartingLineup(Map<String, List<Integer>> startingLineup) { this.startingLineup = startingLineup; }
@@ -58,5 +60,11 @@ public class SquadDto {
     public void setAutoSubstitutions(List<AutoSubstitutionDto> autoSubstitutions) {
         this.autoSubstitutions = autoSubstitutions == null ? List.of() : List.copyOf(autoSubstitutions);
     }
+
+    public Integer getCrownPlayerId() { return crownPlayerId; }
+    public void setCrownPlayerId(Integer crownPlayerId) { this.crownPlayerId = crownPlayerId; }
+
+    public Integer getCrownPoints() { return crownPoints; }
+    public void setCrownPoints(Integer crownPoints) { this.crownPoints = crownPoints; }
 }
 

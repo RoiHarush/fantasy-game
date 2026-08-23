@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import Footer from "../../../Footer";
@@ -11,9 +12,11 @@ import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { findActiveGameweek, gameweekLabel } from "../../../features/gameweeks/availability";
 import { getNextTransferGameweek } from "../../../features/gameweeks/model";
 import { useLeagueObserver, useObservedManagerSquad } from "../../../features/super-admin/useLeagueObserver";
+import { getObserverScreenHref } from "../../../features/super-admin/observerModel";
 import { useTeams } from "../../../features/teams/useTeams";
 import { isSameTransferId } from "../../../features/transfer-window/model";
 import { Button } from "../../../shared/ui/Button";
+import SelectField from "../../../shared/ui/SelectField";
 import { Eye, LockKeyhole, ShieldCheck } from "../../../shared/ui/icons";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
@@ -47,7 +50,7 @@ const SCREEN_LABELS = {
     settings: "Settings",
 };
 
-function ObserverBanner({ league, manager }) {
+function ObserverBanner({ league, manager, managers, onManagerChange }) {
     return (
         <div className="sticky top-2 z-30 mx-3 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-cyan-300/35 bg-[#0c1620]/94 px-3 py-2.5 text-xs font-bold text-white shadow-xl backdrop-blur-xl sm:mx-5 lg:mx-8">
             <Eye className="size-4 text-cyan-300" aria-hidden="true" />
@@ -55,8 +58,21 @@ function ObserverBanner({ league, manager }) {
             <span aria-hidden="true">·</span>
             <span>{league?.name ?? "League"}</span>
             <span aria-hidden="true">·</span>
-            <span className="min-w-0 truncate">{manager?.fantasyTeamName ?? "Manager"}</span>
-            <span className="ml-auto flex items-center gap-2 text-white/65">
+            <div className="w-full min-w-0 sm:w-64">
+                <SelectField
+                    value={manager?.userId ?? ""}
+                    onValueChange={onManagerChange}
+                    options={(managers ?? []).map((item) => ({
+                        value: item.userId,
+                        label: `${item.fantasyTeamName} · ${item.managerName}`,
+                    }))}
+                    ariaLabel="Switch observed manager"
+                    disabled={!manager || !managers?.length}
+                    className="min-h-9 border-cyan-300/35 bg-white/10 px-3 py-1.5 text-xs text-white shadow-none hover:border-cyan-200/60 hover:bg-white/15"
+                    contentClassName="min-w-[min(22rem,calc(100vw-1.5rem))]"
+                />
+            </div>
+            <span className="flex items-center gap-2 text-white/65 sm:ml-auto">
                 <LockKeyhole className="size-4" aria-hidden="true" />
                 Writes blocked
             </span>
@@ -110,9 +126,17 @@ function ObservedPickTeam({ user, nextGameweek, gameweeks, squad, players, playe
 }
 
 export default function LeagueObserverExperience({ leagueId, managerId, screen }) {
+    const router = useRouter();
     const gameweeks = useGameweek();
     const [selectedGameweekId, setSelectedGameweekId] = useState(null);
-    const [selectedTransferUserId, setSelectedTransferUserId] = useState(Number(managerId));
+    const [transferUserSelection, setTransferUserSelection] = useState(null);
+    const selectedTransferUserId = transferUserSelection?.perspectiveManagerId === String(managerId)
+        ? transferUserSelection.userId
+        : Number(managerId);
+    const setSelectedTransferUserId = (userId) => setTransferUserSelection({
+        perspectiveManagerId: String(managerId),
+        userId: Number(userId),
+    });
     const defaultGameweek = gameweeks.currentGameweek ?? gameweeks.nextGameweek ?? gameweeks.gameweeks[0] ?? null;
     const selectedGameweek = gameweeks.gameweeks.find((item) => String(item.id) === String(selectedGameweekId)) ?? defaultGameweek;
     const scheduledTransferGameweek = getNextTransferGameweek({
@@ -124,7 +148,12 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
         : screen === "transfer-window"
             ? scheduledTransferGameweek ?? selectedGameweek
             : selectedGameweek;
-    const observer = useLeagueObserver({ leagueId, managerId, gameweekId: requestedGameweek?.id });
+    const observer = useLeagueObserver({
+        leagueId,
+        managerId,
+        gameweekId: requestedGameweek?.id,
+        includePlayersOfTheWeek: screen === "status" && Boolean(gameweeks.currentGameweek),
+    });
     const activeWindowGameweek = gameweeks.gameweeks.find(
         (item) => Number(item.id) === Number(observer.windowState.data?.gameWeekId),
     ) ?? requestedGameweek;
@@ -186,6 +215,11 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
     }, [gameweeks.gameweeks, requestedGameweek]);
 
     const navigationBase = `/observe/${leagueId}/${managerId}`;
+    const observedManagerPointsHref = (leagueMember) => getObserverScreenHref(leagueId, leagueMember.id, "points");
+    const switchObservedManager = (nextManagerId) => {
+        if (!nextManagerId || String(nextManagerId) === String(managerId)) return;
+        router.replace(getObserverScreenHref(leagueId, nextManagerId, screen));
+    };
     const shell = (content) => (
         <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
             <HeaderCollage />
@@ -195,7 +229,12 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
                 activePath: `/${screen}`,
                 observerMode: true,
             }} />
-            <ObserverBanner league={league} manager={manager} />
+            <ObserverBanner
+                league={league}
+                manager={manager}
+                managers={league?.managers ?? []}
+                onManagerChange={switchObservedManager}
+            />
             <main className="min-w-0 flex-1">{content}</main>
             <Footer />
         </div>
@@ -220,12 +259,19 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
                     points: observer.points.data ?? 0,
                     dailyStatus: [],
                     players: observer.players.data ?? [],
-                    playersOfTheWeek: [],
+                    playersOfTheWeek: observer.playersOfTheWeek.data?.playersOfTheWeek ?? [],
+                    crownStandings: observer.playersOfTheWeek.data?.crownStandings ?? [],
                     transferActions: observer.history.data ?? [],
                     irStatuses: [],
                 }}
             />}
-            right={<StatusSidebar user={observedUser} league={observedLeague} preSeason={!gameweeks.currentGameweek} previewDreamTeam={[]} />}
+            right={<StatusSidebar
+                user={observedUser}
+                league={observedLeague}
+                preSeason={!gameweeks.currentGameweek}
+                previewDreamTeam={[]}
+                getMemberPointsHref={observedManagerPointsHref}
+            />}
         />;
     } else if (screen === "points" && requestedGameweek && observer.squad.data) {
         content = <PageLayout
@@ -253,7 +299,11 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
         />;
     } else if (screen === "league") {
         content = <PageLayout
-            left={<LeagueTable currentUser={observedUser} league={observedLeague} />}
+            left={<LeagueTable
+                currentUser={observedUser}
+                league={observedLeague}
+                getMemberPointsHref={observedManagerPointsHref}
+            />}
             right={<SidebarContainer><PointsSummaryBlock user={observedUser} previewPoints={{ gameweekPoints: observer.points.data ?? 0, totalPoints: manager.totalPoints }} /></SidebarContainer>}
         />;
     } else if (screen === "fixtures") {

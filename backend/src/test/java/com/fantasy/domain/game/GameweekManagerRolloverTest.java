@@ -165,7 +165,8 @@ class GameweekManagerRolloverTest {
                 mock(GameweekDailyStatusRepository.class),
                 mock(FixtureRepository.class),
                 transferMarketService,
-                mock(AutoSubstitutionRepository.class)
+                mock(AutoSubstitutionRepository.class),
+                mock(com.fantasy.domain.player.LeagueCrownService.class)
         );
     }
 }

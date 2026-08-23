@@ -38,6 +38,7 @@ final class LeagueGameweekLeaderResolver {
                 if (contributionPoints <= 0) continue;
 
                 Candidate candidate = new Candidate(
+                        squad,
                         playerId,
                         contributionPoints,
                         tieBreakByPlayer.getOrDefault(
@@ -52,7 +53,12 @@ final class LeagueGameweekLeaderResolver {
         }
 
         return Optional.ofNullable(leader)
-                .map(candidate -> new Leader(candidate.playerId(), candidate.contributionPoints()));
+                .map(candidate -> new Leader(
+                        candidate.squad().getId(),
+                        candidate.squad().getUser() == null ? null : candidate.squad().getUser().getId(),
+                        candidate.playerId(),
+                        candidate.contributionPoints()
+                ));
     }
 
     static List<Integer> orderedPlayerIds(UserSquadEntity squad) {
@@ -60,7 +66,7 @@ final class LeagueGameweekLeaderResolver {
         if (squad.getStartingLineup() != null) {
             squad.getStartingLineup().stream().filter(Objects::nonNull).forEach(playerIds::add);
         }
-        if (squad.getBenchMap() != null) {
+        if (squad.isBenchBoostActive() && squad.getBenchMap() != null) {
             BENCH_SLOTS.stream()
                     .map(squad.getBenchMap()::get)
                     .filter(Objects::nonNull)
@@ -69,7 +75,7 @@ final class LeagueGameweekLeaderResolver {
         return playerIds;
     }
 
-    record Leader(int playerId, int contributionPoints) {}
+    record Leader(Long squadId, Integer gameDataId, int playerId, int contributionPoints) {}
 
     record PerformanceTieBreak(int rawPoints,
                                int positiveImpactPoints,
@@ -84,7 +90,8 @@ final class LeagueGameweekLeaderResolver {
         }
     }
 
-    private record Candidate(int playerId,
+    private record Candidate(UserSquadEntity squad,
+                             int playerId,
                              int contributionPoints,
                              PerformanceTieBreak performance) {
         private static final Comparator<Candidate> BEST_FIRST = Comparator

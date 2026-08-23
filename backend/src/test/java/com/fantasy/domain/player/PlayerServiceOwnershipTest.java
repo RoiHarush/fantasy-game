@@ -67,6 +67,7 @@ class PlayerServiceOwnershipTest {
                 leagueRepository,
                 gameDataRepository,
                 mock(LeagueScoringService.class),
+                mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
                 mock(LeagueTransferWindowRepository.class)
         );
@@ -108,6 +109,7 @@ class PlayerServiceOwnershipTest {
                 leagueRepository,
                 gameDataRepository,
                 mock(LeagueScoringService.class),
+                mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
                 mock(LeagueTransferWindowRepository.class)
         );
@@ -170,6 +172,7 @@ class PlayerServiceOwnershipTest {
                 mock(LeagueRepository.class),
                 mock(UserGameDataRepository.class),
                 new LeagueScoringService(),
+                mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
                 mock(LeagueTransferWindowRepository.class)
         );
@@ -276,6 +279,7 @@ class PlayerServiceOwnershipTest {
                 mock(LeagueRepository.class),
                 gameDataRepository,
                 new LeagueScoringService(),
+                mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
                 mock(LeagueTransferWindowRepository.class)
         );

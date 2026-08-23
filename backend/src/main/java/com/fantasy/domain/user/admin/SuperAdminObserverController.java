@@ -4,6 +4,7 @@ import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.player.PlayerDataDto;
 import com.fantasy.domain.player.PlayerDto;
+import com.fantasy.domain.player.CrownSummaryDto;
 import com.fantasy.domain.player.PlayerService;
 import com.fantasy.domain.score.PointsService;
 import com.fantasy.domain.team.FantasyTeamService;
@@ -109,6 +110,17 @@ public class SuperAdminObserverController {
                       @PathVariable int gameweekId) {
         requireLeagueMember(leagueId, userId);
         return pointsService.getUserPointsForGameWeek(userId, gameweekId);
+    }
+
+    @GetMapping("/leagues/{leagueId}/users/{userId}/players-of-the-week/{gameweekId}")
+    public CrownSummaryDto playersOfTheWeek(@PathVariable long leagueId,
+                                             @PathVariable int userId,
+                                             @PathVariable int gameweekId) {
+        requireLeagueMember(leagueId, userId);
+        if (gameweekId < 1 || gameweekId > 38) {
+            throw new IllegalArgumentException("Gameweek must be between 1 and 38");
+        }
+        return playerService.getCrownSummary(userId, gameweekId);
     }
 
     @GetMapping("/leagues/{leagueId}/window")

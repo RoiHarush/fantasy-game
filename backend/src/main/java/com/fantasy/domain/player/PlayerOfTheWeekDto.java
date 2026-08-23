@@ -7,5 +7,9 @@ public record PlayerOfTheWeekDto(
         int teamId,
         int points,
         String photo,
-        String position
+        String position,
+        int managerId,
+        String managerName,
+        String fantasyTeamName,
+        boolean official
 ) {}

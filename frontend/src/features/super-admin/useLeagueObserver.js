@@ -11,13 +11,14 @@ import {
     getObservedLeague,
     getObservedOrder,
     getObservedPlayers,
+    getObservedPlayersOfTheWeek,
     getObservedPoints,
     getObservedSquad,
     getObservedSquadData,
     getObservedWindow,
 } from "./observerApi";
 
-export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
+export function useLeagueObserver({ leagueId, managerId, gameweekId, includePlayersOfTheWeek = false }) {
     const { subscribe } = useWebSocket();
     const queryClient = useQueryClient();
     const league = useQuery({
@@ -67,6 +68,12 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
         enabled: Boolean(leagueId && effectiveManagerId && gameweekId),
         refetchInterval: 60_000,
     });
+    const playersOfTheWeek = useQuery({
+        queryKey: ["admin", "observe", "players-of-the-week", leagueId, effectiveManagerId, gameweekId],
+        queryFn: () => getObservedPlayersOfTheWeek(leagueId, effectiveManagerId, gameweekId),
+        enabled: Boolean(includePlayersOfTheWeek && leagueId && effectiveManagerId && gameweekId),
+        staleTime: 5 * 60_000,
+    });
     const historyGameweek = windowState.data?.gameWeekId > 0 ? windowState.data.gameWeekId : gameweekId || 1;
     const history = useQuery({
         queryKey: ["admin", "observe", "history", leagueId, historyGameweek],
@@ -102,6 +109,7 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId }) {
         players,
         squadData,
         points,
+        playersOfTheWeek,
         history,
         order,
         attendance,

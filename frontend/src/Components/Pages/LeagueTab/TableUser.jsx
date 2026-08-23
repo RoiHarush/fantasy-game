@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getLeagueMemberPointsHref } from "../../../features/league/model";
 import TeamIdentityImage from "../../../shared/ui/TeamIdentityImage";
 
-function TableUser({ user, currentUser }) {
-    const href = getLeagueMemberPointsHref(user.id, currentUser.id);
+function TableUser({ user, currentUser, pointsHref }) {
+    const href = pointsHref ?? getLeagueMemberPointsHref(user.id, currentUser.id);
 
     return (
         <Link href={href} className="flex min-w-0 items-center gap-2.5 no-underline" aria-label={`View ${user.fantasyTeamName} points`}>

@@ -357,6 +357,8 @@ public class FantasyTeamService {
                         substitution.getSequence()
                 ))
                 .toList());
+        dto.setCrownPlayerId(entity.getCrownPlayerId());
+        dto.setCrownPoints(entity.getCrownPoints());
         return dto;
     }
 

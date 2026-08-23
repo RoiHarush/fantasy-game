@@ -2,11 +2,12 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { usePlayers } from "../../../features/players/usePlayers";
 import { usePlayersOfTheWeek } from "../../../features/status/useStatusData";
-import { ArrowLeft, ArrowRight, Star } from "../../../shared/ui/icons";
+import { ArrowLeft, ArrowRight, Crown, Star } from "../../../shared/ui/icons";
 import { getPlayerById } from "../../../Utils/ItemGetters";
 import PlayerInfoModal from "../../General/PlayerInfoModal";
 import PlayerOfWeekCard from "../../General/PlayerOfTheWeekCard";
 import { Button } from "../../../shared/ui/Button";
+import TeamIdentityImage from "../../../shared/ui/TeamIdentityImage";
 
 function subscribeToMobileViewport(callback) {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -100,7 +101,63 @@ function PlayerCarousel({ records, gameweekId, mobile, onSelect }) {
     );
 }
 
-function PlayerOfTheWeekBlock({ userId, gameweekId, previewRecords, previewPlayers }) {
+function CrownStandings({ standings = [] }) {
+    if (standings.length === 0) return null;
+
+    return (
+        <div className="mx-3 mt-1 overflow-hidden rounded-xl border border-amber-400/25 bg-app-surface-muted sm:mx-4">
+            <div className="flex items-center justify-between border-b border-app-border px-3 py-2.5 sm:px-4">
+                <div className="flex items-center gap-2">
+                    <Crown className="size-5 fill-amber-300 text-amber-500" aria-hidden="true" />
+                    <h3 className="text-sm font-black text-app-foreground sm:text-base">Crown standings</h3>
+                </div>
+                <span className="text-[10px] font-bold tracking-widest text-app-muted uppercase">Official crowns</span>
+            </div>
+
+            <div className="divide-y divide-app-border">
+                {standings.map((standing, index) => (
+                    <details key={standing.managerId} className="group">
+                        <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 marker:hidden sm:px-4">
+                            <span className="w-5 shrink-0 text-center text-xs font-black text-app-muted">{index + 1}</span>
+                            <TeamIdentityImage
+                                src={standing.logoPath}
+                                alt=""
+                                className="size-9 shrink-0 rounded-lg"
+                                sizes="2.25rem"
+                            />
+                            <span className="flex min-w-0 flex-1 flex-col">
+                                <span className="truncate text-sm font-extrabold text-app-foreground">{standing.managerName}</span>
+                                <span className="truncate text-[11px] text-app-muted">{standing.fantasyTeamName}</span>
+                            </span>
+                            <span className="flex min-w-12 items-center justify-end gap-1.5 font-black text-amber-500">
+                                <Crown className="size-4 fill-amber-300" aria-hidden="true" />
+                                {standing.crownCount}
+                            </span>
+                        </summary>
+
+                        {standing.crowns?.length > 0 && (
+                            <div className="grid gap-1.5 px-3 pb-3 pl-11 sm:grid-cols-2 sm:px-4 sm:pl-16">
+                                {standing.crowns.map((award) => (
+                                    <div
+                                        key={`${standing.managerId}-${award.gameweek}`}
+                                        className="flex items-center justify-between gap-3 rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs"
+                                    >
+                                        <span className="min-w-0 truncate font-bold text-app-foreground">
+                                            GW{award.gameweek} · {award.playerName}
+                                        </span>
+                                        <span className="shrink-0 font-black text-app-accent-foreground">{award.points} pts</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </details>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function PlayerOfTheWeekBlock({ userId, gameweekId, previewRecords, previewStandings, previewPlayers }) {
     const playersQuery = usePlayers();
     const players = previewPlayers ?? playersQuery.players;
     const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -108,6 +165,7 @@ function PlayerOfTheWeekBlock({ userId, gameweekId, previewRecords, previewPlaye
     const preview = Array.isArray(previewRecords);
     const playersOfWeekQuery = usePlayersOfTheWeek(userId, !preview);
     const records = preview ? previewRecords : playersOfWeekQuery.data?.playersOfTheWeek ?? [];
+    const standings = preview ? previewStandings ?? [] : playersOfWeekQuery.data?.crownStandings ?? [];
     const pending = !preview && playersOfWeekQuery.isPending;
     const error = !preview && playersOfWeekQuery.error;
     const selectedPlayerDetails = selectedPlayer
@@ -130,6 +188,7 @@ function PlayerOfTheWeekBlock({ userId, gameweekId, previewRecords, previewPlaye
                     onSelect={setSelectedPlayer}
                 />
             )}
+            {!pending && !error && <CrownStandings standings={standings} />}
             {selectedPlayerDetails && (
                 <PlayerInfoModal
                     player={selectedPlayerDetails}

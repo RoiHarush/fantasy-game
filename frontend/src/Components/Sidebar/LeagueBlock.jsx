@@ -1,7 +1,7 @@
 import LeagueTable from "../Pages/LeagueTab/LeagueTable";
 
 
-function LeagueBlock({ currentUser, league }) {
+function LeagueBlock({ currentUser, league, getMemberPointsHref }) {
 
     return (
         <section className="w-full overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm transition-colors">
@@ -9,7 +9,12 @@ function LeagueBlock({ currentUser, league }) {
                 League Standings
             </div>
             <div className="px-3 py-2 sm:px-4">
-                <LeagueTable league={league} currentUser={currentUser} compact={true} />
+                <LeagueTable
+                    league={league}
+                    currentUser={currentUser}
+                    compact={true}
+                    getMemberPointsHref={getMemberPointsHref}
+                />
             </div>
         </section>
     );

@@ -10,6 +10,7 @@ import com.fantasy.application.SystemStatusService;
 import com.fantasy.domain.team.Squad;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
 import com.fantasy.domain.player.Player;
+import com.fantasy.domain.player.LeagueCrownService;
 import com.fantasy.domain.league.LeaguePlayerCatalog;
 import com.fantasy.domain.team.UserGameData;
 import com.fantasy.domain.team.UserGameDataEntity;
@@ -55,6 +56,7 @@ public class GameweekManager {
     private final FixtureRepository fixtureRepository;
     private final TransferMarketService transferMarketService;
     private final AutoSubstitutionRepository autoSubstitutionRepository;
+    private final LeagueCrownService leagueCrownService;
     private ApplicationEventPublisher lifecycleEvents = event -> { };
 
     public GameweekManager(UserGameDataRepository gameDataRepository,
@@ -67,7 +69,8 @@ public class GameweekManager {
                            GameweekDailyStatusRepository dailyStatusRepository,
                            FixtureRepository fixtureRepository,
                            TransferMarketService transferMarketService,
-                           AutoSubstitutionRepository autoSubstitutionRepository) {
+                           AutoSubstitutionRepository autoSubstitutionRepository,
+                           LeagueCrownService leagueCrownService) {
         this.gameDataRepository = gameDataRepository;
         this.squadRepository = squadRepository;
         this.gameweekRepository = gameweekRepository;
@@ -79,6 +82,7 @@ public class GameweekManager {
         this.fixtureRepository = fixtureRepository;
         this.transferMarketService = transferMarketService;
         this.autoSubstitutionRepository = autoSubstitutionRepository;
+        this.leagueCrownService = leagueCrownService;
     }
 
     @Autowired
@@ -207,6 +211,8 @@ public class GameweekManager {
         gw.setCalculated(true);
         gameweekRepository.save(gw);
 
+        leagueCrownService.reconcileFinalizedGameweek(gameweekId);
+
         markAllDaysAsCalculated(gameweekId);
 
         log.info("Finished processing GW {} successfully", gameweekId);
@@ -259,6 +265,7 @@ public class GameweekManager {
         target.setAutoSubsApplied(false);
         target.setTripleCaptainActive(false);
         target.setBenchBoostActive(false);
+        target.clearCrown();
     }
 
     private boolean updateGameweeksStatus(int newGwId) {

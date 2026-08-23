@@ -119,6 +119,29 @@ class LeagueGameweekLeaderResolverTest {
         return squad;
     }
 
+    @Test
+    void ignoresAnUnusedBenchPlayerEvenWhenTheyOutscoreEveryStarter() {
+        UserSquadEntity squad = squad(1, List.of(10), null, false);
+        squad.setBenchMap(new LinkedHashMap<>(Map.of("S1", 20)));
+
+        assertEquals(Set.of(10), LeagueGameweekLeaderResolver.resolve(
+                List.of(squad),
+                Map.of(10, 3, 20, 18)
+        ));
+    }
+
+    @Test
+    void includesBenchPlayersWhenBenchBoostWasActive() {
+        UserSquadEntity squad = squad(1, List.of(10), null, false);
+        squad.setBenchMap(new LinkedHashMap<>(Map.of("S1", 20)));
+        squad.setBenchBoostActive(true);
+
+        assertEquals(Set.of(20), LeagueGameweekLeaderResolver.resolve(
+                List.of(squad),
+                Map.of(10, 3, 20, 18)
+        ));
+    }
+
     private LeagueGameweekLeaderResolver.PerformanceTieBreak performance(
             int rawPoints,
             int positiveImpactPoints,

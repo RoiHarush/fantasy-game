@@ -53,7 +53,7 @@ class SeasonResetServiceTest {
         assertEquals(0, count(jdbc, "leagues"));
         assertEquals(0, count(jdbc, "push_subscriptions"));
         assertEquals(0, count(jdbc, "notification_deliveries"));
-        assertEquals(23, jdbc.queryForObject(
+        assertEquals(24, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL",
                 Integer.class
         ));

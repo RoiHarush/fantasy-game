@@ -12,7 +12,6 @@ import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.score.LeagueScoringService;
-import com.fantasy.domain.score.PlayerScoreBreakdown;
 import com.fantasy.domain.transfer.LeagueTransferWindowRepository;
 import com.fantasy.domain.transfer.LeagueTransferWindowEntity;
 import com.fantasy.domain.transfer.SupplementalDraftPoolService;
@@ -40,6 +39,7 @@ public class PlayerService {
     private final LeagueRepository leagueRepo;
     private final UserGameDataRepository gameDataRepo;
     private final LeagueScoringService leagueScoringService;
+    private final LeagueCrownService leagueCrownService;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final LeagueTransferWindowRepository transferWindowRepository;
 
@@ -54,6 +54,7 @@ public class PlayerService {
                          LeagueRepository leagueRepo,
                          UserGameDataRepository gameDataRepo,
                          LeagueScoringService leagueScoringService,
+                         LeagueCrownService leagueCrownService,
                          SupplementalDraftPoolService supplementalDraftPoolService,
                          LeagueTransferWindowRepository transferWindowRepository) {
         this.playerRepo = playerRepo;
@@ -67,6 +68,7 @@ public class PlayerService {
         this.leagueRepo = leagueRepo;
         this.gameDataRepo = gameDataRepo;
         this.leagueScoringService = leagueScoringService;
+        this.leagueCrownService = leagueCrownService;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
         this.transferWindowRepository = transferWindowRepository;
     }
@@ -242,9 +244,11 @@ public class PlayerService {
         if (squadEntity.getStartingLineup() != null) playerIds.addAll(squadEntity.getStartingLineup());
         if (squadEntity.getBenchMap() != null) playerIds.addAll(squadEntity.getBenchMap().values());
 
-        Set<Integer> leagueLeaderIds = findLeagueGameweekLeader(gameData.getLeague(), gwId)
+        Set<Integer> leagueLeaderIds = Optional.ofNullable(squadEntity.getCrownPlayerId())
+                .map(Set::of)
+                .orElseGet(() -> leagueCrownService.resolveLeagueGameweek(gameData.getLeague(), gwId)
                 .map(leader -> Set.of(leader.playerId()))
-                .orElseGet(Set::of);
+                .orElseGet(Set::of));
 
         return playerIds.stream()
                 .filter(Objects::nonNull)
@@ -260,127 +264,14 @@ public class PlayerService {
                 .toList();
     }
 
+    @Transactional
     public List<PlayerOfTheWeekDto> getPlayersOfTheWeek(int userId, int currentGameweekId) {
-        LeagueEntity league = gameDataRepo.findByUserId(userId)
-                .map(UserGameDataEntity::getLeague)
-                .orElseThrow(() -> new IllegalArgumentException("No league found for user " + userId));
-
-        List<PlayerOfTheWeekDto> result = new ArrayList<>();
-        for (int gameweekId = 1; gameweekId <= currentGameweekId; gameweekId++) {
-            int resolvedGameweekId = gameweekId;
-            findLeagueGameweekLeader(league, resolvedGameweekId).ifPresent(leader -> {
-                PlayerEntity player = playerRepo.findById(leader.playerId()).orElse(null);
-                if (player != null) {
-                    result.add(new PlayerOfTheWeekDto(
-                            player.getId(),
-                            resolvedGameweekId,
-                            player.getViewName(),
-                            player.getTeamId(),
-                            leader.contributionPoints(),
-                            player.getPhoto(),
-                            player.getPosition().getCode()
-                    ));
-                }
-            });
-        }
-        return result;
+        return getCrownSummary(userId, currentGameweekId).playersOfTheWeek();
     }
 
-    private Optional<LeagueGameweekLeaderResolver.Leader> findLeagueGameweekLeader(
-            LeagueEntity league,
-            int gameweekId) {
-        if (league == null || league.getId() == null) return Optional.empty();
-
-        List<UserSquadEntity> leagueSquads = Optional
-                .ofNullable(userSquadRepo.findByGameweek(gameweekId))
-                .orElseGet(List::of)
-                .stream()
-                .filter(squad -> squad.getUser() != null
-                        && squad.getUser().getLeague() != null
-                        && Objects.equals(squad.getUser().getLeague().getId(), league.getId()))
-                .sorted(Comparator.comparing(
-                        squad -> squad.getUser().getId(),
-                        Comparator.nullsLast(Comparator.naturalOrder())
-                ))
-                .toList();
-        if (leagueSquads.isEmpty()) return Optional.empty();
-
-        Map<Integer, PlayerGameweekStatsEntity> statsByPlayer = Optional
-                .ofNullable(statsRepo.findByGameweek(gameweekId))
-                .orElseGet(List::of)
-                .stream()
-                .collect(Collectors.toMap(
-                        stats -> stats.getPlayer().getId(),
-                        Function.identity(),
-                        (first, ignored) -> first
-                ));
-        Map<Integer, List<PlayerFixtureStatsEntity>> fixtureStatsByPlayer = Optional
-                .ofNullable(fixtureStatsRepo.findByGameweek(gameweekId))
-                .orElseGet(List::of)
-                .stream()
-                .collect(Collectors.groupingBy(stats -> stats.getPlayer().getId()));
-
-        Set<Integer> candidatePlayerIds = leagueSquads.stream()
-                .flatMap(squad -> LeagueGameweekLeaderResolver.orderedPlayerIds(squad).stream())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<Integer, Integer> pointsByPlayer = new HashMap<>();
-        Map<Integer, LeagueGameweekLeaderResolver.PerformanceTieBreak> tieBreakByPlayer = new HashMap<>();
-        for (Integer playerId : candidatePlayerIds) {
-            PlayerGameweekStatsEntity stats = statsByPlayer.get(playerId);
-            PlayerScoreBreakdown score = stats == null
-                    ? null
-                    : leagueScoringService.calculatePlayerGameweekScore(
-                            stats,
-                            fixtureStatsByPlayer.getOrDefault(playerId, List.of()),
-                            league
-                    );
-            int points = score == null
-                    ? pointsRepo.findByPlayer_IdAndGameweek(playerId, gameweekId)
-                            .map(PlayerPointsEntity::getPoints)
-                            .orElse(0)
-                    : score.totalPoints();
-            pointsByPlayer.put(playerId, points);
-            if (stats != null && score != null) {
-                int positiveImpactPoints = score.lines().stream()
-                        .filter(line -> !"Minutes played".equals(line.label()))
-                        .mapToInt(line -> Math.max(0, line.points()))
-                        .sum();
-                int goalImpactPoints = pointsForLabels(score, "Goals", "Forward bonus");
-                int penaltySaveImpactPoints = pointsForLabels(score, "Penalties saved");
-                int cleanSheetImpactPoints = pointsForLabels(score, "Clean sheets");
-                int assistImpactPoints = pointsForLabels(score, "Assists");
-                int negativeImpactPoints = score.lines().stream()
-                        .mapToInt(line -> Math.max(0, -line.points()))
-                        .sum();
-                tieBreakByPlayer.put(
-                        playerId,
-                        new LeagueGameweekLeaderResolver.PerformanceTieBreak(
-                                points,
-                                positiveImpactPoints,
-                                goalImpactPoints,
-                                penaltySaveImpactPoints,
-                                cleanSheetImpactPoints,
-                                assistImpactPoints,
-                                stats.getMinutesPlayed(),
-                                negativeImpactPoints
-                        )
-                );
-            }
-        }
-
-        return LeagueGameweekLeaderResolver.resolve(
-                leagueSquads,
-                pointsByPlayer,
-                tieBreakByPlayer
-        );
-    }
-
-    private int pointsForLabels(PlayerScoreBreakdown score, String... labels) {
-        Set<String> includedLabels = Set.of(labels);
-        return score.lines().stream()
-                .filter(line -> includedLabels.contains(line.label()))
-                .mapToInt(line -> Math.max(0, line.points()))
-                .sum();
+    @Transactional
+    public CrownSummaryDto getCrownSummary(int userId, int currentGameweekId) {
+        return leagueCrownService.getSummaryForUser(userId, currentGameweekId);
     }
 
     private PlayerDataDto mapPlayerToDataDto(int playerId, int gwId,

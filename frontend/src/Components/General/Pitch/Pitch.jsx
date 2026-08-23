@@ -17,7 +17,7 @@ function Pitch({
     const playerDataById = new Map(
         (playerData ?? []).map((player) => [String(player.playerId), player]),
     );
-    const leadingPlayerId = getLeagueLeadingPlayerId(playerData);
+    const leadingPlayerId = squad.crownPlayerId ?? getLeagueLeadingPlayerId(playerData);
     const firstPickCaptainIsGoalkeeper = !squad.tripleCaptainActive
         && squad.captainId != null
         && squad.firstPickId != null

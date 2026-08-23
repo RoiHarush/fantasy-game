@@ -2,7 +2,7 @@ import { isSameEntityId } from "../../../features/league/model";
 import { cn } from "../../../lib/cn";
 import TableUser from "./TableUser";
 
-function LeagueTable({ currentUser, league, compact = false }) {
+function LeagueTable({ currentUser, league, compact = false, getMemberPointsHref }) {
     const users = league.users ?? [];
 
     return (
@@ -34,7 +34,11 @@ function LeagueTable({ currentUser, league, compact = false }) {
                             <td className="px-1 py-2 text-center sm:px-3">{user.rank}</td>
 
                             <td className="px-2 py-2 text-left sm:px-3">
-                                <TableUser user={user} currentUser={currentUser} />
+                                <TableUser
+                                    user={user}
+                                    currentUser={currentUser}
+                                    pointsHref={getMemberPointsHref?.(user)}
+                                />
                             </td>
                             <td className="px-1 py-2 text-center sm:px-3">{user.gwPoints}</td>
                             <td className="px-1 py-2 text-center sm:px-3">{user.points}</td>

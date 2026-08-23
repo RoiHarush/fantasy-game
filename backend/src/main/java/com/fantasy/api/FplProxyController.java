@@ -82,10 +82,7 @@ public class FplProxyController {
     public ResponseEntity<?> getPlayersOfTheWeek(@RequestParam int userId) {
         try {
             int currentGw = gameWeekService.getCurrentGameweek().getId();
-            return ResponseEntity.ok(Map.of(
-                    "playersOfTheWeek",
-                    playerService.getPlayersOfTheWeek(userId, currentGw)
-            ));
+            return ResponseEntity.ok(playerService.getCrownSummary(userId, currentGw));
 
         } catch (Exception e) {
             log.error("Error fetching players of the week internally", e);

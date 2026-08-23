@@ -1,6 +1,7 @@
 package com.fantasy.domain.team;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -57,6 +58,15 @@ public class UserSquadEntity {
 
     @Column(name = "bench_boost_active", nullable = false)
     private boolean benchBoostActive = false;
+
+    @Column(name = "crown_player_id")
+    private Integer crownPlayerId;
+
+    @Column(name = "crown_points")
+    private Integer crownPoints;
+
+    @Column(name = "crown_awarded_at")
+    private LocalDateTime crownAwardedAt;
 
     @Version
     @Column(nullable = false)
@@ -115,6 +125,21 @@ public class UserSquadEntity {
     public boolean isBenchBoostActive() { return benchBoostActive; }
     public void setBenchBoostActive(boolean benchBoostActive) {
         this.benchBoostActive = benchBoostActive;
+    }
+
+    public Integer getCrownPlayerId() { return crownPlayerId; }
+    public void setCrownPlayerId(Integer crownPlayerId) { this.crownPlayerId = crownPlayerId; }
+
+    public Integer getCrownPoints() { return crownPoints; }
+    public void setCrownPoints(Integer crownPoints) { this.crownPoints = crownPoints; }
+
+    public LocalDateTime getCrownAwardedAt() { return crownAwardedAt; }
+    public void setCrownAwardedAt(LocalDateTime crownAwardedAt) { this.crownAwardedAt = crownAwardedAt; }
+
+    public void clearCrown() {
+        crownPlayerId = null;
+        crownPoints = null;
+        crownAwardedAt = null;
     }
 
     public long getVersion() { return version; }
