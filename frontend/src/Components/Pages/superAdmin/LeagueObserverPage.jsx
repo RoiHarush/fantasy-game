@@ -28,6 +28,9 @@ export default function LeagueObserverPage() {
     const manager = league.data?.managers?.find((item) => String(item.userId) === String(effectiveManagerId));
     const aiPreviewCount = roastPreview.data?.roasts?.filter((item) => item.generatedByAi).length ?? 0;
     const previewCount = roastPreview.data?.roasts?.length ?? 0;
+    const aiProviderLabel = roastPreview.data?.provider === "gemini"
+        ? "Gemini AI"
+        : roastPreview.data?.provider === "groq" ? "Groq AI" : "AI";
 
     return (
         <div className="mx-auto max-w-5xl space-y-6">
@@ -156,7 +159,7 @@ export default function LeagueObserverPage() {
                             previewFeed={roastPreview.data}
                         />
                         <p className="mt-3 text-xs leading-5 text-app-muted">
-                            Generated privately for {previewCount} managers · {aiPreviewCount} by Groq AI · {previewCount - aiPreviewCount} local fallback. Refreshing generates a fresh unsaved version.
+                            Generated privately for {previewCount} managers · {aiPreviewCount} by {aiProviderLabel} · {previewCount - aiPreviewCount} local fallback. Refreshing generates a fresh unsaved version.
                         </p>
                     </div>
                 )}

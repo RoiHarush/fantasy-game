@@ -19,7 +19,11 @@ import com.fantasy.domain.team.UserSquadRepository;
 import com.fantasy.domain.user.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +43,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AiRoastServiceTest {
+
+    @TempDir
+    Path tempDir;
 
     private AiRoastRepository roastRepository;
     private UserGameDataRepository gameDataRepository;
@@ -65,6 +72,7 @@ class AiRoastServiceTest {
         service = new AiRoastService(
                 true,
                 30,
+                "",
                 roastRepository,
                 gameDataRepository,
                 pointsRepository,
@@ -220,9 +228,11 @@ class AiRoastServiceTest {
     }
 
     @Test
-    void superAdminPreviewUsesCurrentDataWithoutSavingOrEnablingThePublicFeature() {
+    void superAdminPreviewUsesSecretFilePromptWithoutSavingOrEnablingThePublicFeature() throws IOException {
+        Path promptFile = tempDir.resolve("ai-roast-prompt.txt");
+        Files.writeString(promptFile, "פרומפט חיצוני טבעי לבדיקה");
         service = new AiRoastService(
-                false, 30, roastRepository, gameDataRepository, pointsRepository, squadRepository,
+                false, 30, promptFile.toString(), roastRepository, gameDataRepository, pointsRepository, squadRepository,
                 gameWeekRepository, statsRepository, fixtureStatsRepository, scoringService, aiClient,
                 new ObjectMapper()
         );
@@ -271,8 +281,7 @@ class AiRoastServiceTest {
         assertFalse(roastsSchema.path("additionalProperties").asBoolean(true));
         assertEquals("string", roastsSchema.path("properties").path("70").path("type").asText());
         assertEquals("70", roastsSchema.path("required").path(0).asText());
-        assertTrue(requestedSystemPrompt.get().contains("עברית ישראלית"));
-        assertTrue(requestedSystemPrompt.get().contains("דוגמאות שמגדירות את הקול הרצוי"));
+        assertEquals("פרומפט חיצוני טבעי לבדיקה", requestedSystemPrompt.get());
         assertTrue(requestedFacts.get().contains("המנהל: Roi"));
         assertFalse(requestedFacts.get().contains("המנהל: Roi Harush"));
         assertTrue(requestedFacts.get().contains("המחזור עדיין לא הסתיים"));

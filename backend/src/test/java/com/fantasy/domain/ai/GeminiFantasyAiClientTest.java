@@ -61,6 +61,8 @@ class GeminiFantasyAiClientTest {
         assertEquals("user", requestBody.get().path("contents").path(0).path("role").asText());
         assertEquals("facts", requestBody.get().path("contents").path(0).path("parts").path(0).path("text").asText());
         assertEquals(640, requestBody.get().path("generationConfig").path("maxOutputTokens").asInt());
+        assertEquals("minimal", requestBody.get().path("generationConfig").path("thinkingConfig").path("thinkingLevel").asText());
+        assertFalse(requestBody.get().path("generationConfig").has("temperature"));
         assertEquals("application/json", requestBody.get().path("generationConfig").path("responseMimeType").asText());
         assertEquals(schema, requestBody.get().path("generationConfig").path("responseJsonSchema"));
     }
@@ -97,6 +99,40 @@ class GeminiFantasyAiClientTest {
 
         assertTrue(result.isEmpty());
         assertEquals(1, calls.get());
+    }
+
+    @Test
+    void structuredCompletionAcceptsJsonInsideMarkdownFence() throws Exception {
+        server.createContext("/models/gemini-test:generateContent", exchange -> respond(exchange, 200, """
+                {"candidates":[{"finishReason":"STOP","content":{"parts":[
+                  {"text":"```json\\n{\\"roasts\\":{\\"8\\":\\"טקסט\\"}}\\n```"}
+                ]}}]}
+                """));
+        JsonNode schema = mapper.readTree("""
+                {"type":"object","properties":{"roasts":{"type":"object"}}}
+                """);
+
+        Optional<String> result = client("gemini-test").completeJson(
+                "system", "facts", 640, "fantasy_roasts", schema);
+
+        assertEquals("{\"roasts\":{\"8\":\"טקסט\"}}", result.orElseThrow());
+    }
+
+    @Test
+    void incompleteStructuredCompletionFallsBackSafely() throws Exception {
+        server.createContext("/models/gemini-test:generateContent", exchange -> respond(exchange, 200, """
+                {"candidates":[{"finishReason":"MAX_TOKENS","content":{"parts":[
+                  {"text":"{\\"roasts\\":{"}
+                ]}}]}
+                """));
+        JsonNode schema = mapper.readTree("""
+                {"type":"object","properties":{"roasts":{"type":"object"}}}
+                """);
+
+        Optional<String> result = client("gemini-test").completeJson(
+                "system", "facts", 640, "fantasy_roasts", schema);
+
+        assertTrue(result.isEmpty());
     }
 
     @Test

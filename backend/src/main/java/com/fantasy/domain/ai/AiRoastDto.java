@@ -8,6 +8,8 @@ public record AiRoastDto(
         long serverTimeEpochMs,
         long rotationAnchorEpochMs,
         int rotationSeconds,
+        String provider,
+        String model,
         List<Item> roasts
 ) {
     public record Item(int targetUserId, String targetDisplayName, String fantasyTeamName,

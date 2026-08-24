@@ -77,8 +77,8 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
             userContent.putArray("parts").addObject().put("text", userPrompt);
 
             ObjectNode generationConfig = body.putObject("generationConfig");
-            generationConfig.put("temperature", 0.9);
             generationConfig.put("maxOutputTokens", Math.max(1, maxTokens));
+            generationConfig.putObject("thinkingConfig").put("thinkingLevel", "minimal");
             if (schema != null) {
                 generationConfig.put("responseMimeType", "application/json");
                 generationConfig.set("responseJsonSchema", schema);
@@ -96,8 +96,9 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
                 return Optional.empty();
             }
 
-            JsonNode parts = objectMapper.readTree(response.body())
-                    .path("candidates").path(0).path("content").path("parts");
+            JsonNode candidate = objectMapper.readTree(response.body()).path("candidates").path(0);
+            String finishReason = candidate.path("finishReason").asText("UNKNOWN");
+            JsonNode parts = candidate.path("content").path("parts");
             if (!parts.isArray()) return Optional.empty();
             StringBuilder content = new StringBuilder();
             for (JsonNode part : parts) {
@@ -106,7 +107,15 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
                 }
             }
             String result = content.toString().trim();
-            return result.isBlank() ? Optional.empty() : Optional.of(result);
+            if (result.isBlank()) return Optional.empty();
+            if (schema == null) return Optional.of(result);
+
+            Optional<String> structured = normalizeStructuredJson(result);
+            if (structured.isEmpty()) {
+                log.warn("Gemini returned invalid structured output: finishReason={}, characters={}; using local fallback",
+                        finishReason, result.length());
+            }
+            return structured;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             log.warn("AI request was interrupted");
@@ -119,6 +128,35 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
 
     private URI endpoint() {
         return URI.create(baseUrl + "/" + model + ":generateContent");
+    }
+
+    private Optional<String> normalizeStructuredJson(String value) {
+        String normalized = value.trim();
+        if (normalized.startsWith("```")) {
+            int firstLineEnd = normalized.indexOf('\n');
+            int closingFence = normalized.lastIndexOf("```");
+            if (firstLineEnd >= 0 && closingFence > firstLineEnd) {
+                normalized = normalized.substring(firstLineEnd + 1, closingFence).trim();
+            }
+        }
+        if (isValidJson(normalized)) return Optional.of(normalized);
+
+        int objectStart = normalized.indexOf('{');
+        int objectEnd = normalized.lastIndexOf('}');
+        if (objectStart >= 0 && objectEnd > objectStart) {
+            String extracted = normalized.substring(objectStart, objectEnd + 1);
+            if (isValidJson(extracted)) return Optional.of(extracted);
+        }
+        return Optional.empty();
+    }
+
+    private boolean isValidJson(String value) {
+        try {
+            objectMapper.readTree(value);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     @Override

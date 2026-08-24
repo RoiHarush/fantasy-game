@@ -15,6 +15,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -86,6 +89,7 @@ public class AiRoastService {
 
     private final boolean enabled;
     private final int rotationSeconds;
+    private final String systemPrompt;
     private final AiRoastRepository roasts;
     private final UserGameDataRepository gameData;
     private final UserPointsRepository points;
@@ -99,6 +103,7 @@ public class AiRoastService {
 
     public AiRoastService(@Value("${app.ai.roast-enabled:false}") boolean enabled,
                           @Value("${app.ai.roast-rotation-seconds:30}") int rotationSeconds,
+                          @Value("${app.ai.roast-prompt-file:/etc/secrets/ai-roast-prompt.txt}") String promptFile,
                           AiRoastRepository roasts, UserGameDataRepository gameData,
                           UserPointsRepository points, UserSquadRepository squads,
                           GameWeekRepository gameweeks, PlayerGameweekStatsRepository stats,
@@ -106,6 +111,7 @@ public class AiRoastService {
                           FantasyAiClient ai, ObjectMapper mapper) {
         this.enabled = enabled;
         this.rotationSeconds = Math.max(10, rotationSeconds);
+        this.systemPrompt = loadSystemPrompt(promptFile);
         this.roasts = roasts;
         this.gameData = gameData;
         this.points = points;
@@ -169,7 +175,8 @@ public class AiRoastService {
         log.info("Private roast preview generated: leagueId={}, gameweek={}, aiItems={}, fallbackItems={}, provider={}, model={}",
                 leagueId, gameweek, generated.size(), facts.size() - generated.size(), ai.providerName(), ai.modelName());
         long anchor = toEpochMillis(generatedAt);
-        return new AiRoastDto(gameweek, System.currentTimeMillis(), anchor, rotationSeconds, items);
+        return new AiRoastDto(gameweek, System.currentTimeMillis(), anchor, rotationSeconds,
+                ai.providerName(), ai.modelName(), items);
     }
 
     /** Generates all missing league roasts in one provider call. Saved rows make retries quota-free. */
@@ -282,8 +289,8 @@ public class AiRoastService {
 
     private Map<Integer, String> generateBatch(List<RoastFacts> facts, boolean finalScore) {
         if (facts.isEmpty()) return Map.of();
-        int maxTokens = Math.min(2400, Math.max(480, facts.size() * 220));
-        Optional<String> response = ai.completeJson(SYSTEM_PROMPT, serialize(facts, finalScore), maxTokens,
+        int maxTokens = Math.min(3600, Math.max(480, facts.size() * 360));
+        Optional<String> response = ai.completeJson(systemPrompt, serialize(facts, finalScore), maxTokens,
                 "fantasy_gameweek_roasts", responseSchema(facts));
         return response.map(json -> parseBatch(json, facts)).orElseGet(Map::of);
     }
@@ -304,6 +311,35 @@ public class AiRoastService {
         });
         root.putArray("required").add("roasts");
         return root;
+    }
+
+    private String loadSystemPrompt(String promptFile) {
+        if (promptFile == null || promptFile.isBlank()) return SYSTEM_PROMPT;
+        Path path;
+        try {
+            path = Path.of(promptFile.trim());
+        } catch (RuntimeException exception) {
+            log.warn("AI roast prompt file path is invalid; using built-in prompt");
+            return SYSTEM_PROMPT;
+        }
+        if (!Files.isRegularFile(path)) {
+            log.info("AI roast prompt file was not found; using built-in prompt");
+            return SYSTEM_PROMPT;
+        }
+        try {
+            String configured = Files.readString(path, StandardCharsets.UTF_8)
+                    .replaceFirst("^\\uFEFF", "")
+                    .trim();
+            if (configured.isBlank()) {
+                log.warn("AI roast prompt file is empty; using built-in prompt");
+                return SYSTEM_PROMPT;
+            }
+            log.info("AI roast system prompt loaded from secret file");
+            return configured;
+        } catch (Exception exception) {
+            log.warn("AI roast prompt file could not be read; using built-in prompt");
+            return SYSTEM_PROMPT;
+        }
     }
 
     private Map<Integer, String> parseBatch(String json, List<RoastFacts> facts) {
@@ -342,6 +378,7 @@ public class AiRoastService {
         LocalDateTime anchor = feed.stream().map(AiRoastEntity::getGeneratedAt).min(LocalDateTime::compareTo)
                 .orElse(LocalDateTime.now());
         return new AiRoastDto(gameweek, System.currentTimeMillis(), toEpochMillis(anchor), rotationSeconds,
+                ai.providerName(), ai.modelName(),
                 feed.stream().map(r -> new AiRoastDto.Item(r.getUser().getUser().getId(),
                         r.getUser().getUser().getFullName(), r.getUser().getFantasyTeamName(), r.getContent(),
                         !"fallback".equals(r.getProvider()), r.getGeneratedAt(), r.getRotationIndex())).toList());
