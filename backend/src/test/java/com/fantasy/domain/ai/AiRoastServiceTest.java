@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.FixtureEntity;
+import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerFixtureStatsRepository;
@@ -52,6 +54,7 @@ class AiRoastServiceTest {
     private UserPointsRepository pointsRepository;
     private UserSquadRepository squadRepository;
     private GameWeekRepository gameWeekRepository;
+    private FixtureRepository fixtureRepository;
     private PlayerGameweekStatsRepository statsRepository;
     private PlayerFixtureStatsRepository fixtureStatsRepository;
     private LeagueScoringService scoringService;
@@ -65,6 +68,7 @@ class AiRoastServiceTest {
         pointsRepository = mock(UserPointsRepository.class);
         squadRepository = mock(UserSquadRepository.class);
         gameWeekRepository = mock(GameWeekRepository.class);
+        fixtureRepository = mock(FixtureRepository.class);
         statsRepository = mock(PlayerGameweekStatsRepository.class);
         fixtureStatsRepository = mock(PlayerFixtureStatsRepository.class);
         scoringService = mock(LeagueScoringService.class);
@@ -78,6 +82,7 @@ class AiRoastServiceTest {
                 pointsRepository,
                 squadRepository,
                 gameWeekRepository,
+                fixtureRepository,
                 statsRepository,
                 fixtureStatsRepository,
                 scoringService,
@@ -233,7 +238,7 @@ class AiRoastServiceTest {
         Files.writeString(promptFile, "פרומפט חיצוני טבעי לבדיקה");
         service = new AiRoastService(
                 false, 30, promptFile.toString(), roastRepository, gameDataRepository, pointsRepository, squadRepository,
-                gameWeekRepository, statsRepository, fixtureStatsRepository, scoringService, aiClient,
+                gameWeekRepository, fixtureRepository, statsRepository, fixtureStatsRepository, scoringService, aiClient,
                 new ObjectMapper()
         );
         UserGameDataEntity gameData = gameData();
@@ -248,6 +253,14 @@ class AiRoastServiceTest {
         squad.setBenchMap(Map.of());
         squad.setCaptainId(10);
         PlayerGameweekStatsEntity captainStats = stats(10, "Live Captain");
+        captainStats.getPlayer().setTeamId(5);
+        FixtureEntity upcomingFixture = new FixtureEntity();
+        upcomingFixture.setId(100);
+        upcomingFixture.setGameweekId(1);
+        upcomingFixture.setHomeTeamId(5);
+        upcomingFixture.setAwayTeamId(6);
+        upcomingFixture.setStarted(false);
+        upcomingFixture.setFinished(false);
 
         when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
         when(gameDataRepository.findByLeague_Id(3L)).thenReturn(List.of(gameData));
@@ -255,6 +268,7 @@ class AiRoastServiceTest {
         when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
         when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
         when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(fixtureRepository.findByGameweekId(1)).thenReturn(List.of(upcomingFixture));
         when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(4);
         AtomicReference<JsonNode> requestedSchema = new AtomicReference<>();
         AtomicReference<String> requestedSystemPrompt = new AtomicReference<>();
@@ -285,6 +299,10 @@ class AiRoastServiceTest {
         assertTrue(requestedFacts.get().contains("המנהל: Roi"));
         assertFalse(requestedFacts.get().contains("המנהל: Roi Harush"));
         assertTrue(requestedFacts.get().contains("המחזור עדיין לא הסתיים"));
+        assertTrue(requestedFacts.get().contains("Live Captain: 4 נקודות; טרם שיחק"));
+        assertTrue(requestedFacts.get().contains("אסור לצחוק על אפס"));
+        assertTrue(requestedFacts.get().contains("אין עדיין שחקן בהרכב שהתחיל לשחק"));
+        assertTrue(requestedFacts.get().contains("אין עדיין שחקן בהרכב שכל משחקיו במחזור הסתיימו"));
         assertFalse(requestedFacts.get().contains("bestPlayer"));
         verify(roastRepository, never()).save(any());
         verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());

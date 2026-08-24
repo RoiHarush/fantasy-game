@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fantasy.domain.game.GameWeekEntity;
 import com.fantasy.domain.game.GameWeekRepository;
+import com.fantasy.domain.game.FixtureEntity;
+import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.player.*;
 import com.fantasy.domain.score.LeagueScoringService;
 import com.fantasy.domain.team.*;
@@ -95,6 +97,7 @@ public class AiRoastService {
     private final UserPointsRepository points;
     private final UserSquadRepository squads;
     private final GameWeekRepository gameweeks;
+    private final FixtureRepository fixtures;
     private final PlayerGameweekStatsRepository stats;
     private final PlayerFixtureStatsRepository fixtureStats;
     private final LeagueScoringService scoring;
@@ -106,7 +109,8 @@ public class AiRoastService {
                           @Value("${app.ai.roast-prompt-file:/etc/secrets/ai-roast-prompt.txt}") String promptFile,
                           AiRoastRepository roasts, UserGameDataRepository gameData,
                           UserPointsRepository points, UserSquadRepository squads,
-                          GameWeekRepository gameweeks, PlayerGameweekStatsRepository stats,
+                          GameWeekRepository gameweeks, FixtureRepository fixtures,
+                          PlayerGameweekStatsRepository stats,
                           PlayerFixtureStatsRepository fixtureStats, LeagueScoringService scoring,
                           FantasyAiClient ai, ObjectMapper mapper) {
         this.enabled = enabled;
@@ -117,6 +121,7 @@ public class AiRoastService {
         this.points = points;
         this.squads = squads;
         this.gameweeks = gameweeks;
+        this.fixtures = fixtures;
         this.stats = stats;
         this.fixtureStats = fixtureStats;
         this.scoring = scoring;
@@ -154,7 +159,7 @@ public class AiRoastService {
 
         LeagueRoundContext context = buildRoundContext(members.getFirst(), gameweek);
         List<RoastFacts> facts = members.stream()
-                .map(target -> buildFacts(target, gameweek, context))
+                .map(target -> buildFacts(target, gameweek, context, gw.isCalculated()))
                 .sorted(Comparator.comparingInt(RoastFacts::rank).thenComparingInt(RoastFacts::userGameDataId))
                 .toList();
         Map<Integer, String> generated = generateBatch(facts, gw.isCalculated());
@@ -201,7 +206,7 @@ public class AiRoastService {
 
         LeagueRoundContext context = buildRoundContext(viewer, gameweek);
         List<RoastFacts> facts = missing.stream()
-                .map(target -> buildFacts(target, gameweek, context))
+                .map(target -> buildFacts(target, gameweek, context, true))
                 .sorted(Comparator.comparingInt(RoastFacts::rank).thenComparingInt(RoastFacts::userGameDataId))
                 .toList();
         Map<Integer, String> generated = generateBatch(facts, true);
@@ -242,10 +247,17 @@ public class AiRoastService {
         Map<Integer, Integer> scores = new HashMap<>();
         statsByPlayer.forEach((id, stat) -> scores.put(id, scoring.calculatePlayerGameweekPoints(
                 stat, fixturesByPlayer.getOrDefault(id, List.of()), viewer.getLeague())));
-        return new LeagueRoundContext(current, previous, currentByUser, previousByUser, statsByPlayer, scores);
+        Map<Integer, List<FixtureEntity>> fixturesByTeam = new HashMap<>();
+        for (FixtureEntity fixture : fixtures.findByGameweekId(gameweek)) {
+            fixturesByTeam.computeIfAbsent(fixture.getHomeTeamId(), ignored -> new ArrayList<>()).add(fixture);
+            fixturesByTeam.computeIfAbsent(fixture.getAwayTeamId(), ignored -> new ArrayList<>()).add(fixture);
+        }
+        return new LeagueRoundContext(current, previous, currentByUser, previousByUser, statsByPlayer, scores,
+                fixturesByTeam);
     }
 
-    private RoastFacts buildFacts(UserGameDataEntity target, int gameweek, LeagueRoundContext context) {
+    private RoastFacts buildFacts(UserGameDataEntity target, int gameweek, LeagueRoundContext context,
+                                  boolean finalScore) {
         UserPointsEntity userPoints = Optional.ofNullable(context.currentByUser().get(target.getId()))
                 .orElseThrow(() -> new IllegalStateException("Final gameweek points are not available"));
         int rank = rankOf(userPoints.getPoints(), context.currentPoints());
@@ -260,9 +272,17 @@ public class AiRoastService {
                 .filter(Objects::nonNull).toList();
         List<Integer> bench = Optional.ofNullable(squad.getBenchMap()).orElse(Map.of()).values().stream()
                 .filter(Objects::nonNull).toList();
-        Integer bestStarter = starters.stream().max(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
-        Integer worstStarter = starters.stream().min(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
-        Integer bestBench = bench.stream().max(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
+        List<PlayerRoastSnapshot> starterSnapshots = snapshots(starters, context);
+        List<PlayerRoastSnapshot> benchSnapshots = snapshots(bench, context);
+        Integer bestStarter = starters.stream()
+                .filter(id -> finalScore || matchState(id, context).hasStarted())
+                .max(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
+        Integer worstStarter = starters.stream()
+                .filter(id -> finalScore || matchState(id, context).isSafeToJudge())
+                .min(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
+        Integer bestBench = bench.stream()
+                .filter(id -> finalScore || matchState(id, context).hasStarted())
+                .max(Comparator.comparingInt(id -> context.scores().getOrDefault(id, 0))).orElse(null);
         int captainMultiplier = squad.isTripleCaptainActive() ? 3 : 2;
         int goals = starters.stream().map(context.statsByPlayer()::get).filter(Objects::nonNull)
                 .mapToInt(PlayerGameweekStatsEntity::getGoals).sum();
@@ -278,13 +298,41 @@ public class AiRoastService {
                 previousRank == null ? null : previousRank - rank,
                 playerName(squad.getCaptainId(), context.statsByPlayer()),
                 context.scores().getOrDefault(squad.getCaptainId(), 0) * captainMultiplier, captainMultiplier,
-                playerName(bestStarter, context.statsByPlayer()), context.scores().getOrDefault(bestStarter, 0),
-                playerName(worstStarter, context.statsByPlayer()), context.scores().getOrDefault(worstStarter, 0),
+                matchState(squad.getCaptainId(), context),
+                playerNameOrNull(bestStarter, context.statsByPlayer()), context.scores().getOrDefault(bestStarter, 0),
+                playerNameOrNull(worstStarter, context.statsByPlayer()), context.scores().getOrDefault(worstStarter, 0),
                 bench.stream().mapToInt(id -> context.scores().getOrDefault(id, 0)).sum(),
-                playerName(bestBench, context.statsByPlayer()), context.scores().getOrDefault(bestBench, 0),
+                playerNameOrNull(bestBench, context.statsByPlayer()), context.scores().getOrDefault(bestBench, 0),
                 squad.isTripleCaptainActive(), squad.isBenchBoostActive(),
                 playerNameOrNull(squad.getCrownPlayerId(), context.statsByPlayer()), squad.getCrownPoints(),
-                goals, assists, redCards);
+                goals, assists, redCards, finalScore, starterSnapshots, benchSnapshots);
+    }
+
+    private List<PlayerRoastSnapshot> snapshots(List<Integer> playerIds, LeagueRoundContext context) {
+        return playerIds.stream()
+                .map(id -> new PlayerRoastSnapshot(
+                        playerName(id, context.statsByPlayer()),
+                        context.scores().getOrDefault(id, 0),
+                        matchState(id, context)))
+                .toList();
+    }
+
+    private PlayerMatchState matchState(Integer playerId, LeagueRoundContext context) {
+        if (playerId == null) return PlayerMatchState.UNKNOWN;
+        PlayerGameweekStatsEntity playerStats = context.statsByPlayer().get(playerId);
+        if (playerStats == null || playerStats.getPlayer() == null || playerStats.getPlayer().getTeamId() == null) {
+            return PlayerMatchState.UNKNOWN;
+        }
+        List<FixtureEntity> teamFixtures = context.fixturesByTeam()
+                .getOrDefault(playerStats.getPlayer().getTeamId(), List.of());
+        if (teamFixtures.isEmpty()) return PlayerMatchState.UNKNOWN;
+        if (teamFixtures.stream().anyMatch(fixture -> fixture.isStarted() && !fixture.isFinished())) {
+            return PlayerMatchState.LIVE;
+        }
+        long finished = teamFixtures.stream().filter(FixtureEntity::isFinished).count();
+        if (finished == teamFixtures.size()) return PlayerMatchState.FINISHED;
+        if (finished > 0) return PlayerMatchState.PARTIALLY_COMPLETE;
+        return PlayerMatchState.NOT_STARTED;
     }
 
     private Map<Integer, String> generateBatch(List<RoastFacts> facts, boolean finalScore) {
@@ -410,7 +458,12 @@ public class AiRoastService {
     private String serialize(List<RoastFacts> facts, boolean finalScore) {
         String timingInstruction = finalScore
                 ? "המחזור כבר חושב סופית. מותר להתייחס לתוצאה ולמיקום כסופיים."
-                : "זה צילום מצב חי והמחזור עדיין לא הסתיים. כתוב בזמן הווה; אסור לומר שהמנהל סיים, שהמיקום סופי או שהמחזור נגמר.";
+                : """
+                  זה צילום מצב חי והמחזור עדיין לא הסתיים. כתוב בזמן הווה; אסור לומר שהמנהל סיים,
+                  שהמיקום סופי או שהמחזור נגמר. לכל שחקן מצורף מצב המשחק שלו. אסור לצחוק על אפס,
+                  ניקוד נמוך, קפטן שנכשל או נקודות שנשארו על הספסל כאשר השחקן טרם שיחק, משחק כעת,
+                  נשאר לו משחק נוסף או שמצבו אינו ידוע. במקרים האלה הניקוד זמני בלבד.
+                  """;
         StringBuilder briefing = new StringBuilder("""
                 לפניך בריף עובדתי למחזור. לכל מזהה כתוב roast אחד תחת אותו מזהה באובייקט roasts.
                 העובדות הן חומר גלם בלבד: אל תזכיר את שמות הקטגוריות ואל תנסה להשתמש בכולן.
@@ -436,22 +489,38 @@ public class AiRoastService {
                             .append(Math.abs(fact.rankChange())).append(" מקומות. ");
                 }
             }
-            briefing.append("\nקפטן: ").append(promptValue(fact.captain())).append(" תרם ")
-                    .append(fact.captainPoints()).append(" נקודות אחרי מכפיל x")
-                    .append(fact.captainMultiplier()).append(". ")
-                    .append("השחקן הבולט בהרכב: ").append(promptValue(fact.bestPlayer())).append(" עם ")
-                    .append(fact.bestPlayerPoints()).append("; השחקן עם הניקוד הנמוך בהרכב: ")
-                    .append(promptValue(fact.worstStarter())).append(" עם ")
-                    .append(fact.worstStarterPoints()).append(".\n");
+            briefing.append("\nקפטן: ").append(promptValue(fact.captain())).append(" עם ניקוד נוכחי של ")
+                    .append(fact.captainPoints()).append(" אחרי מכפיל x")
+                    .append(fact.captainMultiplier()).append("; מצב: ")
+                    .append(fact.captainMatchState().promptLabel()).append(". ");
+            if (fact.bestPlayer() == null) {
+                briefing.append("אין עדיין שחקן בהרכב שהתחיל לשחק ולכן אין שחקן בולט שאפשר לציין. ");
+            } else {
+                briefing.append("השחקן הבולט מבין מי שהתחיל לשחק: ")
+                        .append(promptValue(fact.bestPlayer())).append(" עם ")
+                        .append(fact.bestPlayerPoints()).append(". ");
+            }
+            if (fact.worstStarter() == null) {
+                briefing.append("אין עדיין שחקן בהרכב שכל משחקיו במחזור הסתיימו ולכן אין שחקן גרוע שאפשר לשפוט.\n");
+            } else {
+                briefing.append("השחקן עם הניקוד הנמוך מבין מי שסיים לשחק: ")
+                        .append(promptValue(fact.worstStarter())).append(" עם ")
+                        .append(fact.worstStarterPoints()).append(".\n");
+            }
 
             if (fact.benchBoost()) {
-                briefing.append("Bench Boost הופעל; שחקני הספסל תרמו יחד ")
-                        .append(fact.benchPoints()).append(" נקודות ונכללו בניקוד. ");
+                briefing.append("Bench Boost הופעל; ניקוד הספסל כרגע הוא ")
+                        .append(fact.benchPoints()).append(" ונכלל בניקוד. ");
             } else {
-                briefing.append("על הספסל נשארו בסך הכול ").append(fact.benchPoints())
-                        .append(" נקודות שלא נכללו; הגבוה מביניהם הוא ")
-                        .append(promptValue(fact.bestBenchPlayer())).append(" עם ")
-                        .append(fact.bestBenchPoints()).append(". ");
+                briefing.append("ניקוד הספסל כרגע הוא ").append(fact.benchPoints())
+                        .append(" ולא נכלל. ");
+                if (fact.bestBenchPlayer() == null) {
+                    briefing.append("אף שחקן ספסל עדיין לא התחיל לשחק. ");
+                } else {
+                    briefing.append("הגבוה מבין שחקני הספסל שכבר התחילו לשחק הוא ")
+                            .append(promptValue(fact.bestBenchPlayer())).append(" עם ")
+                            .append(fact.bestBenchPoints()).append(". ");
+                }
             }
             if (fact.tripleCaptain()) briefing.append("Triple Captain הופעל. ");
             if (fact.crownPlayer() != null) {
@@ -460,9 +529,26 @@ public class AiRoastService {
             }
             briefing.append("שחקני ההרכב צברו יחד ").append(fact.starterGoals()).append(" שערים, ")
                     .append(fact.starterAssists()).append(" בישולים ו-")
-                    .append(fact.starterRedCards()).append(" כרטיסים אדומים.\n\n");
+                    .append(fact.starterRedCards()).append(" כרטיסים אדומים.\n")
+                    .append("מצב כל שחקני ההרכב (מידע מחייב):\n");
+            appendPlayerSnapshots(briefing, fact.starters());
+            briefing.append("מצב כל שחקני הספסל (מידע מחייב):\n");
+            appendPlayerSnapshots(briefing, fact.bench());
+            briefing.append("\n");
         }
         return briefing.toString().trim();
+    }
+
+    private void appendPlayerSnapshots(StringBuilder briefing, List<PlayerRoastSnapshot> players) {
+        if (players.isEmpty()) {
+            briefing.append("- אין שחקנים ברשימה.\n");
+            return;
+        }
+        for (PlayerRoastSnapshot player : players) {
+            briefing.append("- ").append(promptValue(player.name())).append(": ")
+                    .append(player.points()).append(" נקודות; ")
+                    .append(player.matchState().promptLabel()).append(".\n");
+        }
     }
 
     private String promptValue(String value) {
@@ -481,18 +567,24 @@ public class AiRoastService {
     }
 
     private String fallback(RoastFacts f) {
+        String livePrefix = f.finalScore() ? "" : "כרגע ";
         if (f.rank() == 1 && f.crownPlayer() != null) {
-            return f.manager() + " סיים עם " + f.points() + " נקודות וכתר של " + f.crownPlayer()
+            return f.manager() + " " + livePrefix + "עם " + f.points() + " נקודות וכתר של " + f.crownPlayer()
                     + ". רצינו לצחוק עליו, אבל לצערנו הוא הגיע עם קבלות.";
         }
-        if (f.rank() == 1) return f.manager() + " לקח את המקום הראשון עם " + f.points()
+        if (f.rank() == 1) return f.manager() + " " + livePrefix + "במקום הראשון עם " + f.points()
                 + " נקודות. אין הרבה חומר ל-roast, וזה כנראה הדבר הכי מעצבן כאן.";
-        if (!f.benchBoost() && f.bestBenchPoints() >= 6) return f.manager() + " השאיר את "
+        boolean benchCanBeJudged = f.finalScore() || f.bench().stream()
+                .filter(player -> Objects.equals(player.name(), f.bestBenchPlayer()))
+                .anyMatch(player -> player.matchState().isSafeToJudge());
+        if (!f.benchBoost() && benchCanBeJudged && f.bestBenchPoints() >= 6) return f.manager() + " השאיר את "
                 + f.bestBenchPlayer() + " עם " + f.bestBenchPoints() + " נקודות על הספסל. לפחות מישהו בקבוצה שלו הופיע למחזור.";
-        if (f.captainPoints() == 0) return f.manager() + " שם את הסרט על " + f.captain()
+        if (f.captainPoints() == 0 && (f.finalScore() || f.captainMatchState().isSafeToJudge())) return f.manager() + " שם את הסרט על " + f.captain()
                 + " וקיבל אפס. מהלך אמיץ, אם מתעלמים לרגע מהקטע שבו הוא היה נורא.";
-        if (f.points() >= f.leagueAverage() + 5) return f.manager() + " סיים עם " + f.points()
+        if (f.points() >= f.leagueAverage() + 5) return f.manager() + " " + livePrefix + "עם " + f.points()
                 + " נקודות, יפה מעל הממוצע. הפעם אפילו אין צורך להמציא לו תירוץ.";
+        if (!f.finalScore()) return f.manager() + " כרגע עם " + f.points() + " נקודות ובמקום " + f.rank()
+                + " מתוך " + f.leagueSize() + ". המחזור עוד חי, אז גם העקיצה תחכה לשריקת הסיום.";
         return f.manager() + " סיים עם " + f.points() + " נקודות ובמקום " + f.rank() + " מתוך "
                 + f.leagueSize() + ". לא מחזור שייכנס להיסטוריה, וגם הוא כנראה מעדיף שכך.";
     }
@@ -508,6 +600,7 @@ public class AiRoastService {
             Map<Integer, UserPointsEntity> currentByUser,
             Map<Integer, UserPointsEntity> previousByUser,
             Map<Integer, PlayerGameweekStatsEntity> statsByPlayer,
-            Map<Integer, Integer> scores
+            Map<Integer, Integer> scores,
+            Map<Integer, List<FixtureEntity>> fixturesByTeam
     ) {}
 }
