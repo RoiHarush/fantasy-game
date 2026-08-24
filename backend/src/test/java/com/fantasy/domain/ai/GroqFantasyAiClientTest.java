@@ -77,6 +77,14 @@ class GroqFantasyAiClientTest {
         assertEquals(1, calls.get());
     }
 
+    @Test
+    void usesGroqDefaultModelWhenSharedModelSettingIsBlank() {
+        GroqFantasyAiClient client = new GroqFantasyAiClient(
+                mapper, true, "groq", "test-key", " ", baseUrl + "/chat");
+
+        assertEquals("openai/gpt-oss-20b", client.modelName());
+    }
+
     private GroqFantasyAiClient client(String url) {
         return new GroqFantasyAiClient(mapper, true, "groq", "test-key",
                 "openai/gpt-oss-20b", url);

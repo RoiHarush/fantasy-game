@@ -97,6 +97,18 @@ Copy the two `.env.example` files as a reference, but configure secrets in the h
 - one stable VAPID key pair in `WEB_PUSH_VAPID_PUBLIC_KEY` and `WEB_PUSH_VAPID_PRIVATE_KEY`
 - `WEB_PUSH_VAPID_SUBJECT`, normally a `mailto:` address for the operator
 
+The optional AI surfaces run entirely in the backend. For Gemini configure these only in Render:
+
+- `AI_ENABLED=true`
+- `AI_PROVIDER=gemini`
+- `AI_API_KEY`, created in Google AI Studio
+- `AI_MODEL=gemini-3.5-flash`
+- `AI_ROAST_ENABLED=true` when the public roast feed is ready; the private super-admin preview works independently
+- `AI_COACH_ENABLED`, kept `false` until Alex is ready for users
+
+No Gemini secret belongs in Vercel or in a `NEXT_PUBLIC_*` variable. Switching back to Groq requires only
+`AI_PROVIDER=groq`, the Groq key, and a compatible `AI_MODEL`; no code or database change is needed.
+
 Local development defaults to `MAIL_PROVIDER=log`; verification and password-reset links are printed in the backend log. Production uses Resend's HTTP API. The free Resend plan is ample for this league, but delivery to real users requires verifying a domain in Resend first.
 
 Generate the Web Push keys once (do not generate them again on every deploy):

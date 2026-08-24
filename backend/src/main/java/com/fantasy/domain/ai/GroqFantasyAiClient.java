@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +18,11 @@ import java.time.Duration;
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(prefix = "app.ai", name = "provider", havingValue = "groq", matchIfMissing = true)
 public class GroqFantasyAiClient implements FantasyAiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GroqFantasyAiClient.class);
+    private static final String DEFAULT_MODEL = "openai/gpt-oss-20b";
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -39,8 +42,8 @@ public class GroqFantasyAiClient implements FantasyAiClient {
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         this.enabled = enabled;
         this.provider = provider;
-        this.apiKey = apiKey;
-        this.model = model;
+        this.apiKey = apiKey == null ? "" : apiKey.trim();
+        this.model = model == null || model.isBlank() ? DEFAULT_MODEL : model.trim();
         this.baseUrl = baseUrl;
     }
 
