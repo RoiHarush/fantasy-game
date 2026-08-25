@@ -32,12 +32,14 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
     private final String apiKey;
     private final String model;
     private final String baseUrl;
+    private final Duration requestTimeout;
 
     public GeminiFantasyAiClient(ObjectMapper objectMapper,
                                  @Value("${app.ai.enabled:false}") boolean enabled,
                                  @Value("${app.ai.api-key:}") String apiKey,
                                  @Value("${app.ai.model:}") String configuredModel,
-                                 @Value("${app.ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta/models}") String baseUrl) {
+                                 @Value("${app.ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta/models}") String baseUrl,
+                                 @Value("${app.ai.request-timeout-seconds:60}") int requestTimeoutSeconds) {
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         this.enabled = enabled;
@@ -45,6 +47,7 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
         this.model = configuredModel == null || configuredModel.isBlank()
                 ? DEFAULT_MODEL : configuredModel.trim();
         this.baseUrl = stripTrailingSlash(baseUrl);
+        this.requestTimeout = Duration.ofSeconds(Math.clamp(requestTimeoutSeconds, 5, 120));
     }
 
     @Override
@@ -85,7 +88,7 @@ public class GeminiFantasyAiClient implements FantasyAiClient {
             }
 
             HttpRequest request = HttpRequest.newBuilder(endpoint())
-                    .timeout(Duration.ofSeconds(25))
+                    .timeout(requestTimeout)
                     .header("x-goog-api-key", apiKey)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))

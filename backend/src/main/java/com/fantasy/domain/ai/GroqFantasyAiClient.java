@@ -31,13 +31,15 @@ public class GroqFantasyAiClient implements FantasyAiClient {
     private final String apiKey;
     private final String model;
     private final String baseUrl;
+    private final Duration requestTimeout;
 
     public GroqFantasyAiClient(ObjectMapper objectMapper,
                                @Value("${app.ai.enabled:false}") boolean enabled,
                                @Value("${app.ai.provider:groq}") String provider,
                                @Value("${app.ai.api-key:}") String apiKey,
                                @Value("${app.ai.model:openai/gpt-oss-20b}") String model,
-                               @Value("${app.ai.base-url:https://api.groq.com/openai/v1/chat/completions}") String baseUrl) {
+                               @Value("${app.ai.base-url:https://api.groq.com/openai/v1/chat/completions}") String baseUrl,
+                               @Value("${app.ai.request-timeout-seconds:60}") int requestTimeoutSeconds) {
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         this.enabled = enabled;
@@ -45,6 +47,7 @@ public class GroqFantasyAiClient implements FantasyAiClient {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null || model.isBlank() ? DEFAULT_MODEL : model.trim();
         this.baseUrl = baseUrl;
+        this.requestTimeout = Duration.ofSeconds(Math.clamp(requestTimeoutSeconds, 5, 120));
     }
 
     @Override
@@ -88,7 +91,7 @@ public class GroqFantasyAiClient implements FantasyAiClient {
             messages.addObject().put("role", "user").put("content", userPrompt);
 
             HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl))
-                    .timeout(Duration.ofSeconds(12))
+                    .timeout(requestTimeout)
                     .header("Authorization", "Bearer " + apiKey)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))

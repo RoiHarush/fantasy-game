@@ -80,14 +80,14 @@ class GroqFantasyAiClientTest {
     @Test
     void usesGroqDefaultModelWhenSharedModelSettingIsBlank() {
         GroqFantasyAiClient client = new GroqFantasyAiClient(
-                mapper, true, "groq", "test-key", " ", baseUrl + "/chat");
+                mapper, true, "groq", "test-key", " ", baseUrl + "/chat", 60);
 
         assertEquals("openai/gpt-oss-20b", client.modelName());
     }
 
     private GroqFantasyAiClient client(String url) {
         return new GroqFantasyAiClient(mapper, true, "groq", "test-key",
-                "openai/gpt-oss-20b", url);
+                "openai/gpt-oss-20b", url, 60);
     }
 
     private void respond(HttpExchange exchange, int status, String body) throws IOException {

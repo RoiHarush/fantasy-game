@@ -89,8 +89,7 @@ public class LeagueScoringService {
         }
 
         Map<String, int[]> totalsByLabel = new LinkedHashMap<>();
-        fixtureStats.stream()
-                .map(stats -> calculateFixturePlayerScore(stats, league))
+        calculatePlayerGameweekFixtureScores(aggregateStats, fixtureStats, league).stream()
                 .flatMap(score -> score.lines().stream())
                 .forEach(line -> {
                     int[] totals = totalsByLabel.computeIfAbsent(line.label(), ignored -> new int[2]);
@@ -102,12 +101,46 @@ public class LeagueScoringService {
         totalsByLabel.forEach((label, totals) -> lines.add(
                 new PlayerScoreBreakdown.Line(label, totals[0], totals[1])
         ));
-        int correctionPoints = calculateGameweekCorrectionPoints(aggregateStats, league);
-        if (correctionPoints != 0) {
-            lines.add(new PlayerScoreBreakdown.Line("League adjustments", 1, correctionPoints));
-        }
         int total = lines.stream().mapToInt(PlayerScoreBreakdown.Line::points).sum();
         return new PlayerScoreBreakdown(total, lines);
+    }
+
+    public List<PlayerScoreBreakdown> calculatePlayerGameweekFixtureScores(
+            PlayerGameweekStatsEntity aggregateStats,
+            List<PlayerFixtureStatsEntity> fixtureStats,
+            LeagueEntity league) {
+        if (fixtureStats == null || fixtureStats.isEmpty()) return List.of();
+
+        List<PlayerScoreBreakdown> scores = fixtureStats.stream()
+                .map(stats -> calculateFixturePlayerScore(stats, league))
+                .toList();
+        if (league == null) return scores;
+
+        Map<String, Integer> rules = effectiveRules(league);
+        PlayerPosition position = league.effectivePosition(aggregateStats.getPlayer());
+        int assistAdjustment = league.effectiveAssists(
+                aggregateStats.getPlayer().getId(),
+                aggregateStats.getGameweek(),
+                aggregateStats.getAssists()
+        ) - aggregateStats.getAssists();
+        int penaltyAdjustment = league.effectivePenaltiesConceded(
+                aggregateStats.getPlayer().getId(),
+                aggregateStats.getGameweek(),
+                aggregateStats.getPenaltiesConceded()
+        ) - aggregateStats.getPenaltiesConceded();
+
+        scores = adjustFixtureLineCount(
+                scores,
+                "Assists",
+                assistAdjustment,
+                rule(rules, "ASSIST", position)
+        );
+        return adjustFixtureLineCount(
+                scores,
+                "Penalties conceded",
+                penaltyAdjustment,
+                rule(rules, "PENALTY_CONCEDED", position)
+        );
     }
 
     private PlayerScoreBreakdown calculatePlayerScore(ScorablePlayerStats stats,
@@ -186,26 +219,64 @@ public class LeagueScoringService {
         return new PlayerScoreBreakdown(total, lines);
     }
 
-    private int calculateGameweekCorrectionPoints(PlayerGameweekStatsEntity aggregateStats,
-                                                  LeagueEntity league) {
-        if (league == null) return 0;
+    private List<PlayerScoreBreakdown> adjustFixtureLineCount(List<PlayerScoreBreakdown> source,
+                                                              String label,
+                                                              int delta,
+                                                              int pointsPerEvent) {
+        List<List<PlayerScoreBreakdown.Line>> fixtureLines = new ArrayList<>();
+        source.forEach(score -> fixtureLines.add(new ArrayList<>(score.lines())));
 
-        Map<String, Integer> rules = effectiveRules(league);
-        PlayerPosition position = league.effectivePosition(aggregateStats.getPlayer());
-        int effectiveAssists = league.effectiveAssists(
-                aggregateStats.getPlayer().getId(),
-                aggregateStats.getGameweek(),
-                aggregateStats.getAssists()
-        );
-        int effectivePenalties = league.effectivePenaltiesConceded(
-                aggregateStats.getPlayer().getId(),
-                aggregateStats.getGameweek(),
-                aggregateStats.getPenaltiesConceded()
-        );
+        if (delta < 0) {
+            int remaining = -delta;
+            for (int fixtureIndex = fixtureLines.size() - 1;
+                 fixtureIndex >= 0 && remaining > 0;
+                 fixtureIndex--) {
+                List<PlayerScoreBreakdown.Line> lines = fixtureLines.get(fixtureIndex);
+                for (int lineIndex = 0; lineIndex < lines.size() && remaining > 0; lineIndex++) {
+                    PlayerScoreBreakdown.Line line = lines.get(lineIndex);
+                    if (!line.label().equals(label)) continue;
+                    int removed = Math.min(line.count(), remaining);
+                    int updatedCount = line.count() - removed;
+                    remaining -= removed;
+                    if (updatedCount == 0) {
+                        lines.remove(lineIndex);
+                        lineIndex--;
+                    } else {
+                        lines.set(lineIndex, new PlayerScoreBreakdown.Line(
+                                label,
+                                updatedCount,
+                                updatedCount * pointsPerEvent
+                        ));
+                    }
+                }
+            }
+        } else if (delta > 0) {
+            List<PlayerScoreBreakdown.Line> lines = fixtureLines.getLast();
+            int existingIndex = -1;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).label().equals(label)) {
+                    existingIndex = i;
+                    break;
+                }
+            }
+            if (existingIndex >= 0) {
+                int updatedCount = lines.get(existingIndex).count() + delta;
+                lines.set(existingIndex, new PlayerScoreBreakdown.Line(
+                        label,
+                        updatedCount,
+                        updatedCount * pointsPerEvent
+                ));
+            } else {
+                lines.add(new PlayerScoreBreakdown.Line(label, delta, delta * pointsPerEvent));
+            }
+        }
 
-        return (effectiveAssists - aggregateStats.getAssists()) * rule(rules, "ASSIST", position)
-                + (effectivePenalties - aggregateStats.getPenaltiesConceded())
-                * rule(rules, "PENALTY_CONCEDED", position);
+        return fixtureLines.stream()
+                .map(lines -> new PlayerScoreBreakdown(
+                        lines.stream().mapToInt(PlayerScoreBreakdown.Line::points).sum(),
+                        lines
+                ))
+                .toList();
     }
 
     private void addCountedLine(List<PlayerScoreBreakdown.Line> lines,

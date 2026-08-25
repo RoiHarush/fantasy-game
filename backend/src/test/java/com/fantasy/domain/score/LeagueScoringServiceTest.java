@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class LeagueScoringServiceTest {
 
@@ -177,6 +178,71 @@ class LeagueScoringServiceTest {
         league.adjustAssists(4, 3, 1, 1);
 
         assertEquals(6, scoringService.calculatePlayerPoints(stats, league));
+    }
+
+    @Test
+    void removesCorrectedAssistFromGameweekAndFixtureBreakdowns() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+        PlayerGameweekStatsEntity aggregate = stats(4, PlayerPosition.MIDFIELDER);
+        aggregate.setGameweek(3);
+        aggregate.setMinutesPlayed(90);
+        aggregate.setStarted(true);
+        aggregate.setAssists(1);
+        aggregate.setGoalsConceded(1);
+        PlayerFixtureStatsEntity fixture = fixtureStats(aggregate.getPlayer(), 301, 3);
+        fixture.setMinutesPlayed(90);
+        fixture.setStarted(true);
+        fixture.setAssists(1);
+        fixture.setGoalsConceded(1);
+        league.adjustAssists(4, 3, 1, -1);
+
+        PlayerScoreBreakdown gameweekScore = scoringService.calculatePlayerGameweekScore(
+                aggregate,
+                List.of(fixture),
+                league
+        );
+        PlayerScoreBreakdown fixtureScore = scoringService.calculatePlayerGameweekFixtureScores(
+                aggregate,
+                List.of(fixture),
+                league
+        ).getFirst();
+
+        assertEquals(2, gameweekScore.totalPoints());
+        assertEquals(2, fixtureScore.totalPoints());
+        assertFalse(gameweekScore.lines().stream().anyMatch(line -> line.label().equals("Assists")));
+        assertFalse(fixtureScore.lines().stream().anyMatch(line -> line.label().equals("Assists")));
+    }
+
+    @Test
+    void appliesGameweekCorrectionOnlyOnceAcrossMultipleFixtures() {
+        LeagueEntity league = new LeagueEntity();
+        league.setScoringRules(new HashMap<>(LeagueScoringRules.defaults()));
+        PlayerGameweekStatsEntity aggregate = stats(4, PlayerPosition.MIDFIELDER);
+        aggregate.setGameweek(3);
+        aggregate.setAssists(2);
+        PlayerFixtureStatsEntity first = fixtureStats(aggregate.getPlayer(), 301, 3);
+        first.setAssists(1);
+        PlayerFixtureStatsEntity second = fixtureStats(aggregate.getPlayer(), 302, 3);
+        second.setAssists(1);
+        league.adjustAssists(4, 3, 2, -1);
+
+        List<PlayerScoreBreakdown> fixtureScores = scoringService.calculatePlayerGameweekFixtureScores(
+                aggregate,
+                List.of(first, second),
+                league
+        );
+
+        assertEquals(1, fixtureScores.stream()
+                .flatMap(score -> score.lines().stream())
+                .filter(line -> line.label().equals("Assists"))
+                .mapToInt(PlayerScoreBreakdown.Line::count)
+                .sum());
+        assertEquals(3, scoringService.calculatePlayerGameweekScore(
+                aggregate,
+                List.of(first, second),
+                league
+        ).totalPoints());
     }
 
     @Test

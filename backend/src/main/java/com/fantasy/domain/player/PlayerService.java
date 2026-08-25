@@ -12,6 +12,7 @@ import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.league.LeagueRepository;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.score.LeagueScoringService;
+import com.fantasy.domain.score.PlayerScoreBreakdown;
 import com.fantasy.domain.transfer.LeagueTransferWindowRepository;
 import com.fantasy.domain.transfer.LeagueTransferWindowEntity;
 import com.fantasy.domain.transfer.SupplementalDraftPoolService;
@@ -449,12 +450,22 @@ public class PlayerService {
         );
         dto.setCaptainMultiplier(captainMultiplier);
         Player renderedPlayer = effectivePlayer;
+        List<PlayerScoreBreakdown> fixtureScores =
+                leagueScoringService.calculatePlayerGameweekFixtureScores(
+                        stats,
+                        fixtureStats,
+                        scoringLeague
+                );
         Map<Integer, PlayerFixtureStatsEntity> statsByFixture = fixtureStats.stream()
                 .collect(Collectors.toMap(
                         fixtureStat -> fixtureStat.getFixture().getId(),
                         Function.identity(),
                         (left, right) -> right
                 ));
+        Map<Integer, PlayerScoreBreakdown> scoresByFixture = new HashMap<>();
+        for (int i = 0; i < fixtureStats.size(); i++) {
+            scoresByFixture.put(fixtureStats.get(i).getFixture().getId(), fixtureScores.get(i));
+        }
         List<FixtureEntity> scheduledFixtures = fixtureRepo.findAllByGameweekAndTeam(gw, player.getTeamId());
         if (scheduledFixtures.isEmpty()) {
             dto.setFixtures(fixtureStats.stream()
@@ -462,7 +473,7 @@ public class PlayerService {
                             renderedPlayer,
                             fixtureStat,
                             playerTeam,
-                            scoringLeague
+                            scoresByFixture.get(fixtureStat.getFixture().getId())
                     ))
                     .toList());
         } else {
@@ -471,7 +482,12 @@ public class PlayerService {
                         PlayerFixtureStatsEntity fixtureStat = statsByFixture.get(fixture.getId());
                         return fixtureStat == null
                                 ? buildEmptyFixtureMatchStatsDto(renderedPlayer, fixture)
-                                : buildFixtureMatchStatsDto(renderedPlayer, fixtureStat, playerTeam, scoringLeague);
+                                : buildFixtureMatchStatsDto(
+                                        renderedPlayer,
+                                        fixtureStat,
+                                        playerTeam,
+                                        scoresByFixture.get(fixture.getId())
+                                );
                     })
                     .toList());
         }
@@ -491,7 +507,7 @@ public class PlayerService {
     private PlayerMatchStatsDto buildFixtureMatchStatsDto(Player player,
                                                           PlayerFixtureStatsEntity stats,
                                                           TeamEntity playerTeam,
-                                                          LeagueEntity scoringLeague) {
+                                                          PlayerScoreBreakdown score) {
         FixtureEntity fixture = stats.getFixture();
         TeamEntity homeTeam = teamRepo.findById(fixture.getHomeTeamId()).orElse(null);
         TeamEntity awayTeam = teamRepo.findById(fixture.getAwayTeamId()).orElse(null);
@@ -503,7 +519,7 @@ public class PlayerService {
                 fixture.getHomeTeamScore(),
                 fixture.getAwayTeamScore(),
                 false,
-                leagueScoringService.calculateFixturePlayerScore(stats, scoringLeague)
+                score
         );
         dto.setFixtureId(fixture.getId());
         dto.setKickoffTime(fixture.getKickoffTime());

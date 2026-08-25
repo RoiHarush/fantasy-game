@@ -103,6 +103,7 @@ The optional AI surfaces run entirely in the backend. For Gemini configure these
 - `AI_PROVIDER=gemini`
 - `AI_API_KEY`, created in Google AI Studio
 - `AI_MODEL=gemini-3.5-flash`
+- `AI_REQUEST_TIMEOUT_SECONDS=60`, the maximum wait for one provider response
 - `AI_ROAST_PROMPT_FILE=/etc/secrets/ai-roast-prompt.txt`, pointing to a Render Secret File named `ai-roast-prompt.txt`; a missing or empty file safely uses the built-in prompt
 - `AI_ROAST_ENABLED=true` when the public roast feed is ready; the private super-admin preview works independently
 - `AI_COACH_ENABLED`, kept `false` until Alex is ready for users

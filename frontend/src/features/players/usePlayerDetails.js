@@ -20,5 +20,6 @@ export function usePlayerMatchStats(playerId, gameweekId, userId) {
         queryFn: ({ signal }) => getPlayerMatchStats(playerId, gameweekId, userId, { signal }),
         enabled: Boolean(playerId && gameweekId && userId),
         staleTime: 60_000,
+        refetchOnMount: "always",
     });
 }

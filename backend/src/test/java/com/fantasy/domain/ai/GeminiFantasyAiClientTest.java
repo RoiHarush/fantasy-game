@@ -143,14 +143,14 @@ class GeminiFantasyAiClientTest {
             respond(exchange, 200, "{}");
         });
         GeminiFantasyAiClient client = new GeminiFantasyAiClient(
-                mapper, false, "test-key", "gemini-test", baseUrl + "/models/");
+                mapper, false, "test-key", "gemini-test", baseUrl + "/models/", 60);
 
         assertTrue(client.complete("system", "question", 100).isEmpty());
         assertEquals(0, calls.get());
     }
 
     private GeminiFantasyAiClient client(String model) {
-        return new GeminiFantasyAiClient(mapper, true, "test-key", model, baseUrl + "/models/");
+        return new GeminiFantasyAiClient(mapper, true, "test-key", model, baseUrl + "/models/", 60);
     }
 
     private void respond(HttpExchange exchange, int status, String body) throws IOException {

@@ -31,6 +31,7 @@ export function useAdminAssists(leagueId, gameweek) {
             queryClient.setQueryData(queryKey, (current = []) => (
                 updateStatList(current, updatedPlayer, "numOfAssist")
             ));
+            queryClient.invalidateQueries({ queryKey: ["player-match"] });
         },
     });
 
@@ -51,6 +52,7 @@ export function useAdminPenalties(leagueId, gameweek) {
             queryClient.setQueryData(queryKey, (current = []) => (
                 updateStatList(current, updatedPlayer, "penaltiesConceded")
             ));
+            queryClient.invalidateQueries({ queryKey: ["player-match"] });
         },
     });
 
