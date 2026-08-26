@@ -116,19 +116,20 @@ function TeamProfilePage() {
                             sizes="(max-width: 767px) calc(100vw - 4rem), 16rem"
                         />
                         <div className="mt-3 grid grid-cols-2 gap-2">
-                            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-app-accent-border bg-app-accent-surface px-3 text-xs font-black text-app-accent-foreground transition hover:bg-app-accent-hover">
+                            <div className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl border border-app-accent-border bg-app-accent-surface px-3 text-xs font-black text-app-accent-foreground transition hover:bg-app-accent-hover focus-within:ring-3 focus-within:ring-app-accent-surface">
                                 <ImagePlus className="size-4" aria-hidden="true" />
-                                Choose image
+                                <span>Choose image</span>
                                 <input
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp,image/gif"
-                                    className="sr-only"
+                                    aria-label="Choose team image"
+                                    className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                                     onChange={(event) => {
                                         chooseLogo(event.target.files?.[0]);
                                         event.target.value = "";
                                     }}
                                 />
-                            </label>
+                            </div>
                             <Button type="button" variant="danger" disabled={removing || !hasCustomLogo} onClick={removeLogo} className="min-h-11 px-3 text-xs font-black">
                                 <Trash2 className="size-4" aria-hidden="true" />
                                 Remove
