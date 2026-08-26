@@ -52,7 +52,9 @@ export function useGameweekRoast(gameweekId, enabled = true) {
         queryKey: queryKeys.gameweekRoast(gameweekId),
         queryFn: ({ signal }) => getGameweekRoast(gameweekId, { signal }),
         enabled: Boolean(enabled && gameweekId),
-        staleTime: Infinity,
+        staleTime: 60_000,
+        refetchOnMount: "always",
+        refetchInterval: enabled ? 5 * 60_000 : false,
     });
 }
 

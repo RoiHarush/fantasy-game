@@ -6,7 +6,7 @@ import { Button } from "../../../shared/ui/Button";
 import { roastFeaturesEnabled } from "../../../features/ai/useAlexCoach";
 import { useGameweekRoast, useGenerateGameweekRoast } from "../../../features/status/useStatusData";
 
-export default function GameweekRoast({ gameweekId, available = false, unavailableMessage = "ה-roast ייפתח בסיום המחזור.", featureEnabled = roastFeaturesEnabled, readOnly = false, previewFeed }) {
+export default function GameweekRoast({ gameweekId, available = false, manualGenerationAllowed = false, unavailableMessage = "ה-roast ייפתח בסיום המחזור.", featureEnabled = roastFeaturesEnabled, readOnly = false, previewFeed }) {
     const hasPreviewFeed = previewFeed !== undefined;
     const query = useGameweekRoast(gameweekId, featureEnabled && available && !hasPreviewFeed);
     const generate = useGenerateGameweekRoast(gameweekId);
@@ -48,8 +48,8 @@ export default function GameweekRoast({ gameweekId, available = false, unavailab
                     </div>
                     {!available && <p className="text-sm text-app-muted">{unavailableMessage}</p>}
                     {available && !current && <>
-                        <p className="text-base font-extrabold text-app-foreground sm:text-lg">אותו roast, לכל הליגה</p>
-                        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-app-muted">אחד החברים יכול לפתוח את הסבב; מאותו רגע כולם רואים את אותה הירידה שמתחלפת באותו זמן.</p>
+                        <p className="text-base font-extrabold text-app-foreground sm:text-lg">ה-roast של הליגה בהכנה</p>
+                        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-app-muted">בסיום כל יום משחקים נוצרת לכולם אותה גרסה מעודכנת.</p>
                     </>}
                     {current && <div aria-live="polite">
                         <p className="text-xs font-black text-brand-purple dark:text-brand-cyan">{current.targetDisplayName} · {current.fantasyTeamName}</p>
@@ -57,7 +57,7 @@ export default function GameweekRoast({ gameweekId, available = false, unavailab
                     </div>}
                     {(query.error || (!readOnly && generate.error)) && <p role="alert" className="mt-2 text-sm text-app-danger-foreground">{(query.error || generate.error).message}</p>}
                 </div>
-                {available && !current && !readOnly && <Button type="button" size="sm" disabled={generate.isPending} onClick={() => generate.mutate()}>
+                {available && manualGenerationAllowed && !current && !readOnly && <Button type="button" size="sm" disabled={generate.isPending} onClick={() => generate.mutate()}>
                     {generate.isPending ? "מכין לכולם…" : "פתח את סבב ה-roast"}
                 </Button>}
             </div>

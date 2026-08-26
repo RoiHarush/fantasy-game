@@ -1,6 +1,7 @@
 package com.fantasy.scheduler;
 
 import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.domain.ai.AiRoastGenerationRequestedEvent;
 import com.fantasy.domain.game.*;
 import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
 import com.fantasy.domain.notification.NotificationEvents;
@@ -155,12 +156,13 @@ public class DailyPointsScheduler {
                 .filter(data -> data.getLeague() != null)
                 .map(data -> data.getLeague().getId())
                 .distinct()
-                .forEach(leagueId -> AfterCommitExecutor.run(() -> applicationEvents.publishEvent(
-                        LeagueNotificationRequestedEvent.league(
-                                leagueId,
-                                NotificationEvents.matchdayClosed(gwId, date.toString())
-                        )
-                )));
+                .forEach(leagueId -> AfterCommitExecutor.run(() -> {
+                    applicationEvents.publishEvent(LeagueNotificationRequestedEvent.league(
+                            leagueId,
+                            NotificationEvents.matchdayClosed(gwId, date.toString())
+                    ));
+                    applicationEvents.publishEvent(new AiRoastGenerationRequestedEvent(leagueId, gwId, false));
+                }));
 
         log.info("Date {} marked as CALCULATED.", date);
     }

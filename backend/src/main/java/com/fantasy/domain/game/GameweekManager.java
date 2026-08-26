@@ -1,6 +1,7 @@
 package com.fantasy.domain.game;
 
 import com.fantasy.config.AfterCommitExecutor;
+import com.fantasy.domain.ai.AiRoastGenerationRequestedEvent;
 import com.fantasy.scheduler.LifecycleScheduleChangedEvent;
 import com.fantasy.domain.notification.LeagueNotificationRequestedEvent;
 import com.fantasy.domain.notification.NotificationEvents;
@@ -221,12 +222,13 @@ public class GameweekManager {
                 .filter(data -> data.getLeague() != null)
                 .map(data -> data.getLeague().getId())
                 .distinct()
-                .forEach(leagueId -> AfterCommitExecutor.run(() -> lifecycleEvents.publishEvent(
-                        LeagueNotificationRequestedEvent.league(
-                                leagueId,
-                                NotificationEvents.gameweekFinalized(gameweekId)
-                        )
-                )));
+                .forEach(leagueId -> AfterCommitExecutor.run(() -> {
+                    lifecycleEvents.publishEvent(LeagueNotificationRequestedEvent.league(
+                            leagueId,
+                            NotificationEvents.gameweekFinalized(gameweekId)
+                    ));
+                    lifecycleEvents.publishEvent(new AiRoastGenerationRequestedEvent(leagueId, gameweekId, true));
+                }));
     }
 
     private void publishScheduleChanged(String reason) {

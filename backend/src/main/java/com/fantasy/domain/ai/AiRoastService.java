@@ -231,6 +231,72 @@ public class AiRoastService {
         return toFeed(gameweek, roasts.findByLeague_IdAndGameweekOrderByRotationIndexAsc(leagueId, gameweek));
     }
 
+    /**
+     * Rebuilds the shared league feed after a settled matchday or the final gameweek calculation.
+     * An incomplete provider response never overwrites the last known-good feed.
+     */
+    @Transactional
+    public boolean refreshForLeague(long leagueId, int gameweek, boolean finalVersion) {
+        if (!enabled) return false;
+
+        GameWeekEntity gw = gameweeks.findById(gameweek)
+                .orElseThrow(() -> new IllegalArgumentException("Gameweek was not found"));
+        if (finalVersion && !gw.isCalculated()) {
+            throw new IllegalStateException("Cannot generate a final roast before the gameweek is calculated");
+        }
+
+        List<UserGameDataEntity> members = gameData.findAllByLeagueIdForUpdate(leagueId).stream()
+                .filter(member -> member.getUser() != null && member.getLeague() != null)
+                .toList();
+        if (members.isEmpty()) {
+            log.info("Skipping automatic roast for an empty league: leagueId={}, gameweek={}", leagueId, gameweek);
+            return false;
+        }
+
+        boolean useFinalFacts = finalVersion || gw.isCalculated();
+        LeagueRoundContext context = buildRoundContext(members.getFirst(), gameweek);
+        List<RoastFacts> facts = members.stream()
+                .map(target -> buildFacts(target, gameweek, context, useFinalFacts))
+                .sorted(Comparator.comparingInt(RoastFacts::rank).thenComparingInt(RoastFacts::userGameDataId))
+                .toList();
+        Map<Integer, String> generated = generateBatch(facts, useFinalFacts);
+        if (generated.size() != facts.size()) {
+            log.warn("Automatic roast response was incomplete; preserving previous feed: leagueId={}, gameweek={}, expectedItems={}, generatedItems={}, finalVersion={}",
+                    leagueId, gameweek, facts.size(), generated.size(), useFinalFacts);
+            return false;
+        }
+
+        List<AiRoastEntity> existing = roasts.findByLeague_IdAndGameweekOrderByRotationIndexAsc(leagueId, gameweek);
+        Map<Integer, AiRoastEntity> existingByMemberId = existing.stream()
+                .collect(Collectors.toMap(entity -> entity.getUser().getId(), Function.identity()));
+        Map<Integer, UserGameDataEntity> membersById = members.stream()
+                .collect(Collectors.toMap(UserGameDataEntity::getId, Function.identity()));
+        LocalDateTime generatedAt = LocalDateTime.now();
+        List<AiRoastEntity> refreshed = new ArrayList<>();
+
+        for (int index = 0; index < facts.size(); index++) {
+            RoastFacts fact = facts.get(index);
+            AiRoastEntity entity = existingByMemberId.remove(fact.userGameDataId());
+            if (entity == null) {
+                entity = new AiRoastEntity();
+                entity.setUser(membersById.get(fact.userGameDataId()));
+                entity.setLeague(members.getFirst().getLeague());
+                entity.setGameweek(gameweek);
+            }
+            entity.setRotationIndex(index);
+            entity.setContent(generated.get(fact.userGameDataId()));
+            entity.setProvider(ai.providerName());
+            entity.setGeneratedAt(generatedAt);
+            refreshed.add(entity);
+        }
+
+        if (!existingByMemberId.isEmpty()) roasts.deleteAll(existingByMemberId.values());
+        roasts.saveAll(refreshed);
+        log.info("Automatic roast feed refreshed: leagueId={}, gameweek={}, items={}, finalVersion={}, provider={}, model={}",
+                leagueId, gameweek, refreshed.size(), useFinalFacts, ai.providerName(), ai.modelName());
+        return true;
+    }
+
     private LeagueRoundContext buildRoundContext(UserGameDataEntity viewer, int gameweek) {
         long leagueId = viewer.getLeague().getId();
         List<UserPointsEntity> current = points.findByGameweekAndUser_League_Id(gameweek, leagueId);

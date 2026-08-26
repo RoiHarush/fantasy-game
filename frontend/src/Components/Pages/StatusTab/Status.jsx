@@ -35,6 +35,7 @@ function Status({
     const dailyStatus = preview ? previewData.dailyStatus ?? [] : dailyStatusQuery.data ?? [];
     const leagueUser = league?.users?.find((leagueMember) => String(leagueMember.id) === String(user.id));
     const isCalculated = currentGameweek?.calculated === true;
+    const hasSettledMatchday = dailyStatus.some((day) => day.isCalculated === true);
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-5 overflow-x-clip">
@@ -55,10 +56,11 @@ function Status({
 
             <GameweekRoast
                 gameweekId={currentGameweek?.id}
-                available={!preSeason && isCalculated}
+                available={!preSeason && (isCalculated || hasSettledMatchday)}
+                manualGenerationAllowed={isCalculated}
                 unavailableMessage={preSeason
                     ? "The AI roast unlocks after Gameweek 1 is calculated."
-                    : "The AI roast unlocks when this gameweek is calculated."}
+                    : "The AI roast unlocks after the first matchday is calculated."}
                 readOnly={preview}
                 previewFeed={preview ? previewData?.roastFeed ?? null : undefined}
             />

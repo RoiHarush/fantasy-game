@@ -1,5 +1,6 @@
 package com.fantasy.scheduler;
 
+import com.fantasy.domain.ai.AiRoastGenerationRequestedEvent;
 import com.fantasy.domain.game.FixtureEntity;
 import com.fantasy.domain.game.FixtureRepository;
 import com.fantasy.domain.game.FixtureService;
@@ -9,7 +10,10 @@ import com.fantasy.domain.game.GameWeekService;
 import com.fantasy.domain.game.GameweekDailyStatusRepository;
 import com.fantasy.domain.score.PointsService;
 import com.fantasy.domain.score.LiveScoreManager;
+import com.fantasy.domain.league.LeagueEntity;
+import com.fantasy.domain.team.UserGameDataEntity;
 import com.fantasy.domain.team.UserGameDataRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
@@ -23,6 +27,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
 
 class DailyPointsSchedulerTest {
 
@@ -36,6 +41,7 @@ class DailyPointsSchedulerTest {
         FixtureService fixtureService = mock(FixtureService.class);
         GameWeekService gameWeekService = mock(GameWeekService.class);
         LiveScoreManager liveScores = mock(LiveScoreManager.class);
+        ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
         DailyPointsScheduler scheduler = new DailyPointsScheduler(
                 gameweeks,
                 fixtures,
@@ -46,6 +52,7 @@ class DailyPointsSchedulerTest {
                 gameWeekService,
                 liveScores
         );
+        scheduler.setApplicationEvents(events);
         LocalDate matchDate = LocalDate.now().minusDays(1);
         FixtureEntity finished = new FixtureEntity();
         finished.setId(1);
@@ -64,6 +71,11 @@ class DailyPointsSchedulerTest {
                 matchDate.atTime(java.time.LocalTime.MAX)
         )).thenReturn(Optional.of(finished));
         when(users.findAllRealUserIds()).thenReturn(List.of(10));
+        LeagueEntity league = new LeagueEntity();
+        league.setId(3L);
+        UserGameDataEntity member = new UserGameDataEntity();
+        member.setLeague(league);
+        when(users.findAllWithRelations()).thenReturn(List.of(member));
 
         scheduler.processDailyPoints();
 
@@ -71,6 +83,10 @@ class DailyPointsSchedulerTest {
         settlementOrder.verify(liveScores).updateLiveScores(4);
         settlementOrder.verify(points).calculateAndPersist(10, 4);
         settlementOrder.verify(dailyStatuses).save(org.mockito.ArgumentMatchers.any());
+        verify(events).publishEvent(argThat((Object event) -> event instanceof AiRoastGenerationRequestedEvent request
+                && request.leagueId() == 3L
+                && request.gameweek() == 4
+                && !request.finalVersion()));
     }
 
     @Test

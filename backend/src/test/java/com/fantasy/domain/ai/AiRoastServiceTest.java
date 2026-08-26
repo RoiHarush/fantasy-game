@@ -308,6 +308,83 @@ class AiRoastServiceTest {
         verify(roastRepository, never()).findByLeague_IdAndGameweekOrderByRotationIndexAsc(anyLong(), anyInt());
     }
 
+    @Test
+    void automaticRefreshReplacesTheWholeFeedOnlyAfterACompleteAiResponse() {
+        UserGameDataEntity gameData = gameData();
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(1);
+        gameweek.setCalculated(false);
+        UserPointsEntity userPoints = points(gameData, 33);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(1);
+        squad.setUser(gameData);
+        squad.setStartingLineup(List.of(10));
+        squad.setBenchMap(Map.of());
+        squad.setCaptainId(10);
+        PlayerGameweekStatsEntity captainStats = stats(10, "Captain Choice");
+        AiRoastEntity existing = new AiRoastEntity();
+        existing.setUser(gameData);
+        existing.setLeague(gameData.getLeague());
+        existing.setGameweek(1);
+        existing.setContent("Yesterday's feed");
+        existing.setProvider("gemini");
+        existing.setGeneratedAt(LocalDateTime.now().minusDays(1));
+        existing.setRotationIndex(0);
+
+        when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
+        when(gameDataRepository.findAllByLeagueIdForUpdate(3L)).thenReturn(List.of(gameData));
+        when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints));
+        when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
+        when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
+        when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(5);
+        when(roastRepository.findByLeague_IdAndGameweekOrderByRotationIndexAsc(3L, 1))
+                .thenReturn(List.of(existing));
+        when(aiClient.completeJson(any(), any(), eq(480), eq("fantasy_gameweek_roasts"), any()))
+                .thenReturn(Optional.of("""
+                        {"roasts":{"70":"Roast updated after today's matches."}}
+                        """));
+        when(aiClient.providerName()).thenReturn("gemini");
+
+        boolean updated = service.refreshForLeague(3L, 1, false);
+
+        assertTrue(updated);
+        assertEquals("Roast updated after today's matches.", existing.getContent());
+        assertEquals("gemini", existing.getProvider());
+        verify(roastRepository).saveAll(any());
+    }
+
+    @Test
+    void automaticRefreshPreservesThePreviousFeedWhenTheProviderResponseIsIncomplete() {
+        UserGameDataEntity gameData = gameData();
+        GameWeekEntity gameweek = new GameWeekEntity();
+        gameweek.setId(1);
+        UserPointsEntity userPoints = points(gameData, 33);
+        UserSquadEntity squad = new UserSquadEntity();
+        squad.setGameweek(1);
+        squad.setUser(gameData);
+        squad.setStartingLineup(List.of(10));
+        squad.setBenchMap(Map.of());
+        squad.setCaptainId(10);
+        PlayerGameweekStatsEntity captainStats = stats(10, "Captain Choice");
+
+        when(gameWeekRepository.findById(1)).thenReturn(Optional.of(gameweek));
+        when(gameDataRepository.findAllByLeagueIdForUpdate(3L)).thenReturn(List.of(gameData));
+        when(pointsRepository.findByGameweekAndUser_League_Id(1, 3L)).thenReturn(List.of(userPoints));
+        when(squadRepository.findByUser_IdAndGameweek(70, 1)).thenReturn(Optional.of(squad));
+        when(statsRepository.findByGameweek(1)).thenReturn(List.of(captainStats));
+        when(fixtureStatsRepository.findByGameweek(1)).thenReturn(List.of());
+        when(scoringService.calculatePlayerGameweekPoints(eq(captainStats), eq(List.of()), any())).thenReturn(5);
+        when(aiClient.completeJson(any(), any(), eq(480), eq("fantasy_gameweek_roasts"), any()))
+                .thenReturn(Optional.empty());
+
+        boolean updated = service.refreshForLeague(3L, 1, false);
+
+        assertFalse(updated);
+        verify(roastRepository, never()).saveAll(any());
+        verify(roastRepository, never()).deleteAll(any());
+    }
+
     private UserGameDataEntity gameData() {
         UserEntity user = new UserEntity();
         user.setId(7);

@@ -47,4 +47,14 @@ public class LifecycleTaskSchedulerConfig {
         scheduler.setRemoveOnCancelPolicy(true);
         return scheduler;
     }
+
+    @Bean(name = "fantasyAiTaskScheduler")
+    public ThreadPoolTaskScheduler fantasyAiTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("fantasy-ai-");
+        scheduler.setWaitForTasksToCompleteOnShutdown(false);
+        scheduler.setRemoveOnCancelPolicy(true);
+        return scheduler;
+    }
 }
