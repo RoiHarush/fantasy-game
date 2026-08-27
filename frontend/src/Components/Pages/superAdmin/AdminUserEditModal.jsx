@@ -2,18 +2,106 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
+import { prepareTeamLogoSource } from "../../../features/team-profile/cropImage";
 import { adminUserDetailsSchema } from "../../../features/super-admin/schemas";
 import {
+    useRemoveAdminUserLogo,
     useAdminUserDetails,
     useUpdateAdminUser,
+    useUpdateAdminUserLogo,
 } from "../../../features/super-admin/useSuperAdmin";
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";
 import SelectField from "../../../shared/ui/SelectField";
+import TeamIdentityImage from "../../../shared/ui/TeamIdentityImage";
+import TeamLogoCropDialog from "../TeamProfile/TeamLogoCropDialog";
+import TeamLogoFileInput from "../TeamProfile/TeamLogoFileInput";
 
 const inputClassName = "mt-1 h-10 w-full rounded-xl border border-app-border bg-app-surface-elevated px-3 text-app-foreground outline-none transition placeholder:text-app-muted focus:border-app-accent-border focus:ring-3 focus:ring-app-accent-surface";
+
+function AdminTeamLogoEditor({ details, userId }) {
+    const [cropSource, setCropSource] = useState(null);
+    const [cropFileName, setCropFileName] = useState("team-logo");
+    const updateLogo = useUpdateAdminUserLogo(userId);
+    const removeLogo = useRemoveAdminUserLogo(userId);
+    const hasCustomLogo = Boolean(details.logoPath && details.logoPath !== "/UI/team-placeholder.svg");
+
+    useEffect(() => () => {
+        if (cropSource) URL.revokeObjectURL(cropSource);
+    }, [cropSource]);
+
+    function clearCropSource() {
+        setCropSource((currentSource) => {
+            if (currentSource) URL.revokeObjectURL(currentSource);
+            return null;
+        });
+    }
+
+    async function chooseLogo(file) {
+        if (!file) return;
+        clearCropSource();
+        try {
+            const source = await prepareTeamLogoSource(file);
+            setCropFileName(file.name || "team-logo");
+            setCropSource(source);
+        } catch (error) {
+            toast.error(error.message || "Unable to open this image");
+        }
+    }
+
+    async function saveLogo(file) {
+        await updateLogo.mutateAsync(file);
+        clearCropSource();
+        toast.success("Manager team logo updated");
+    }
+
+    async function deleteLogo() {
+        try {
+            await removeLogo.mutateAsync();
+            toast.success("Manager team logo removed");
+        } catch (error) {
+            toast.error(error.message || "Unable to remove the team logo");
+        }
+    }
+
+    return (
+        <section className="mt-5 rounded-2xl border border-app-border bg-app-surface-muted p-4">
+            <div className="grid gap-4 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
+                <TeamIdentityImage
+                    src={details.logoPath || "/UI/team-placeholder.svg"}
+                    alt={`${details.fantasyTeamName || details.username} team logo`}
+                    className="w-28 rounded-2xl"
+                    sizes="7rem"
+                />
+                <div>
+                    <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-cyan-500">Team badge</p>
+                    <p className="mt-1 text-xs leading-5 text-app-muted">Upload and crop a badge on this manager&apos;s behalf. This saves immediately and does not change the other fields below.</p>
+                    <div className="mt-3 grid max-w-sm grid-cols-2 gap-2">
+                        <TeamLogoFileInput onChoose={chooseLogo} ariaLabel={`Choose team image for ${details.username}`} />
+                        <Button type="button" variant="danger" size="sm" disabled={!hasCustomLogo || removeLogo.isPending} onClick={deleteLogo}>
+                            {removeLogo.isPending ? "Removing…" : "Remove image"}
+                        </Button>
+                    </div>
+                    {updateLogo.error && <p className="mt-2 text-xs font-bold text-app-danger-foreground" role="alert">{updateLogo.error.message}</p>}
+                </div>
+            </div>
+
+            {cropSource && (
+                <TeamLogoCropDialog
+                    key={cropSource}
+                    source={cropSource}
+                    fileName={cropFileName}
+                    onCancel={clearCropSource}
+                    onComplete={saveLogo}
+                />
+            )}
+        </section>
+    );
+}
 
 function AdminUserEditForm({ details, userId, onSave }) {
     const defaultValues = {
@@ -34,6 +122,9 @@ function AdminUserEditForm({ details, userId, onSave }) {
         <form onSubmit={form.handleSubmit(values => saveUser.mutate(values))} className="flex min-h-0 flex-1 flex-col" noValidate>
             <input type="hidden" {...form.register("userId", { valueAsNumber: true })} />
             <div className="flex-1 overflow-y-auto pr-2 text-app-foreground">
+                <AdminTeamLogoEditor details={details} userId={userId} />
+
+                <hr className="my-6 border-app-border" />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <label className="text-sm font-bold text-app-foreground">Username<input className={inputClassName} {...form.register("username")} /></label>
                     <label className="text-sm font-bold text-app-foreground">Name<input className={inputClassName} {...form.register("name")} /></label>

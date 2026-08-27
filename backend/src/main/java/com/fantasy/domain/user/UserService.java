@@ -40,6 +40,7 @@ public class UserService {
         this.leagueAccessService = leagueAccessService;
     }
 
+    @Transactional(readOnly = true)
     public List<UserDto> getAllUsers(int requestingUserId) {
         UserEntity requestingUser = userRepo.findById(requestingUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -63,6 +64,7 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public UserDto getUserById(int requestingUserId, int id) {
         leagueAccessService.requireSameLeague(requestingUserId, id);
         UserEntity user = userRepo.findById(id)
@@ -152,12 +154,25 @@ public class UserService {
         gameData.setFantasyTeamName(normalizedTeamName);
 
         if (logo != null && !logo.isEmpty()) {
-            TeamLogoUpload upload = validateTeamLogo(logo);
-            gameData.setTeamLogoBytes(Arrays.copyOf(upload.bytes(), upload.bytes().length));
-            gameData.setTeamLogoContentType(upload.contentType());
-            gameData.setTeamLogoVersion(System.currentTimeMillis());
+            applyTeamLogoUpload(gameData, logo);
         }
 
+        gameDataRepo.save(gameData);
+        return convertToDto(user);
+    }
+
+    @Transactional
+    public UserDto updateTeamLogo(int userId, MultipartFile logo) {
+        if (logo == null || logo.isEmpty()) {
+            throw new IllegalArgumentException("Choose a team logo to upload");
+        }
+
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("User does not have a fantasy team"));
+
+        applyTeamLogoUpload(gameData, logo);
         gameDataRepo.save(gameData);
         return convertToDto(user);
     }
@@ -255,6 +270,13 @@ public class UserService {
         } catch (IOException exception) {
             throw new IllegalArgumentException("Unable to read the uploaded team logo");
         }
+    }
+
+    private void applyTeamLogoUpload(UserGameDataEntity gameData, MultipartFile logo) {
+        TeamLogoUpload upload = validateTeamLogo(logo);
+        gameData.setTeamLogoBytes(Arrays.copyOf(upload.bytes(), upload.bytes().length));
+        gameData.setTeamLogoContentType(upload.contentType());
+        gameData.setTeamLogoVersion(System.currentTimeMillis());
     }
 
     private String detectImageType(byte[] bytes) {

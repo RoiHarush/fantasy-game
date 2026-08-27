@@ -15,6 +15,7 @@ public class AdminUserDetailsDto {
     private LocalDateTime registeredAt;
 
     private String fantasyTeamName;
+    private String logoPath;
     private int totalPoints;
 
     private Map<String, Integer> chips;
@@ -44,6 +45,9 @@ public class AdminUserDetailsDto {
 
     public String getFantasyTeamName() { return fantasyTeamName; }
     public void setFantasyTeamName(String fantasyTeamName) { this.fantasyTeamName = fantasyTeamName; }
+
+    public String getLogoPath() { return logoPath; }
+    public void setLogoPath(String logoPath) { this.logoPath = logoPath; }
 
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }

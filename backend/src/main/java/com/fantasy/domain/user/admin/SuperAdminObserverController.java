@@ -185,12 +185,12 @@ public class SuperAdminObserverController {
     }
 
     private LeagueEntity requireLeague(long leagueId) {
-        return leagueRepository.findById(leagueId)
+        return leagueRepository.findByIdWithUsers(leagueId)
                 .orElseThrow(() -> new IllegalArgumentException("League was not found"));
     }
 
     private void requireLeagueMember(long leagueId, int userId) {
-        boolean member = requireLeague(leagueId).getUsers().stream().anyMatch(user -> user.getId() == userId);
+        boolean member = leagueRepository.existsByIdAndUsers_Id(leagueId, userId);
         if (!member) throw new IllegalArgumentException("Manager is not in the selected league");
     }
 

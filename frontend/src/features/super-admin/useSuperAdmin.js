@@ -10,7 +10,9 @@ import {
     getAdminUsers,
     getPlayerReplacementOptions,
     replacePlayerForManager,
+    removeAdminUserLogo,
     runAdminAction,
+    updateAdminUserLogo,
     updateAdminUser,
 } from "./api";
 
@@ -65,6 +67,38 @@ export function useRunAdminAction(options = {}) {
             queryClient.invalidateQueries({ queryKey: queryKeys.adminPlayers });
             queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
             options.onSuccess?.(response);
+        },
+        onError: options.onError,
+    });
+}
+
+export function useUpdateAdminUserLogo(userId, options = {}) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (logo) => updateAdminUserLogo(userId, logo),
+        onSuccess: async (result) => {
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.adminUserDetails(userId) }),
+            ]);
+            options.onSuccess?.(result);
+        },
+        onError: options.onError,
+    });
+}
+
+export function useRemoveAdminUserLogo(userId, options = {}) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => removeAdminUserLogo(userId),
+        onSuccess: async (result) => {
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.adminUserDetails(userId) }),
+            ]);
+            options.onSuccess?.(result);
         },
         onError: options.onError,
     });

@@ -63,4 +63,42 @@ class UserServiceTeamLogoTest {
         assertNotSame(gameData.getTeamLogoBytes(), downloaded.bytes());
         assertEquals("image/png", downloaded.contentType());
     }
+
+    @Test
+    void superAdminLogoUpdatePreservesTheManagersTeamName() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserGameDataRepository gameDataRepository = mock(UserGameDataRepository.class);
+        LeagueRepository leagueRepository = mock(LeagueRepository.class);
+        UserService service = new UserService(
+                userRepository,
+                gameDataRepository,
+                mock(PasswordEncoder.class),
+                leagueRepository,
+                mock(LeagueAccessService.class)
+        );
+
+        UserEntity user = new UserEntity();
+        user.setId(9);
+        user.setFirstName("Galaxy");
+        user.setLastName("Manager");
+        user.setUsername("galaxy-manager");
+        user.setRole(UserRole.ROLE_USER);
+
+        UserGameDataEntity gameData = new UserGameDataEntity();
+        gameData.setUser(user);
+        gameData.setFantasyTeamName("Galaxy XI");
+
+        when(userRepository.findById(9)).thenReturn(Optional.of(user));
+        when(gameDataRepository.findByUserId(9)).thenReturn(Optional.of(gameData));
+        when(leagueRepository.findFirstByUsers_Id(9)).thenReturn(Optional.empty());
+
+        byte[] jpegBytes = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x01};
+        var upload = new MockMultipartFile("logo", "badge.jpg", "image/jpeg", jpegBytes);
+
+        UserDto updated = service.updateTeamLogo(9, upload);
+
+        assertEquals("Galaxy XI", updated.getFantasyTeamName());
+        assertArrayEquals(jpegBytes, gameData.getTeamLogoBytes());
+        assertEquals("image/jpeg", gameData.getTeamLogoContentType());
+    }
 }

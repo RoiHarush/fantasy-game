@@ -64,6 +64,9 @@ public class AdminUserService {
         dto.setRegisteredAt(user.getRegisteredAt());
 
         dto.setFantasyTeamName(gameData.getFantasyTeamName());
+        dto.setLogoPath(gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0
+                ? "/api/users/" + userId + "/team-logo?v=" + gameData.getTeamLogoVersion()
+                : "/UI/team-placeholder.svg");
         dto.setTotalPoints(gameData.getTotalPoints());
 
         dto.setChips(new java.util.HashMap<>(gameData.getChips()));

@@ -10,12 +10,16 @@ import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.SquadDto;
 import com.fantasy.domain.transfer.TransferMarketService;
 import com.fantasy.domain.user.UserEntity;
+import com.fantasy.domain.user.UserDto;
 import com.fantasy.domain.user.UserRepository;
+import com.fantasy.domain.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +39,7 @@ public class SuperAdminController {
     private final AdminUserService adminUserService;
     private final TransferMarketService marketService;
     private final FantasyTeamService fantasyTeamService;
+    private final UserService userService;
 
     @Autowired
     public SuperAdminController(PlayerSyncService playerSyncService,
@@ -44,7 +49,8 @@ public class SuperAdminController {
                                 GameweekManager gameweekManager,
                                 AdminUserService adminUserService,
                                 TransferMarketService marketService,
-                                FantasyTeamService fantasyTeamService) {
+                                FantasyTeamService fantasyTeamService,
+                                UserService userService) {
         this.playerSyncService = playerSyncService;
         this.gameWeekService = gameWeekService;
         this.gameDataRepo = gameDataRepo;
@@ -53,6 +59,7 @@ public class SuperAdminController {
         this.adminUserService = adminUserService;
         this.marketService = marketService;
         this.fantasyTeamService = fantasyTeamService;
+        this.userService = userService;
     }
 
 
@@ -202,5 +209,17 @@ public class SuperAdminController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @PutMapping(value = "/user-details/{userId}/team-logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserDto> updateUserTeamLogo(
+            @PathVariable int userId,
+            @RequestPart("logo") MultipartFile logo) {
+        return ResponseEntity.ok(userService.updateTeamLogo(userId, logo));
+    }
+
+    @DeleteMapping("/user-details/{userId}/team-logo")
+    public ResponseEntity<UserDto> removeUserTeamLogo(@PathVariable int userId) {
+        return ResponseEntity.ok(userService.removeTeamLogo(userId));
     }
 }

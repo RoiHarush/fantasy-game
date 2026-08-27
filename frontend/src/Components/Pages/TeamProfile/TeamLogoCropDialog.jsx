@@ -23,7 +23,7 @@ function TeamLogoCropDialog({ source, fileName, onCancel, onComplete }) {
         setProcessing(true);
         try {
             const croppedLogo = await createCroppedTeamLogo(source, cropPixels, fileName);
-            onComplete(croppedLogo);
+            await onComplete(croppedLogo);
         } catch (error) {
             toast.error(error.message || "Unable to crop this image");
         } finally {

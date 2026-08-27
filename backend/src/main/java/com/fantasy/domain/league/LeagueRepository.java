@@ -14,6 +14,10 @@ public interface LeagueRepository extends JpaRepository<LeagueEntity, Long> {
     Optional<LeagueEntity> findFirstByUsers_Id(Integer userId);
     boolean existsByLeagueCodeIgnoreCase(String leagueCode);
     boolean existsByUsers_Id(Integer userId);
+    boolean existsByIdAndUsers_Id(Long leagueId, Integer userId);
+
+    @Query("select distinct league from LeagueEntity league left join fetch league.users where league.id = :leagueId")
+    Optional<LeagueEntity> findByIdWithUsers(@Param("leagueId") Long leagueId);
 
     @Query("select user.id from LeagueEntity league join league.users user where league.id = :leagueId")
     List<Integer> findUserIdsByLeagueId(@Param("leagueId") Long leagueId);

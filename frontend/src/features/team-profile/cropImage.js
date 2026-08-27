@@ -56,3 +56,19 @@ export async function createCroppedTeamLogo(source, cropPixels, originalName = "
         lastModified: Date.now(),
     });
 }
+
+export async function prepareTeamLogoSource(file) {
+    if (!file) throw new Error("Choose an image from your gallery or camera");
+    if (file.type && !file.type.startsWith("image/")) {
+        throw new Error("Choose an image from your gallery or camera");
+    }
+
+    const source = URL.createObjectURL(file);
+    try {
+        await loadImage(source);
+        return source;
+    } catch {
+        URL.revokeObjectURL(source);
+        throw new Error("This photo format is not supported. Try a screenshot or a JPG/PNG image.");
+    }
+}
