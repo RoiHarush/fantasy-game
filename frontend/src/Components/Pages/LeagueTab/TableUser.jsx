@@ -15,8 +15,8 @@ function TableUser({ user, currentUser, pointsHref }) {
                 sizes="2.5rem"
             />
             <span className="flex min-w-0 flex-col items-start gap-0.5">
-                <span className="max-w-[105px] overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap text-inherit sm:max-w-none sm:text-base">{user.name}</span>
-                <span className="max-w-full overflow-hidden text-xs text-ellipsis whitespace-nowrap text-current opacity-65">{user.fantasyTeamName}</span>
+                <span className="max-w-[105px] overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap text-inherit sm:max-w-none sm:text-base">{user.fantasyTeamName}</span>
+                <span className="max-w-full overflow-hidden text-xs text-ellipsis whitespace-nowrap text-current opacity-65">{user.name}</span>
             </span>
         </Link>
     );

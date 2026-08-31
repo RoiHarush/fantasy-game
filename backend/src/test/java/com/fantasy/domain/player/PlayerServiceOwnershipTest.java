@@ -69,7 +69,8 @@ class PlayerServiceOwnershipTest {
                 mock(LeagueScoringService.class),
                 mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
-                mock(LeagueTransferWindowRepository.class)
+                mock(LeagueTransferWindowRepository.class),
+                new LeaguePlayerPointsCache(java.time.Duration.ofSeconds(15), 100, java.time.Clock.systemUTC())
         );
 
         List<PlayerDto> players = service.getAllPlayers(42);
@@ -111,7 +112,8 @@ class PlayerServiceOwnershipTest {
                 mock(LeagueScoringService.class),
                 mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
-                mock(LeagueTransferWindowRepository.class)
+                mock(LeagueTransferWindowRepository.class),
+                new LeaguePlayerPointsCache(java.time.Duration.ofSeconds(15), 100, java.time.Clock.systemUTC())
         );
 
         assertThrows(IllegalStateException.class, () -> service.getAllPlayers(42));
@@ -174,7 +176,8 @@ class PlayerServiceOwnershipTest {
                 new LeagueScoringService(),
                 mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
-                mock(LeagueTransferWindowRepository.class)
+                mock(LeagueTransferWindowRepository.class),
+                new LeaguePlayerPointsCache(java.time.Duration.ofSeconds(15), 100, java.time.Clock.systemUTC())
         );
 
         PlayerMatchStatsDto result = service.getMatchStats(1, 8, null);
@@ -281,7 +284,8 @@ class PlayerServiceOwnershipTest {
                 new LeagueScoringService(),
                 mock(LeagueCrownService.class),
                 mock(SupplementalDraftPoolService.class),
-                mock(LeagueTransferWindowRepository.class)
+                mock(LeagueTransferWindowRepository.class),
+                new LeaguePlayerPointsCache(java.time.Duration.ofSeconds(15), 100, java.time.Clock.systemUTC())
         );
     }
 

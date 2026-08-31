@@ -26,6 +26,9 @@ describe("TableUser", () => {
 
         expect(document.querySelector("img")).toHaveAttribute("src", "/api/users/2/team-logo?v=7");
         expect(screen.getByRole("link", { name: "View Roi FC points" })).toBeInTheDocument();
+        const identity = screen.getByRole("link", { name: "View Roi FC points" });
+        expect(identity.children[1].children[0]).toHaveTextContent("Roi FC");
+        expect(identity.children[1].children[1]).toHaveTextContent("Roi");
     });
 
     it("uses an observer-specific points link when one is provided", () => {

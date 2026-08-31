@@ -20,6 +20,7 @@ import SelectField from "../../../shared/ui/SelectField";
 import { Eye, LockKeyhole, ShieldCheck } from "../../../shared/ui/icons";
 import PageLayout from "../../PageLayout";
 import PointsSummaryBlock from "../../Sidebar/PointsSummaryBlock";
+import LeagueBlock from "../../Sidebar/LeagueBlock";
 import SidebarContainer from "../../Sidebar/SidebarContainer";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
 import TransferUserSidebar from "../../Sidebar/TransferUserSidebar";
@@ -249,31 +250,41 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
     let content;
     if (screen === "status" && requestedGameweek) {
         content = <PageLayout
-            left={<Status
-                user={observedUser}
-                league={observedLeague}
-                currentGameweek={requestedGameweek}
-                nextGameweek={gameweeks.nextGameweek}
-                preSeason={!gameweeks.currentGameweek}
-                transferHistoryGameweekId={requestedGameweek.id}
-                refreshGameweeks={() => {}}
-                previewData={{
-                    points: observer.points.data ?? 0,
-                    dailyStatus: observer.dailyStatus.data ?? [],
-                    roastFeed: observer.roast.data ?? null,
-                    players: observer.players.data ?? [],
-                    playersOfTheWeek: observer.playersOfTheWeek.data?.playersOfTheWeek ?? [],
-                    crownStandings: observer.playersOfTheWeek.data?.crownStandings ?? [],
-                    transferActions: observer.history.data ?? [],
-                    irStatuses: [],
-                }}
-            />}
+            left={<>
+                <div className="lg:hidden">
+                    <LeagueBlock
+                        league={observedLeague}
+                        currentUser={observedUser}
+                        getMemberPointsHref={observedManagerPointsHref}
+                    />
+                </div>
+                <Status
+                    user={observedUser}
+                    league={observedLeague}
+                    currentGameweek={requestedGameweek}
+                    nextGameweek={gameweeks.nextGameweek}
+                    preSeason={!gameweeks.currentGameweek}
+                    transferHistoryGameweekId={requestedGameweek.id}
+                    refreshGameweeks={() => {}}
+                    previewData={{
+                        points: observer.points.data ?? 0,
+                        dailyStatus: observer.dailyStatus.data ?? [],
+                        roastFeed: observer.roast.data ?? null,
+                        players: observer.players.data ?? [],
+                        playersOfTheWeek: observer.playersOfTheWeek.data?.playersOfTheWeek ?? [],
+                        crownStandings: observer.playersOfTheWeek.data?.crownStandings ?? [],
+                        transferActions: observer.history.data ?? [],
+                        irStatuses: [],
+                    }}
+                />
+            </>}
             right={<StatusSidebar
                 user={observedUser}
                 league={observedLeague}
                 preSeason={!gameweeks.currentGameweek}
                 previewDreamTeam={[]}
                 getMemberPointsHref={observedManagerPointsHref}
+                hideLeagueOnMobile
             />}
         />;
     } else if (screen === "points" && requestedGameweek && observer.squad.data) {

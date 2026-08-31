@@ -30,6 +30,7 @@ public class LiveScoreManager {
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
     private final FixtureRepository fixtureRepository;
+    private final LeaguePlayerPointsCache leaguePlayerPointsCache;
 
     public LiveScoreManager(PlayerGameweekStatsRepository statsRepository,
                             PlayerFixtureStatsRepository fixtureStatsRepository,
@@ -38,7 +39,8 @@ public class LiveScoreManager {
                             PlayerStatsUpdater statsUpdater,
                             RestTemplate restTemplate,
                             ObjectMapper mapper,
-                            FixtureRepository fixtureRepository) {
+                            FixtureRepository fixtureRepository,
+                            LeaguePlayerPointsCache leaguePlayerPointsCache) {
         this.statsRepository = statsRepository;
         this.fixtureStatsRepository = fixtureStatsRepository;
         this.pointsRepository = pointsRepository;
@@ -47,6 +49,7 @@ public class LiveScoreManager {
         this.restTemplate = restTemplate;
         this.mapper = mapper;
         this.fixtureRepository = fixtureRepository;
+        this.leaguePlayerPointsCache = leaguePlayerPointsCache;
     }
 
     @Transactional
@@ -202,6 +205,9 @@ public class LiveScoreManager {
             if (!fixtureStatsToUpdate.isEmpty()) {
                 fixtureStatsRepository.saveAll(fixtureStatsToUpdate);
                 log.debug("Live update: Updated {} player fixture rows.", fixtureStatsToUpdate.size());
+            }
+            if (!statsToUpdate.isEmpty() || !fixtureStatsToUpdate.isEmpty()) {
+                leaguePlayerPointsCache.invalidateAll();
             }
 
     }

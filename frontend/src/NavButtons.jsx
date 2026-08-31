@@ -25,6 +25,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useAuth } from "./Context/AuthContext";
 import {
     getMobilePrimaryNavigation,
+    getMobileQuickMenuNavigation,
     getMobileSecondaryNavigation,
     getSiteNavigation,
     isNavigationItemActive,
@@ -37,6 +38,7 @@ const MOBILE_ICONS = {
     "/status": MobileStatusIcon,
     "/points": MobilePointsIcon,
     "/pick-team": MobileTeamIcon,
+    "/league": UsersRound,
     "/scout": MobileScoutIcon,
     "/transfer-window": MobileTransfersIcon,
 };
@@ -52,6 +54,7 @@ const SECTION_LABELS = {
 const SECONDARY_ICONS = {
     "/league": UsersRound,
     "/fixtures": CalendarDays,
+    "/scout": MobileScoutIcon,
     "/draft-room": Shirt,
     "/league-control": ShieldCheck,
     "/settings": UserRound,
@@ -94,8 +97,10 @@ export default function NavButtons({
     const navigationPathname = activePath ?? pathname;
     const [isLoggingOut, startLogout] = useTransition();
     const [openMenuPath, setOpenMenuPath] = useState(null);
+    const [openQuickMenuPath, setOpenQuickMenuPath] = useState(null);
     const navigationItems = getSiteNavigation(user);
     const isMenuOpen = openMenuPath === pathname;
+    const isQuickMenuOpen = openQuickMenuPath === pathname;
     const buildHref = (href) => navigationBase ? `${navigationBase}${href}` : href;
 
     if (process.env.NODE_ENV === "development" && !observerMode) {
@@ -104,7 +109,9 @@ export default function NavButtons({
 
     const activeItem = navigationItems.find(({ href }) => isNavigationItemActive(navigationPathname, href));
     const mobilePrimaryItems = getMobilePrimaryNavigation(navigationItems);
+    const mobileQuickMenuItems = getMobileQuickMenuNavigation(navigationItems);
     const mobileSecondaryItems = getMobileSecondaryNavigation(navigationItems);
+    const isQuickMenuActive = mobileQuickMenuItems.some(({ href }) => isNavigationItemActive(navigationPathname, href));
     const secondarySections = Object.entries(SECTION_LABELS)
         .map(([section, label]) => ({
             section,
@@ -114,18 +121,22 @@ export default function NavButtons({
         .filter(({ items }) => items.length > 0);
 
     useEffect(() => {
-        if (!isMenuOpen) return undefined;
+        if (!isMenuOpen && !isQuickMenuOpen) return undefined;
 
         const closeOnEscape = (event) => {
-            if (event.key === "Escape") setOpenMenuPath(null);
+            if (event.key === "Escape") {
+                setOpenMenuPath(null);
+                setOpenQuickMenuPath(null);
+            }
         };
 
         window.addEventListener("keydown", closeOnEscape);
         return () => window.removeEventListener("keydown", closeOnEscape);
-    }, [isMenuOpen]);
+    }, [isMenuOpen, isQuickMenuOpen]);
 
     function handleLogout() {
         setOpenMenuPath(null);
+        setOpenQuickMenuPath(null);
         startLogout(async () => {
             await logout();
         });
@@ -180,7 +191,10 @@ export default function NavButtons({
                 <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => setOpenMenuPath(isMenuOpen ? null : pathname)}
+                    onClick={() => {
+                        setOpenQuickMenuPath(null);
+                        setOpenMenuPath(isMenuOpen ? null : pathname);
+                    }}
                     className="ml-auto grid size-11 shrink-0 place-items-center rounded-xl border border-white/30 bg-black/20 p-0 text-white shadow-sm transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
                     aria-expanded={isMenuOpen}
                     aria-controls="mobile-secondary-navigation"
@@ -285,7 +299,7 @@ export default function NavButtons({
                 )}
             </div>
 
-            {mobilePrimaryItems.length > 0 && (
+            {(mobilePrimaryItems.length > 0 || mobileQuickMenuItems.length > 0) && (
                 <nav
                     className="fixed inset-x-0 bottom-0 z-[60] h-[calc(4.5rem+max(0.35rem,env(safe-area-inset-bottom)))] border-t border-white/15 bg-[#160b27]/96 px-1.5 pt-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] text-white shadow-[0_-12px_38px_rgba(0,0,0,0.42)] backdrop-blur-xl lg:hidden"
                     aria-label="Mobile quick navigation"
@@ -298,6 +312,7 @@ export default function NavButtons({
                                 <Link
                                     key={href}
                                     href={buildHref(href)}
+                                    onClick={() => setOpenQuickMenuPath(null)}
                                     aria-label={MOBILE_LABELS[href] || label}
                                     aria-current={isActive ? "page" : undefined}
                                     className={cn(
@@ -317,16 +332,78 @@ export default function NavButtons({
                                 </Link>
                             );
                         })}
+
+                        {mobileQuickMenuItems.length > 0 && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => {
+                                    setOpenMenuPath(null);
+                                    setOpenQuickMenuPath(isQuickMenuOpen ? null : pathname);
+                                }}
+                                aria-expanded={isQuickMenuOpen}
+                                aria-controls="mobile-quick-menu"
+                                aria-label="Open player market menu"
+                                className={cn(
+                                    "relative h-16 min-w-0 overflow-hidden rounded-2xl border-0 bg-transparent px-1 font-bold text-white/60 no-underline transition-[background-color,color] duration-200 motion-reduce:transition-none hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+                                    (isQuickMenuActive || isQuickMenuOpen) && "bg-white/10 text-white",
+                                )}
+                            >
+                                {(isQuickMenuActive || isQuickMenuOpen) && <span className="absolute top-0 left-1/2 h-0.5 w-9 -translate-x-1/2 rounded-full bg-linear-to-r from-brand-cyan to-brand-purple" aria-hidden="true" />}
+                                <span className="absolute top-2 left-1/2 grid size-7 -translate-x-1/2 place-items-center">
+                                    <Menu className={cn("size-[1.45rem]", (isQuickMenuActive || isQuickMenuOpen) && "text-brand-cyan")} aria-hidden="true" />
+                                </span>
+                                <span className="absolute inset-x-1 bottom-1.5 truncate text-center text-[0.7rem] leading-4">Market</span>
+                            </Button>
+                        )}
                     </div>
                 </nav>
             )}
 
-            {isMenuOpen && (
+            {isQuickMenuOpen && (
+                <nav
+                    id="mobile-quick-menu"
+                    className="fixed right-2 bottom-[calc(4.85rem+max(0.35rem,env(safe-area-inset-bottom)))] z-[80] w-[min(15rem,calc(100vw-1rem))] origin-bottom-right overflow-hidden rounded-2xl border border-[#5d4172] bg-[#100918]/98 p-2 text-white shadow-[0_20px_54px_rgba(0,0,0,0.72)] backdrop-blur-xl lg:hidden"
+                    aria-label="Mobile quick menu"
+                >
+                    <p className="px-2 pb-1.5 pt-1 text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#cbb8d8]">Player market</p>
+                    <div className="flex flex-col gap-1">
+                        {mobileQuickMenuItems.map(({ href, label }) => {
+                            const isActive = isNavigationItemActive(navigationPathname, href);
+                            const ItemIcon = MOBILE_ICONS[href] || SECONDARY_ICONS[href] || Settings2;
+
+                            return (
+                                <Link
+                                    key={href}
+                                    href={buildHref(href)}
+                                    onClick={() => setOpenQuickMenuPath(null)}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={cn(
+                                        "flex min-h-12 items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm font-bold text-white/85 no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan",
+                                        "pointer-fine:hover:border-white/10 pointer-fine:hover:bg-white/8",
+                                        isActive && "border-[#8d63b5] bg-[#3a2350] font-extrabold text-white",
+                                    )}
+                                >
+                                    <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-[#765299] bg-[#321e44] text-[#ead8ff]" aria-hidden="true">
+                                        <ItemIcon className="size-4" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">{MOBILE_LABELS[href] || label}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </nav>
+            )}
+
+            {(isMenuOpen || isQuickMenuOpen) && (
                 <Button
                     type="button"
                     variant="ghost"
                     className="fixed inset-0 z-[70] h-auto w-auto cursor-default rounded-none bg-black/40 p-0 backdrop-blur-[1px] lg:hidden"
-                    onClick={() => setOpenMenuPath(null)}
+                    onClick={() => {
+                        setOpenMenuPath(null);
+                        setOpenQuickMenuPath(null);
+                    }}
                     aria-label="Close navigation menu"
                 />
             )}

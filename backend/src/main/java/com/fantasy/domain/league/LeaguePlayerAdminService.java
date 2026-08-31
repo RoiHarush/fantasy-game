@@ -6,6 +6,7 @@ import com.fantasy.domain.player.PlayerEntity;
 import com.fantasy.domain.player.PlayerGameweekStatsEntity;
 import com.fantasy.domain.player.PlayerGameweekStatsRepository;
 import com.fantasy.domain.player.PlayerMapper;
+import com.fantasy.domain.player.LeaguePlayerPointsCache;
 import com.fantasy.domain.player.PlayerPenaltyDto;
 import com.fantasy.domain.player.PlayerPosition;
 import com.fantasy.domain.player.PlayerRepository;
@@ -34,6 +35,7 @@ public class LeaguePlayerAdminService {
     private final UserGameDataRepository gameDataRepository;
     private final UserSquadRepository squadRepository;
     private final PointsService pointsService;
+    private final LeaguePlayerPointsCache leaguePlayerPointsCache;
 
     public LeaguePlayerAdminService(LeagueAccessService leagueAccessService,
                                     LeagueRepository leagueRepository,
@@ -41,7 +43,8 @@ public class LeaguePlayerAdminService {
                                     PlayerGameweekStatsRepository statsRepository,
                                     UserGameDataRepository gameDataRepository,
                                     UserSquadRepository squadRepository,
-                                    PointsService pointsService) {
+                                    PointsService pointsService,
+                                    LeaguePlayerPointsCache leaguePlayerPointsCache) {
         this.leagueAccessService = leagueAccessService;
         this.leagueRepository = leagueRepository;
         this.playerRepository = playerRepository;
@@ -49,6 +52,7 @@ public class LeaguePlayerAdminService {
         this.gameDataRepository = gameDataRepository;
         this.squadRepository = squadRepository;
         this.pointsService = pointsService;
+        this.leaguePlayerPointsCache = leaguePlayerPointsCache;
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +93,7 @@ public class LeaguePlayerAdminService {
         league.adjustAssists(stats.getPlayer().getId(), stats.getGameweek(), stats.getAssists(), delta);
         leagueRepository.saveAndFlush(league);
         recalculateLeaguePoints(league.getId(), request.getGameweek());
+        leaguePlayerPointsCache.invalidateLeague(league.getId());
         return toAssistDto(league, stats);
     }
 
@@ -135,6 +140,7 @@ public class LeaguePlayerAdminService {
         );
         leagueRepository.saveAndFlush(league);
         recalculateLeaguePoints(league.getId(), request.getGameweek());
+        leaguePlayerPointsCache.invalidateLeague(league.getId());
         return toPenaltyDto(league, stats);
     }
 

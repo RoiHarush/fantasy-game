@@ -24,7 +24,10 @@ COPY --from=build --chown=fantasy:fantasy /workspace/build/libs/app.jar app.jar
 
 USER fantasy
 
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+# Leave explicit native-memory headroom for Tomcat threads, WebSocket buffers,
+# metaspace and the JVM itself. Render enforces the container limit, not only
+# the Java heap limit.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=55.0 -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080
 

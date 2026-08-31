@@ -24,7 +24,7 @@ describe("AppResumeRecovery", () => {
     it("cancels frozen active requests before refetching after a long background pause", async () => {
         const queryClient = {
             cancelQueries: vi.fn().mockResolvedValue(undefined),
-            invalidateQueries: vi.fn().mockResolvedValue(undefined),
+            refetchQueries: vi.fn().mockResolvedValue(undefined),
         };
         render(<AppResumeRecovery queryClient={queryClient} />);
 
@@ -35,20 +35,20 @@ describe("AppResumeRecovery", () => {
         fireEvent(document, new Event("visibilitychange"));
 
         expect(queryClient.cancelQueries).toHaveBeenCalledWith(
-            { type: "active" },
+            { type: "active", stale: true },
             { silent: true },
         );
         await Promise.resolve();
-        expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+        expect(queryClient.refetchQueries).toHaveBeenCalledWith({
             type: "active",
-            refetchType: "active",
+            stale: true,
         });
     });
 
     it("does not churn active requests after a brief app switch", () => {
         const queryClient = {
             cancelQueries: vi.fn().mockResolvedValue(undefined),
-            invalidateQueries: vi.fn().mockResolvedValue(undefined),
+            refetchQueries: vi.fn().mockResolvedValue(undefined),
         };
         render(<AppResumeRecovery queryClient={queryClient} />);
 
@@ -59,6 +59,6 @@ describe("AppResumeRecovery", () => {
         fireEvent(document, new Event("visibilitychange"));
 
         expect(queryClient.cancelQueries).not.toHaveBeenCalled();
-        expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+        expect(queryClient.refetchQueries).not.toHaveBeenCalled();
     });
 });

@@ -43,6 +43,7 @@ public class PlayerService {
     private final LeagueCrownService leagueCrownService;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
     private final LeagueTransferWindowRepository transferWindowRepository;
+    private final LeaguePlayerPointsCache leaguePlayerPointsCache;
 
     public PlayerService(PlayerRepository playerRepo,
                          PlayerPointsRepository pointsRepo,
@@ -57,7 +58,8 @@ public class PlayerService {
                          LeagueScoringService leagueScoringService,
                          LeagueCrownService leagueCrownService,
                          SupplementalDraftPoolService supplementalDraftPoolService,
-                         LeagueTransferWindowRepository transferWindowRepository) {
+                         LeagueTransferWindowRepository transferWindowRepository,
+                         LeaguePlayerPointsCache leaguePlayerPointsCache) {
         this.playerRepo = playerRepo;
         this.pointsRepo = pointsRepo;
         this.statsRepo = statsRepo;
@@ -72,19 +74,27 @@ public class PlayerService {
         this.leagueCrownService = leagueCrownService;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
         this.transferWindowRepository = transferWindowRepository;
+        this.leaguePlayerPointsCache = leaguePlayerPointsCache;
     }
 
 
     public List<PlayerDto> getAllPlayers(Integer requestingUserId) {
-        List<PlayerPointsEntity> allPoints = pointsRepo.findAll();
-        Map<Integer, List<PlayerPointsEntity>> pointsByPlayer =
-                allPoints.stream().collect(Collectors.groupingBy(p -> p.getPlayer().getId()));
-
         Map<Integer, PlayerOwnership> ownershipByPlayer = loadLeagueOwnership(requestingUserId);
         LeagueEntity scoringLeague = requestingUserId == null
                 ? null
                 : leagueRepo.findFirstByUsers_Id(requestingUserId).orElse(null);
-        Map<Integer, Integer> leaguePointsByPlayer = new HashMap<>();
+        Map<Integer, Integer> defaultPointsByPlayer = scoringLeague == null
+                ? pointsRepo.findTotalPointsByPlayer().stream().collect(Collectors.toMap(
+                        PlayerPointsRepository.PlayerPointsTotal::getPlayerId,
+                        total -> Math.toIntExact(total.getTotalPoints())
+                ))
+                : Map.of();
+        Map<Integer, Integer> leaguePointsByPlayer = scoringLeague == null
+                ? Map.of()
+                : leaguePlayerPointsCache.getOrLoad(
+                        scoringLeague.getId(),
+                        () -> calculateLeaguePoints(scoringLeague)
+                );
         var activeWindow = scoringLeague == null
                 ? Optional.<LeagueTransferWindowEntity>empty()
                 : transferWindowRepository.findFirstByLeague_IdAndStatusOrderByOpenedAtDesc(
@@ -104,27 +114,6 @@ public class PlayerService {
                         scoringLeague.getId(),
                         activeWindow.orElseThrow().getOpenedAt()
                 );
-        if (scoringLeague != null) {
-            Map<Integer, Map<Integer, List<PlayerFixtureStatsEntity>>> fixtureStatsByPlayerAndGameweek =
-                    fixtureStatsRepo.findAll().stream().collect(Collectors.groupingBy(
-                            stats -> stats.getPlayer().getId(),
-                            Collectors.groupingBy(PlayerFixtureStatsEntity::getGameweek)
-                    ));
-            for (PlayerGameweekStatsEntity stats : statsRepo.findAll()) {
-                leaguePointsByPlayer.merge(
-                        stats.getPlayer().getId(),
-                        leagueScoringService.calculatePlayerGameweekPoints(
-                                stats,
-                                fixtureStatsByPlayerAndGameweek
-                                        .getOrDefault(stats.getPlayer().getId(), Map.of())
-                                        .getOrDefault(stats.getGameweek(), List.of()),
-                                scoringLeague
-                        ),
-                        Integer::sum
-                );
-            }
-        }
-
         return playerRepo.findAll().stream()
                 .map(p -> {
                     PlayerOwnership ownership = ownershipByPlayer.get(p.getId());
@@ -155,9 +144,9 @@ public class PlayerService {
                         dto.setSupplementalDraftSelectable(supplementalSelectable);
                         return dto;
                     }
-                    return PlayerMapper.toDto(
+                    return PlayerMapper.toDtoWithTotalPoints(
                                 p,
-                                pointsByPlayer.getOrDefault(p.getId(), List.of()),
+                                defaultPointsByPlayer.getOrDefault(p.getId(), p.getTotalPoints()),
                                 ownerId,
                                 ownerName,
                                 available,
@@ -165,6 +154,29 @@ public class PlayerService {
                         );
                 })
                 .collect(Collectors.toList());
+    }
+
+    private Map<Integer, Integer> calculateLeaguePoints(LeagueEntity scoringLeague) {
+        Map<Integer, Map<Integer, List<PlayerFixtureStatsEntity>>> fixtureStatsByPlayerAndGameweek =
+                fixtureStatsRepo.findAll().stream().collect(Collectors.groupingBy(
+                        stats -> stats.getPlayer().getId(),
+                        Collectors.groupingBy(PlayerFixtureStatsEntity::getGameweek)
+                ));
+        Map<Integer, Integer> leaguePointsByPlayer = new HashMap<>();
+        for (PlayerGameweekStatsEntity stats : statsRepo.findAll()) {
+            leaguePointsByPlayer.merge(
+                    stats.getPlayer().getId(),
+                    leagueScoringService.calculatePlayerGameweekPoints(
+                            stats,
+                            fixtureStatsByPlayerAndGameweek
+                                    .getOrDefault(stats.getPlayer().getId(), Map.of())
+                                    .getOrDefault(stats.getGameweek(), List.of()),
+                            scoringLeague
+                    ),
+                    Integer::sum
+            );
+        }
+        return leaguePointsByPlayer;
     }
 
     private Map<Integer, PlayerOwnership> loadLeagueOwnership(Integer requestingUserId) {

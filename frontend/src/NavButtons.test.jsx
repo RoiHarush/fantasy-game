@@ -51,8 +51,22 @@ describe("NavButtons responsive navigation", () => {
         expect(within(quickNavigation).getByRole("link", { name: "Status" })).toHaveAttribute("aria-current", "page");
         expect(within(quickNavigation).getByRole("link", { name: "Points" })).toHaveAttribute("href", "/points");
         expect(within(quickNavigation).getByRole("link", { name: "Team" })).toHaveAttribute("href", "/pick-team");
-        expect(within(quickNavigation).getByRole("link", { name: "Scout" })).toHaveAttribute("href", "/scout");
-        expect(within(quickNavigation).getByRole("link", { name: "Transfers" })).toHaveAttribute("href", "/transfer-window");
+        expect(within(quickNavigation).getByRole("link", { name: "League" })).toHaveAttribute("href", "/league");
+        expect(within(quickNavigation).getByRole("button", { name: "Open player market menu" })).toBeInTheDocument();
+    });
+
+    it("opens the player market from the rightmost mobile dock button", () => {
+        render(<NavButtons />);
+
+        const quickNavigation = screen.getByRole("navigation", { name: "Mobile quick navigation" });
+        const marketButton = within(quickNavigation).getByRole("button", { name: "Open player market menu" });
+        fireEvent.click(marketButton);
+
+        expect(marketButton).toHaveAttribute("aria-expanded", "true");
+        const marketMenu = screen.getByRole("navigation", { name: "Mobile quick menu" });
+        expect(within(marketMenu).getByRole("link", { name: "Scout" })).toHaveAttribute("href", "/scout");
+        expect(within(marketMenu).getByRole("link", { name: "Transfers" })).toHaveAttribute("href", "/transfer-window");
+        expect(within(marketMenu).getByRole("link", { name: "Draft Room" })).toHaveAttribute("href", "/draft-room");
     });
 
     it("opens an accessible mobile menu for secondary screens", () => {
@@ -65,7 +79,12 @@ describe("NavButtons responsive navigation", () => {
 
         const mobileNavigation = screen.getByRole("navigation", { name: "More navigation" });
         expect(within(mobileNavigation).queryByRole("link", { name: "Status" })).not.toBeInTheDocument();
-        expect(within(mobileNavigation).getByRole("link", { name: "League" })).toHaveAttribute("href", "/league");
+        expect(within(mobileNavigation).queryByRole("link", { name: "League" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).queryByRole("link", { name: "Scout" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).queryByRole("link", { name: "Transfers" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).queryByRole("link", { name: "Draft Room" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).getByRole("link", { name: "Fixtures" })).toHaveAttribute("href", "/fixtures");
+        expect(within(mobileNavigation).getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
         expect(within(mobileNavigation).getByRole("link", { name: "League Control" })).toHaveAttribute("href", "/league-control");
 
         fireEvent.keyDown(window, { key: "Escape" });

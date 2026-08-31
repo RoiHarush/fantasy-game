@@ -10,6 +10,7 @@ import { deriveStatusGameweekView } from "../../../features/status/model";
 import { useTransferWindowState } from "../../../features/transfer-window/useTransferWindow";
 import LoadingPage from "../../General/LoadingPage";
 import PageLayout from "../../PageLayout";
+import LeagueBlock from "../../Sidebar/LeagueBlock";
 import StatusSidebar from "../../Sidebar/StatusSidebar";
 import PreDraftStatus from "./PreDraftStatus";
 import Status from "./Status";
@@ -63,22 +64,27 @@ function StatusPage() {
     return (
         <PageLayout
             left={
-                <Status
-                    user={user}
-                    league={league}
-                    currentGameweek={gameweekView.displayedGameweek}
-                    nextGameweek={gameweekState.nextGameweek}
-                    nextTransferGameweek={gameweekView.nextTransferGameweek}
-                    preSeason={gameweekView.preSeason}
-                    seasonComplete={gameweekView.seasonComplete}
-                    transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}
-                    refreshGameweeks={gameweekState.refreshGameweeks}
-                    presenceState={presenceQuery.data}
-                    presenceLoading={presenceQuery.isPending}
-                    presenceUnavailable={Boolean(presenceQuery.error)}
-                />
+                <>
+                    <div className="lg:hidden">
+                        <LeagueBlock league={league} currentUser={user} />
+                    </div>
+                    <Status
+                        user={user}
+                        league={league}
+                        currentGameweek={gameweekView.displayedGameweek}
+                        nextGameweek={gameweekState.nextGameweek}
+                        nextTransferGameweek={gameweekView.nextTransferGameweek}
+                        preSeason={gameweekView.preSeason}
+                        seasonComplete={gameweekView.seasonComplete}
+                        transferHistoryGameweekId={gameweekView.transferHistoryGameweekId}
+                        refreshGameweeks={gameweekState.refreshGameweeks}
+                        presenceState={presenceQuery.data}
+                        presenceLoading={presenceQuery.isPending}
+                        presenceUnavailable={Boolean(presenceQuery.error)}
+                    />
+                </>
             }
-            right={<StatusSidebar league={league} user={user} preSeason={gameweekView.preSeason} />}
+            right={<StatusSidebar league={league} user={user} preSeason={gameweekView.preSeason} hideLeagueOnMobile />}
         />
     );
 }

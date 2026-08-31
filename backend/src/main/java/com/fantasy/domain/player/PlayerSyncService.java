@@ -37,6 +37,7 @@ public class PlayerSyncService {
     private final GameWeekService gameWeekService;
     private final PlayerSyncPersistenceService persistenceService;
     private final SupplementalDraftPoolService supplementalDraftPoolService;
+    private final LeaguePlayerPointsCache leaguePlayerPointsCache;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
@@ -48,6 +49,7 @@ public class PlayerSyncService {
                              GameWeekService gameWeekService,
                              PlayerSyncPersistenceService persistenceService,
                              SupplementalDraftPoolService supplementalDraftPoolService,
+                             LeaguePlayerPointsCache leaguePlayerPointsCache,
                              RestTemplate restTemplate,
                              ObjectMapper mapper) {
         this.playerRepo = playerRepo;
@@ -57,6 +59,7 @@ public class PlayerSyncService {
         this.gameWeekService = gameWeekService;
         this.persistenceService = persistenceService;
         this.supplementalDraftPoolService = supplementalDraftPoolService;
+        this.leaguePlayerPointsCache = leaguePlayerPointsCache;
         this.restTemplate = restTemplate;
         this.mapper = mapper;
     }
@@ -226,6 +229,7 @@ public class PlayerSyncService {
                 playerRepo.save(entity);
 
             }
+            leaguePlayerPointsCache.invalidateAll();
         } catch (Exception e) {
             log.error("Failed updating gameweek points: {}", e.getMessage(), e);
             throw new IllegalStateException("Failed updating gameweek points", e);

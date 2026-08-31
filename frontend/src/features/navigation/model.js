@@ -25,7 +25,8 @@ function toNavigationItem([href, label, kind = "default"]) {
         href,
         label,
         kind,
-        mobilePrimary: ["/status", "/points", "/pick-team", "/scout", "/transfer-window"].includes(href),
+        mobilePrimary: ["/status", "/points", "/pick-team", "/league"].includes(href),
+        mobileQuickMenu: ["/scout", "/transfer-window", "/draft-room"].includes(href),
         section: href === "/settings"
             ? "account"
             : kind === "admin"
@@ -39,7 +40,9 @@ export function getSiteNavigation(user) {
         return [
             ["/scout", "Scout"],
             ["/onboarding", "Create / Join League"],
-        ].map(toNavigationItem);
+        ].map(toNavigationItem).map((item) => (
+            item.href === "/scout" ? { ...item, mobilePrimary: true, mobileQuickMenu: false } : item
+        ));
     }
 
     const leagueItems = user.leagueStatus === "ACTIVE" ? ACTIVE_LEAGUE_ITEMS : PRE_DRAFT_ITEMS;
@@ -60,5 +63,9 @@ export function getMobilePrimaryNavigation(items) {
 }
 
 export function getMobileSecondaryNavigation(items) {
-    return items.filter((item) => !item.mobilePrimary);
+    return items.filter((item) => !item.mobilePrimary && !item.mobileQuickMenu);
+}
+
+export function getMobileQuickMenuNavigation(items) {
+    return items.filter((item) => item.mobileQuickMenu);
 }

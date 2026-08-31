@@ -1,4 +1,4 @@
-import { act, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -28,20 +28,18 @@ vi.mock("@stomp/stompjs", () => ({
             this.active = false;
             this.connected = false;
             this.connectHeaders = {};
+            this.activate = vi.fn(() => {
+                this.active = true;
+                this.activationPromise = this.beforeConnect(this);
+            });
+            this.deactivate = vi.fn(() => {
+                this.active = false;
+                this.connected = false;
+                return Promise.resolve();
+            });
+            this.publish = vi.fn();
             mocks.clients.push(this);
         }
-
-        activate() {
-            this.active = true;
-            this.activationPromise = this.beforeConnect(this);
-        }
-
-        deactivate() {
-            this.active = false;
-            return Promise.resolve();
-        }
-
-        publish() { }
     },
 }));
 
@@ -49,6 +47,8 @@ import { WebSocketProvider } from "./WebSocketProvider";
 
 describe("WebSocketProvider authentication", () => {
     afterEach(() => {
+        cleanup();
+        vi.useRealTimers();
         mocks.apiRequest.mockReset();
         mocks.sockJs.mockClear();
         mocks.clients.length = 0;
@@ -87,5 +87,75 @@ describe("WebSocketProvider authentication", () => {
         });
 
         view.unmount();
+    });
+
+    it("keeps a healthy socket connected after returning from the background", async () => {
+        let visibilityState = "visible";
+        Object.defineProperty(document, "visibilityState", {
+            configurable: true,
+            get: () => visibilityState,
+        });
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-31T08:00:00Z"));
+        mocks.apiRequest.mockResolvedValue({ ticket: "healthy-ticket" });
+
+        render(
+            <WebSocketProvider>
+                <div>Connected application</div>
+            </WebSocketProvider>
+        );
+
+        const client = mocks.clients[0];
+        await act(async () => client.activationPromise);
+        client.connected = true;
+        act(() => client.onConnect());
+        client.deactivate.mockClear();
+
+        visibilityState = "hidden";
+        fireEvent(document, new Event("visibilitychange"));
+        vi.advanceTimersByTime(11_000);
+        visibilityState = "visible";
+        fireEvent(document, new Event("visibilitychange"));
+
+        expect(client.deactivate).not.toHaveBeenCalled();
+        expect(client.publish).toHaveBeenCalledWith(expect.objectContaining({
+            destination: "/app/presence",
+        }));
+    });
+
+    it("rebuilds a socket that is disconnected while the app is in the background", async () => {
+        let visibilityState = "visible";
+        Object.defineProperty(document, "visibilityState", {
+            configurable: true,
+            get: () => visibilityState,
+        });
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-31T08:00:00Z"));
+        mocks.apiRequest.mockResolvedValue({ ticket: "recovery-ticket" });
+
+        render(
+            <WebSocketProvider>
+                <div>Connected application</div>
+            </WebSocketProvider>
+        );
+
+        const client = mocks.clients[0];
+        await act(async () => client.activationPromise);
+        client.connected = true;
+        act(() => client.onConnect());
+        client.deactivate.mockClear();
+
+        visibilityState = "hidden";
+        fireEvent(document, new Event("visibilitychange"));
+        vi.advanceTimersByTime(11_000);
+        client.connected = false;
+        visibilityState = "visible";
+        await act(async () => {
+            fireEvent(document, new Event("visibilitychange"));
+            await Promise.resolve();
+        });
+
+        expect(client.deactivate).toHaveBeenCalledWith({ force: true });
+        expect(client.activate).toHaveBeenCalledTimes(2);
     });
 });

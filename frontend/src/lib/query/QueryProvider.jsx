@@ -18,13 +18,15 @@ export function AppResumeRecovery({ queryClient }) {
             if (hiddenAt == null || Date.now() - hiddenAt < APP_RESUME_RECOVERY_AFTER_MS) return;
 
             // iOS can freeze an in-flight request together with the PWA. Abort
-            // that stale request before refetching the data used by visible UI.
+            // that request, but only refetch active data whose staleTime has
+            // actually elapsed. Fresh player snapshots should not be downloaded
+            // again after every short app switch.
             recoveryPromiseRef.current = queryClient.cancelQueries(
-                { type: "active" },
+                { type: "active", stale: true },
                 { silent: true },
-            ).then(() => queryClient.invalidateQueries({
+            ).then(() => queryClient.refetchQueries({
                 type: "active",
-                refetchType: "active",
+                stale: true,
             })).finally(() => {
                 recoveryPromiseRef.current = null;
             });

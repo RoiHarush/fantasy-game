@@ -274,7 +274,7 @@ export function WebSocketProvider({ children }) {
         });
 
         const reconnectAfterResume = () => {
-            if (disposed || resumeReconnectPromise || !client.active) return;
+            if (disposed || resumeReconnectPromise || !client.active || client.connected) return;
 
             const now = Date.now();
             if (now - lastResumeReconnectAt < 2_000) return;
@@ -282,9 +282,10 @@ export function WebSocketProvider({ children }) {
             activeSubscriptions.clear();
             setConnected(false);
 
-            // iOS may keep a frozen socket looking connected after the PWA
-            // returns from the background. Rebuild the same STOMP client and
-            // let onConnect restore every desired subscription.
+            // Rebuild only a connection that STOMP has already identified as
+            // disconnected. Healthy sockets keep their session and presence;
+            // heartbeat monitoring still closes a genuinely frozen transport
+            // and lets the configured reconnect loop recover it.
             resumeReconnectPromise = client.deactivate({ force: true })
                 .then(() => {
                     if (!disposed) client.activate();
