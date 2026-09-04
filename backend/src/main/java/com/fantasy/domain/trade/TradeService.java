@@ -161,6 +161,8 @@ public class TradeService {
         Map<Integer, UserGameDataEntity> data = leagueDataByUser(leagueId, true);
         UserGameDataEntity proposerData = requireGameData(data, offer.getProposer().getId());
         UserGameDataEntity recipientData = requireGameData(data, recipientId);
+        Map<Integer, Long> proposerClubCountsBefore = clubCounts(proposerData.getNextSquad());
+        Map<Integer, Long> recipientClubCountsBefore = clubCounts(recipientData.getNextSquad());
         List<CreateTradeItemRequest> items = offer.getItems().stream()
                 .map(item -> new CreateTradeItemRequest(
                         item.getProposerPlayer().getId(), item.getRecipientPlayer().getId()))
@@ -173,8 +175,8 @@ public class TradeService {
         }
         validateFinalSquad(proposerData.getNextSquad());
         validateFinalSquad(recipientData.getNextSquad());
-        validateClubLimit(proposerData.getNextSquad());
-        validateClubLimit(recipientData.getNextSquad());
+        validateClubLimit(proposerData.getNextSquad(), proposerClubCountsBefore);
+        validateClubLimit(recipientData.getNextSquad(), recipientClubCountsBefore);
         squadRepo.save(proposerData.getNextSquad());
         squadRepo.save(recipientData.getNextSquad());
         gameDataRepo.save(proposerData);
@@ -337,11 +339,19 @@ public class TradeService {
         }
     }
 
-    private void validateClubLimit(UserSquadEntity squad) {
-        Map<Integer, Long> counts = playerRepo.findAllById(rosterIds(squad)).stream()
+    private Map<Integer, Long> clubCounts(UserSquadEntity squad) {
+        return playerRepo.findAllById(rosterIds(squad)).stream()
                 .filter(player -> player.getTeamId() != null)
                 .collect(Collectors.groupingBy(PlayerEntity::getTeamId, Collectors.counting()));
-        if (counts.values().stream().anyMatch(count -> count > 3)) {
+    }
+
+    private void validateClubLimit(UserSquadEntity squad, Map<Integer, Long> countsBefore) {
+        Map<Integer, Long> countsAfter = clubCounts(squad);
+        boolean increasedOverage = countsAfter.entrySet().stream().anyMatch(entry -> (
+                entry.getValue() > 3
+                        && entry.getValue() > countsBefore.getOrDefault(entry.getKey(), 0L)
+        ));
+        if (increasedOverage) {
             throw new IllegalStateException("Trade would create more than 3 players from the same club");
         }
     }

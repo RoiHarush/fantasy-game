@@ -69,12 +69,19 @@ export function getReplacementBlockReason({ playerIn, playerOut, squadPlayers = 
         return "Players must have the same position";
     }
 
-    const prospectiveClubCount = squadPlayers.filter((player) => (
+    const uniqueSquadPlayers = [...new Map(squadPlayers
+        .filter((player) => player?.id !== null && player?.id !== undefined)
+        .map((player) => [String(player.id), player]))
+        .values()];
+    const currentClubCount = uniqueSquadPlayers.filter((player) => (
+        isSameTransferId(player.teamId, playerIn.teamId)
+    )).length;
+    const prospectiveClubCount = uniqueSquadPlayers.filter((player) => (
         !isSameTransferId(player.id, playerOut.id)
         && isSameTransferId(player.teamId, playerIn.teamId)
     )).length + 1;
 
-    if (prospectiveClubCount > 3) {
+    if (prospectiveClubCount > 3 && prospectiveClubCount > currentClubCount) {
         return "Would exceed the three-player club limit";
     }
     return null;

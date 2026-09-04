@@ -71,6 +71,20 @@ describe("transfer-window event model", () => {
             .toBeNull();
     });
 
+    it("allows a same-club replacement without worsening an existing club overage", () => {
+        const playerIn = { id: 20, position: "DEF", teamId: "5" };
+        const squadPlayers = [
+            { id: 1, position: "DEF", teamId: 5 },
+            { id: 2, position: "MID", teamId: 5 },
+            { id: 3, position: "FWD", teamId: 5 },
+            { id: 4, position: "DEF", teamId: 5 },
+            { id: 4, position: "DEF", teamId: 5 },
+        ];
+
+        expect(getReplacementBlockReason({ playerIn, playerOut: squadPlayers[0], squadPlayers }))
+            .toBeNull();
+    });
+
     it("summarizes a snake order without duplicating managers", () => {
         const order = [1, 2, 3, 3, 2, 1];
         const summary = summarizeSnakeOrder(order, [

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import TradesPage from "./TradesPage";
@@ -19,7 +19,22 @@ vi.mock("../../../features/trades/useTrades", () => ({
     }),
     useTradeOffers: () => ({
         data: {
-            incoming: [],
+            incoming: [{
+                id: 2,
+                status: "ACCEPTED",
+                proposer: { userId: 19, userName: "Alex", teamName: "Alex FC" },
+                recipient: { userId: 10, userName: "Roi", teamName: "Roi FC" },
+                items: [{
+                    offeredPlayer: { id: 303, name: "Historic Midfielder", position: "MID", teamId: 3 },
+                    requestedPlayer: { id: 404, name: "Other Midfielder", position: "MID", teamId: 4 },
+                }],
+                message: null,
+                createdAt: [2026, 9, 3, 12, 0, 0],
+                respondedAt: [2026, 9, 3, 12, 5, 0],
+                canAccept: false,
+                canReject: false,
+                canCancel: false,
+            }],
             outgoing: [{
                 id: 1,
                 status: "PENDING",
@@ -55,10 +70,25 @@ describe("TradesPage", () => {
     it("renders persisted offers whose backend timestamp is a Java date-time array", () => {
         render(<TradesPage />);
 
-        expect(screen.getByText("Alex FC · Alex")).toBeInTheDocument();
-    expect(screen.getByText(/Fri 4 Sep(?:t)? 13:06/)).toBeInTheDocument();
+        expect(screen.getAllByText("Alex FC · Alex")).toHaveLength(2);
+        expect(screen.getByText(/Fri 4 Sep(?:t)? 13:06/)).toBeInTheDocument();
         expect(screen.getByText("Forward One")).toBeInTheDocument();
         expect(screen.getByText("Forward Two")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Cancel offer" })).toBeEnabled();
+    });
+
+    it("keeps completed offers in a collapsed trade history section", () => {
+        render(<TradesPage />);
+
+        const historySummary = screen.getByText("Trade history").closest("summary");
+        const history = historySummary.closest("details");
+
+        expect(history).not.toHaveAttribute("open");
+        expect(history).toContainElement(screen.getByText("Historic Midfielder"));
+
+        fireEvent.click(historySummary);
+
+        expect(history).toHaveAttribute("open");
+        expect(screen.getByText("accepted")).toBeInTheDocument();
     });
 });

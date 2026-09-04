@@ -13,12 +13,12 @@ import {
     useTradeContext,
     useTradeOffers,
 } from "../../../features/trades/useTrades";
-import { formatAppDateTime } from "../../../lib/dateTime";
+import { formatAppDateTime, toAppTimestamp } from "../../../lib/dateTime";
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
 import SelectField from "../../../shared/ui/SelectField";
-import { AlertTriangle, ArrowLeftRight, CheckCircle2, Clock3, Plus, Trash2 } from "../../../shared/ui/icons";
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, ChevronDown, Clock3, Plus, Trash2 } from "../../../shared/ui/icons";
 import PlayerKit from "../../General/PlayerKit";
 
 const STATUS_STYLES = {
@@ -75,7 +75,7 @@ function TradePairs({ items }) {
 
 function OfferCard({ offer, direction, onAction }) {
     const other = direction === "incoming" ? offer.proposer : offer.recipient;
-    const pendingAction = onAction.pendingId === offer.id;
+    const pendingAction = onAction?.pendingId === offer.id;
     return (
         <article className="overflow-hidden rounded-2xl border border-app-border bg-app-surface-elevated shadow-sm">
             <header className="flex items-start justify-between gap-3 border-b border-app-border bg-app-surface-muted/55 px-4 py-3">
@@ -106,6 +106,35 @@ function OfferCard({ offer, direction, onAction }) {
                 </footer>
             )}
         </article>
+    );
+}
+
+function TradeHistory({ offers, actions }) {
+    if (!offers.length) return null;
+
+    return (
+        <details className="group overflow-hidden rounded-2xl border border-app-border bg-app-surface-muted/35">
+            <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:hidden sm:px-5">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-app-border bg-app-surface-elevated text-app-muted">
+                    <Clock3 className="size-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block font-black text-app-foreground">Trade history</span>
+                    <span className="block text-sm text-app-muted">Accepted, declined and cancelled offers.</span>
+                </span>
+                <span className="rounded-full border border-app-border bg-app-surface-elevated px-2.5 py-1 text-xs font-black text-app-muted">
+                    {offers.length}
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-app-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="border-t border-app-border p-3 sm:p-5">
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                    {offers.map(({ offer, direction }) => (
+                        <OfferCard key={offer.id} offer={offer} direction={direction} onAction={actions} />
+                    ))}
+                </div>
+            </div>
+        </details>
     );
 }
 
@@ -258,7 +287,16 @@ export default function TradesPage() {
     const offers = offersQuery.data || { incoming: [], outgoing: [] };
     const pendingId = acceptMutation.variables || rejectMutation.variables || cancelMutation.variables;
 
-    const pendingCount = [...offers.incoming, ...offers.outgoing].filter((offer) => offer.status === "PENDING").length;
+    const pendingIncoming = offers.incoming.filter((offer) => offer.status === "PENDING");
+    const pendingOutgoing = offers.outgoing.filter((offer) => offer.status === "PENDING");
+    const history = [
+        ...offers.incoming.filter((offer) => offer.status !== "PENDING").map((offer) => ({ offer, direction: "incoming" })),
+        ...offers.outgoing.filter((offer) => offer.status !== "PENDING").map((offer) => ({ offer, direction: "outgoing" })),
+    ].sort((left, right) => (
+        (toAppTimestamp(right.offer.respondedAt || right.offer.createdAt) || 0)
+        - (toAppTimestamp(left.offer.respondedAt || left.offer.createdAt) || 0)
+    ));
+    const pendingCount = pendingIncoming.length + pendingOutgoing.length;
     const action = async (mutation, offer, success) => {
         try { await mutation.mutateAsync(offer.id); toast.success(success); } catch (error) { toast.error(errorMessage(error)); }
     };
@@ -292,9 +330,11 @@ export default function TradesPage() {
             </section>
 
             <div className="grid gap-7 lg:grid-cols-2 lg:items-start">
-                <OffersSection title="Incoming offers" subtitle="Deals waiting for your decision." offers={offers.incoming} direction="incoming" actions={actions} />
-                <OffersSection title="Sent offers" subtitle="Track or cancel the offers you created." offers={offers.outgoing} direction="outgoing" actions={actions} />
+                <OffersSection title="Incoming offers" subtitle="Deals waiting for your decision." offers={pendingIncoming} direction="incoming" actions={actions} />
+                <OffersSection title="Sent offers" subtitle="Track or cancel the offers you created." offers={pendingOutgoing} direction="outgoing" actions={actions} />
             </div>
+
+            <TradeHistory offers={history} actions={actions} />
 
             {context && <TradeBuilder context={context} open={builderOpen} onOpenChange={setBuilderOpen} onSubmit={(payload) => createMutation.mutateAsync(payload)} saving={createMutation.isPending} />}
             <AcceptDialog offer={acceptingOffer} saving={acceptMutation.isPending} onClose={() => setAcceptingOffer(null)} onAccept={async () => { try { await acceptMutation.mutateAsync(acceptingOffer.id); toast.success("Trade completed"); setAcceptingOffer(null); } catch (error) { toast.error(errorMessage(error)); } }} />

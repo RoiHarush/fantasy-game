@@ -799,19 +799,25 @@ public class TransferMarketService {
         if (incomingPlayer.getTeamId() == null) {
             return;
         }
-        Set<Integer> prospectiveRoster = rosterPlayerIds(squad);
-        if (includeIrPlayer && squad.getIrId() != null) prospectiveRoster.add(squad.getIrId());
+        Set<Integer> currentRoster = rosterPlayerIds(squad);
+        if (includeIrPlayer && squad.getIrId() != null) currentRoster.add(squad.getIrId());
+        int currentPlayersFromClub = countPlayersFromClub(currentRoster, incomingPlayer.getTeamId());
+
+        Set<Integer> prospectiveRoster = new LinkedHashSet<>(currentRoster);
         if (outgoingPlayerId != null) prospectiveRoster.remove(outgoingPlayerId);
         prospectiveRoster.add(incomingPlayer.getId());
-        int playersFromClub = 0;
-        for (PlayerEntity player : playerRepo.findAllById(prospectiveRoster)) {
-            if (Objects.equals(player.getTeamId(), incomingPlayer.getTeamId())) {
-                playersFromClub++;
-            }
-        }
-        if (playersFromClub > 3) {
+        int prospectivePlayersFromClub = countPlayersFromClub(prospectiveRoster, incomingPlayer.getTeamId());
+        if (prospectivePlayersFromClub > 3 && prospectivePlayersFromClub > currentPlayersFromClub) {
             throw new FantasyTeamException("Cannot have more than 3 players from the same club");
         }
+    }
+
+    private int countPlayersFromClub(Set<Integer> rosterPlayerIds, Integer teamId) {
+        int count = 0;
+        for (PlayerEntity player : playerRepo.findAllById(rosterPlayerIds)) {
+            if (Objects.equals(player.getTeamId(), teamId)) count++;
+        }
+        return count;
     }
 
     private boolean isPlayerOwnedInLeague(long leagueId, int playerId) {

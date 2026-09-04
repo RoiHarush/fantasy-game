@@ -81,7 +81,12 @@ class TradeServiceTest {
         when(windowRepo.existsByLeague_IdAndStatus(7L, TransferWindowStatus.OPEN)).thenReturn(false);
         lenient().when(gameWeekRepo.findAll()).thenReturn(List.of());
         lenient().when(playerRepo.findById(any())).thenAnswer(invocation -> player(invocation.getArgument(0)));
-        lenient().when(playerRepo.findAllById(any())).thenReturn(players);
+        lenient().when(playerRepo.findAllById(any())).thenAnswer(invocation -> {
+            Iterable<Integer> requestedIds = invocation.getArgument(0);
+            List<Integer> ids = new ArrayList<>();
+            requestedIds.forEach(ids::add);
+            return players.stream().filter(player -> ids.contains(player.getId())).toList();
+        });
         lenient().when(gameDataRepo.findByUserId(11)).thenReturn(Optional.of(proposerData));
         lenient().when(gameDataRepo.findByUserId(22)).thenReturn(Optional.of(recipientData));
     }
@@ -128,6 +133,29 @@ class TradeServiceTest {
         assertThat(proposerData.getNextSquad().getStartingLineup()).contains(1).doesNotContain(16);
         assertThat(recipientData.getNextSquad().getBenchMap()).containsEntry("B1", 16);
         verifyNoInteractions(squadRepo);
+    }
+
+    @Test
+    void acceptingSameClubSwapDoesNotWorsenAnExistingClubOverage() {
+        player(1).orElseThrow().setTeamId(50);
+        player(2).orElseThrow().setTeamId(50);
+        player(3).orElseThrow().setTeamId(50);
+        player(4).orElseThrow().setTeamId(50);
+        player(16).orElseThrow().setTeamId(50);
+        TradeOfferEntity offer = offer(41L, proposerData.getUser(), recipientData.getUser(), 1, 16);
+
+        when(offerRepo.findById(41L)).thenReturn(Optional.of(offer));
+        when(leagueRepo.findByIdWithLock(7L)).thenReturn(Optional.of(league));
+        when(offerRepo.findByIdForUpdate(41L)).thenReturn(Optional.of(offer));
+        when(gameDataRepo.findAllByLeagueIdForUpdate(7L)).thenReturn(List.of(proposerData, recipientData));
+        when(offerRepo.findPendingByLeagueForUpdate(7L, TradeOfferStatus.PENDING))
+                .thenReturn(List.of(offer));
+
+        TradeDtos.TradeOffer result = service.accept(22, 41L);
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(proposerData.getNextSquad().getStartingLineup())
+                .contains(16).doesNotContain(1);
     }
 
     private UserGameDataEntity gameData(int userId, String userName, String teamName, int firstPlayerId) {
