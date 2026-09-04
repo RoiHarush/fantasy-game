@@ -13,6 +13,7 @@ import {
     useTradeContext,
     useTradeOffers,
 } from "../../../features/trades/useTrades";
+import { formatAppDateTime } from "../../../lib/dateTime";
 import { Button } from "../../../shared/ui/Button";
 import CloseButton from "../../../shared/ui/CloseButton";
 import { ResponsiveDialogSurface } from "../../../shared/ui/ResponsiveDialog";
@@ -30,11 +31,6 @@ const STATUS_STYLES = {
 
 function errorMessage(error) {
     return error?.message || "Something went wrong. Please try again.";
-}
-
-function formatDate(value) {
-    if (!value) return "";
-    return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function managerLabel(manager) {
@@ -88,7 +84,7 @@ function OfferCard({ offer, direction, onAction }) {
                         {direction === "incoming" ? "Offer from" : "Offer to"}
                     </p>
                     <h3 className="truncate text-base font-extrabold text-app-foreground">{managerLabel(other)}</h3>
-                    <p className="mt-0.5 text-xs text-app-muted">{formatDate(offer.createdAt)}</p>
+                    <p className="mt-0.5 text-xs text-app-muted">{formatAppDateTime(offer.createdAt) || "Date unavailable"}</p>
                 </div>
                 <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-wider ${STATUS_STYLES[offer.status] || STATUS_STYLES.INVALIDATED}`}>
                     {offer.status.toLowerCase().replace("_", " ")}
