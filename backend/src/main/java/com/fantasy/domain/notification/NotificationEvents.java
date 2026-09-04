@@ -136,4 +136,37 @@ public final class NotificationEvents {
                 NotificationAudiencePolicy.PUSH_WHEN_INACTIVE_ONLY
         );
     }
+
+    public static NotificationEvent tradeOffered(long offerId, String proposer) {
+        return new NotificationEvent(
+                "trade:" + offerId + ":offered",
+                "TRADE_OFFERED",
+                "New trade offer",
+                proposer + " sent you a trade offer.",
+                "/trades",
+                NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+        );
+    }
+
+    public static NotificationEvent tradeAccepted(long offerId, String recipient) {
+        return new NotificationEvent(
+                "trade:" + offerId + ":accepted",
+                "TRADE_ACCEPTED",
+                "Trade accepted",
+                recipient + " accepted your trade offer.",
+                "/trades",
+                NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+        );
+    }
+
+    public static NotificationEvent tradeRejected(long offerId, String recipient) {
+        return new NotificationEvent(
+                "trade:" + offerId + ":rejected",
+                "TRADE_REJECTED",
+                "Trade declined",
+                recipient + " declined your trade offer.",
+                "/trades",
+                NotificationAudiencePolicy.TOAST_WHEN_ACTIVE_PUSH_WHEN_INACTIVE
+        );
+    }
 }

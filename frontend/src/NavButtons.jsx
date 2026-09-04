@@ -2,6 +2,7 @@
 
 import {
     Beaker,
+    ArrowLeftRight,
     CalendarDays,
     LogOut,
     Menu,
@@ -41,6 +42,7 @@ const MOBILE_ICONS = {
     "/league": UsersRound,
     "/scout": MobileScoutIcon,
     "/transfer-window": MobileTransfersIcon,
+    "/trades": ArrowLeftRight,
 };
 const MOBILE_LABELS = {
     "/pick-team": "Team",
@@ -56,6 +58,7 @@ const SECONDARY_ICONS = {
     "/fixtures": CalendarDays,
     "/scout": MobileScoutIcon,
     "/draft-room": Shirt,
+    "/trades": ArrowLeftRight,
     "/league-control": ShieldCheck,
     "/settings": UserRound,
     "/onboarding": WaiverAdd,
@@ -98,7 +101,8 @@ export default function NavButtons({
     const [isLoggingOut, startLogout] = useTransition();
     const [openMenuPath, setOpenMenuPath] = useState(null);
     const [openQuickMenuPath, setOpenQuickMenuPath] = useState(null);
-    const navigationItems = getSiteNavigation(user);
+    const navigationItems = getSiteNavigation(user)
+        .filter((item) => !(observerMode && item.href === "/trades"));
     const isMenuOpen = openMenuPath === pathname;
     const isQuickMenuOpen = openQuickMenuPath === pathname;
     const buildHref = (href) => navigationBase ? `${navigationBase}${href}` : href;

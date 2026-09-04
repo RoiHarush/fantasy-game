@@ -45,6 +45,7 @@ describe("site navigation", () => {
             "/scout",
             "/transfer-window",
             "/draft-room",
+            "/trades",
         ]);
         expect(getMobileSecondaryNavigation(navigation).map(({ href }) => href)).toEqual([
             "/fixtures",

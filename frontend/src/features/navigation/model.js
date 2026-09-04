@@ -7,6 +7,7 @@ const ACTIVE_LEAGUE_ITEMS = [
     ["/scout", "Scout"],
     ["/transfer-window", "Transfer Window"],
     ["/draft-room", "Draft Room"],
+    ["/trades", "Trades"],
 ];
 
 const PRE_DRAFT_ITEMS = [
@@ -26,7 +27,7 @@ function toNavigationItem([href, label, kind = "default"]) {
         label,
         kind,
         mobilePrimary: ["/status", "/points", "/pick-team", "/league"].includes(href),
-        mobileQuickMenu: ["/scout", "/transfer-window", "/draft-room"].includes(href),
+        mobileQuickMenu: ["/scout", "/transfer-window", "/draft-room", "/trades"].includes(href),
         section: href === "/settings"
             ? "account"
             : kind === "admin"

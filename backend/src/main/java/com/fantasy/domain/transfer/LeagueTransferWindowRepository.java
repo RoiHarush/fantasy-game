@@ -26,6 +26,8 @@ public interface LeagueTransferWindowRepository extends JpaRepository<LeagueTran
 
     List<LeagueTransferWindowEntity> findAllByStatus(TransferWindowStatus status);
 
+    boolean existsByLeague_IdAndStatus(Long leagueId, TransferWindowStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select w from LeagueTransferWindowEntity w
