@@ -16,7 +16,7 @@ public class MemoryPressureMonitor {
 
     private static final Logger log = LoggerFactory.getLogger(MemoryPressureMonitor.class);
 
-    @Scheduled(fixedDelayString = "${app.memory.log-interval:5m}")
+    @Scheduled(fixedDelayString = "${app.memory.log-interval:300000}")
     public void logMemoryPressure() {
         MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         MemoryUsage nonHeap = ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
