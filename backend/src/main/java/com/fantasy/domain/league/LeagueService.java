@@ -71,7 +71,7 @@ public class LeagueService {
 
             int totalPoints = (gameData != null) ? gameData.getTotalPoints() : 0;
             String teamName = (gameData != null) ? gameData.getFantasyTeamName() : "N/A";
-            String logoPath = gameData != null && gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0
+            String logoPath = gameData != null && gameData.hasTeamLogo()
                     ? "/api/users/" + user.getId() + "/team-logo?v=" + gameData.getTeamLogoVersion()
                     : "/UI/team-placeholder.svg";
             int gwPoints = (gameData != null) ? gwPointsMap.getOrDefault(user.getId(), 0) : 0;

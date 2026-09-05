@@ -3,6 +3,7 @@ const ACTIVE_LEAGUE_ITEMS = [
     ["/points", "Points"],
     ["/pick-team", "Pick Team"],
     ["/league", "League"],
+    ["/live", "Live"],
     ["/fixtures", "Fixtures"],
     ["/scout", "Scout"],
     ["/transfer-window", "Transfer Window"],

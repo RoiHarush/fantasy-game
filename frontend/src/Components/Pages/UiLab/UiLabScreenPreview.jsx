@@ -16,6 +16,7 @@ import Points from "../PointsTab/Points";
 import { PreSeasonPointsState } from "../PointsTab/PointsPage";
 import Status from "../StatusTab/Status";
 import DraftLobbyView from "../DraftRoomTab/DraftLobbyView";
+import LeagueLiveBoard from "../LiveTab/LeagueLiveBoard";
 import ClosedWindowView from "../TransferWindowTab/ClosedWindowView";
 import TransferWindow from "../TransferWindowTab/TransferWindow";
 import TransferWindowLifecycleScenario from "./TransferWindowLifecycleScenario";
@@ -39,6 +40,7 @@ const SCREEN_TITLES = {
     "screen-points": "Regular-season points",
     "screen-points-closed": "Pre-season points",
     "screen-status": "Regular-season status",
+    "screen-live": "Live match centre",
 };
 
 export default function UiLabScreenPreview({ id, user, users, players, squad, onClose }) {
@@ -72,6 +74,10 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
         [currentGameweek.id, players, previewUsers],
     );
     const previewDreamTeam = useMemo(() => buildPreviewDreamTeam(players), [players]);
+    const livePreviewData = useMemo(
+        () => buildLivePreviewData(players, previewUsers, previewTeams, currentGameweek.id),
+        [currentGameweek.id, players, previewTeams, previewUsers],
+    );
 
     let content;
     if (id === "screen-loading") {
@@ -265,6 +271,8 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
                 )}
             />
         );
+    } else if (id === "screen-live") {
+        content = <LeagueLiveBoard data={livePreviewData} teams={previewTeams} />;
     } else {
         content = (
             <PageLayout
@@ -305,6 +313,64 @@ export default function UiLabScreenPreview({ id, user, users, players, squad, on
             </Button>
         </>
     );
+}
+
+function buildLivePreviewData(players, users, teams, gameweekId) {
+    const availablePlayers = players.filter(Boolean);
+    const matchTeams = teams.slice(0, 4);
+    const managers = users.length > 0 ? users : [{ id: 1, name: "Roi Harush", fantasyTeamName: "Roi FC" }];
+    const buildPlayer = (player, index) => {
+        const manager = managers[index % managers.length];
+        const featured = index % 4 !== 3;
+        const captain = index === 0;
+        const squadRole = index === 4 ? "BENCH" : "STARTING";
+        const multiplier = squadRole === "BENCH" ? 0 : captain ? 2 : 1;
+        const points = featured ? [9, 5, 3, 2, 1, 6][index % 6] : 0;
+        return {
+            playerId: player.id,
+            viewName: player.viewName,
+            position: player.position,
+            teamId: player.teamId,
+            photo: player.photo,
+            ownerUserId: manager.id,
+            ownerName: manager.name,
+            ownerTeamName: manager.fantasyTeamName,
+            squadRole,
+            captain,
+            multiplier,
+            minutesPlayed: featured ? 64 : 0,
+            participation: featured ? (index % 3 === 2 ? "SUBSTITUTE" : "STARTED") : "NOT_PLAYED",
+            points,
+            contributionPoints: points * multiplier,
+            goals: index === 0 ? 1 : 0,
+            assists: index === 1 ? 1 : 0,
+            yellowCards: index === 5 ? 1 : 0,
+            redCards: 0,
+        };
+    };
+    const livePlayers = availablePlayers.slice(0, 10).map(buildPlayer);
+    const fixtures = [0, 1].map((fixtureIndex) => {
+        const homeTeam = matchTeams[fixtureIndex * 2] ?? matchTeams[0];
+        const awayTeam = matchTeams[fixtureIndex * 2 + 1] ?? matchTeams[1] ?? matchTeams[0];
+        return {
+            id: 9900 + fixtureIndex,
+            homeTeamId: homeTeam?.id,
+            awayTeamId: awayTeam?.id,
+            homeScore: fixtureIndex === 0 ? 2 : 0,
+            awayScore: fixtureIndex === 0 ? 1 : 0,
+            minutes: fixtureIndex === 0 ? 64 : 27,
+            players: livePlayers.filter((player) => player.teamId === homeTeam?.id || player.teamId === awayTeam?.id),
+        };
+    });
+
+    return {
+        gameweekId,
+        gameweekName: `Gameweek ${gameweekId}`,
+        fixtures,
+        nextFixture: null,
+        ownedPlayerCount: fixtures.reduce((total, fixture) => total + fixture.players.length, 0),
+        refreshedAt: new Date().toISOString(),
+    };
 }
 
 function buildStatusPreviewData(players, users, gameweekId) {

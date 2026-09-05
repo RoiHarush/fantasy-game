@@ -11,7 +11,7 @@ import { useAllTeamFixtures } from "../../../features/fixtures/useAllTeamFixture
 import { useGameweek } from "../../../features/gameweeks/useGameweek";
 import { findActiveGameweek, gameweekLabel } from "../../../features/gameweeks/availability";
 import { getNextTransferGameweek } from "../../../features/gameweeks/model";
-import { useLeagueObserver, useObservedManagerSquad } from "../../../features/super-admin/useLeagueObserver";
+import { useLeagueObserver, useObservedLeagueLive, useObservedManagerSquad } from "../../../features/super-admin/useLeagueObserver";
 import { getObserverScreenHref } from "../../../features/super-admin/observerModel";
 import { useTeams } from "../../../features/teams/useTeams";
 import { isSameTransferId } from "../../../features/transfer-window/model";
@@ -29,6 +29,7 @@ import DraftLobby from "../DraftRoomTab/DraftLobby";
 import Fixtures from "../FixturesTab/Fixtures";
 import LeagueControlPage from "../Admin/LeagueControlPage";
 import LeagueTable from "../LeagueTab/LeagueTable";
+import LeagueLiveBoard from "../LiveTab/LeagueLiveBoard";
 import PickTeam from "../PickTeamTab/PickTeam";
 import Points from "../PointsTab/Points";
 import Scout from "../ScoutTab/Scout";
@@ -43,6 +44,7 @@ const SCREEN_LABELS = {
     points: "Points",
     "pick-team": "Pick Team",
     league: "League",
+    live: "Live",
     fixtures: "Fixtures",
     scout: "Scout",
     "transfer-window": "Transfer Window",
@@ -155,6 +157,7 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
         gameweekId: requestedGameweek?.id,
         includeStatusDetails: screen === "status" && Boolean(gameweeks.currentGameweek),
     });
+    const observedLive = useObservedLeagueLive(leagueId, screen === "live");
     const activeWindowGameweek = gameweeks.gameweeks.find(
         (item) => Number(item.id) === Number(observer.windowState.data?.gameWeekId),
     ) ?? requestedGameweek;
@@ -325,6 +328,12 @@ export default function LeagueObserverExperience({ leagueId, managerId, screen }
             left={<Fixtures />}
             right={<SidebarContainer><PointsSummaryBlock user={observedUser} previewPoints={{ gameweekPoints: observer.points.data ?? 0, totalPoints: manager.totalPoints }} /></SidebarContainer>}
         />;
+    } else if (screen === "live") {
+        content = observedLive.isPending
+            ? <ObserverPageState>Loading the live match centre…</ObserverPageState>
+            : observedLive.error
+                ? <ObserverPageState error>Live match data is temporarily unavailable.</ObserverPageState>
+                : <LeagueLiveBoard data={observedLive.data} teams={teams.teams} />;
     } else if (screen === "scout") {
         content = <PageLayout
             left={<Scout

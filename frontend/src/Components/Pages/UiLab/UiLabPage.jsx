@@ -141,7 +141,7 @@ const NOTIFICATION_TOASTS = {
         url: "/points",
     },
 };
-const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-server-error", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status"]);
+const SCREEN_DEMO_IDS = new Set(["screen-loading", "screen-gameweek-update", "screen-not-found", "screen-server-error", "screen-onboarding", "screen-draft", "screen-draft-closed", "screen-transfer", "screen-transfer-closed", "screen-transfer-lifecycle", "screen-points", "screen-points-closed", "screen-status", "screen-live"]);
 
 const GROUPS = [
     {
@@ -161,6 +161,7 @@ const GROUPS = [
             ["screen-points", "Regular-season points", "Gameweek points, pitch and fixtures"],
             ["screen-points-closed", "Pre-season points", "The real closed points screen before Gameweek 1"],
             ["screen-status", "Regular-season status", "Live round summary, deadlines and activity"],
+            ["screen-live", "Live match centre", "Owned players currently involved in live fixtures"],
         ],
     },
     {

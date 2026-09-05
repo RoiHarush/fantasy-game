@@ -48,6 +48,7 @@ describe("site navigation", () => {
             "/trades",
         ]);
         expect(getMobileSecondaryNavigation(navigation).map(({ href }) => href)).toEqual([
+            "/live",
             "/fixtures",
             "/settings",
         ]);

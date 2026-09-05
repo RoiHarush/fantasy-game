@@ -5,6 +5,7 @@ export const queryKeys = {
     players: (leagueId) => ["players", leagueId ?? "no-league"],
     teamFixtures: (teamId) => ["fixtures", "team", teamId],
     allFixtures: ["fixtures", "all"],
+    leagueLive: (leagueId) => ["league-live", leagueId ?? "no-league"],
     watchlist: (userId, leagueId) => ["watchlist", userId, leagueId],
     squad: (userId, gameweekId) => ["squad", userId, gameweekId],
     squadPlayerData: (userId, gameweekId) => ["squad-player-data", userId, gameweekId],

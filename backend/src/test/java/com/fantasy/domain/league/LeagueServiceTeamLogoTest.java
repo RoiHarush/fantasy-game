@@ -33,7 +33,7 @@ class LeagueServiceTeamLogoTest {
         UserGameDataEntity gameData = new UserGameDataEntity();
         gameData.setUser(user);
         gameData.setFantasyTeamName("Crop United");
-        gameData.setTeamLogoBytes(new byte[] { 1, 2, 3 });
+        gameData.setTeamLogoPresent(true);
         gameData.setTeamLogoVersion(42L);
 
         when(leagueRepository.findFirstByUsers_Id(7)).thenReturn(Optional.of(league));

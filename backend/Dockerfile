@@ -24,11 +24,9 @@ COPY --from=build --chown=fantasy:fantasy /workspace/build/libs/app.jar app.jar
 
 USER fantasy
 
-# Leave explicit native-memory headroom for Tomcat threads, WebSocket buffers,
-# metaspace and the JVM itself. Render enforces the container limit, not only
-# the Java heap limit.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=55.0 -XX:+ExitOnOutOfMemoryError"
-
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Render's 512 MB limit covers heap, metaspace, code cache, thread stacks and
+# native WebSocket/Tomcat buffers. Explicit launcher flags win even if an old
+# JAVA_TOOL_OPTIONS value is still configured in the Render dashboard.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=45.0", "-XX:InitialRAMPercentage=20.0", "-Xss512k", "-XX:MaxMetaspaceSize=128m", "-XX:ReservedCodeCacheSize=64m", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]

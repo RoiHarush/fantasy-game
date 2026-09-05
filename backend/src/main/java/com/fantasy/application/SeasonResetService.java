@@ -23,6 +23,7 @@ public class SeasonResetService {
             "ai_roasts",
             "trade_offer_items",
             "trade_offers",
+            "user_team_logos",
             "user_squad_starting",
             "user_squad_bench",
             "user_squad_formation",

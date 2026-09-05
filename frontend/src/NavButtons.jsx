@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    Activity,
     Beaker,
     ArrowLeftRight,
     CalendarDays,
@@ -40,6 +41,7 @@ const MOBILE_ICONS = {
     "/points": MobilePointsIcon,
     "/pick-team": MobileTeamIcon,
     "/league": UsersRound,
+    "/live": Activity,
     "/scout": MobileScoutIcon,
     "/transfer-window": MobileTransfersIcon,
     "/trades": ArrowLeftRight,
@@ -55,6 +57,7 @@ const SECTION_LABELS = {
 };
 const SECONDARY_ICONS = {
     "/league": UsersRound,
+    "/live": Activity,
     "/fixtures": CalendarDays,
     "/scout": MobileScoutIcon,
     "/draft-room": Shirt,
@@ -357,7 +360,7 @@ export default function NavButtons({
                                 <span className="absolute top-2 left-1/2 grid size-7 -translate-x-1/2 place-items-center">
                                     <Menu className={cn("size-[1.45rem]", (isQuickMenuActive || isQuickMenuOpen) && "text-brand-cyan")} aria-hidden="true" />
                                 </span>
-                                <span className="absolute inset-x-1 bottom-1.5 truncate text-center text-[0.7rem] leading-4">Market</span>
+                        <span className="absolute inset-x-1 bottom-1.5 truncate text-center text-[0.7rem] leading-4">Market</span>
                             </Button>
                         )}
                     </div>

@@ -212,7 +212,7 @@ public class AuthService {
         String teamName = gameData == null ? "No Team" : gameData.getFantasyTeamName();
 
         dto.setFantasyTeamName(teamName);
-        if (gameData != null && gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0) {
+        if (gameData != null && gameData.hasTeamLogo()) {
             dto.setLogoVersion(gameData.getTeamLogoVersion());
             dto.setLogoPath("/api/users/" + user.getId() + "/team-logo?v=" + gameData.getTeamLogoVersion());
         } else {

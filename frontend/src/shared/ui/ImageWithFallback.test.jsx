@@ -6,6 +6,7 @@ vi.mock("next/image", () => ({
     default: (props) => {
         const imageProps = { ...props };
         delete imageProps.fill;
+        delete imageProps.unoptimized;
         return createElement("img", imageProps);
     },
 }));

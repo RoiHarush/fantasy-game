@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
-function ImageWithFallback({ src, fallbackSrc, onError, alt, ...props }) {
+function ImageWithFallback({ src, fallbackSrc, onError, alt, unoptimized = true, ...props }) {
     const sourceKey = `${src || ""}|${fallbackSrc}`;
     return (
         <FallbackImage
@@ -12,6 +12,7 @@ function ImageWithFallback({ src, fallbackSrc, onError, alt, ...props }) {
             fallbackSrc={fallbackSrc}
             onError={onError}
             alt={alt}
+            unoptimized={unoptimized}
             {...props}
         />
     );

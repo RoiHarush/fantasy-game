@@ -4,6 +4,8 @@ import com.fantasy.domain.ai.AiRoastDto;
 import com.fantasy.domain.ai.AiRoastService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
+import com.fantasy.domain.live.LeagueLiveDto;
+import com.fantasy.domain.live.LeagueLiveService;
 import com.fantasy.domain.player.PlayerDataDto;
 import com.fantasy.domain.player.PlayerDto;
 import com.fantasy.domain.player.CrownSummaryDto;
@@ -37,6 +39,7 @@ public class SuperAdminObserverController {
     private final PlayerService playerService;
     private final PointsService pointsService;
     private final AiRoastService aiRoastService;
+    private final LeagueLiveService leagueLiveService;
 
     public SuperAdminObserverController(LeagueRepository leagueRepository,
                                         UserGameDataRepository gameDataRepository,
@@ -45,7 +48,8 @@ public class SuperAdminObserverController {
                                         DraftService draftService,
                                         PlayerService playerService,
                                         PointsService pointsService,
-                                        AiRoastService aiRoastService) {
+                                        AiRoastService aiRoastService,
+                                        LeagueLiveService leagueLiveService) {
         this.leagueRepository = leagueRepository;
         this.gameDataRepository = gameDataRepository;
         this.fantasyTeamService = fantasyTeamService;
@@ -54,6 +58,7 @@ public class SuperAdminObserverController {
         this.playerService = playerService;
         this.pointsService = pointsService;
         this.aiRoastService = aiRoastService;
+        this.leagueLiveService = leagueLiveService;
     }
 
     @GetMapping("/leagues/{leagueId}")
@@ -158,6 +163,12 @@ public class SuperAdminObserverController {
         return transferMarketService.getCurrentWindowStateForLeague(leagueId);
     }
 
+    @GetMapping("/leagues/{leagueId}/live")
+    public LeagueLiveDto live(@PathVariable long leagueId) {
+        requireLeague(leagueId);
+        return leagueLiveService.getForLeague(leagueId);
+    }
+
     @GetMapping("/leagues/{leagueId}/draft")
     public DraftConfig draft(@PathVariable long leagueId) {
         requireLeague(leagueId);
@@ -195,7 +206,7 @@ public class SuperAdminObserverController {
     }
 
     private String teamLogoPath(int userId, UserGameDataEntity data) {
-        if (data == null || data.getTeamLogoBytes() == null || data.getTeamLogoBytes().length == 0) {
+        if (data == null || !data.hasTeamLogo()) {
             return "/UI/team-placeholder.svg";
         }
         return "/api/users/" + userId + "/team-logo?v=" + data.getTeamLogoVersion();

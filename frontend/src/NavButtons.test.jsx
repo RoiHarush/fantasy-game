@@ -83,6 +83,7 @@ describe("NavButtons responsive navigation", () => {
         expect(within(mobileNavigation).queryByRole("link", { name: "Scout" })).not.toBeInTheDocument();
         expect(within(mobileNavigation).queryByRole("link", { name: "Transfers" })).not.toBeInTheDocument();
         expect(within(mobileNavigation).queryByRole("link", { name: "Draft Room" })).not.toBeInTheDocument();
+        expect(within(mobileNavigation).getByRole("link", { name: "Live" })).toHaveAttribute("href", "/live");
         expect(within(mobileNavigation).getByRole("link", { name: "Fixtures" })).toHaveAttribute("href", "/fixtures");
         expect(within(mobileNavigation).getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
         expect(within(mobileNavigation).getByRole("link", { name: "League Control" })).toHaveAttribute("href", "/league-control");

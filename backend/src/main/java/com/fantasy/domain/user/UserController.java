@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/users")
@@ -57,7 +58,7 @@ public class UserController {
         UserService.TeamLogoContent logo = userService.getTeamLogo(authenticatedUserId(authentication), id);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(logo.contentType()))
-                .cacheControl(CacheControl.noCache())
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePrivate().immutable())
                 .body(logo.bytes());
     }
 

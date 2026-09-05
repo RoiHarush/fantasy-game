@@ -10,6 +10,7 @@ import {
     getObservedDraft,
     getObservedHistory,
     getObservedLeague,
+    getObservedLive,
     getObservedOrder,
     getObservedPlayers,
     getObservedPlayersOfTheWeek,
@@ -132,6 +133,16 @@ export function useLeagueObserver({ leagueId, managerId, gameweekId, includeStat
         attendance,
         effectiveManagerId,
     };
+}
+
+export function useObservedLeagueLive(leagueId, enabled = true) {
+    return useQuery({
+        queryKey: ["admin", "observe", "live", leagueId],
+        queryFn: () => getObservedLive(leagueId),
+        enabled: Boolean(enabled && leagueId),
+        staleTime: 10_000,
+        refetchInterval: 60_000,
+    });
 }
 
 export function useObservedManagerSquad({ leagueId, managerId, gameweekId, enabled = true }) {

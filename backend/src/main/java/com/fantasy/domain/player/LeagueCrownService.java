@@ -250,7 +250,7 @@ public class LeagueCrownService {
                 .map(gameData -> {
                     int managerId = gameData.getUser().getId();
                     List<PlayerOfTheWeekDto> managerAwards = awardsByManager.getOrDefault(managerId, List.of());
-                    String logoPath = gameData.getTeamLogoBytes() != null && gameData.getTeamLogoBytes().length > 0
+                    String logoPath = gameData.hasTeamLogo()
                             ? "/api/users/" + managerId + "/team-logo?v=" + gameData.getTeamLogoVersion()
                             : "/UI/team-placeholder.svg";
                     return new CrownStandingDto(

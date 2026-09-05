@@ -2,6 +2,8 @@ package com.fantasy.domain.user;
 
 import com.fantasy.domain.team.UserGameDataRepository;
 import com.fantasy.domain.team.UserGameDataEntity;
+import com.fantasy.domain.team.UserTeamLogoEntity;
+import com.fantasy.domain.team.UserTeamLogoRepository;
 import com.fantasy.domain.league.LeagueAccessService;
 import com.fantasy.domain.league.LeagueEntity;
 import com.fantasy.domain.league.LeagueRepository;
@@ -24,17 +26,20 @@ public class UserService {
 
     private final UserRepository userRepo;
     private final UserGameDataRepository gameDataRepo;
+    private final UserTeamLogoRepository teamLogoRepo;
     private final PasswordEncoder passwordEncoder;
     private final LeagueRepository leagueRepository;
     private final LeagueAccessService leagueAccessService;
 
     public UserService(UserRepository userRepo,
                        UserGameDataRepository gameDataRepo,
+                       UserTeamLogoRepository teamLogoRepo,
                        PasswordEncoder passwordEncoder,
                        LeagueRepository leagueRepository,
                        LeagueAccessService leagueAccessService) {
         this.userRepo = userRepo;
         this.gameDataRepo = gameDataRepo;
+        this.teamLogoRepo = teamLogoRepo;
         this.passwordEncoder = passwordEncoder;
         this.leagueRepository = leagueRepository;
         this.leagueAccessService = leagueAccessService;
@@ -183,8 +188,8 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
                 .orElseThrow(() -> new IllegalStateException("User does not have a fantasy team"));
-        gameData.setTeamLogoBytes(null);
-        gameData.setTeamLogoContentType(null);
+        teamLogoRepo.deleteById(gameData.getId());
+        gameData.setTeamLogoPresent(false);
         gameData.setTeamLogoVersion(System.currentTimeMillis());
         gameDataRepo.save(gameData);
         return convertToDto(user);
@@ -195,12 +200,14 @@ public class UserService {
         leagueAccessService.requireSameLeague(requestingUserId, userId);
         UserGameDataEntity gameData = gameDataRepo.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Fantasy team was not found"));
-        if (!hasTeamLogo(gameData)) {
+        UserTeamLogoEntity logo = teamLogoRepo.findById(gameData.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Fantasy team does not have a custom logo"));
+        if (logo.getLogoBytes() == null || logo.getLogoBytes().length == 0) {
             throw new IllegalArgumentException("Fantasy team does not have a custom logo");
         }
         return new TeamLogoContent(
-                Arrays.copyOf(gameData.getTeamLogoBytes(), gameData.getTeamLogoBytes().length),
-                gameData.getTeamLogoContentType()
+                Arrays.copyOf(logo.getLogoBytes(), logo.getLogoBytes().length),
+                logo.getContentType()
         );
     }
 
@@ -243,9 +250,7 @@ public class UserService {
     }
 
     private boolean hasTeamLogo(UserGameDataEntity gameData) {
-        return gameData != null
-                && gameData.getTeamLogoBytes() != null
-                && gameData.getTeamLogoBytes().length > 0;
+        return gameData != null && gameData.hasTeamLogo();
     }
 
     private String requireTeamName(String value) {
@@ -274,8 +279,12 @@ public class UserService {
 
     private void applyTeamLogoUpload(UserGameDataEntity gameData, MultipartFile logo) {
         TeamLogoUpload upload = validateTeamLogo(logo);
-        gameData.setTeamLogoBytes(Arrays.copyOf(upload.bytes(), upload.bytes().length));
-        gameData.setTeamLogoContentType(upload.contentType());
+        UserTeamLogoEntity storedLogo = new UserTeamLogoEntity();
+        storedLogo.setUserGameDataId(gameData.getId());
+        storedLogo.setLogoBytes(Arrays.copyOf(upload.bytes(), upload.bytes().length));
+        storedLogo.setContentType(upload.contentType());
+        teamLogoRepo.save(storedLogo);
+        gameData.setTeamLogoPresent(true);
         gameData.setTeamLogoVersion(System.currentTimeMillis());
     }
 

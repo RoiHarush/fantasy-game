@@ -5,6 +5,7 @@ function readOnlyRequest(path) {
 }
 
 export const getObservedLeague = (leagueId) => readOnlyRequest(`/api/admin/observe/leagues/${leagueId}`);
+export const getObservedLive = (leagueId) => readOnlyRequest(`/api/admin/observe/leagues/${leagueId}/live`);
 export const getObservedSquad = (leagueId, userId, gameweek) => readOnlyRequest(
     `/api/admin/observe/leagues/${leagueId}/users/${userId}/squad${gameweek ? `?gw=${gameweek}` : ""}`
 );

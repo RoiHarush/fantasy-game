@@ -19,7 +19,7 @@ class DatabaseMigrationTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(25, flyway.migrate().migrationsExecuted);
+        assertEquals(26, flyway.migrate().migrationsExecuted);
 
         try (var connection = DriverManager.getConnection(url, "sa", "")) {
             var metadata = connection.getMetaData();
@@ -47,9 +47,11 @@ class DatabaseMigrationTest {
             assertTrue(hasColumn(metadata, "WAIVER_PREFERENCES", "PLAN_TYPE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "TRIPLE_CAPTAIN_ACTIVE"));
             assertTrue(hasColumn(metadata, "USER_SQUADS", "BENCH_BOOST_ACTIVE"));
-            assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_BYTES"));
-            assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_CONTENT_TYPE"));
+            assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_PRESENT"));
             assertTrue(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_VERSION"));
+            assertTrue(hasTable(metadata, "USER_TEAM_LOGOS"));
+            assertTrue(hasColumn(metadata, "USER_TEAM_LOGOS", "LOGO_BYTES"));
+            assertTrue(hasColumn(metadata, "USER_TEAM_LOGOS", "CONTENT_TYPE"));
             assertTrue(hasTable(metadata, "LEAGUE_DRAFT_CONFIG_ORDER"));
             assertTrue(hasTable(metadata, "LEAGUE_SUPPLEMENTAL_DRAFT_POOL"));
             assertTrue(hasTable(metadata, "WAIVER_PLAN_PROGRESS"));
@@ -67,6 +69,8 @@ class DatabaseMigrationTest {
             assertFalse(hasColumn(metadata, "PLAYERS", "OWNER_ID"));
             assertFalse(hasColumn(metadata, "PLAYERS", "STATE"));
             assertFalse(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_DATA"));
+            assertFalse(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_BYTES"));
+            assertFalse(hasColumn(metadata, "USER_GAME_DATA", "TEAM_LOGO_CONTENT_TYPE"));
             assertFalse(hasTable(metadata, "GAMEWEEK_TRANSFER_ORDER"));
 
             try (var statement = connection.createStatement()) {

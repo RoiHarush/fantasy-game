@@ -3,6 +3,7 @@ export const OBSERVER_SCREENS = new Set([
     "points",
     "pick-team",
     "league",
+    "live",
     "fixtures",
     "scout",
     "transfer-window",
